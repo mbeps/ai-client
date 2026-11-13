@@ -1,6 +1,11 @@
 import { and, eq, inArray, or, sql } from "drizzle-orm";
+import {
+  getBuiltInAgentById,
+  isBuiltInAgentId,
+  LINKABLE_BUILT_IN_AGENT_IDS,
+} from "@/config/built-in-agents";
 import { db } from "@/drizzle/db";
-import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { agent } from "@/drizzle/schemas/agent-schema";
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import {
@@ -9,67 +14,97 @@ import {
 } from "@/drizzle/schemas/mcp-server-schema";
 import { project } from "@/drizzle/schemas/project-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
+import { resolveLinkedSubagents } from "@/lib/agents/resolve-linked-subagents";
 import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
 import { retrieveRelevantMemories } from "@/lib/memory/retrieve-relevant-memories";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
 import type { SkillMode } from "@/schemas/skill/skill-config";
+import type { Agent } from "@/types/agent/agent";
 import type { McpServerConfig } from "@/types/mcp/mcp-server-config";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
 
-/**
- * All database context required for a single chat request.
- * Lazy-loads projects, assistants, knowledge bases, MCP servers, and Agent Skills.
- * Resolves effective configuration considering request-level overrides.
- * @author Maruf Bepary
- */
+export interface LoadedAgentSummary {
+  id: string;
+  name: string;
+  prompt: string | null;
+  skillMode: SkillMode;
+  skillIds: string[];
+  knowledgebaseIds: string[];
+  subagentIds: string[];
+}
+
 type ChatContext = {
-  /** The chat row — always present if the chat exists */
   chatRow: {
     id: string;
     projectId: string | null;
-    assistantId: string | null;
+    agentId: string | null;
     knowledgebaseId: string | null;
   };
-  /** Project row (null when chat has no project) */
   projectRow: {
     globalPrompt: string | null;
     knowledgebaseId: string | null;
+    subagentIds: string[];
   } | null;
-  /** The effective primary KB id for this request */
   activeKbId: string | null;
-  /** All effective ready KB ids for this request */
   activeKbIds: string[];
-  /** Whether at least one active KB is ready */
   kbIsReady: boolean;
-  /** Assistant prompt (null when no assistant is associated) */
-  assistantRow: { prompt: string | null } | null;
-  /** Effective skill mode inherited from the assistant, else the project, else `dynamic` */
+  agentRow: LoadedAgentSummary | null;
   skillMode: SkillMode;
-  /** Effective pre-configured skill IDs inherited from the assistant, else the project */
   skillIds: string[];
-  /** Enabled MCP servers, optionally filtered by selectedServerIds */
   servers: McpServerConfig[];
-  /** Available skills for progressive disclosure catalog */
   availableSkills: SkillSummary[];
-  /** Pre-selected skills to inject directly */
   selectedSkills: SkillRow[];
-  /** Ambient user memories to inject into system prompt */
   userMemories: string[];
+  linkedSubagents: Agent[];
 };
 
+async function loadAgentSummary(
+  agentId: string | null,
+  userId: string,
+): Promise<LoadedAgentSummary | null> {
+  if (!agentId) return null;
+  if (isBuiltInAgentId(agentId)) {
+    const builtIn = getBuiltInAgentById(agentId)!;
+    return {
+      id: builtIn.id,
+      name: builtIn.name,
+      prompt: builtIn.prompt,
+      skillMode: builtIn.skillMode,
+      skillIds: builtIn.skillIds,
+      knowledgebaseIds: builtIn.knowledgebaseIds,
+      subagentIds: builtIn.subagentIds,
+    };
+  }
+  const rows = await db
+    .select({
+      id: agent.id,
+      name: agent.name,
+      prompt: agent.prompt,
+      skillMode: agent.skillMode,
+      skillIds: agent.skillIds,
+      knowledgebaseIds: agent.knowledgebaseIds,
+      subagentIds: agent.subagentIds,
+    })
+    .from(agent)
+    .where(and(eq(agent.id, agentId), eq(agent.userId, userId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 /**
- * Loads all database context needed for a chat request in minimal queries. **Query pattern**: Chat lookup runs first (sequential dependency). All remaining queries (project, assistant, servers, KB, skills) run in parallel after.
+ * Loads all database context needed for a chat request in minimal queries.
  *
  * @param chatId - Chat UUID
  * @param userId - Authenticated user ID for authorization
  * @param selectedServerIds - Optional MCP server IDs to filter by
  * @param selectedKbIds - Optional knowledge base override from request body
- * @param selectedAssistantId - Optional assistant override from request body
+ * @param selectedAgentId - Optional agent override from request body
  * @param selectedSkillIds - Optional skill IDs to manually inject
- * @param latestQuery - The latest query parameter.
- * @returns All context needed for streaming: prompts, KB readiness, servers, skills
+ * @param latestQuery - Latest user query for memory retrieval
+ * @param selectedSubagentIds - Optional per-chat linked subagent IDs override
+ * @returns Full chat execution context
  * @author Maruf Bepary
  */
 export async function loadChatContext(
@@ -77,22 +112,23 @@ export async function loadChatContext(
   userId: string,
   selectedServerIds?: string[],
   selectedKbIds?: string[],
-  selectedAssistantId?: string,
+  selectedAgentId?: string,
   selectedSkillIds?: string[],
   latestQuery?: string,
+  selectedSubagentIds?: string[],
 ): Promise<ChatContext> {
-  // 1. Chat and Project lookup (joined to resolve project context and KB in one query)
   const [row] = await db
     .select({
       id: chat.id,
       projectId: chat.projectId,
-      assistantId: chat.agentId,
+      agentId: chat.agentId,
       knowledgebaseId: chat.knowledgebaseId,
       projectTableId: project.id,
       projectGlobalPrompt: project.globalPrompt,
       projectKnowledgebaseId: project.knowledgebaseId,
       projectSkillMode: project.skillMode,
       projectSkillIds: project.skillIds,
+      projectSubagentIds: project.subagentIds,
     })
     .from(chat)
     .leftJoin(
@@ -108,7 +144,10 @@ export async function loadChatContext(
   const chatRow = {
     id: row.id,
     projectId: row.projectId,
-    assistantId: row.assistantId,
+    agentId:
+      row.agentId ??
+      ((row as Record<string, unknown>).assistantId as string | null) ??
+      null,
     knowledgebaseId: row.knowledgebaseId,
   };
 
@@ -117,6 +156,7 @@ export async function loadChatContext(
       ? {
           globalPrompt: row.projectGlobalPrompt,
           knowledgebaseId: row.projectKnowledgebaseId,
+          subagentIds: row.projectSubagentIds ?? [],
         }
       : null;
 
@@ -127,34 +167,11 @@ export async function loadChatContext(
           (id): id is string => Boolean(id),
         );
 
-  const effectiveAssistantId =
-    chatRow.assistantId || selectedAssistantId || null;
+  const effectiveAgentId = chatRow.agentId || selectedAgentId || null;
 
-  // 2. Parallel queries that depend on chatRow and candidateKbIds
-  const [assistantRow, servers, kbRows, userSkills, userMemories] =
+  const [agentRow, servers, kbRows, userSkills, userMemories] =
     await Promise.all([
-      // Assistant lookup (if applicable)
-      (() => {
-        return effectiveAssistantId
-          ? db
-              .select({
-                prompt: assistant.prompt,
-                skillMode: assistant.skillMode,
-                skillIds: assistant.skillIds,
-              })
-              .from(assistant)
-              .where(
-                and(
-                  eq(assistant.id, effectiveAssistantId),
-                  eq(assistant.userId, userId),
-                ),
-              )
-              .limit(1)
-              .then((rows) => rows[0] ?? null)
-          : Promise.resolve(null);
-      })(),
-
-      // Enabled MCP servers for this user (owned personal servers + installed public servers)
+      loadAgentSummary(effectiveAgentId, userId),
       Promise.all([
         db
           .select({
@@ -197,8 +214,6 @@ export async function loadChatContext(
           mcpServerRowToConfig(r as McpServerRow, userId),
         ),
       ),
-
-      // KB readiness check (if applicable)
       (() => {
         if (candidateKbIds.length === 0) return Promise.resolve([]);
         if (candidateKbIds.length === 1) {
@@ -229,8 +244,6 @@ export async function loadChatContext(
             ),
           );
       })(),
-
-      // Enabled user skills scoped to this chat context
       (() => {
         const conditions = [eq(skill.userId, userId), eq(skill.enabled, true)];
         const isGlobal = sql`cardinality(${skill.projectIds}) = 0 AND cardinality(${skill.agentIds}) = 0`;
@@ -239,10 +252,8 @@ export async function loadChatContext(
         if (chatRow.projectId) {
           matchScope.push(sql`${chatRow.projectId} = ANY(${skill.projectIds})`);
         }
-        if (effectiveAssistantId) {
-          matchScope.push(
-            sql`${effectiveAssistantId} = ANY(${skill.agentIds})`,
-          );
+        if (effectiveAgentId) {
+          matchScope.push(sql`${effectiveAgentId} = ANY(${skill.agentIds})`);
         }
 
         if (matchScope.length > 0) {
@@ -256,34 +267,65 @@ export async function loadChatContext(
           .from(skill)
           .where(and(...conditions)) as Promise<SkillRow[]>;
       })(),
-
-      // Ambient user memories
       retrieveRelevantMemories(userId, latestQuery).catch(() => [] as string[]),
     ]);
 
-  // 3. Derive composite values
-  const skillMode: SkillMode =
-    assistantRow?.skillMode ?? row.projectSkillMode ?? "dynamic";
-  const skillIds: string[] =
-    assistantRow?.skillIds ?? row.projectSkillIds ?? [];
+  const extraAgentKbIds =
+    !selectedKbIds?.length && agentRow?.knowledgebaseIds?.length
+      ? agentRow.knowledgebaseIds.filter((id) => !candidateKbIds.includes(id))
+      : [];
 
-  const readyKbIds = kbRows
+  const extraKbRows =
+    extraAgentKbIds.length > 0
+      ? await db
+          .select({
+            id: knowledgebase.id,
+            indexStatus: knowledgebase.indexStatus,
+          })
+          .from(knowledgebase)
+          .where(
+            and(
+              inArray(knowledgebase.id, extraAgentKbIds),
+              eq(knowledgebase.userId, userId),
+            ),
+          )
+      : [];
+
+  const allCandidateKbIds = [...candidateKbIds, ...extraAgentKbIds];
+  const allKbRows = [...kbRows, ...extraKbRows];
+
+  const targetSubagentIds: readonly string[] =
+    selectedSubagentIds !== undefined
+      ? selectedSubagentIds
+      : agentRow && agentRow.subagentIds?.length > 0
+        ? agentRow.subagentIds
+        : projectRow && projectRow.subagentIds.length > 0
+          ? projectRow.subagentIds
+          : LINKABLE_BUILT_IN_AGENT_IDS;
+
+  const linkedSubagents = await resolveLinkedSubagents(
+    userId,
+    targetSubagentIds,
+  );
+
+  const skillMode: SkillMode =
+    agentRow?.skillMode ?? row.projectSkillMode ?? "dynamic";
+  const skillIds: string[] = agentRow?.skillIds ?? row.projectSkillIds ?? [];
+
+  const activeKbIds = allKbRows
     .filter((k) => k.indexStatus === "ready")
-    .map((k, idx) => k.id ?? candidateKbIds[idx])
+    .map((k, idx) => k.id ?? allCandidateKbIds[idx])
     .filter(Boolean);
-  const activeKbIds = readyKbIds;
   const activeKbId = activeKbIds[0] ?? null;
   const kbIsReady = activeKbIds.length > 0;
 
-  // 4. Filter servers by selection if provided
   const filteredServers =
     selectedServerIds === undefined
-      ? servers // Default to all enabled servers
+      ? servers
       : selectedServerIds.length === 0
-        ? [] // Explicitly no MCP servers
+        ? []
         : servers.filter((s) => selectedServerIds.includes(s.id));
 
-  // 5. Resolve skill configuration (entity inheritance + per-chat selection)
   const { availableSkills, selectedSkills } = resolveContextSkills({
     skillMode,
     skillIds,
@@ -297,18 +339,19 @@ export async function loadChatContext(
     activeKbId,
     activeKbIds,
     kbIsReady,
-    assistantRow,
+    agentRow,
     skillMode,
     skillIds,
     servers: filteredServers,
     availableSkills,
     selectedSkills,
     userMemories,
+    linkedSubagents,
   };
 }
 
 /**
- * Provides chat not found error service implementation.
+ * Error thrown when the requested chat does not exist or is not owned by the user.
  *
  * @author Maruf Bepary
  */

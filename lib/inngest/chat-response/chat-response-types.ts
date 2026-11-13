@@ -1,6 +1,7 @@
 import type { ModelMessage } from "ai";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { Agent } from "@/types/agent/agent";
 import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
 export type { CompletedToolRecord };
@@ -21,6 +22,7 @@ export interface BuildOrchestratorToolSetParams {
     chatRow?: {
       id: string;
       projectId?: string | null;
+      agentId?: string | null;
       assistantId?: string | null;
       knowledgebaseId?: string | null;
     };
@@ -28,6 +30,7 @@ export interface BuildOrchestratorToolSetParams {
     activeKbId?: string | null;
     kbIsReady?: boolean;
     availableSkills: any[];
+    linkedSubagents?: Agent[];
   };
   fileAttachments: Array<{ name: string; key: string; type?: string }>;
   isMemoryEnabled: boolean;

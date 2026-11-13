@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { buildStepSystemPrompt } from "@/lib/transform/step-system-prompt";
 import { filterStepTools } from "@/lib/transform/step-tool-filtering";
 import type { TransformStep } from "@/types/transform/transform-step";
 
@@ -93,6 +94,63 @@ describe("filterStepTools", () => {
 
     expect(registerSkillAuthoringToolsMock).toHaveBeenCalledWith("u1");
     expect(filteredTools.create_skill).toBeDefined();
+  });
+
+  it("registers delegate_task when DELEGATE_TASK is allowed and linkedSubagents and resolvedProvider are provided", () => {
+    const { filteredTools } = filterStepTools({
+      step: { ...baseStep, toolIds: [INTERNAL_TOOL_IDS.DELEGATE_TASK] },
+      agentRow: { ...baseAgent, tools: [] },
+      allServers: [],
+      runMcpTools: {},
+      runToolSourceMap: {},
+      userId: "u1",
+      skillCatalog: [],
+      activeWorkbookFilePath: null,
+      currentAttachmentRows: [],
+      linkedSubagents: [
+        {
+          id: "builtin:researcher",
+          name: "Researcher",
+          description: "Researches topics",
+        } as any,
+      ],
+      resolvedProvider: {
+        modelId: "gpt-4o",
+        sdkProvider: { chat: vi.fn((id: string) => ({ modelId: id })) },
+      } as any,
+    });
+
+    expect(filteredTools.delegate_task).toBeDefined();
+
+    const promptWithSubagents = buildStepSystemPrompt({
+      step: baseStep,
+      agentRow: { globalContext: null, tools: [] },
+      filteredTools,
+      skillCatalog: [],
+      preloadedSkills: [],
+      kbContext: "",
+      fileContext: "",
+      linkedSubagents: [
+        {
+          id: "builtin:researcher",
+          name: "Researcher",
+          description: "Researches topics",
+        } as any,
+      ],
+    });
+    expect(promptWithSubagents).toContain("## Available Subagents");
+
+    const promptWithoutSubagents = buildStepSystemPrompt({
+      step: baseStep,
+      agentRow: { globalContext: null, tools: [] },
+      filteredTools,
+      skillCatalog: [],
+      preloadedSkills: [],
+      kbContext: "",
+      fileContext: "",
+      linkedSubagents: [],
+    });
+    expect(promptWithoutSubagents).not.toContain("## Available Subagents");
   });
 });
 

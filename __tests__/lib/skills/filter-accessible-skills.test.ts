@@ -169,4 +169,31 @@ describe("filterAccessibleSkills", () => {
     });
     expect(result.map((s) => s.id)).toEqual(["s-global-1", "s-proj-1", "s-dual"]);
   });
+
+  it("supports agentId in SkillScopeContext and agentIds on Skill", () => {
+    const skillsWithAgentIds = [
+      ...mockSkills,
+      {
+        id: "s-agent-only",
+        userId: "u1",
+        name: "agent-skill",
+        displayName: "Agent Skill",
+        description: "Desc",
+        content: "Content",
+        files: [],
+        enabled: true,
+        projectIds: [],
+        agentIds: ["agent-42"],
+        assistantIds: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+    const result = filterAccessibleSkills(skillsWithAgentIds, {
+      agentId: "agent-42",
+      skillMode: "specific",
+      skillIds: ["s-global-1"],
+    });
+    expect(result.map((s) => s.id)).toEqual(["s-global-1", "s-agent-only"]);
+  });
 });

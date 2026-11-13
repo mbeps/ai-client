@@ -257,6 +257,7 @@ describe("loadTransformContext", () => {
         description: "agent desc",
         modelId: null,
         knowledgeBaseIds: ["kb-1"],
+        subagentIds: ["builtin:researcher"],
         steps: JSON.stringify([{ toolIds: ["internal:tool:manage_artifact"] }]),
       },
     });

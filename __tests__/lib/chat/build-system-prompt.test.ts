@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BUILT_IN_AGENTS, isLinkableBuiltInAgentId } from "@/config/built-in-agents";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 
 describe("buildSystemPrompt (T4A.5 — plain string)", () => {
@@ -158,5 +159,31 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
       expect(result).toContain("- Name: Alice\n");
       expect(result).toContain("- Email: alice@example.com");
     });
+  });
+
+  it("injects Available Subagents manifest when isSubagentDelegationEnabled is true and availableSubagents are provided", () => {
+    const linkable = BUILT_IN_AGENTS.filter((a) =>
+      isLinkableBuiltInAgentId(a.id),
+    );
+    const result = buildSystemPrompt(null, null, null, false, {
+      isSubagentDelegationEnabled: true,
+      availableSubagents: linkable,
+    });
+
+    expect(result).toContain("## Available Subagents");
+    expect(result).toContain("builtin:researcher");
+    expect(result).toContain("Researcher");
+  });
+
+  it("omits Available Subagents manifest when isSubagentDelegationEnabled is false", () => {
+    const linkable = BUILT_IN_AGENTS.filter((a) =>
+      isLinkableBuiltInAgentId(a.id),
+    );
+    const result = buildSystemPrompt(null, null, null, false, {
+      isSubagentDelegationEnabled: false,
+      availableSubagents: linkable,
+    });
+
+    expect(result).not.toContain("## Available Subagents");
   });
 });

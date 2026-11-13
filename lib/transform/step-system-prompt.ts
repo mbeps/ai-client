@@ -1,6 +1,8 @@
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { formatActiveSkill } from "@/lib/skills/format-active-skill";
 import { formatSkillCatalog } from "@/lib/skills/format-skill-catalog";
+import { formatSubagentManifest } from "@/lib/subagents/format-subagent-manifest";
+import type { Agent } from "@/types/agent/agent";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
 import type { TransformStep } from "@/types/transform/transform-step";
@@ -49,6 +51,7 @@ export interface BuildStepSystemPromptParams {
   kbContext: string;
   fileContext: string;
   dryRun?: boolean;
+  linkedSubagents?: Agent[];
 }
 
 const DRY_RUN_INSTRUCTION =
@@ -73,6 +76,7 @@ export function buildStepSystemPrompt(
     kbContext,
     fileContext,
     dryRun,
+    linkedSubagents,
   } = params;
 
   const hasManageArtifact = checkManageArtifactEnabled(
@@ -80,6 +84,12 @@ export function buildStepSystemPrompt(
     agentRow.tools,
     step.toolIds,
   );
+  const subagentManifest =
+    "delegate_task" in filteredTools &&
+    linkedSubagents &&
+    linkedSubagents.length > 0
+      ? formatSubagentManifest(linkedSubagents)
+      : null;
 
   const sections: Array<string | null | undefined> = [
     dryRun ? DRY_RUN_INSTRUCTION : null,
@@ -91,6 +101,7 @@ export function buildStepSystemPrompt(
     `Instructions for this step:\n${step.prompt}`,
     "Use only the provided MCP tools. After completing the task, briefly summarise what you did.",
     hasManageArtifact ? MANAGE_ARTIFACT_SYSTEM_INSTRUCTIONS : null,
+    subagentManifest,
     fileContext || null,
   ];
 

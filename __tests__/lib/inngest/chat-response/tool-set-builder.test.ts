@@ -128,4 +128,26 @@ describe("buildOrchestratorToolSet", () => {
       },
     );
   });
+
+  it("passes linkedSubagents to createSubagentDispatchTool when subagentsEnabled is true", () => {
+    const linkedSubagents = [
+      {
+        id: "builtin:researcher",
+        name: "Researcher",
+      } as any,
+    ];
+    const res = buildOrchestratorToolSet({
+      ...baseParams,
+      subagentsEnabled: true,
+      ctx: {
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        linkedSubagents,
+      },
+    });
+
+    expect(res.isSubagentDelegationEnabled).toBe(true);
+    expect(res.subagentDispatchTools).toHaveProperty("delegate_task");
+  });
 });

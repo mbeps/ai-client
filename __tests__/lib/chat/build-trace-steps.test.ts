@@ -187,6 +187,46 @@ describe("buildTraceSteps", () => {
         state: "error",
       });
     });
+
+    it("extracts agentId and agentName when delegate_task is called with agent parameter", () => {
+      const active: ToolCallState[] = [
+        {
+          toolCallId: "sub-agent-1",
+          toolName: "delegate_task",
+          args: {
+            agent: "builtin:researcher",
+            taskBrief: "Research topic",
+          },
+          status: "calling",
+        },
+        {
+          toolCallId: "sub-agent-2",
+          toolName: "delegate_task",
+          args: {
+            agent: "11111111-1111-4111-8111-111111111111",
+            agentName: "SQL Analyst",
+            taskBrief: "Analyze query",
+          },
+          result: "Done",
+          status: "complete",
+        },
+      ];
+
+      const steps = buildTraceSteps({ activeToolCalls: active });
+
+      expect(steps[0]).toMatchObject({
+        kind: "subagent",
+        role: "builtin:researcher",
+        agentId: "builtin:researcher",
+        agentName: "Researcher",
+      });
+      expect(steps[1]).toMatchObject({
+        kind: "subagent",
+        role: "11111111-1111-4111-8111-111111111111",
+        agentId: "11111111-1111-4111-8111-111111111111",
+        agentName: "SQL Analyst",
+      });
+    });
   });
 
   describe("persisted tool calls", () => {

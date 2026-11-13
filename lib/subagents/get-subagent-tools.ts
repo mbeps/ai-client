@@ -13,8 +13,9 @@ import { INTERNAL_TOOL_IDS } from "@/config/tools";
 export function getSubagentTools(
   availableTools: Record<string, any>,
 ): Record<string, any> {
-  const forbidden = new Set([
+  const forbidden = new Set<string>([
     "delegate_task",
+    INTERNAL_TOOL_IDS.DELEGATE_TASK,
     "manage_artifact",
     INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
     "create_skill",

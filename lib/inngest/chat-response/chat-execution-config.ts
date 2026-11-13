@@ -158,8 +158,10 @@ export interface ChatExecutionResourcesParams {
   subagentModelId?: string;
   selectedServerIds?: string[];
   selectedKbIds?: string[];
+  selectedAgentId?: string;
   selectedAssistantId?: string;
   selectedSkillIds?: string[];
+  selectedSubagentIds?: string[];
 }
 
 /**
@@ -182,8 +184,10 @@ export async function loadChatExecutionResources(
         params.userId,
         params.selectedServerIds,
         params.selectedKbIds,
-        params.selectedAssistantId,
+        params.selectedAgentId ?? params.selectedAssistantId,
         params.selectedSkillIds,
+        undefined,
+        params.selectedSubagentIds,
       ),
       loadThreadFromDb(params.chatId, params.userMessageId, params.userId),
     ]);

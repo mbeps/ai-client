@@ -4,9 +4,11 @@ import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
+import { createSubagentDispatchTool } from "@/lib/subagents/create-subagent-dispatch-tool";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
+import type { Agent } from "@/types/agent/agent";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { TransformStep } from "@/types/transform/transform-step";
@@ -148,6 +150,8 @@ export interface FilterStepToolsParams {
   activeWorkbookFilePath: string | null;
   currentAttachmentRows: AttachmentRow[];
   dryRun?: boolean;
+  linkedSubagents?: Agent[];
+  resolvedProvider?: ResolvedProvider;
 }
 
 /**
@@ -173,6 +177,8 @@ export function filterStepTools(params: FilterStepToolsParams): {
     activeWorkbookFilePath,
     currentAttachmentRows,
     dryRun,
+    linkedSubagents,
+    resolvedProvider,
   } = params;
 
   const stepServerNames = resolveStepServerNames(step, allServers);
@@ -204,6 +210,19 @@ export function filterStepTools(params: FilterStepToolsParams): {
   );
   if (allowSkillAuthoring) {
     Object.assign(filteredTools, registerSkillAuthoringTools(userId));
+  }
+
+  if (
+    allowedToolIds.has(INTERNAL_TOOL_IDS.DELEGATE_TASK) &&
+    linkedSubagents &&
+    linkedSubagents.length > 0 &&
+    resolvedProvider
+  ) {
+    filteredTools.delegate_task = createSubagentDispatchTool({
+      defaultModel: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
+      availableTools: { ...filteredTools },
+      allowedSubagents: linkedSubagents,
+    });
   }
 
   const toolSourceMap = Object.fromEntries(

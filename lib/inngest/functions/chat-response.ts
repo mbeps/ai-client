@@ -366,7 +366,7 @@ export const generateChatResponse = inngest.createFunction(
       const systemPrompt = buildSystemPrompt(
         userSettings?.globalSystemPrompt,
         ctx.projectRow?.globalPrompt,
-        ctx.assistantRow?.prompt,
+        ctx.agentRow?.prompt,
         isToolCallingModel && hasKbTool,
         {
           attachmentNames: fileAttachments.map((a) => a.name),
@@ -376,6 +376,7 @@ export const generateChatResponse = inngest.createFunction(
           userContext: { name: userName, email: userEmail },
           userMemories: ctx.userMemories,
           isSubagentDelegationEnabled,
+          availableSubagents: ctx.linkedSubagents,
           canvasArtifacts,
         },
       );

@@ -243,6 +243,7 @@ async function executeSingleTransformStep(
       mcpCleanup,
       availableSkills,
       selectedSkills,
+      linkedSubagents,
     } = await loadTransformContext({
       userId,
       agentRow: currentAgent,
@@ -264,6 +265,7 @@ async function executeSingleTransformStep(
         kbContext,
         availableSkills,
         selectedSkills,
+        linkedSubagents,
         runMcpTools: mcpTools,
         runToolSourceMap: toolSourceMap,
         initialAttachmentRows,

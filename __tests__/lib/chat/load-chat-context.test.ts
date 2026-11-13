@@ -30,6 +30,9 @@ const chainable = vi.hoisted(() => {
 });
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
+vi.mock("@/lib/memory/retrieve-relevant-memories", () => ({
+  retrieveRelevantMemories: vi.fn().mockResolvedValue([]),
+}));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encrypt } from "@/lib/encryption/encrypt";
@@ -209,7 +212,7 @@ describe("loadChatContext KB ownership", () => {
     expect(ctx.projectRow?.knowledgebaseId).toBe("proj-kb");
     expect(ctx.activeKbId).toBe("proj-kb");
     expect(ctx.kbIsReady).toBe(true);
-    expect(ctx.assistantRow?.prompt).toBe("Assistant Prompt");
+    expect(ctx.agentRow?.prompt).toBe("Assistant Prompt");
     expect(ctx.servers).toHaveLength(1);
     expect(ctx.servers[0].id).toBe("srv-1");
     expect(ctx.selectedSkills).toHaveLength(1);
@@ -366,29 +369,141 @@ describe("loadChatContext KB ownership", () => {
 
     const ctx = await loadChatContext("chat-1", "user-1");
 
-    expect(ctx.assistantRow).toBeNull();
+    expect(ctx.agentRow).toBeNull();
   });
 
-  it("returns the assistant prompt when the lookup matches a row", async () => {
+  it("returns the agent row when the lookup matches a custom agent", async () => {
     chainable.__queueWhere([
       {
         id: "chat-1",
         projectId: null,
-        assistantId: "asst-1",
+        agentId: "agent-1",
         knowledgebaseId: null,
         projectTableId: null,
         projectGlobalPrompt: null,
         projectKnowledgebaseId: null,
+        projectSubagentIds: [],
       },
     ]);
-    chainable.__queueWhere([{ prompt: "Be terse" }]);
-    chainable.__queueWhere([]);
-    chainable.__queueWhere([]);
-    chainable.__queueWhere([]);
+    chainable.__queueWhere([
+      {
+        id: "agent-1",
+        name: "Terse Agent",
+        prompt: "Be terse",
+        skillMode: "dynamic",
+        skillIds: [],
+        knowledgebaseIds: ["kb-agent-1"],
+        subagentIds: ["builtin:researcher"],
+      },
+    ]);
+    chainable.__queueWhere([]); // personal mcp servers
+    chainable.__queueWhere([]); // installed mcp servers
+    chainable.__queueWhere([]); // user skills
+    chainable.__queueWhere([{ id: "kb-agent-1", indexStatus: "ready" }]); // agent KB
 
     const ctx = await loadChatContext("chat-1", "user-1");
 
-    // Pins the `rows[0]` arm so the null test above is meaningful.
-    expect(ctx.assistantRow).toEqual({ prompt: "Be terse" });
+    expect(ctx.agentRow).toMatchObject({ id: "agent-1", prompt: "Be terse" });
+    expect(ctx.activeKbIds).toEqual(["kb-agent-1"]);
+    expect(ctx.linkedSubagents.map((a) => a.id)).toEqual(["builtin:researcher"]);
+  });
+
+  it("resolves built-in agent directly without querying agent table and resolves custom linkedSubagents", async () => {
+    chainable.__queueWhere([
+      {
+        id: "chat-2",
+        projectId: "proj-1",
+        agentId: "builtin:researcher",
+        knowledgebaseId: null,
+        projectTableId: "proj-1",
+        projectGlobalPrompt: "Project prompt",
+        projectKnowledgebaseId: null,
+        projectSubagentIds: ["custom-leaf-1"],
+      },
+    ]);
+    chainable.__queueWhere([]); // personal mcp servers
+    chainable.__queueWhere([]); // installed mcp servers
+    chainable.__queueWhere([]); // user skills
+    chainable.__queueWhere([
+      {
+        id: "custom-leaf-1",
+        userId: "user-1",
+        name: "Leaf Worker",
+        description: "Does leaf work",
+        prompt: "Leaf prompt",
+        subagentPrompt: null,
+        modelId: null,
+        knowledgebaseIds: [],
+        tools: [],
+        skillMode: "dynamic",
+        skillIds: [],
+        promptMode: "all",
+        promptIds: [],
+        subagentIds: [],
+        guardrails: { maxSteps: 8, scratchpadAccess: "read_only", isolateTools: true },
+        avatar: null,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    ]);
+
+    const ctx = await loadChatContext("chat-2", "user-1");
+
+    expect(ctx.agentRow?.id).toBe("builtin:researcher");
+    expect(ctx.linkedSubagents.map((a) => a.id)).toEqual(["custom-leaf-1"]);
+  });
+
+  it("uses selectedSubagentIds override when provided and falls back to linkable built-ins otherwise", async () => {
+    chainable.__queueWhere([
+      {
+        id: "chat-3",
+        projectId: null,
+        agentId: null,
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+        projectSubagentIds: [],
+      },
+    ]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+
+    const defaultCtx = await loadChatContext("chat-3", "user-1");
+    expect(defaultCtx.linkedSubagents.map((a) => a.id)).toEqual([
+      "builtin:researcher",
+      "builtin:planner",
+      "builtin:reviewer",
+      "builtin:worker",
+    ]);
+
+    chainable.__queueWhere([
+      {
+        id: "chat-3",
+        projectId: null,
+        agentId: null,
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+        projectSubagentIds: [],
+      },
+    ]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+
+    const overrideCtx = await loadChatContext(
+      "chat-3",
+      "user-1",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      ["builtin:planner"],
+    );
+    expect(overrideCtx.linkedSubagents.map((a) => a.id)).toEqual(["builtin:planner"]);
   });
 });

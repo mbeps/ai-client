@@ -103,6 +103,7 @@ function buildSubagentDispatchTools(params: {
   resolvedModelId: string;
   workerResolved: any;
   scratchpadContext?: { chatId: string; messageId: string };
+  allowedSubagents?: BuildOrchestratorToolSetParams["ctx"]["linkedSubagents"];
 }): Record<string, any> {
   if (!params.isSubagentDelegationEnabled) {
     return {};
@@ -117,6 +118,7 @@ function buildSubagentDispatchTools(params: {
       availableTools: params.orchestratorActiveTools,
       maxSteps: env.CHAT_MAX_STEPS,
       scratchpadContext: params.scratchpadContext,
+      allowedSubagents: params.allowedSubagents,
     }),
   };
 }
@@ -196,7 +198,7 @@ export function buildOrchestratorToolSet(
     ctx.availableSkills.length > 0
       ? registerSkillTool(userId, {
           projectId: ctx.chatRow?.projectId,
-          assistantId: ctx.chatRow?.assistantId,
+          assistantId: ctx.chatRow?.agentId ?? ctx.chatRow?.assistantId,
         })
       : {};
 
@@ -243,6 +245,7 @@ export function buildOrchestratorToolSet(
       chatId,
       messageId: assistantMessageId,
     },
+    allowedSubagents: ctx.linkedSubagents,
   });
 
   const allTools = Object.assign(
