@@ -2,7 +2,7 @@ import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
-import type { Assistant } from "@/types/assistant/assistant";
+import type { Agent } from "@/types/agent/agent";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
 import type { Project } from "@/types/project/project";
@@ -39,7 +39,7 @@ function getThreadLastModelId(thread: Message[]): string | undefined {
 function resolveInitialModelId(
   thread: Message[],
   currentProject: Project | undefined,
-  currentAssistant: Assistant | undefined,
+  currentAssistant: Agent | undefined,
   userSettings: UserSettingsRow | null,
 ): string | undefined {
   const fromThread = getThreadLastModelId(thread);
@@ -91,7 +91,7 @@ function resolveInitialSubagents(thread: Message[]): {
  */
 function resolveInitialTools(
   currentProject?: Project,
-  currentAssistant?: Assistant,
+  currentAssistant?: Agent,
 ): {
   initialServerIds: string[];
   initialSelectedTools: string[];
@@ -136,7 +136,7 @@ function resolveInitialKbIds(chat?: Chat, currentProject?: Project): string[] {
  * @author Maruf Bepary
  */
 function resolveInitialSkillIds(
-  currentAssistant?: Assistant,
+  currentAssistant?: Agent,
   currentProject?: Project,
 ): string[] {
   const source = currentAssistant ?? currentProject;
@@ -193,7 +193,7 @@ export interface InitialChatConfig {
 export function resolveInitialChatConfig(
   thread: Message[],
   currentProject: Project | undefined,
-  currentAssistant: Assistant | undefined,
+  currentAssistant: Agent | undefined,
   userSettings: UserSettingsRow | null,
   chat: Chat | undefined,
 ): InitialChatConfig {
@@ -253,9 +253,9 @@ export function resolveActiveChat(
  * @author Maruf Bepary
  */
 export function findAssistant(
-  assistants: Assistant[],
+  assistants: Agent[],
   assistantId?: string | null,
-): Assistant | undefined {
+): Agent | undefined {
   if (!assistantId) return undefined;
   return assistants.find((a) => a.id === assistantId);
 }

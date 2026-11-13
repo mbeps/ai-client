@@ -36,7 +36,8 @@ export default function NewSkillPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultProjectId = searchParams.get("projectId") || undefined;
-  const defaultAssistantId = searchParams.get("assistantId") || undefined;
+  const defaultAssistantId =
+    searchParams.get("agentId") || searchParams.get("assistantId") || undefined;
   const loadSkills = useAppStore((state) => state.loadSkills);
 
   const [activeTab, setActiveTab] = useQueryState(
@@ -68,7 +69,7 @@ export default function NewSkillPage() {
       if (defaultProjectId) {
         router.push(ROUTES.PROJECTS.detail(defaultProjectId));
       } else if (defaultAssistantId) {
-        router.push(ROUTES.ASSISTANTS.detail(defaultAssistantId));
+        router.push(ROUTES.AGENTS.detail(defaultAssistantId));
       } else {
         router.push(ROUTES.SETTINGS.SKILLS.path);
       }

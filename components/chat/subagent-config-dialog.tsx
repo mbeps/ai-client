@@ -2,6 +2,7 @@
 
 import { Check, ShieldCheck, X } from "lucide-react";
 import { SubagentModelSelect } from "@/components/chat/subagent-model-select";
+import { SubagentPicker } from "@/components/shared/subagent-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { useAppStore } from "@/lib/store/use-app-store";
+import type { Agent } from "@/types/agent/agent";
 
 /**
  * Represents subagent config dialog props.
@@ -25,6 +28,9 @@ export interface SubagentConfigDialogProps {
   onToggleSubagents: (enabled: boolean) => void;
   subagentModelId?: string;
   onSubagentModelChange: (modelId: string | undefined) => void;
+  agents?: Agent[];
+  selectedSubagentIds?: string[];
+  onToggleSubagentId?: (agentId: string) => void;
 }
 
 /**
@@ -43,7 +49,12 @@ export function SubagentConfigDialog({
   onToggleSubagents,
   subagentModelId,
   onSubagentModelChange,
+  agents: agentsProp,
+  selectedSubagentIds,
+  onToggleSubagentId,
 }: SubagentConfigDialogProps) {
+  const storeAgents = useAppStore((s) => s.agents);
+  const agents = agentsProp ?? storeAgents;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col overflow-hidden p-0 sm:max-w-md">
@@ -91,6 +102,20 @@ export function SubagentConfigDialog({
               disabled={!subagentsEnabled}
             />
           </div>
+
+          {onToggleSubagentId && (
+            <div className="space-y-2">
+              <label className="text-foreground text-xs font-medium">
+                Available Subagents
+              </label>
+              <SubagentPicker
+                agents={agents}
+                selectedIds={selectedSubagentIds ?? []}
+                onToggle={onToggleSubagentId}
+                disabled={!subagentsEnabled}
+              />
+            </div>
+          )}
 
           {/* Topological Sandboxing Notice */}
           <div className="border-border/60 bg-muted/30 space-y-1 rounded-lg border p-3 text-xs leading-relaxed">

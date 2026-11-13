@@ -100,6 +100,15 @@ export default function AgentEditorPage() {
         onRequiresFileUploadChange={workflow.form.setRequiresFileUpload}
         onOpenDeleteDialog={() => workflow.setShowDeleteDialog(true)}
         isDeleting={workflow.isDeleting}
+        agents={workflow.form.agents}
+        subagentIds={workflow.form.subagentIds}
+        onToggleSubagent={(subId) =>
+          workflow.form.setSubagentIds((prev) =>
+            prev.includes(subId)
+              ? prev.filter((s) => s !== subId)
+              : [...prev, subId],
+          )
+        }
       />
 
       <DeleteConfirmDialog

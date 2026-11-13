@@ -577,7 +577,7 @@ export default function SkillDetailPage() {
   const params = useParams();
   const skillId = params.id as string;
 
-  useResourceHydration(["projects", "assistants", "skills"]);
+  useResourceHydration(["projects", "agents", "skills"]);
 
   const skills = useAppStore((state) => state.skills);
   const skill = skills.find((s) => s.id === skillId);

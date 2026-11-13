@@ -19,17 +19,18 @@ export interface PromptGroup {
  */
 export interface PromptScopeContext {
   projectId?: string | null;
+  agentId?: string | null;
   assistantId?: string | null;
   promptMode?: "all" | "none" | "specific";
   allowedPromptIds?: string[];
 }
 
 /**
- * Filters a list of database prompts based on the active scope (Project, Assistant, or Global/Standalone).
+ * Filters a list of database prompts based on the active scope (Project, Agent, or Global/Standalone).
  * - Prompts scoped to a specific project are accessible ONLY within that project.
- * - Prompts scoped to a specific assistant are accessible ONLY with that assistant.
- * - Global prompts (projectId and assistantId are null) are accessible in global chat, or governed
- *   by promptMode ('all', 'none', 'specific') when inside a project or assistant.
+ * - Prompts scoped to a specific agent are accessible ONLY with that agent.
+ * - Global prompts (projectIds and agentIds are empty) are accessible in global chat, or governed
+ *   by promptMode ('all', 'none', 'specific') when inside a project or agent.
  *
  * @param prompts - Database prompts.
  * @param context - The current chat scope context.
@@ -41,37 +42,41 @@ export function filterAccessiblePrompts(
 ): Prompt[] {
   const {
     projectId,
+    agentId,
     assistantId,
     promptMode = "all",
     allowedPromptIds = [],
   } = context;
+  const scopedAgentId = agentId ?? assistantId;
   const allowedSet = new Set(allowedPromptIds);
 
   return prompts.filter((p) => {
+    const targetAgentIds =
+      p.agentIds && p.agentIds.length > 0 ? p.agentIds : (p.assistantIds ?? []);
     const isProjectScoped = Boolean(
       projectId && p.projectIds?.includes(projectId),
     );
-    const isAssistantScoped = Boolean(
-      assistantId && p.assistantIds?.includes(assistantId),
+    const isAgentScoped = Boolean(
+      scopedAgentId && targetAgentIds.includes(scopedAgentId),
     );
-    if (isProjectScoped || isAssistantScoped) {
+    if (isProjectScoped || isAgentScoped) {
       return true;
     }
 
     const isGlobal =
       (!p.projectIds || p.projectIds.length === 0) &&
-      (!p.assistantIds || p.assistantIds.length === 0);
+      targetAgentIds.length === 0;
 
-    // If it has specific project or assistant scopes and neither matches:
+    // If it has specific project or agent scopes and neither matches:
     if (!isGlobal) {
       return false;
     }
 
-    // In standalone global chat (no project, no assistant): always accessible
-    if (!projectId && !assistantId) {
+    // In standalone global chat (no project, no agent): always accessible
+    if (!projectId && !scopedAgentId) {
       return true;
     }
-    // Inside a Project or Assistant: check promptMode
+    // Inside a Project or Agent: check promptMode
     if (promptMode === "none") return false;
     if (promptMode === "specific") return allowedSet.has(p.id);
     return true; // "all"

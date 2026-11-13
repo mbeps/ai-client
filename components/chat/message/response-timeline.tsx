@@ -69,6 +69,8 @@ export function ResponseTimeline({
               key={step.key}
               toolCallId={step.toolCallId}
               role={step.role}
+              agentId={step.agentId}
+              agentName={step.agentName}
               taskBrief={step.taskBrief}
               inputData={step.inputData}
               result={step.result}

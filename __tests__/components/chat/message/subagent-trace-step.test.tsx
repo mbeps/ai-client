@@ -126,4 +126,22 @@ describe("SubagentTraceStep", () => {
     expect(screen.getByText("Worker Findings")).toBeDefined();
     expect(screen.getByText("Code looks great!")).toBeDefined();
   });
+
+  it("displays custom agentName and agentId title when provided", () => {
+    render(
+      <SubagentTraceStep
+        toolCallId="call-sub-6"
+        role="worker"
+        agentId="custom-agent-1"
+        agentName="SQL Analyst"
+        taskBrief="Query user retention"
+        state="done"
+        result="Done"
+      />,
+    );
+
+    const badge = screen.getByText("SQL Analyst");
+    expect(badge).toBeDefined();
+    expect(badge.getAttribute("title")).toBe("custom-agent-1");
+  });
 });

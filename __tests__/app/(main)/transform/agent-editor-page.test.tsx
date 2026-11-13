@@ -69,6 +69,8 @@ vi.mock("@/lib/store/use-app-store", () => ({
     loadMcpServers: vi.fn(),
     skills: [],
     loadSkills: vi.fn(),
+    agents: [],
+    loadAgents: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 vi.mock("@/hooks/use-knowledgebases", () => ({

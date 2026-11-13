@@ -14,8 +14,8 @@ vi.mock("@/components/chat/artifact-panel", () => ({
   ArtifactPanel: () => null,
 }));
 
-vi.mock("@/components/chat/assistant-bar", () => ({
-  AssistantBar: () => null,
+vi.mock("@/components/chat/agent-bar", () => ({
+  AgentBar: () => null,
 }));
 
 vi.mock("@/components/chat/message-thread", () => ({
@@ -101,7 +101,7 @@ describe("ChatUI - assistant tools seeding", () => {
       chats: { [chat.id]: chat },
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [assistant],
+      agents: [assistant],
       projects: [],
       prompts: [],
       skills: [],
@@ -151,7 +151,7 @@ describe("ChatUI - assistant tools seeding", () => {
       chats: { [chat.id]: chat },
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [],
+      agents: [],
       projects: [project],
       prompts: [],
       skills: [],

@@ -27,8 +27,8 @@ vi.mock("@/lib/auth/auth", () => ({ auth: {} }));
 vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/actions/assistants/list-assistants", () => ({
-  listAssistants: vi.fn(),
+vi.mock("@/actions/agents/list-agents", () => ({
+  listAgents: vi.fn(),
 }));
 vi.mock("@/actions/prompts/list-prompts", () => ({
   listPrompts: vi.fn(),
@@ -80,7 +80,7 @@ import { listProjects } from "@/actions/projects/list-projects";
 const RESET_STATE = {
   chats: {},
   projects: [],
-  assistants: [],
+  agents: [],
   prompts: [],
   userSettings: null,
   mcpServers: [],

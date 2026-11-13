@@ -34,7 +34,7 @@ vi.mock("@/components/chat/chat-page-client", () => ({
 }));
 
 import ProjectChatPage from "@/app/(main)/projects/[id]/[chatId]/page";
-import AssistantChatPage from "@/app/(main)/assistants/[id]/[chatId]/page";
+import AgentChatPage from "@/app/(main)/agents/[id]/[chatId]/page";
 
 describe("Scoped Chat Pages", () => {
   beforeEach(() => {
@@ -111,7 +111,7 @@ describe("Scoped Chat Pages", () => {
     });
   });
 
-  describe("AssistantChatPage", () => {
+  describe("AgentChatPage", () => {
     it("calls notFound when getChat fails", async () => {
       mockGetChat.mockResolvedValueOnce({
         ok: false,
@@ -119,7 +119,7 @@ describe("Scoped Chat Pages", () => {
       });
 
       await expect(
-        AssistantChatPage({
+        AgentChatPage({
           params: Promise.resolve({ id: "asst-1", chatId: "chat-1" }),
         }),
       ).rejects.toThrow("NEXT_NOT_FOUND");
@@ -127,16 +127,17 @@ describe("Scoped Chat Pages", () => {
       expect(mockNotFound).toHaveBeenCalled();
     });
 
-    it("redirects to standalone chat when chat.assistantId !== id", async () => {
+    it("redirects to standalone chat when chat.agentId !== id", async () => {
       mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: null,
-        assistantId: null, // unlinked/deleted assistant
+        agentId: null,
+        assistantId: null,
       });
 
       await expect(
-        AssistantChatPage({
+        AgentChatPage({
           params: Promise.resolve({ id: "asst-1", chatId: "chat-1" }),
         }),
       ).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.CHATS.detail("chat-1")}`);
@@ -145,16 +146,17 @@ describe("Scoped Chat Pages", () => {
       expect(mockNotFound).not.toHaveBeenCalled();
     });
 
-    it("redirects to standalone chat when chat.assistantId belongs to different assistant", async () => {
+    it("redirects to standalone chat when chat.agentId belongs to different agent", async () => {
       mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: null,
+        agentId: "asst-other",
         assistantId: "asst-other",
       });
 
       await expect(
-        AssistantChatPage({
+        AgentChatPage({
           params: Promise.resolve({ id: "asst-1", chatId: "chat-1" }),
         }),
       ).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.CHATS.detail("chat-1")}`);
@@ -163,15 +165,16 @@ describe("Scoped Chat Pages", () => {
       expect(mockNotFound).not.toHaveBeenCalled();
     });
 
-    it("renders ChatPageClient when chat.assistantId matches id", async () => {
+    it("renders ChatPageClient when chat.agentId matches id", async () => {
       mockGetChat.mockResolvedValueOnce({ ok: true, value: { id: "chat-1" } });
       mockBuildChatFromRows.mockReturnValueOnce({
         id: "chat-1",
         projectId: null,
+        agentId: "asst-1",
         assistantId: "asst-1",
       });
 
-      const element = await AssistantChatPage({
+      const element = await AgentChatPage({
         params: Promise.resolve({ id: "asst-1", chatId: "chat-1" }),
       });
 

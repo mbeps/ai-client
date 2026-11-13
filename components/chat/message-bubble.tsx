@@ -149,8 +149,8 @@ export function MessageBubble(props: MessageBubbleProps) {
   const isUser = message.role === "user";
   const prompts = useAppStore((state) => state.prompts);
   const skills = useAppStore((state) => state.skills);
-  const storeAssistants = useAppStore((state) => state.assistants);
-  const assistantsList = assistantsProp ?? storeAssistants;
+  const storeAgents = useAppStore((state) => state.agents);
+  const assistantsList = assistantsProp ?? storeAgents;
 
   const viewData = useMemo(
     () => deriveMessageBubbleViewData(message, isUser, streamingCitations),

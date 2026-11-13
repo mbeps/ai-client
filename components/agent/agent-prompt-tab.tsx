@@ -20,14 +20,14 @@ import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
 
 /**
- * Represents assistant prompt tab props.
- *
- * @author Maruf Bepary
+ * Props for the AgentPromptTab component.
  */
-export interface AssistantPromptTabProps {
-  assistantId?: string;
+export interface AgentPromptTabProps {
+  agentId?: string;
   prompt: string;
   onPromptChange: (value: string) => void;
+  subagentPrompt: string;
+  onSubagentPromptChange: (value: string) => void;
   promptMode?: "all" | "none" | "specific";
   onPromptModeChange?: (mode: "all" | "none" | "specific") => void;
   selectedPromptIds?: Set<string>;
@@ -36,48 +36,42 @@ export interface AssistantPromptTabProps {
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
   saveLabel?: string;
+  disabled?: boolean;
 }
 
-interface ModeOption {
-  value: "all" | "none" | "specific";
-  title: string;
-  description: string;
-  icon: typeof Globe;
-}
-
-const MODE_OPTIONS: ModeOption[] = [
+const MODE_OPTIONS = [
   {
-    value: "all",
+    value: "all" as const,
     title: "All Global Prompts (Default)",
     description:
-      "All global prompt shortcuts are accessible inside chats with this assistant.",
+      "All global prompt shortcuts are accessible inside chats with this agent.",
     icon: Globe,
   },
   {
-    value: "none",
-    title: "Assistant Prompts Only",
+    value: "none" as const,
+    title: "Agent Prompts Only",
     description:
-      "Exclude all global prompts. Only shortcuts created specifically for this assistant are accessible.",
+      "Exclude all global prompts. Only shortcuts created specifically for this agent are accessible.",
     icon: Ban,
   },
   {
-    value: "specific",
+    value: "specific" as const,
     title: "Specific Global Prompts",
     description:
-      "Allow only explicitly selected global prompts in addition to this assistant's shortcuts.",
+      "Allow only explicitly selected global prompts in addition to this agent's shortcuts.",
     icon: SlidersHorizontal,
   },
 ];
 
 /**
- * System persona and prompt controls editor tab for an Assistant.
- *
- * @author Maruf Bepary
+ * System persona, optional subagent worker instructions, and prompt shortcut controls for an Agent.
  */
-export function AssistantPromptTab({
-  assistantId,
+export function AgentPromptTab({
+  agentId,
   prompt,
   onPromptChange,
+  subagentPrompt,
+  onSubagentPromptChange,
   promptMode = "all",
   onPromptModeChange,
   selectedPromptIds = new Set(),
@@ -86,56 +80,91 @@ export function AssistantPromptTab({
   onSave,
   isSaving = false,
   saveLabel = "Save Changes",
-}: AssistantPromptTabProps) {
+  disabled = false,
+}: AgentPromptTabProps) {
   const prompts = useAppStore((state) => state.prompts);
 
   const globalPrompts = useMemo(
     () =>
-      prompts.filter(
-        (p) =>
-          (!p.projectIds || p.projectIds.length === 0) &&
-          (!p.assistantIds || p.assistantIds.length === 0),
-      ),
+      prompts.filter((p) => {
+        const agents =
+          p.agentIds && p.agentIds.length > 0
+            ? p.agentIds
+            : (p.assistantIds ?? []);
+        return (
+          (!p.projectIds || p.projectIds.length === 0) && agents.length === 0
+        );
+      }),
     [prompts],
   );
 
-  const assistantShortcuts = useMemo(
+  const agentShortcuts = useMemo(
     () =>
-      assistantId
-        ? prompts.filter((p) => p.assistantIds?.includes(assistantId))
+      agentId
+        ? prompts.filter((p) => {
+            const agents =
+              p.agentIds && p.agentIds.length > 0
+                ? p.agentIds
+                : (p.assistantIds ?? []);
+            return agents.includes(agentId);
+          })
         : [],
-    [prompts, assistantId],
+    [prompts, agentId],
   );
 
   return (
     <div className="space-y-8">
-      {/* 1. System Persona Instructions */}
       <div className="space-y-4">
         <div className="space-y-1">
           <h3 className="text-lg font-semibold">System Persona Prompt</h3>
           <p className="text-muted-foreground text-sm">
-            Customize the persona and instructions for chats with this
-            assistant.
+            Core persona and instructions used for direct chats and as base
+            context when delegated to.
           </p>
         </div>
-        <MarkdownTabEditor
-          value={prompt}
-          onChange={onPromptChange}
-          placeholder={
-            PROMPTS.UI.EXAMPLES.ASSISTANT_SYSTEM_PROMPT_PLACEHOLDER_EDIT
-          }
-          minHeight="min-h-[260px]"
-        />
+        <div
+          className={disabled ? "pointer-events-none opacity-60" : undefined}
+        >
+          <MarkdownTabEditor
+            value={prompt}
+            onChange={onPromptChange}
+            placeholder={
+              PROMPTS.UI.EXAMPLES.ASSISTANT_SYSTEM_PROMPT_PLACEHOLDER_EDIT
+            }
+            minHeight="min-h-[240px]"
+          />
+        </div>
       </div>
 
-      {/* 2. Global Prompt Controls */}
+      <div className="space-y-4 border-t pt-6">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold">
+            Subagent Worker Prompt (Optional)
+          </h3>
+          <p className="text-muted-foreground text-sm">
+            Dedicated worker instructions appended only when this agent is
+            invoked as a Layer-2 subagent via delegate_task.
+          </p>
+        </div>
+        <div
+          className={disabled ? "pointer-events-none opacity-60" : undefined}
+        >
+          <MarkdownTabEditor
+            value={subagentPrompt}
+            onChange={onSubagentPromptChange}
+            placeholder="Optional constraints, output formatting, or scratchpad instructions for delegated subagent runs..."
+            minHeight="min-h-[160px]"
+          />
+        </div>
+      </div>
+
       {onPromptModeChange && (
         <div className="space-y-4 border-t pt-6">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Global Prompt Shortcuts</h3>
             <p className="text-muted-foreground text-sm">
               Control which global slash-command shortcuts are accessible in
-              chats with this assistant.
+              chats with this agent.
             </p>
           </div>
 
@@ -145,11 +174,13 @@ export function AssistantPromptTab({
               const isSelected = promptMode === option.value;
 
               return (
-                <div
+                <button
                   key={option.value}
+                  type="button"
+                  disabled={disabled}
                   onClick={() => onPromptModeChange(option.value)}
                   className={cn(
-                    "group bg-card hover:bg-accent/40 relative flex cursor-pointer flex-col justify-between rounded-lg border p-4 transition-all",
+                    "group bg-card hover:bg-accent/40 relative flex cursor-pointer flex-col justify-between rounded-lg border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
                     isSelected
                       ? "border-primary bg-primary/5 shadow-xs"
                       : "border-border",
@@ -175,78 +206,54 @@ export function AssistantPromptTab({
                       {option.description}
                     </p>
                   </div>
-
-                  <div className="mt-3 flex items-center justify-end">
-                    <div
-                      className={cn(
-                        "h-2 w-2 rounded-full",
-                        isSelected ? "bg-primary" : "bg-transparent",
-                      )}
-                    />
-                  </div>
-                </div>
+                </button>
               );
             })}
           </div>
 
           {promptMode === "specific" && (
-            <div className="space-y-3 pt-2">
-              <div className="space-y-0.5">
-                <h4 className="text-sm font-medium">
-                  Select Allowed Global Prompts
-                </h4>
-                <p className="text-muted-foreground text-xs">
-                  Only the checked global prompts will be available with this
-                  assistant.
-                </p>
-              </div>
-              <div className="bg-card flex max-h-[400px] flex-col overflow-hidden rounded-md border p-4">
-                <PromptPicker
-                  prompts={globalPrompts}
-                  selectedPromptIds={selectedPromptIds}
-                  onTogglePrompt={(item) => onTogglePromptId?.(item.id)}
-                  onSelectAll={(items) =>
-                    onSelectPromptIds?.(new Set(items.map((i) => i.id)))
-                  }
-                  onClearAll={() => onSelectPromptIds?.(new Set())}
-                  maxHeight="320px"
-                />
-              </div>
+            <div className="bg-card flex max-h-[400px] flex-col overflow-hidden rounded-md border p-4">
+              <PromptPicker
+                prompts={globalPrompts}
+                selectedPromptIds={selectedPromptIds}
+                onTogglePrompt={(item) => onTogglePromptId?.(item.id)}
+                onSelectAll={(items) =>
+                  onSelectPromptIds?.(new Set(items.map((i) => i.id)))
+                }
+                onClearAll={() => onSelectPromptIds?.(new Set())}
+                maxHeight="320px"
+              />
             </div>
           )}
         </div>
       )}
 
-      {/* 3. Assistant-Specific Prompt Shortcuts */}
-      {assistantId && (
+      {agentId && !disabled && (
         <div className="space-y-4 border-t pt-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <h3 className="text-lg font-semibold">Assistant Shortcuts</h3>
+              <h3 className="text-lg font-semibold">Agent Shortcuts</h3>
               <p className="text-muted-foreground text-sm">
-                Prompts created exclusively for this assistant.
+                Prompts created exclusively for this agent.
               </p>
             </div>
             <Button asChild size="sm" variant="outline">
-              <Link
-                href={`${ROUTES.SETTINGS.PROMPTS.new}?assistantId=${assistantId}`}
-              >
+              <Link href={`${ROUTES.SETTINGS.PROMPTS.new}?agentId=${agentId}`}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                 New Shortcut
               </Link>
             </Button>
           </div>
 
-          {assistantShortcuts.length === 0 ? (
+          {agentShortcuts.length === 0 ? (
             <div className="bg-muted/20 rounded-lg border border-dashed p-6 text-center">
               <p className="text-muted-foreground text-xs">
-                No assistant-specific shortcuts yet. Create one to define a
-                shortcut accessible only with this assistant.
+                No agent-specific shortcuts yet.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {assistantShortcuts.map((p) => (
+              {agentShortcuts.map((p) => (
                 <PromptCard key={p.id} prompt={p} />
               ))}
             </div>
@@ -254,17 +261,18 @@ export function AssistantPromptTab({
         </div>
       )}
 
-      {/* 4. Unified Save Button */}
-      <div className="border-t pt-4">
-        <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {saveLabel}
-        </Button>
-      </div>
+      {!disabled && (
+        <div className="border-t pt-4">
+          <Button onClick={onSave} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {saveLabel}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

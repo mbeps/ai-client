@@ -12,8 +12,8 @@ vi.mock("@/components/chat/artifact-panel", () => ({
   ArtifactPanel: () => null,
 }));
 
-vi.mock("@/components/chat/assistant-bar", () => ({
-  AssistantBar: () => null,
+vi.mock("@/components/chat/agent-bar", () => ({
+  AgentBar: () => null,
 }));
 
 vi.mock("@/components/chat/message-thread", () => ({
@@ -86,7 +86,7 @@ function renderChatUI(chat: Chat) {
     chats: { [chat.id]: chat },
     mcpServers: [],
     loadMcpServers: vi.fn().mockResolvedValue([]),
-    assistants: [],
+    agents: [],
     projects: [],
     prompts: [],
     skills: [],
@@ -110,7 +110,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       chats: {},
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [
+      agents: [
         {
           id: "asst-1",
           name: "Helper",
@@ -142,7 +142,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       chats: {},
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [],
+      agents: [],
       projects: [
         {
           id: "proj-1",
@@ -171,7 +171,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       chats: {},
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [
+      agents: [
         {
           id: "asst-1",
           name: "Helper",

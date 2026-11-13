@@ -128,10 +128,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Assistants">
-                <Link href={ROUTES.ASSISTANTS.path}>
+              <SidebarMenuButton asChild tooltip="Agents">
+                <Link href={ROUTES.AGENTS.path}>
                   <Bot className="h-4 w-4" />
-                  <span>Assistants</span>
+                  <span>Agents</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

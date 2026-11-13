@@ -16,7 +16,7 @@ import {
   type SkillScopeContext,
 } from "@/lib/skills/filter-accessible-skills";
 import { useAppStore } from "@/lib/store/use-app-store";
-import type { Assistant } from "@/types/assistant/assistant";
+import type { Agent } from "@/types/agent/agent";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { Prompt } from "@/types/prompt/prompt";
@@ -56,11 +56,11 @@ export type MentionSkillItem = Skill & {
 };
 
 /**
- * Assistant persona mention item.
+ * Agent persona mention item.
  *
  * @author Maruf Bepary
  */
-export type MentionAssistantItem = Assistant & {
+export type MentionAssistantItem = Agent & {
   isMcp: false;
   isSkill?: false;
 };
@@ -121,7 +121,7 @@ export function useMentionCommands(
   skillScopeContext?: SkillScopeContext,
 ) {
   const prompts = useAppStore((state) => state.prompts);
-  const assistants = useAppStore((state) => state.assistants);
+  const agents = useAppStore((state) => state.agents);
   const skills = useAppStore((state) => state.skills);
   const mcpPrompts = useAppStore((state) => state.mcpPrompts);
   const kbs = knowledgebases ?? [];
@@ -164,9 +164,9 @@ export function useMentionCommands(
     },
   );
 
-  const [selectedAssistant, setSelectedAssistant] = useState<Assistant | null>(
+  const [selectedAssistant, setSelectedAssistant] = useState<Agent | null>(
     initialSelectedAssistantId
-      ? assistants.find((a) => a.id === initialSelectedAssistantId) || null
+      ? agents.find((a) => a.id === initialSelectedAssistantId) || null
       : null,
   );
 
@@ -231,11 +231,12 @@ export function useMentionCommands(
     }
 
     if (openTrigger === "@") {
-      return assistants
+      return agents
         .filter(
           (a) =>
-            a.name.toLowerCase().includes(q) ||
-            a.description?.toLowerCase().includes(q),
+            a.id !== "builtin:kb-reader" &&
+            (a.name.toLowerCase().includes(q) ||
+              a.description?.toLowerCase().includes(q)),
         )
         .map(
           (a): MentionAssistantItem => ({ ...a, isMcp: false, isSkill: false }),
@@ -264,7 +265,7 @@ export function useMentionCommands(
     skills,
     prompts,
     mcpPrompts,
-    assistants,
+    agents,
     kbs,
     openTrigger,
     selectedServerIds,

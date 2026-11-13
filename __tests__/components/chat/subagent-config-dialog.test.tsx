@@ -89,5 +89,45 @@ describe("SubagentConfigDialog", () => {
     fireEvent.click(cancelButton);
     expect(handleOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("renders SubagentPicker when onToggleSubagentId is provided", () => {
+    const onToggleSubagentId = vi.fn();
+    render(
+      <SubagentConfigDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        subagentsEnabled={true}
+        onToggleSubagents={vi.fn()}
+        onSubagentModelChange={vi.fn()}
+        agents={[
+          {
+            id: "leaf-1",
+            userId: "user-1",
+            name: "Custom Leaf",
+            description: "Does leaf work",
+            prompt: "",
+            subagentPrompt: "",
+            modelId: null,
+            tools: [],
+            skillMode: "dynamic",
+            skillIds: [],
+            promptMode: "all",
+            promptIds: [],
+            knowledgebaseIds: [],
+            subagentIds: [],
+            guardrails: null,
+            avatar: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ]}
+        selectedSubagentIds={["leaf-1"]}
+        onToggleSubagentId={onToggleSubagentId}
+      />,
+    );
+
+    expect(screen.getByText("Available Subagents")).toBeInTheDocument();
+    expect(screen.getByText("Custom Leaf")).toBeInTheDocument();
+  });
 });
 

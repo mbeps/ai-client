@@ -25,6 +25,7 @@ import type { Skill } from "@/types/skill/skill";
  */
 export interface SkillsConfigTabProps {
   projectId?: string;
+  agentId?: string;
   assistantId?: string;
   skillMode: SkillMode;
   onSkillModeChange: (mode: SkillMode) => void;
@@ -38,6 +39,7 @@ export interface SkillsConfigTabProps {
   title?: string;
   description?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 /**
@@ -84,6 +86,7 @@ const MODE_OPTIONS: ModeOption[] = [
  */
 export function SkillsConfigTab({
   projectId,
+  agentId,
   assistantId,
   skillMode,
   onSkillModeChange,
@@ -97,26 +100,38 @@ export function SkillsConfigTab({
   title = "Skills Configuration",
   description = "Configure how agent skills and domain instructions are used.",
   className,
+  disabled = false,
 }: SkillsConfigTabProps) {
+  const scopedAgentId = agentId ?? assistantId;
+
   const entitySkills = useMemo(() => {
     return skills.filter((s) => {
+      const targetAgents =
+        s.agentIds && s.agentIds.length > 0
+          ? s.agentIds
+          : (s.assistantIds ?? []);
       const matchProject = Boolean(
         projectId && s.projectIds?.includes(projectId),
       );
-      const matchAssistant = Boolean(
-        assistantId && s.assistantIds?.includes(assistantId),
+      const matchAgent = Boolean(
+        scopedAgentId && targetAgents.includes(scopedAgentId),
       );
-      return matchProject || matchAssistant;
+      return matchProject || matchAgent;
     });
-  }, [skills, projectId, assistantId]);
+  }, [skills, projectId, scopedAgentId]);
 
   const globalSkills = useMemo(
     () =>
-      skills.filter(
-        (s) =>
+      skills.filter((s) => {
+        const targetAgents =
+          s.agentIds && s.agentIds.length > 0
+            ? s.agentIds
+            : (s.assistantIds ?? []);
+        return (
           (!s.projectIds || s.projectIds.length === 0) &&
-          (!s.assistantIds || s.assistantIds.length === 0),
-      ),
+          targetAgents.length === 0
+        );
+      }),
     [skills],
   );
 
@@ -198,38 +213,40 @@ export function SkillsConfigTab({
         </div>
       )}
 
-      {(projectId || assistantId) && (
+      {(projectId || scopedAgentId) && (
         <div className="space-y-4 border-t pt-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <h4 className="text-base font-semibold">
-                {projectId ? "Project Skills" : "Assistant Skills"}
+                {projectId ? "Project Skills" : "Agent Skills"}
               </h4>
               <p className="text-muted-foreground text-xs">
                 Skills created exclusively for this{" "}
-                {projectId ? "project" : "assistant"}.
+                {projectId ? "project" : "agent"}.
               </p>
             </div>
-            <Button asChild size="sm" variant="outline">
-              <Link
-                href={
-                  projectId
-                    ? `${ROUTES.SETTINGS.SKILLS.new}?projectId=${projectId}`
-                    : `${ROUTES.SETTINGS.SKILLS.new}?assistantId=${assistantId}`
-                }
-              >
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                New Skill
-              </Link>
-            </Button>
+            {!disabled && (
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  href={
+                    projectId
+                      ? `${ROUTES.SETTINGS.SKILLS.new}?projectId=${projectId}`
+                      : `${ROUTES.SETTINGS.SKILLS.new}?agentId=${scopedAgentId}`
+                  }
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  New Skill
+                </Link>
+              </Button>
+            )}
           </div>
 
           {entitySkills.length === 0 ? (
             <div className="bg-muted/20 rounded-lg border border-dashed p-6 text-center">
               <p className="text-muted-foreground text-xs">
-                No {projectId ? "project" : "assistant"}-specific skills yet.
-                Create one to define a skill accessible only in this{" "}
-                {projectId ? "project" : "assistant"}.
+                No {projectId ? "project" : "agent"}-specific skills yet. Create
+                one to define a skill accessible only in this{" "}
+                {projectId ? "project" : "agent"}.
               </p>
             </div>
           ) : (
@@ -242,7 +259,7 @@ export function SkillsConfigTab({
         </div>
       )}
 
-      {onSave && (
+      {onSave && !disabled && (
         <Button onClick={onSave} disabled={isSaving}>
           {isSaving ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -16,6 +16,7 @@ export default async function ChatsPage() {
     id: row.id,
     title: row.title,
     projectId: row.projectId ?? undefined,
+    agentId: row.agentId ?? undefined,
     assistantId: row.agentId ?? undefined,
     knowledgebaseId: row.knowledgebaseId ?? null,
     createdAt: new Date(row.createdAt),

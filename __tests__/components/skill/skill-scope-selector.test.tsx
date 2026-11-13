@@ -44,7 +44,7 @@ describe("SkillScopeSelector", () => {
   beforeEach(() => {
     useAppStore.setState({
       projects: mockProjects,
-      assistants: mockAssistants,
+      agents: mockAssistants,
     });
   });
 

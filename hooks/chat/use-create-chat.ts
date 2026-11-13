@@ -28,15 +28,15 @@ export function useCreateChat() {
   const createNewChat = async (
     title: string = "New Chat",
     projectId?: string,
-    assistantId?: string,
+    agentId?: string,
   ) => {
     try {
-      const id = await createChatDb(title, projectId, assistantId);
+      const id = await createChatDb(title, projectId, agentId);
       router.push(
         projectId
           ? ROUTES.PROJECTS.chat(projectId, id)
-          : assistantId
-            ? ROUTES.ASSISTANTS.chat(assistantId, id)
+          : agentId
+            ? ROUTES.AGENTS.chat(agentId, id)
             : ROUTES.CHATS.detail(id),
       );
       return id;

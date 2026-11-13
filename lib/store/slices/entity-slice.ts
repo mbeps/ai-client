@@ -1,5 +1,8 @@
 import type { StateCreator } from "zustand";
-import { listAssistants } from "@/actions/assistants/list-assistants";
+import {
+  type AgentRowWithUsage,
+  listAgents,
+} from "@/actions/agents/list-agents";
 import { discoverAllPrompts } from "@/actions/mcp/discover-all-prompts";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers } from "@/actions/mcp-servers/list-public-mcp-servers";
@@ -9,6 +12,9 @@ import { listPrompts } from "@/actions/prompts/list-prompts";
 import { listSkills } from "@/actions/skills/list-skills";
 import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
 import { getUserSettings } from "@/actions/user-settings/get-user-settings";
+import { BUILT_IN_AGENTS } from "@/config/built-in-agents";
+import { DEFAULT_AGENT_GUARDRAILS } from "@/drizzle/schemas/agent-schema";
+import type { Agent } from "@/types/agent/agent";
 import type { AppState } from "@/types/app/app-state";
 import type { Result } from "@/types/result";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
@@ -64,7 +70,7 @@ const createEntityLoader = <K extends keyof AppState, R>(
 type EntitySlice = Pick<
   AppState,
   | "projects"
-  | "assistants"
+  | "agents"
   | "prompts"
   | "skills"
   | "memories"
@@ -76,7 +82,8 @@ type EntitySlice = Pick<
   | "loadError"
   | "loadTransformAgents"
   | "loadProjects"
-  | "loadAssistants"
+  | "loadAgents"
+  | "deleteAgent"
   | "loadPrompts"
   | "loadSkills"
   | "loadMemories"
@@ -102,7 +109,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   set,
 ) => ({
   projects: [],
-  assistants: [],
+  agents: [],
   prompts: [],
   skills: [],
   memories: [],
@@ -162,6 +169,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     skillIds: row.skillIds ?? [],
     promptMode: (row.promptMode as "all" | "none" | "specific") ?? "all",
     promptIds: row.promptIds ?? [],
+    subagentIds: row.subagentIds ?? [],
     knowledgebaseId: row.knowledgebaseId ?? null,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
@@ -189,6 +197,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
         skillMode: row.skillMode as "dynamic" | "none" | "specific",
         skillIds: row.skillIds ?? [],
         knowledgeBaseIds: row.knowledgeBaseIds,
+        subagentIds: row.subagentIds ?? [],
         requiresFileUpload: row.requiresFileUpload,
         steps,
         createdAt: new Date(row.createdAt),
@@ -197,26 +206,99 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     },
   ),
 
-  loadAssistants: createEntityLoader(
-    set,
-    "assistants",
-    listAssistants,
-    (row) => ({
-      id: row.id,
-      userId: row.userId,
-      name: row.name,
-      description: row.description ?? "",
-      prompt: row.prompt ?? "",
-      tools: row.tools ?? [],
-      skillMode: row.skillMode as "dynamic" | "none" | "specific",
-      skillIds: row.skillIds ?? [],
-      promptMode: (row.promptMode as "all" | "none" | "specific") ?? "all",
-      promptIds: row.promptIds ?? [],
-      avatar: row.avatar ?? null,
-      createdAt: new Date(row.createdAt),
-      updatedAt: new Date(row.updatedAt),
-    }),
-  ),
+  loadAgents: async () => {
+    const mapAgentRow = (row: AgentRowWithUsage): Agent => {
+      const subagentIds = row.subagentIds ?? [];
+      return {
+        id: row.id,
+        userId: row.userId,
+        name: row.name,
+        description: row.description ?? "",
+        prompt: row.prompt ?? "",
+        subagentPrompt: row.subagentPrompt ?? "",
+        modelId: row.modelId ?? null,
+        knowledgebaseIds: row.knowledgebaseIds ?? [],
+        tools: row.tools ?? [],
+        skillMode: row.skillMode as "dynamic" | "none" | "specific",
+        skillIds: row.skillIds ?? [],
+        promptMode: (row.promptMode as "all" | "none" | "specific") ?? "all",
+        promptIds: row.promptIds ?? [],
+        subagentIds,
+        guardrails: row.guardrails ?? DEFAULT_AGENT_GUARDRAILS,
+        avatar: row.avatar ?? null,
+        isBuiltIn: false,
+        isOrchestrator: subagentIds.length > 0,
+        usedByCount: row.usedByCount ?? 0,
+        createdAt: new Date(row.createdAt),
+        updatedAt: new Date(row.updatedAt),
+      };
+    };
+
+    try {
+      const res = await listAgents();
+      if (res && typeof res === "object" && "ok" in res) {
+        if (!res.ok) {
+          set({ loadError: res.error?.message || "Failed to load agents" });
+          return;
+        }
+        set({
+          agents: [...res.value.map(mapAgentRow), ...BUILT_IN_AGENTS],
+          loadError: null,
+        });
+        return;
+      }
+      set({
+        agents: [
+          ...(res as AgentRowWithUsage[]).map(mapAgentRow),
+          ...BUILT_IN_AGENTS,
+        ],
+        loadError: null,
+      });
+    } catch {
+      set({ loadError: "Failed to load agents" });
+    }
+  },
+
+  deleteAgent: (agentId) => {
+    set((state) => {
+      const nextAgents = state.agents
+        .filter((a) => a.id !== agentId)
+        .map((a) => {
+          const filtered = a.subagentIds.filter((id) => id !== agentId);
+          if (filtered.length === a.subagentIds.length) return a;
+          return {
+            ...a,
+            subagentIds: filtered,
+            isOrchestrator: filtered.length > 0,
+          };
+        });
+
+      const nextProjects = state.projects.map((p) => {
+        if (!p.subagentIds?.includes(agentId)) return p;
+        return {
+          ...p,
+          subagentIds: p.subagentIds.filter((id) => id !== agentId),
+        };
+      });
+
+      const nextChats = { ...state.chats };
+      for (const [chatId, chat] of Object.entries(nextChats)) {
+        if (chat.agentId === agentId || chat.assistantId === agentId) {
+          nextChats[chatId] = {
+            ...chat,
+            agentId: undefined,
+            assistantId: undefined,
+          };
+        }
+      }
+
+      return {
+        agents: nextAgents,
+        projects: nextProjects,
+        chats: nextChats,
+      };
+    });
+  },
 
   loadPrompts: createEntityLoader(set, "prompts", listPrompts, (row) => ({
     id: row.id,
@@ -225,6 +307,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     shortcut: row.shortcut,
     content: row.content,
     projectIds: row.projectIds ?? [],
+    agentIds: row.agentIds ?? [],
     assistantIds: row.agentIds ?? [],
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
@@ -240,6 +323,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     files: (row.files as any) ?? [],
     enabled: row.enabled,
     projectIds: row.projectIds ?? [],
+    agentIds: row.agentIds ?? [],
     assistantIds: row.agentIds ?? [],
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
@@ -307,7 +391,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   resetEntityState: () => {
     set({
       projects: [],
-      assistants: [],
+      agents: [],
       prompts: [],
       skills: [],
       memories: [],

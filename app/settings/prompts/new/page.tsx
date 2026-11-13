@@ -27,9 +27,10 @@ export default function NewPromptPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultProjectId = searchParams.get("projectId") ?? undefined;
-  const defaultAssistantId = searchParams.get("assistantId") ?? undefined;
+  const defaultAssistantId =
+    searchParams.get("agentId") ?? searchParams.get("assistantId") ?? undefined;
 
-  useResourceHydration(["projects", "assistants", "prompts"]);
+  useResourceHydration(["projects", "agents", "prompts"]);
 
   const loadPrompts = useAppStore((state) => state.loadPrompts);
   const [isSubmitting, setIsSubmitting] = useState(false);

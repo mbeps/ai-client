@@ -6,6 +6,7 @@ import {
   FileText,
   History,
   List,
+  Network,
   Plus,
   Settings,
   Shield,
@@ -22,6 +23,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
+import { SubagentPicker } from "@/components/shared/subagent-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TransformConfigTab } from "@/components/workflows/sheet-flow/transform-config-tab";
@@ -31,6 +33,7 @@ import { TransformStepsTab } from "@/components/workflows/sheet-flow/transform-s
 import { ROUTES } from "@/config/routes";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import type { SkillMode } from "@/schemas/skill/skill-config";
+import type { Agent } from "@/types/agent/agent";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { Skill } from "@/types/skill/skill";
@@ -83,6 +86,9 @@ export interface AgentEditorTabsProps {
   onRequiresFileUploadChange: (requires: boolean) => void;
   onOpenDeleteDialog: () => void;
   isDeleting: boolean;
+  agents?: Agent[];
+  subagentIds?: string[];
+  onToggleSubagent?: (id: string) => void;
 }
 
 /**
@@ -126,6 +132,9 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
     onRequiresFileUploadChange,
     onOpenDeleteDialog,
     isDeleting,
+    agents = [],
+    subagentIds = [],
+    onToggleSubagent,
   } = props;
 
   return (
@@ -162,6 +171,10 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
         <SidebarTabsTrigger value="skills">
           <BrainCircuit className="mr-2 h-4 w-4" />
           <span>Skills</span>
+        </SidebarTabsTrigger>
+        <SidebarTabsTrigger value="subagents">
+          <Network className="mr-2 h-4 w-4" />
+          <span>Subagents</span>
         </SidebarTabsTrigger>
         {!isNew && (
           <SidebarTabsTrigger value="runs">
@@ -260,6 +273,21 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
           skills={skills}
           onSave={onSave}
           isSaving={isSaving}
+        />
+      </SidebarTabsContent>
+
+      <SidebarTabsContent value="subagents" className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold">Workflow Subagents</h3>
+          <p className="text-muted-foreground text-sm">
+            Select Leaf Agents and Built-in Agents available for delegation via
+            delegate_task during workflow steps.
+          </p>
+        </div>
+        <SubagentPicker
+          agents={agents}
+          selectedIds={subagentIds}
+          onToggle={(id) => onToggleSubagent?.(id)}
         />
       </SidebarTabsContent>
 

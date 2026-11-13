@@ -27,9 +27,9 @@ vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
 
-// Assistants
-vi.mock("@/actions/assistants/list-assistants", () => ({
-  listAssistants: vi.fn(),
+// Agents
+vi.mock("@/actions/agents/list-agents", () => ({
+  listAgents: vi.fn(),
 }));
 
 // Prompts
@@ -65,7 +65,9 @@ vi.mock("@/actions/mcp/discover-all-prompts", () => ({
   discoverAllPrompts: vi.fn(),
 }));
 
-import { listAssistants as listAssistantsAction } from "@/actions/assistants/list-assistants";
+import { listAgents as listAgentsAction } from "@/actions/agents/list-agents";
+import { BUILT_IN_AGENTS } from "@/config/built-in-agents";
+import { DEFAULT_AGENT_GUARDRAILS } from "@/drizzle/schemas/agent-schema";
 import { listMcpServers as listMcpServersAction } from "@/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers as listPublicMcpServersAction } from "@/actions/mcp-servers/list-public-mcp-servers";
 import { listSkills as listSkillsAction } from "@/actions/skills/list-skills";
@@ -95,7 +97,7 @@ vi.mock("@/actions/chats/update-message-metadata", () => ({
 const RESET_STATE = {
   chats: {} as Record<string, Chat>,
   projects: [],
-  assistants: [],
+  agents: [],
   prompts: [],
   mcpServers: [],
 };
@@ -112,15 +114,31 @@ const makeProjectRow = (id: string, name = "Test Project") => ({
   updatedAt: NOW,
 });
 
-const makeAssistantRow = (id: string, name = "Test Assistant") => ({
+const makeAgentRow = (
+  id: string,
+  name = "Test Agent",
+  overrides: Record<string, unknown> = {},
+) => ({
   id,
   name,
   description: null,
   prompt: null,
+  subagentPrompt: null,
+  modelId: null,
+  knowledgebaseIds: [],
+  tools: [],
+  skillMode: "dynamic",
+  skillIds: [],
+  promptMode: "all",
+  promptIds: [],
+  subagentIds: [],
+  guardrails: DEFAULT_AGENT_GUARDRAILS,
   avatar: null,
+  usedByCount: 0,
   userId: "user-1",
   createdAt: NOW,
   updatedAt: NOW,
+  ...overrides,
 });
 
 const makePromptRow = (id: string, title = "Test Prompt") => ({
@@ -156,8 +174,8 @@ describe("EntitySlice — initial state", () => {
     expect(useAppStore.getState().projects).toEqual([]);
   });
 
-  it("starts with empty assistants array", () => {
-    expect(useAppStore.getState().assistants).toEqual([]);
+  it("starts with empty agents array", () => {
+    expect(useAppStore.getState().agents).toEqual([]);
   });
 
   it("starts with empty prompts array", () => {
@@ -190,20 +208,114 @@ describe("EntitySlice — Projects", () => {
   });
 });
 
-// ─── Assistants ────────────────────────────────────────────────────────────
-describe("EntitySlice — Assistants", () => {
+// ─── Agents ────────────────────────────────────────────────────────────────
+describe("EntitySlice — Agents", () => {
   beforeEach(() => {
     useAppStore.setState(RESET_STATE);
     vi.clearAllMocks();
   });
 
-  describe("loadAssistants", () => {
-    it("replaces assistants with rows from server action", async () => {
-      vi.mocked(listAssistantsAction).mockResolvedValueOnce([
-        makeAssistantRow("a1", "My Bot"),
-      ]);
-      await useAppStore.getState().loadAssistants();
-      expect(useAppStore.getState().assistants[0].name).toBe("My Bot");
+  describe("loadAgents", () => {
+    it("merges custom agents from server action with BUILT_IN_AGENTS", async () => {
+      vi.mocked(listAgentsAction).mockResolvedValueOnce([
+        makeAgentRow("a1", "My Bot", {
+          subagentIds: ["builtin:researcher"],
+          usedByCount: 0,
+        }),
+      ] as any);
+      await useAppStore.getState().loadAgents();
+      const agents = useAppStore.getState().agents;
+      expect(agents).toHaveLength(1 + BUILT_IN_AGENTS.length);
+      expect(agents[0].name).toBe("My Bot");
+      expect(agents[0].isOrchestrator).toBe(true);
+      expect(agents[0].isBuiltIn).toBe(false);
+      expect(agents.some((a) => a.id === "builtin:researcher" && a.isBuiltIn)).toBe(
+        true,
+      );
+    });
+
+    it("handles Result failure in loadAgents without throwing", async () => {
+      vi.mocked(listAgentsAction).mockResolvedValueOnce({
+        ok: false,
+        error: { code: "DB_ERROR", message: "DB down" },
+      } as any);
+      await useAppStore.getState().loadAgents();
+      expect(useAppStore.getState().loadError).toBe("DB down");
+    });
+
+    it("handles Result success in loadAgents", async () => {
+      vi.mocked(listAgentsAction).mockResolvedValueOnce({
+        ok: true,
+        value: [makeAgentRow("a2", "Result Bot")],
+      } as any);
+      await useAppStore.getState().loadAgents();
+      expect(useAppStore.getState().loadError).toBeNull();
+      expect(useAppStore.getState().agents[0].name).toBe("Result Bot");
+    });
+  });
+
+  describe("deleteAgent", () => {
+    it("removes agent and cascades unbind across chats, agents, and projects", () => {
+      useAppStore.setState({
+        agents: [
+          {
+            ...BUILT_IN_AGENTS[0],
+            id: "leaf-1",
+            name: "Leaf",
+            isBuiltIn: false,
+            subagentIds: [],
+          },
+          {
+            ...BUILT_IN_AGENTS[0],
+            id: "orch-1",
+            name: "Orch",
+            isBuiltIn: false,
+            isOrchestrator: true,
+            subagentIds: ["leaf-1", "builtin:researcher"],
+          },
+        ],
+        projects: [
+          {
+            id: "proj-1",
+            userId: "user-1",
+            name: "Proj",
+            description: "",
+            globalPrompt: "",
+            tools: [],
+            skillMode: "dynamic",
+            skillIds: [],
+            promptMode: "all",
+            promptIds: [],
+            subagentIds: ["leaf-1"],
+            knowledgebaseId: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        chats: {
+          "chat-1": {
+            id: "chat-1",
+            title: "Agent Chat",
+            agentId: "leaf-1",
+            assistantId: "leaf-1",
+            messages: {},
+            currentLeafId: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        },
+      });
+
+      useAppStore.getState().deleteAgent("leaf-1");
+
+      const state = useAppStore.getState();
+      expect(state.agents.find((a) => a.id === "leaf-1")).toBeUndefined();
+      const orch = state.agents.find((a) => a.id === "orch-1");
+      expect(orch?.subagentIds).toEqual(["builtin:researcher"]);
+      expect(orch?.isOrchestrator).toBe(true);
+      expect(state.projects[0].subagentIds).toEqual([]);
+      expect(state.chats["chat-1"].agentId).toBeUndefined();
+      expect(state.chats["chat-1"].assistantId).toBeUndefined();
     });
   });
 });
@@ -307,15 +419,15 @@ describe("EntitySlice — loadError", () => {
   });
 
   it("resetEntityState clears loadError", () => {
-    useAppStore.setState({ loadError: "Failed to load assistants" });
+    useAppStore.setState({ loadError: "Failed to load agents" });
     useAppStore.getState().resetEntityState();
     expect(useAppStore.getState().loadError).toBeNull();
   });
 
   it("does not reject when the loader fails", async () => {
-    vi.mocked(listAssistantsAction).mockRejectedValueOnce(new Error("boom"));
+    vi.mocked(listAgentsAction).mockRejectedValueOnce(new Error("boom"));
     await expect(
-      useAppStore.getState().loadAssistants(),
+      useAppStore.getState().loadAgents(),
     ).resolves.toBeUndefined();
   });
 });
@@ -345,7 +457,7 @@ describe("T5.4 resetEntityState clears entity state", () => {
     expect(useAppStore.getState().projects).toHaveLength(1);
     useAppStore.getState().resetEntityState();
     expect(useAppStore.getState().projects).toHaveLength(0);
-    expect(useAppStore.getState().assistants).toHaveLength(0);
+    expect(useAppStore.getState().agents).toHaveLength(0);
     expect(useAppStore.getState().prompts).toHaveLength(0);
     expect(useAppStore.getState().mcpServers).toHaveLength(0);
     expect(useAppStore.getState().publicMcpServers).toHaveLength(0);
@@ -573,5 +685,229 @@ describe("T5.4 resetEntityState clears entity state", () => {
     vi.mocked(discoverAllPromptsAction).mockRejectedValueOnce(new Error("failure"));
     await useAppStore.getState().loadMcpPrompts();
     expect(useAppStore.getState().loadError).toBe("Failed to load mcpPrompts");
+  });
+
+  it("loadAgents handles Result ok/error envelopes and default guardrails/usage", async () => {
+    vi.mocked(listAgentsAction).mockResolvedValueOnce({
+      ok: true,
+      value: [
+        {
+          id: "agent-ok",
+          userId: "u1",
+          name: "Agent OK",
+          description: null,
+          prompt: null,
+          subagentPrompt: null,
+          modelId: null,
+          knowledgebaseIds: undefined,
+          tools: null,
+          skillMode: "dynamic",
+          skillIds: null,
+          promptMode: null,
+          promptIds: null,
+          subagentIds: undefined,
+          guardrails: { maxSteps: 10, scratchpadAccess: false, isolateTools: true },
+          avatar: null,
+          usedByCount: 2,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "agent-defaults",
+          userId: "u1",
+          name: "Agent Defaults",
+          description: null,
+          prompt: null,
+          subagentPrompt: null,
+          modelId: null,
+          knowledgebaseIds: null,
+          tools: null,
+          skillMode: "dynamic",
+          skillIds: null,
+          promptMode: null,
+          promptIds: null,
+          subagentIds: null,
+          guardrails: null,
+          avatar: null,
+          usedByCount: undefined,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    } as any);
+
+    await useAppStore.getState().loadAgents();
+    expect(useAppStore.getState().loadError).toBeNull();
+    const loaded = useAppStore.getState().agents.find((a) => a.id === "agent-ok");
+    expect(loaded?.usedByCount).toBe(2);
+    expect(loaded?.guardrails?.maxSteps).toBe(10);
+    const defaulted = useAppStore
+      .getState()
+      .agents.find((a) => a.id === "agent-defaults");
+    expect(defaulted?.usedByCount).toBe(0);
+    expect(defaulted?.guardrails).toEqual(DEFAULT_AGENT_GUARDRAILS);
+
+    vi.mocked(listAgentsAction).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Agent fetch failed" },
+    } as any);
+    await useAppStore.getState().loadAgents();
+    expect(useAppStore.getState().loadError).toBe("Agent fetch failed");
+
+    vi.mocked(listAgentsAction).mockResolvedValueOnce({
+      ok: false,
+      error: {},
+    } as any);
+    await useAppStore.getState().loadAgents();
+    expect(useAppStore.getState().loadError).toBe("Failed to load agents");
+  });
+
+  it("deleteAgent removes agent, strips subagentIds from agents/projects, and unbinds chats", () => {
+    useAppStore.setState({
+      agents: [
+        {
+          id: "leaf-1",
+          userId: "u1",
+          name: "Leaf",
+          description: "",
+          prompt: "",
+          subagentPrompt: "",
+          modelId: null,
+          knowledgebaseIds: [],
+          tools: [],
+          skillMode: "dynamic",
+          skillIds: [],
+          promptMode: "all",
+          promptIds: [],
+          subagentIds: [],
+          guardrails: DEFAULT_AGENT_GUARDRAILS,
+          avatar: null,
+          isBuiltIn: false,
+          isOrchestrator: false,
+          usedByCount: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "orch-1",
+          userId: "u1",
+          name: "Orchestrator",
+          description: "",
+          prompt: "",
+          subagentPrompt: "",
+          modelId: null,
+          knowledgebaseIds: [],
+          tools: [],
+          skillMode: "dynamic",
+          skillIds: [],
+          promptMode: "all",
+          promptIds: [],
+          subagentIds: ["leaf-1"],
+          guardrails: DEFAULT_AGENT_GUARDRAILS,
+          avatar: null,
+          isBuiltIn: false,
+          isOrchestrator: true,
+          usedByCount: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "unrelated-agent",
+          userId: "u1",
+          name: "Unrelated",
+          description: "",
+          prompt: "",
+          subagentPrompt: "",
+          modelId: null,
+          knowledgebaseIds: [],
+          tools: [],
+          skillMode: "dynamic",
+          skillIds: [],
+          promptMode: "all",
+          promptIds: [],
+          subagentIds: [],
+          guardrails: DEFAULT_AGENT_GUARDRAILS,
+          avatar: null,
+          isBuiltIn: false,
+          isOrchestrator: false,
+          usedByCount: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      projects: [
+        {
+          id: "proj-with-sub",
+          userId: "u1",
+          name: "Proj 1",
+          description: "",
+          globalPrompt: "",
+          tools: [],
+          skillMode: "dynamic",
+          skillIds: [],
+          promptMode: "all",
+          promptIds: [],
+          knowledgebaseId: null,
+          subagentIds: ["leaf-1", "other"],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "proj-no-sub",
+          userId: "u1",
+          name: "Proj 2",
+          description: "",
+          globalPrompt: "",
+          tools: [],
+          skillMode: "dynamic",
+          skillIds: [],
+          promptMode: "all",
+          promptIds: [],
+          knowledgebaseId: null,
+          subagentIds: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      chats: {
+        c1: {
+          id: "c1",
+          title: "Bound",
+          agentId: "leaf-1",
+          assistantId: "leaf-1",
+          messages: {},
+          currentLeafId: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        c2: {
+          id: "c2",
+          title: "Unbound",
+          agentId: "other",
+          assistantId: "other",
+          messages: {},
+          currentLeafId: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      },
+    });
+
+    useAppStore.getState().deleteAgent("leaf-1");
+
+    const state = useAppStore.getState();
+    expect(state.agents.find((a) => a.id === "leaf-1")).toBeUndefined();
+    const orch = state.agents.find((a) => a.id === "orch-1");
+    expect(orch?.subagentIds).toEqual([]);
+    expect(orch?.isOrchestrator).toBe(false);
+    expect(
+      state.projects.find((p) => p.id === "proj-with-sub")?.subagentIds,
+    ).toEqual(["other"]);
+    expect(
+      state.projects.find((p) => p.id === "proj-no-sub")?.subagentIds,
+    ).toEqual([]);
+    expect(state.chats.c1.agentId).toBeUndefined();
+    expect(state.chats.c1.assistantId).toBeUndefined();
+    expect(state.chats.c2.agentId).toBe("other");
   });
 });

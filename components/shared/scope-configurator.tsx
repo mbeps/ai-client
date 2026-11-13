@@ -38,10 +38,10 @@ export function ScopeConfigurator({
   className,
 }: ScopeConfiguratorProps) {
   const storeProjects = useAppStore((state) => state.projects);
-  const storeAssistants = useAppStore((state) => state.assistants);
+  const storeAgents = useAppStore((state) => state.agents);
 
   const projects = customProjects ?? storeProjects;
-  const assistants = customAssistants ?? storeAssistants;
+  const assistants = customAssistants ?? storeAgents;
 
   const isInitiallyScoped = projectIds.length > 0 || assistantIds.length > 0;
   const [mode, setMode] = React.useState<"global" | "scoped">(
@@ -159,7 +159,7 @@ export function ScopeConfigurator({
                 )}
               </div>
               <p className="text-muted-foreground mt-1 text-xs">
-                Restricted to specific projects and/or assistants.
+                Restricted to specific projects and/or agents.
               </p>
             </div>
           </button>
@@ -198,7 +198,7 @@ export function ScopeConfigurator({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bot className="text-muted-foreground h-4 w-4" />
-                <span className="text-sm font-medium">Assistants</span>
+                <span className="text-sm font-medium">Agents</span>
               </div>
               {assistantIds.length > 0 && (
                 <span className="text-muted-foreground text-xs">
@@ -207,22 +207,22 @@ export function ScopeConfigurator({
               )}
             </div>
             <p className="text-muted-foreground text-xs">
-              Select assistants where this can be invoked.
+              Select agents where this can be invoked.
             </p>
             <EntityMultiSelect
               items={assistants}
               selectedIds={assistantIds}
               onChange={onAssistantIdsChange}
-              placeholder="Select assistants..."
-              searchPlaceholder="Search assistants..."
-              emptyMessage="No assistants available."
+              placeholder="Select agents..."
+              searchPlaceholder="Search agents..."
+              emptyMessage="No agents available."
               disabled={disabled}
             />
           </div>
 
           {!hasSelections && (
             <p className="text-xs text-amber-600 dark:text-amber-500">
-              Tip: Select at least one project or assistant above, or switch to
+              Tip: Select at least one project or agent above, or switch to
               Global to make it available everywhere.
             </p>
           )}

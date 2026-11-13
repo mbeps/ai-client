@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import AssistantChatNotFound from "@/app/(main)/assistants/[id]/[chatId]/not-found";
-import AssistantNotFound from "@/app/(main)/assistants/[id]/not-found";
+import AgentChatNotFound from "@/app/(main)/agents/[id]/[chatId]/not-found";
+import AgentNotFound from "@/app/(main)/agents/[id]/not-found";
 import ChatNotFound from "@/app/(main)/chats/[id]/not-found";
 import KnowledgebaseNotFound from "@/app/(main)/knowledgebases/[id]/not-found";
 import MainNotFound from "@/app/(main)/not-found";
@@ -51,18 +51,18 @@ describe("Not Found Pages", () => {
     expect(link).toHaveAttribute("href", ROUTES.PROJECTS.path);
   });
 
-  it("renders AssistantNotFound with link to assistants", () => {
-    render(<AssistantNotFound />);
-    expect(screen.getByText("Assistant not found")).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: /back to assistants/i });
-    expect(link).toHaveAttribute("href", ROUTES.ASSISTANTS.path);
+  it("renders AgentNotFound with link to agents", () => {
+    render(<AgentNotFound />);
+    expect(screen.getByText("Agent not found")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /back to agents/i });
+    expect(link).toHaveAttribute("href", ROUTES.AGENTS.path);
   });
 
-  it("renders AssistantChatNotFound with link to assistants", () => {
-    render(<AssistantChatNotFound />);
-    expect(screen.getByText("Assistant chat not found")).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: /back to assistants/i });
-    expect(link).toHaveAttribute("href", ROUTES.ASSISTANTS.path);
+  it("renders AgentChatNotFound with link to agents", () => {
+    render(<AgentChatNotFound />);
+    expect(screen.getByText("Agent chat not found")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /back to agents/i });
+    expect(link).toHaveAttribute("href", ROUTES.AGENTS.path);
   });
 
   it("renders KnowledgebaseNotFound with link to knowledge bases", () => {

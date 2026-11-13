@@ -6,11 +6,9 @@ import { Button } from "@/components/ui/button";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
 /**
- * Represents assistant tools tab props.
- *
- * @author Maruf Bepary
+ * Props for the AgentToolsTab component.
  */
-export interface AssistantToolsTabProps {
+export interface AgentToolsTabProps {
   mcpServers: McpServer[];
   selectedTools: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
@@ -22,14 +20,13 @@ export interface AssistantToolsTabProps {
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
   saveLabel?: string;
+  disabled?: boolean;
 }
 
 /**
- * Default tools configuration tab for an Assistant.
- *
- * @author Maruf Bepary
+ * Default tools configuration tab for an Agent.
  */
-export function AssistantToolsTab({
+export function AgentToolsTab({
   mcpServers,
   selectedTools,
   onToggleTool,
@@ -37,18 +34,25 @@ export function AssistantToolsTab({
   onSave,
   isSaving = false,
   saveLabel = "Save Tools",
-}: AssistantToolsTabProps) {
+  disabled = false,
+}: AgentToolsTabProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h3 className="text-lg font-semibold">Default Tools</h3>
         <p className="text-muted-foreground text-sm">
-          Select tools and resources that should be enabled by default for all
-          new chats with this assistant.
+          Select tools and resources enabled for direct chats and isolated
+          subagent runs with this agent.
         </p>
       </div>
       <div className="space-y-4">
-        <div className="flex max-h-[500px] flex-col overflow-hidden">
+        <div
+          className={
+            disabled
+              ? "pointer-events-none flex max-h-[500px] flex-col overflow-hidden opacity-60"
+              : "flex max-h-[500px] flex-col overflow-hidden"
+          }
+        >
           <ToolPickerList
             servers={mcpServers.filter((s) => s.enabled)}
             selectedTools={selectedTools}
@@ -57,14 +61,16 @@ export function AssistantToolsTab({
           />
         </div>
 
-        <Button onClick={onSave} disabled={isSaving}>
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {saveLabel}
-        </Button>
+        {!disabled && (
+          <Button onClick={onSave} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {saveLabel}
+          </Button>
+        )}
       </div>
     </div>
   );

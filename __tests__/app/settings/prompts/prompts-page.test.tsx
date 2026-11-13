@@ -47,7 +47,7 @@ vi.mock("@/lib/store/use-app-store", () => ({
     selector({
       prompts: mockPrompts,
       projects: [{ id: "proj-1", name: "Alpha Project" }],
-      assistants: [{ id: "asst-1", name: "Beta Assistant" }],
+      agents: [{ id: "asst-1", name: "Beta Assistant" }],
       loadPrompts: mockLoadPrompts,
       loadError: null,
     }),
@@ -87,7 +87,7 @@ describe("PromptsPage", () => {
     expect(screen.getByText("Summarize Code")).toBeInTheDocument();
     expect(screen.queryByText("Code Review")).not.toBeInTheDocument();
 
-    const assistantsFilterBtn = screen.getByRole("button", { name: "Assistants" });
+    const assistantsFilterBtn = screen.getByRole("button", { name: "Agents" });
     await user.click(assistantsFilterBtn);
 
     expect(screen.getByText("Refactor Helper")).toBeInTheDocument();

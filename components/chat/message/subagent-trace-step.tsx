@@ -55,6 +55,8 @@ const ROLE_STYLES: Record<
 export interface SubagentTraceStepProps {
   toolCallId: string;
   role: string;
+  agentId?: string;
+  agentName?: string;
   taskBrief: string;
   inputData?: string;
   result?: unknown;
@@ -147,6 +149,8 @@ function SubagentTraceDetails({
  */
 export function SubagentTraceStep({
   role,
+  agentId,
+  agentName,
   taskBrief,
   inputData,
   result,
@@ -157,11 +161,12 @@ export function SubagentTraceStep({
   const [scratchpadOpen, setScratchpadOpen] = useState(false);
 
   const roleStyle = ROLE_STYLES[role.toLowerCase()] ?? {
-    label: role,
+    label: agentName ?? role,
     bg: "bg-purple-500/10 dark:bg-purple-500/20",
     text: "text-purple-700 dark:text-purple-300",
     border: "border-purple-500/30",
   };
+  const displayLabel = agentName ?? roleStyle.label;
 
   const outputText = useMemo(() => extractSubagentOutputText(result), [result]);
 
@@ -188,6 +193,7 @@ export function SubagentTraceStep({
             </TraceIcon>
             <Badge
               variant="outline"
+              title={agentId}
               className={cn(
                 "px-1.5 py-0 font-mono text-[10px] uppercase",
                 roleStyle.bg,
@@ -195,7 +201,7 @@ export function SubagentTraceStep({
                 roleStyle.border,
               )}
             >
-              {roleStyle.label}
+              {displayLabel}
             </Badge>
             <TraceTitle className="truncate font-normal">
               {taskBrief}

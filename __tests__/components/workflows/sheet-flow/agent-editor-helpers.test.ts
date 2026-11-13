@@ -161,6 +161,7 @@ describe("agent-editor-helpers", () => {
         skillMode: "dynamic",
         skillIds: ["skill-a"],
         knowledgeBaseIds: ["kb-a"],
+        subagentIds: [],
         requiresFileUpload: true,
         steps: [
           {

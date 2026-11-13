@@ -13,7 +13,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
  */
 type HydratableResource =
   | "projects"
-  | "assistants"
+  | "agents"
   | "prompts"
   | "skills"
   | "mcpServers"
@@ -42,7 +42,7 @@ export function useResourceHydration(resources: HydratableResource[]) {
   const store = useAppStore(
     useShallow((s) => ({
       projects: s.projects,
-      assistants: s.assistants,
+      agents: s.agents,
       prompts: s.prompts,
       skills: s.skills,
       mcpServers: s.mcpServers,
@@ -51,7 +51,7 @@ export function useResourceHydration(resources: HydratableResource[]) {
       mcpPrompts: s.mcpPrompts,
       userSettings: s.userSettings,
       loadProjects: s.loadProjects,
-      loadAssistants: s.loadAssistants,
+      loadAgents: s.loadAgents,
       loadPrompts: s.loadPrompts,
       loadSkills: s.loadSkills,
       loadMcpServers: s.loadMcpServers,

@@ -146,8 +146,11 @@ describe("Listing Cards Next.js Link Refactoring", () => {
       );
 
       const link = screen.getByRole("link", { name: /design discussion/i });
-      expect(link).toHaveAttribute("href", ROUTES.ASSISTANTS.chat("asst-999", "chat-789"));
-      expect(screen.getByText("Assistant Chat")).toBeInTheDocument();
+      expect(link).toHaveAttribute(
+        "href",
+        ROUTES.AGENTS.chat("asst-999", "chat-789"),
+      );
+      expect(screen.getByText("Agent Chat")).toBeInTheDocument();
     });
 
     it("stops propagation on options menu click and keydown", async () => {

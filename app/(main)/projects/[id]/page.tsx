@@ -7,6 +7,7 @@ import {
   Library,
   MessageSquare,
   MessageSquarePlus,
+  Network,
   Settings,
   Shield,
   Wrench,
@@ -22,6 +23,7 @@ import { ProjectChatsTab } from "@/components/project/project-chats-tab";
 import { ProjectKnowledgebaseTab } from "@/components/project/project-knowledgebase-tab";
 import { ProjectPromptTab } from "@/components/project/project-prompt-tab";
 import { ProjectSettingsTab } from "@/components/project/project-settings-tab";
+import { ProjectSubagentsTab } from "@/components/project/project-subagents-tab";
 import { ProjectToolsTab } from "@/components/project/project-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
 import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
@@ -59,6 +61,7 @@ type ProjectFormState = {
   selectedSkillIds: Set<string>;
   promptMode: "all" | "none" | "specific";
   selectedPromptIds: Set<string>;
+  selectedSubagentIds: string[];
   selectedKbId: string | null;
 };
 
@@ -102,6 +105,7 @@ function buildInitialProjectForm(project?: any): ProjectFormState {
       selectedSkillIds: new Set<string>(),
       promptMode: "all",
       selectedPromptIds: new Set<string>(),
+      selectedSubagentIds: [],
       selectedKbId: null,
     };
   }
@@ -115,6 +119,7 @@ function buildInitialProjectForm(project?: any): ProjectFormState {
     selectedSkillIds: resolveSetField(project.skillIds),
     promptMode: project.promptMode || "all",
     selectedPromptIds: resolveSetField(project.promptIds),
+    selectedSubagentIds: project.subagentIds ?? [],
     selectedKbId: project.knowledgebaseId || null,
   };
 }
@@ -136,6 +141,7 @@ function useProjectEditor(projectId: string, project?: any) {
   );
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingSkills, setSavingSkills] = useState(false);
+  const [savingSubagents, setSavingSubagents] = useState(false);
   const [savingKb, setSavingKb] = useState(false);
 
   useEffect(() => {
@@ -158,6 +164,26 @@ function useProjectEditor(projectId: string, project?: any) {
       toast.error("Failed to save project skills");
     } finally {
       setSavingSkills(false);
+    }
+  };
+
+  const handleSaveSubagents = async () => {
+    setSavingSubagents(true);
+    try {
+      const res = await updateProject(projectId, {
+        subagentIds: form.selectedSubagentIds,
+      });
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to save project subagents");
+        return;
+      }
+      toast.success("Project subagents saved");
+      await loadProjects();
+      router.refresh();
+    } catch {
+      toast.error("Failed to save project subagents");
+    } finally {
+      setSavingSubagents(false);
     }
   };
 
@@ -231,8 +257,10 @@ function useProjectEditor(projectId: string, project?: any) {
     setForm,
     savingSettings,
     savingSkills,
+    savingSubagents,
     savingKb,
     handleSaveSkills,
+    handleSaveSubagents,
     handleSaveSettings,
     handleSaveKb,
     onToggleTool,
@@ -368,6 +396,7 @@ function ProjectPageTabs(props: ProjectPageTabsProps) {
     deletion,
   } = props;
 
+  const agents = useAppStore((state) => state.agents);
   return (
     <SidebarTabs value={tab} onValueChange={onTabChange} className="w-full">
       <SidebarTabsList>
@@ -394,6 +423,10 @@ function ProjectPageTabs(props: ProjectPageTabsProps) {
         <SidebarTabsTrigger value="skills">
           <BrainCircuit className="mr-2 h-4 w-4" />
           <span>Skills</span>
+        </SidebarTabsTrigger>
+        <SidebarTabsTrigger value="subagents">
+          <Network className="mr-2 h-4 w-4" />
+          <span>Subagents</span>
         </SidebarTabsTrigger>
         <SidebarTabsTrigger value="danger">
           <Shield className="mr-2 h-4 w-4" />
@@ -489,6 +522,23 @@ function ProjectPageTabs(props: ProjectPageTabsProps) {
         />
       </SidebarTabsContent>
 
+      <SidebarTabsContent value="subagents">
+        <ProjectSubagentsTab
+          agents={agents}
+          selectedSubagentIds={editor.form.selectedSubagentIds}
+          onToggleSubagent={(id) =>
+            editor.setForm((prev) => ({
+              ...prev,
+              selectedSubagentIds: prev.selectedSubagentIds.includes(id)
+                ? prev.selectedSubagentIds.filter((s) => s !== id)
+                : [...prev.selectedSubagentIds, id],
+            }))
+          }
+          onSave={editor.handleSaveSubagents}
+          isSaving={editor.savingSubagents}
+        />
+      </SidebarTabsContent>
+
       <SidebarTabsContent value="danger">
         <DangerZoneCard
           title="Danger Zone"
@@ -517,6 +567,7 @@ function useProjectPageResources(projectId: string) {
   const { normalizedKnowledgebases } = useKnowledgebases();
   const { isLoading: hydrationLoading } = useResourceHydration([
     "projects",
+    "agents",
     "mcpServers",
     "skills",
     "prompts",

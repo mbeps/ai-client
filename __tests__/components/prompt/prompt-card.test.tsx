@@ -30,7 +30,7 @@ describe("PromptCard", () => {
     vi.clearAllMocks();
     useAppStore.setState({
       projects: mockProjects as any,
-      assistants: mockAssistants as any,
+      agents: mockAssistants as any,
       loadPrompts: vi.fn(),
     });
   });
@@ -84,7 +84,7 @@ describe("PromptCard", () => {
     render(<PromptCard prompt={assistantPrompt} />);
 
     expect(screen.getByText("Assistant Prompt")).toBeInTheDocument();
-    expect(screen.getByText("Assistant: Beta Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Agent: Beta Assistant")).toBeInTheDocument();
   });
 
   it("renders multiple project and assistant badges when scoped to both", () => {
@@ -99,7 +99,7 @@ describe("PromptCard", () => {
     render(<PromptCard prompt={multiPrompt} />);
 
     expect(screen.getByText("Multi Prompt")).toBeInTheDocument();
-    expect(screen.getByText("2 Proj, 2 Asst")).toBeInTheDocument();
+    expect(screen.getByText("2 Proj, 2 Agent")).toBeInTheDocument();
   });
 
   it("opens delete dialog and deletes prompt", async () => {

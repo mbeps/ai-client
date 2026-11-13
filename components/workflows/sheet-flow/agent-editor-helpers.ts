@@ -45,6 +45,7 @@ export interface AgentFormSetters {
   setSkillMode: (mode: SkillMode) => void;
   setSkillIds: (ids: Set<string>) => void;
   setKnowledgeBaseIds: (ids: Set<string>) => void;
+  setSubagentIds?: (ids: string[]) => void;
   setRequiresFileUpload: (requires: boolean) => void;
   setSteps: (steps: TransformStep[]) => void;
 }
@@ -63,6 +64,7 @@ export interface AgentPayloadInput {
   skillMode: SkillMode;
   skillIds: Set<string>;
   knowledgeBaseIds: Set<string>;
+  subagentIds?: string[];
   requiresFileUpload: boolean;
   steps: TransformStep[];
 }
@@ -126,6 +128,7 @@ export function hydrateAgentFormState(
   setters.setSkillMode((agent.skillMode as SkillMode) ?? "dynamic");
   setters.setSkillIds(new Set(agent.skillIds ?? []));
   setters.setKnowledgeBaseIds(new Set(agent.knowledgeBaseIds ?? []));
+  setters.setSubagentIds?.(agent.subagentIds ?? []);
   setters.setRequiresFileUpload(agent.requiresFileUpload);
   setters.setSteps(normalizeAgentSteps(agent.steps));
 }
@@ -166,6 +169,7 @@ export function buildAgentPayload(state: AgentPayloadInput) {
     skillMode: state.skillMode,
     skillIds: Array.from(state.skillIds),
     knowledgeBaseIds: Array.from(state.knowledgeBaseIds),
+    subagentIds: state.subagentIds ?? [],
     requiresFileUpload: state.requiresFileUpload,
     steps: state.steps.map((s, i) => ({
       id: s.id,

@@ -36,7 +36,7 @@ describe("SkillCard", () => {
     vi.clearAllMocks();
     useAppStore.setState({
       projects: mockProjects as any,
-      assistants: mockAssistants as any,
+      agents: mockAssistants as any,
       loadSkills: vi.fn(),
     });
   });
@@ -94,7 +94,7 @@ describe("SkillCard", () => {
     render(<SkillCard skill={assistantSkill} />);
 
     expect(screen.getByText("Assistant Skill")).toBeInTheDocument();
-    expect(screen.getByText("Assistant: Beta Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Agent: Beta Assistant")).toBeInTheDocument();
   });
 
   it("renders multiple project and assistant badges when scoped to both", () => {
@@ -110,7 +110,7 @@ describe("SkillCard", () => {
     render(<SkillCard skill={multiSkill} />);
 
     expect(screen.getByText("Multi Skill")).toBeInTheDocument();
-    expect(screen.getByText("2 Proj, 2 Asst")).toBeInTheDocument();
+    expect(screen.getByText("2 Proj, 2 Agent")).toBeInTheDocument();
   });
 
   it("toggles skill enabled state", async () => {

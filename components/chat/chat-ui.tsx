@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { AgentBar } from "@/components/chat/agent-bar";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
-import { AssistantBar } from "@/components/chat/assistant-bar";
 import { CanvasReopenButton } from "@/components/chat/canvas-reopen-button";
 import { ChatInput } from "@/components/chat/chat-input";
 import {
@@ -70,7 +70,7 @@ export function ChatUI({
     setCurrentLeafDb,
     setKnowledgebaseDb,
     mcpServers,
-    assistants,
+    agents,
     userSettings,
     projects,
     updateMessageMetadataDb,
@@ -80,7 +80,7 @@ export function ChatUI({
   useResourceHydration([
     "mcpServers",
     "publicMcpServers",
-    "assistants",
+    "agents",
     "projects",
     "prompts",
     "skills",
@@ -88,7 +88,10 @@ export function ChatUI({
     "userSettings",
   ]);
 
-  const currentAssistant = findAssistant(assistants, chat?.assistantId);
+  const currentAssistant = findAssistant(
+    agents,
+    chat?.agentId ?? chat?.assistantId,
+  );
   const currentProject = findProject(projects, chat?.projectId);
 
   const thread = useMemo(
@@ -195,7 +198,7 @@ export function ChatUI({
     );
   }
 
-  const chatAssistantId = chat.assistantId;
+  const chatAssistantId = chat.agentId ?? chat.assistantId;
   const activeArtifactId = activeArtifact?.id;
   const assistantName = currentAssistant?.name;
   const assistantPrompt = currentAssistant?.prompt ?? undefined;
@@ -211,7 +214,7 @@ export function ChatUI({
   return (
     <div className="relative flex h-full w-full overflow-hidden">
       <div className="relative flex h-full min-w-0 flex-1 flex-col">
-        <AssistantBar assistantName={assistantName} />
+        <AgentBar agentName={assistantName} />
 
         <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
           <div className="px-4 py-6 md:px-8">
@@ -270,7 +273,7 @@ export function ChatUI({
               onKnowledgebaseChange={handleKbChange}
               thread={thread}
               projectId={chat?.projectId}
-              assistantId={chat?.assistantId}
+              assistantId={chatAssistantId}
               promptMode={
                 currentProject?.promptMode || currentAssistant?.promptMode
               }

@@ -5,16 +5,9 @@ import { ROUTES } from "@/config/routes";
 import { buildChatFromRows } from "@/lib/chat/message-tree-utils";
 
 /**
- * Chat detail page within an assistant context — server component with validation.
- * Route parameters: `[id]` — assistant ID, `[chatId]` — chat ID to load.
- * Verifies chat belongs to assistant; redirects to standalone chat if unlinked/mismatched, returns 404 if chat not found.
- * Renders full chat interface with message tree, streaming, artifacts, and MCP tools.
- *
- * @author Maruf Bepary
- * @see AssistantPage for parent assistant view
- * @see ProjectChatPage for equivalent project-scoped chat page
+ * Chat detail page within an agent context (/agents/[id]/[chatId]).
  */
-export default async function AssistantChatPage({
+export default async function AgentChatPage({
   params,
 }: {
   params: Promise<{ id: string; chatId: string }>;
@@ -27,8 +20,9 @@ export default async function AssistantChatPage({
   }
 
   const chat = buildChatFromRows(res.value);
+  const chatAgentId = chat.agentId ?? chat.assistantId;
 
-  if (chat.assistantId !== id) {
+  if (chatAgentId !== id) {
     redirect(ROUTES.CHATS.detail(chatId));
   }
 

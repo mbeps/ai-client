@@ -7,26 +7,22 @@ import { Input } from "@/components/ui/input";
 import type { Chat } from "@/types/chat/chat";
 
 /**
- * Represents assistant chats tab props.
- *
- * @author Maruf Bepary
+ * Props for the AgentChatsTab component.
  */
-export interface AssistantChatsTabProps {
+export interface AgentChatsTabProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   filteredChats: Chat[];
 }
 
 /**
- * Chats tab for an Assistant: search filter, grid of chat cards, and empty state.
- *
- * @author Maruf Bepary
+ * Chats tab for an Agent: search filter, grid of chat cards, and empty state.
  */
-export function AssistantChatsTab({
+export function AgentChatsTab({
   searchQuery,
   onSearchQueryChange,
   filteredChats,
-}: AssistantChatsTabProps) {
+}: AgentChatsTabProps) {
   return (
     <div className="space-y-4">
       <div className="relative w-full sm:max-w-xs">
@@ -48,7 +44,7 @@ export function AssistantChatsTab({
             message={
               searchQuery
                 ? "No chats match your search."
-                : "No chats with this assistant yet."
+                : "No chats with this agent yet."
             }
           />
         )}
