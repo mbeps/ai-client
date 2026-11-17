@@ -201,7 +201,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
 
   const setSubagentsEnabled = selections.setSubagentsEnabled;
   useEffect(() => {
-    if (Boolean(mentions.selectedAssistant?.subagentIds?.length)) {
+    if (mentions.selectedAssistant?.subagentIds?.length) {
       setSubagentsEnabled(true);
     }
   }, [mentions.selectedAssistant, setSubagentsEnabled]);

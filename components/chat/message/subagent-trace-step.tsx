@@ -103,6 +103,18 @@ function SubagentTraceDetails({
   outputText,
   result,
 }: SubagentTraceDetailsProps) {
+  const hasInputData = Boolean(
+    inputData && inputData.trim() !== "" && inputData.trim() !== "{}",
+  );
+  const displayFindings = outputText
+    ? outputText
+        .replace(
+          /^(?:\*{0,2})STATUS:\s*(?:DONE|DONE_WITH_CONCERNS|NEEDS_CONTEXT|BLOCKED)(?:\*{0,2})[:\s-]*/i,
+          "",
+        )
+        .trim() || outputText
+    : null;
+
   return (
     <div className="bg-muted/20 mt-2 space-y-3 rounded-md p-3 text-xs">
       <TraceContextUsage args={{ taskBrief, inputData }} result={result} />
@@ -117,7 +129,7 @@ function SubagentTraceDetails({
         </div>
       </div>
 
-      {inputData && (
+      {hasInputData && (
         <div>
           <div className="text-muted-foreground mb-1.5 text-[10px] font-bold tracking-wider uppercase">
             Context Pointers & Input Data
@@ -128,14 +140,14 @@ function SubagentTraceDetails({
         </div>
       )}
 
-      {outputText && (
+      {displayFindings && (
         <div>
           <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10px] font-bold tracking-wider uppercase">
             <Bot className="h-3 w-3 text-purple-600 dark:text-purple-400" />
             <span>Worker Findings</span>
           </div>
           <div className="border-border/60 bg-background/80 text-foreground rounded-lg border p-3 text-xs leading-relaxed shadow-xs">
-            <MarkdownRenderer content={outputText} />
+            <MarkdownRenderer content={displayFindings} />
           </div>
         </div>
       )}
@@ -165,8 +177,7 @@ export function SubagentTraceStep({
   const lookupKey = agentId ?? role;
   const resolvedAgent = agents?.find(
     (a) =>
-      a.id === lookupKey ||
-      a.name.toLowerCase() === lookupKey.toLowerCase(),
+      a.id === lookupKey || a.name.toLowerCase() === lookupKey.toLowerCase(),
   );
   const effectiveAgentName = agentName ?? resolvedAgent?.name;
   const effectiveAgentId = agentId ?? resolvedAgent?.id;
@@ -196,6 +207,7 @@ export function SubagentTraceStep({
   const isRunning = state === "running";
   const isError = state === "error" || outcome.isError;
   const status = resolveTraceLineStatus(isRunning, isError);
+  const canUseScratchpad = resolvedAgent?.guardrails?.scratchpadAccess !== "none";
 
   return (
     <TraceCollapsible>
@@ -240,7 +252,7 @@ export function SubagentTraceStep({
             </Badge>
           </TraceLine>
         </TraceCollapsibleTrigger>
-        {messageId && (
+        {messageId && canUseScratchpad && (
           <Button
             type="button"
             variant="outline"

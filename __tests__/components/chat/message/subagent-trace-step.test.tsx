@@ -117,6 +117,34 @@ describe("SubagentTraceStep", () => {
     expect(screen.queryByTestId("scratchpad-modal")).toBeNull();
   });
 
+  it("hides Scratchpad button when agent scratchpadAccess is none", () => {
+    mockStoreAgents = [
+      {
+        id: "agent-no-scratchpad",
+        name: "No Scratchpad Agent",
+        guardrails: {
+          maxSteps: 10,
+          scratchpadAccess: "none",
+          isolateTools: true,
+        },
+      } as Agent,
+    ];
+
+    render(
+      <SubagentTraceStep
+        toolCallId="call-sub-no-sp"
+        role="worker"
+        agentId="agent-no-scratchpad"
+        taskBrief="Run isolated task"
+        state="done"
+        messageId="msg-123"
+        chatId="chat-456"
+      />,
+    );
+
+    expect(screen.queryByText("Scratchpad")).toBeNull();
+  });
+
   it("renders collapsible details with input data and findings when expanded", () => {
     render(
       <SubagentTraceStep
@@ -220,5 +248,28 @@ describe("SubagentTraceStep", () => {
 
     const builtInBadge = screen.getByText("Researcher");
     expect(builtInBadge.className).toContain("text-blue-700");
+  });
+
+  it("hides empty '{}' inputData and strips leading STATUS prefix from worker findings", async () => {
+    const user = userEvent.setup();
+    render(
+      <SubagentTraceStep
+        toolCallId="call-sub-10"
+        role="researcher"
+        taskBrief="Research Maruf"
+        inputData="{}"
+        state="done"
+        result={"<think>Internal monologue</think>STATUS: DONE\n\nClean summary."}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /Research Maruf/i });
+    await user.click(trigger);
+
+    expect(screen.queryByText("Context Pointers & Input Data")).toBeNull();
+    expect(screen.queryByText(/Internal monologue/)).toBeNull();
+    expect(screen.queryByText(/STATUS: DONE/)).toBeNull();
+    expect(screen.getByText("Clean summary.")).toBeDefined();
+    expect(screen.getByText("Completed")).toBeDefined();
   });
 });

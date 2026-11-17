@@ -1,3 +1,5 @@
+import { stripSubagentReasoning } from "@/lib/chat/extract-subagent-output";
+
 /**
  * Extracts a concise text summary from a subagent's execution output. Handles strings, UIMessage objects, structured results, and text parts.
  *
@@ -6,41 +8,36 @@
  * @author Maruf Bepary
  */
 function extractSubagentSummary(output: unknown): string {
+  let raw: string | null = null;
   if (typeof output === "string") {
-    return output;
-  }
-  if (!output || typeof output !== "object") {
-    return "Subagent finished with no text output.";
-  }
-  const r = output as Record<string, unknown>;
-  if (typeof r.summary === "string" && r.summary.trim()) {
-    return r.summary;
-  }
-  if (typeof r.value === "string" && r.value.trim()) {
-    return r.value;
-  }
-  if (typeof r.text === "string" && r.text.trim()) {
-    return r.text;
-  }
-  if (Array.isArray(r.parts)) {
-    const textParts = (r.parts as Array<{ type?: string; text?: string }>)
-      .filter(
-        (p) =>
-          p?.type === "text" && typeof p?.text === "string" && p.text.trim(),
-      )
-      .map((p) => p.text as string);
-    if (textParts.length > 0) {
-      const lastText = textParts[textParts.length - 1];
-      if (
-        lastText &&
-        (lastText.includes("STATUS:") || textParts.length === 1)
-      ) {
-        return lastText;
+    raw = output;
+  } else if (output && typeof output === "object") {
+    const r = output as Record<string, unknown>;
+    if (typeof r.summary === "string" && r.summary.trim()) {
+      raw = r.summary;
+    } else if (typeof r.value === "string" && r.value.trim()) {
+      raw = r.value;
+    } else if (typeof r.text === "string" && r.text.trim()) {
+      raw = r.text;
+    } else if (Array.isArray(r.parts)) {
+      const textParts = (r.parts as Array<{ type?: string; text?: string }>)
+        .filter(
+          (p) =>
+            p?.type === "text" && typeof p?.text === "string" && p.text.trim(),
+        )
+        .map((p) => p.text as string);
+      if (textParts.length > 0) {
+        const lastText = textParts[textParts.length - 1];
+        raw =
+          lastText && (lastText.includes("STATUS:") || textParts.length === 1)
+            ? lastText
+            : textParts.join("\n\n");
       }
-      return textParts.join("\n\n");
     }
   }
-  return "Subagent finished with no text output.";
+
+  const cleaned = raw ? stripSubagentReasoning(raw) : "";
+  return cleaned || "Subagent finished with no text output.";
 }
 
 /**
