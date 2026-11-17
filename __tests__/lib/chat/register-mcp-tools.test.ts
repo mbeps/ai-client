@@ -91,7 +91,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
     expect(mcpTools.search_knowledge_base).toBeUndefined();
   });
 
-  it("does NOT register search_knowledge_base when kbIsReady is true but selectedTools excludes it", async () => {
+  it("registers search_knowledge_base when kbIsReady is true even if selectedTools omits it", async () => {
     const { mcpTools } = await registerMcpTools(
       [],
       ["other_tool"],
@@ -101,7 +101,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
       "user-1",
     );
 
-    expect(mcpTools.search_knowledge_base).toBeUndefined();
+    expect(mcpTools.search_knowledge_base).toBeDefined();
   });
 
   it("does NOT query the database for KB readiness (T3.4)", async () => {

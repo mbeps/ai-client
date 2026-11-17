@@ -15,6 +15,7 @@ import {
 import { project } from "@/drizzle/schemas/project-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
 import { resolveLinkedSubagents } from "@/lib/agents/resolve-linked-subagents";
+import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
 import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
 import { retrieveRelevantMemories } from "@/lib/memory/retrieve-relevant-memories";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
@@ -54,6 +55,7 @@ type ChatContext = {
   skillMode: SkillMode;
   skillIds: string[];
   servers: McpServerConfig[];
+  subagentServers: McpServerConfig[];
   availableSkills: SkillSummary[];
   selectedSkills: SkillRow[];
   userMemories: string[];
@@ -326,6 +328,14 @@ export async function loadChatContext(
         ? []
         : servers.filter((s) => selectedServerIds.includes(s.id));
 
+  const subagentServerIds = extractServerIdsFromTools(
+    linkedSubagents.flatMap((s) => s.tools),
+  );
+  const subagentServers =
+    subagentServerIds.length > 0
+      ? servers.filter((s) => subagentServerIds.includes(s.id))
+      : [];
+
   const { availableSkills, selectedSkills } = resolveContextSkills({
     skillMode,
     skillIds,
@@ -343,6 +353,7 @@ export async function loadChatContext(
     skillMode,
     skillIds,
     servers: filteredServers,
+    subagentServers,
     availableSkills,
     selectedSkills,
     userMemories,

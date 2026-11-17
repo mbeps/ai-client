@@ -6,11 +6,15 @@ import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-too
 import { registerMemoryTool } from "@/lib/chat/register-memory-tool";
 import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
+import { resolveProvider } from "@/lib/chat/resolve-provider";
 import type {
   BuildOrchestratorToolSetParams,
   OrchestratorToolSetResult,
 } from "@/lib/inngest/chat-response/chat-response-types";
-import { createSubagentDispatchTool } from "@/lib/subagents/create-subagent-dispatch-tool";
+import {
+  createSubagentDispatchTool,
+  filterToolsForAgent,
+} from "@/lib/subagents/create-subagent-dispatch-tool";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
 
 /**
@@ -49,20 +53,27 @@ function isInternalToolAllowed(
 
 /**
  * Determines whether subagent task delegation is enabled.
- * True when the explicit `subagentsEnabled` flag is set or `delegate_task` is selected.
+ * True when the explicit `subagentsEnabled` flag is set, `delegate_task` is selected,
+ * or the active orchestrator agent / project has linked subagents configured.
  *
  * @param subagentsEnabled - Explicit subagent delegation flag from chat options
  * @param selectedTools - Whitelist of permitted tool IDs
+ * @param ctx - Chat context containing optional agentRow and projectRow subagent links
  * @returns Whether subagent delegation is active
  * @author Maruf Bepary
  */
 function isSubagentEnabled(
   subagentsEnabled?: boolean,
   selectedTools?: string[],
+  ctx?: BuildOrchestratorToolSetParams["ctx"],
 ): boolean {
+  const hasEntitySubagents =
+    Boolean(ctx?.agentRow?.subagentIds?.length) ||
+    Boolean(ctx?.projectRow?.subagentIds?.length);
   return (
     subagentsEnabled === true ||
-    Boolean(selectedTools?.includes(INTERNAL_TOOL_IDS.DELEGATE_TASK))
+    Boolean(selectedTools?.includes(INTERNAL_TOOL_IDS.DELEGATE_TASK)) ||
+    hasEntitySubagents
   );
 }
 
@@ -99,9 +110,15 @@ function buildScratchpadTools(
 function buildSubagentDispatchTools(params: {
   isSubagentDelegationEnabled: boolean;
   orchestratorActiveTools: Record<string, any>;
+  isolatedToolPool: Record<string, any>;
   resolved: any;
   resolvedModelId: string;
   workerResolved: any;
+  userId: string;
+  projectId?: string | null;
+  hasAvailableSkills: boolean;
+  kbSubagentModel: any;
+  kbSubagentContextWindow?: number;
   scratchpadContext?: { chatId: string; messageId: string };
   allowedSubagents?: BuildOrchestratorToolSetParams["ctx"]["linkedSubagents"];
 }): Record<string, any> {
@@ -119,6 +136,36 @@ function buildSubagentDispatchTools(params: {
       maxSteps: env.CHAT_MAX_STEPS,
       scratchpadContext: params.scratchpadContext,
       allowedSubagents: params.allowedSubagents,
+      resolveModelById: async (modelId: string) => {
+        const targetResolved = await resolveProvider(
+          params.userId,
+          modelId,
+        ).catch(() => null);
+        return targetResolved
+          ? targetResolved.sdkProvider.chat(targetResolved.modelId)
+          : undefined;
+      },
+      buildIsolatedTools: (targetAgent) => {
+        const filtered = filterToolsForAgent(
+          params.isolatedToolPool,
+          targetAgent.tools,
+          targetAgent.knowledgebaseIds,
+        );
+        const agentSkillTools =
+          targetAgent.skillMode !== "none" &&
+          (Boolean(targetAgent.skillIds?.length) || params.hasAvailableSkills)
+            ? registerSkillTool(params.userId, {
+                projectId: params.projectId,
+                assistantId: targetAgent.id,
+              })
+            : {};
+        return { ...filtered, ...agentSkillTools };
+      },
+      buildKnowledgebaseTools: (kbIds) =>
+        registerKnowledgebaseTool(kbIds, true, params.userId, undefined, {
+          model: params.kbSubagentModel,
+          contextWindow: params.kbSubagentContextWindow,
+        }),
     }),
   };
 }
@@ -212,6 +259,7 @@ export function buildOrchestratorToolSet(
   const isSubagentDelegationEnabled = isSubagentEnabled(
     subagentsEnabled,
     selectedTools,
+    ctx,
   );
 
   const scratchpadTools = buildScratchpadTools(
@@ -235,12 +283,26 @@ export function buildOrchestratorToolSet(
     scratchpadTools,
   );
 
+  const isolatedMemoryTools = isMemoryEnabled ? registerMemoryTool(userId) : {};
+  const isolatedToolPool: Record<string, any> = Object.assign(
+    {},
+    params.subagentMcpTools ?? mcpTools,
+    isolatedMemoryTools,
+    fileUrlTools,
+  );
+
   const subagentDispatchTools = buildSubagentDispatchTools({
     isSubagentDelegationEnabled,
     orchestratorActiveTools,
+    isolatedToolPool,
     resolved,
     resolvedModelId,
     workerResolved,
+    userId,
+    projectId: ctx.chatRow?.projectId,
+    hasAvailableSkills: ctx.availableSkills.length > 0,
+    kbSubagentModel,
+    kbSubagentContextWindow,
     scratchpadContext: {
       chatId,
       messageId: assistantMessageId,

@@ -6,12 +6,10 @@ import {
   toUIMessageStream,
 } from "ai";
 import { z } from "zod";
-import {
-  BUILT_IN_AGENTS,
-  isLinkableBuiltInAgentId,
-} from "@/config/built-in-agents";
+import { DEFAULT_LINKABLE_BUILT_IN_AGENTS } from "@/config/built-in-agents";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { getLogger } from "@/lib/logger";
+import { sanitiseToolName } from "@/lib/mcp/sanitise-tool-names";
 import { constructSubagentPrompt } from "@/lib/subagents/construct-subagent-prompt";
 import { getSubagentTools } from "@/lib/subagents/get-subagent-tools";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
@@ -20,10 +18,6 @@ import { SUBAGENT_ROLES } from "@/lib/subagents/subagent-role";
 import type { Agent } from "@/types/agent/agent";
 
 const log = getLogger(["subagents", "dispatch"]);
-
-const DEFAULT_LINKABLE_BUILT_IN_AGENTS = BUILT_IN_AGENTS.filter((a) =>
-  isLinkableBuiltInAgentId(a.id),
-);
 
 const INTERNAL_TOOL_ID_TO_RUNTIME_NAME: Record<string, string> = {
   [INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE]: "search_knowledge_base",
@@ -42,36 +36,67 @@ export interface CreateSubagentDispatchToolParams {
   maxSteps?: number;
   scratchpadContext?: { chatId: string; messageId: string };
   allowedSubagents?: readonly Agent[];
-  resolveModelById?: (modelId: string) => any;
+  resolveModelById?: (modelId: string) => Promise<any> | any;
   buildIsolatedTools?: (
     agent: Agent,
   ) => Promise<Record<string, any>> | Record<string, any>;
+  buildKnowledgebaseTools?: (
+    kbIds: string[],
+  ) => Promise<Record<string, any>> | Record<string, any>;
 }
 
-function resolveTargetAgent(
+/**
+ * Resolves the target subagent from `allowedSubagents` by checking `agentIdentifier`
+ * first and falling back to `roleAlias` if `agentIdentifier` is absent or unmatched.
+ *
+ * @param allowedSubagents - Linked subagents permitted for this turn
+ * @param agentIdentifier - Optional target agent ID, built-in slug, or name
+ * @param roleAlias - Optional built-in role alias fallback
+ * @returns Matching `Agent` or `undefined` if none match
+ * @author Maruf Bepary
+ */
+export function resolveTargetAgent(
   allowedSubagents: readonly Agent[],
   agentIdentifier?: string,
   roleAlias?: string,
 ): Agent | undefined {
-  const query = agentIdentifier?.trim() || roleAlias?.trim();
-  if (!query) {
-    return undefined;
+  const candidates = [agentIdentifier?.trim(), roleAlias?.trim()].filter(
+    (v): v is string => Boolean(v),
+  );
+
+  for (const query of candidates) {
+    const lower = query.toLowerCase();
+    const builtInId = lower.startsWith("builtin:") ? lower : `builtin:${lower}`;
+
+    const matched = allowedSubagents.find(
+      (candidate) =>
+        candidate.id === query ||
+        candidate.id === builtInId ||
+        candidate.name.toLowerCase() === lower,
+    );
+    if (matched) {
+      return matched;
+    }
   }
 
-  const lower = query.toLowerCase();
-  const builtInId = lower.startsWith("builtin:") ? lower : `builtin:${lower}`;
-
-  return allowedSubagents.find(
-    (candidate) =>
-      candidate.id === query ||
-      candidate.id === builtInId ||
-      candidate.name.toLowerCase() === lower,
-  );
+  return undefined;
 }
 
-function filterToolsForAgent(
+/**
+ * Filters a pool of runtime tools down to those explicitly configured on an isolated subagent.
+ * Normalizes MCP tool identifiers (`<serverId>:tool:<toolName>`) against both raw and
+ * provider-sanitised tool names so special characters (`.` or `:`) match `registerMcpTools` keys.
+ *
+ * @param availableTools - Pool of available runtime tool instances
+ * @param configuredTools - Tool identifiers configured on the target subagent
+ * @param knowledgebaseIds - Optional knowledge base IDs attached to the subagent
+ * @returns Filtered dictionary of runtime tools permitted for the subagent
+ * @author Maruf Bepary
+ */
+export function filterToolsForAgent(
   availableTools: Record<string, any>,
   configuredTools: readonly string[],
+  knowledgebaseIds?: readonly string[],
 ): Record<string, any> {
   const allowedRuntimeNames = new Set<string>();
   for (const entry of configuredTools) {
@@ -80,7 +105,11 @@ function filterToolsForAgent(
       (entry.includes(":tool:") ? entry.split(":tool:")[1] : entry);
     if (runtimeName) {
       allowedRuntimeNames.add(runtimeName);
+      allowedRuntimeNames.add(sanitiseToolName(runtimeName));
     }
+  }
+  if (knowledgebaseIds && knowledgebaseIds.length > 0) {
+    allowedRuntimeNames.add("search_knowledge_base");
   }
 
   const filtered: Record<string, any> = {};
@@ -121,7 +150,13 @@ export function createSubagentDispatchTool(
     allowedSubagents = DEFAULT_LINKABLE_BUILT_IN_AGENTS,
     resolveModelById,
     buildIsolatedTools,
+    buildKnowledgebaseTools,
   } = params;
+
+  const availableAgentsDesc =
+    allowedSubagents.length > 0
+      ? allowedSubagents.map((a) => `${a.name} (id: "${a.id}")`).join(", ")
+      : "none";
 
   return tool({
     description:
@@ -134,13 +169,13 @@ export function createSubagentDispatchTool(
         .string()
         .optional()
         .describe(
-          "Target subagent ID (e.g. 'builtin:researcher' or agent UUID), name, or role slug.",
+          `Target subagent ID or exact name. Available subagents: ${availableAgentsDesc}. Always pass the target subagent's ID or name here when delegating to a custom subagent.`,
         ),
       role: z
         .enum(SUBAGENT_ROLES)
         .optional()
         .describe(
-          "Optional built-in role alias: 'researcher', 'planner', 'reviewer', or 'worker'.",
+          "Optional built-in role alias ('researcher', 'planner', 'reviewer', or 'worker'). Only use when delegating to a built-in role agent; for custom subagents, pass their ID or name in 'agent'.",
         ),
       taskBrief: z
         .string()
@@ -173,7 +208,8 @@ export function createSubagentDispatchTool(
       }
 
       const selectedModel =
-        (targetAgent.modelId && resolveModelById?.(targetAgent.modelId)) ||
+        (targetAgent.modelId &&
+          (await resolveModelById?.(targetAgent.modelId))) ||
         customWorkerModel ||
         defaultModel;
 
@@ -184,11 +220,22 @@ export function createSubagentDispatchTool(
       } = targetAgent.guardrails;
       const effectiveMaxSteps = Math.min(Math.max(rawMaxSteps, 1), 30);
 
-      const rawWorkerTools = isolateTools
+      const baseFilteredTools = isolateTools
         ? buildIsolatedTools
           ? await buildIsolatedTools(targetAgent)
-          : filterToolsForAgent(availableTools, targetAgent.tools)
+          : filterToolsForAgent(
+              availableTools,
+              targetAgent.tools,
+              targetAgent.knowledgebaseIds,
+            )
         : availableTools;
+
+      const targetKbIds = targetAgent.knowledgebaseIds;
+      const agentKbTools =
+        targetKbIds.length > 0 && buildKnowledgebaseTools
+          ? await buildKnowledgebaseTools(targetKbIds)
+          : {};
+      const rawWorkerTools = { ...baseFilteredTools, ...agentKbTools };
 
       const baseWorkerTools = getSubagentTools(rawWorkerTools);
       const workerRoleLabel = targetAgent.isBuiltIn

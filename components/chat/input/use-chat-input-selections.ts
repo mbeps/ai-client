@@ -151,6 +151,14 @@ function useKnowledgebaseSelections(
     () => new Set(initialKbs),
   );
 
+  const kbSeedKey = (initialKbs ?? EMPTY_STRING_ARRAY).join("::");
+  const lastKbSeedKey = useRef(kbSeedKey);
+  useEffect(() => {
+    if (lastKbSeedKey.current === kbSeedKey) return;
+    lastKbSeedKey.current = kbSeedKey;
+    setSelectedKbs(new Set(initialKbs));
+  }, [kbSeedKey, initialKbs]);
+
   const handleToggleKb = useCallback(
     (id: string) => {
       setSelectedKbs((prev) => {
@@ -179,9 +187,17 @@ function useKnowledgebaseSelections(
     [onKnowledgebaseChange],
   );
 
-  const addKbById = useCallback((id: string) => {
-    setSelectedKbs((prev) => new Set(prev).add(id));
-  }, []);
+  const addKbById = useCallback(
+    (id: string) => {
+      setSelectedKbs((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Set(prev).add(id);
+        onKnowledgebaseChange?.(Array.from(next));
+        return next;
+      });
+    },
+    [onKnowledgebaseChange],
+  );
 
   const onMentionKb = useCallback(
     (kb: { id: string }) => addKbById(kb.id),

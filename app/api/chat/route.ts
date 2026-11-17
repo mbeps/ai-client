@@ -71,10 +71,12 @@ export async function POST(req: Request) {
       reasoningEffort,
       selectedServerIds,
       selectedTools,
+      selectedAgentId,
       selectedAssistantId,
       selectedSkillIds,
       selectedKbIds,
       subagentsEnabled,
+      subagentIds,
       subagentModelId,
     } = parsed.data;
 
@@ -127,10 +129,12 @@ export async function POST(req: Request) {
         reasoningEffort,
         selectedServerIds,
         selectedTools,
+        selectedAgentId,
         selectedAssistantId,
         selectedSkillIds,
         selectedKbIds,
         subagentsEnabled: subagentsEnabled ?? false,
+        subagentIds,
         subagentModelId,
       },
     });

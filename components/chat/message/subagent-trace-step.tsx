@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/trace";
 import { extractSubagentOutputText } from "@/lib/chat/extract-subagent-output";
 import { resolveSubagentOutcome } from "@/lib/chat/resolve-subagent-outcome";
+import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
 
 const ROLE_STYLES: Record<
@@ -159,14 +160,31 @@ export function SubagentTraceStep({
   chatId,
 }: SubagentTraceStepProps) {
   const [scratchpadOpen, setScratchpadOpen] = useState(false);
+  const agents = useAppStore((s) => s.agents);
 
-  const roleStyle = ROLE_STYLES[role.toLowerCase()] ?? {
-    label: agentName ?? role,
+  const lookupKey = agentId ?? role;
+  const resolvedAgent = agents?.find(
+    (a) =>
+      a.id === lookupKey ||
+      a.name.toLowerCase() === lookupKey.toLowerCase(),
+  );
+  const effectiveAgentName = agentName ?? resolvedAgent?.name;
+  const effectiveAgentId = agentId ?? resolvedAgent?.id;
+
+  const customStyle = {
+    label: effectiveAgentName ?? role,
     bg: "bg-purple-500/10 dark:bg-purple-500/20",
     text: "text-purple-700 dark:text-purple-300",
     border: "border-purple-500/30",
   };
-  const displayLabel = agentName ?? roleStyle.label;
+  const isCustomAgent = Boolean(
+    (resolvedAgent && !resolvedAgent.isBuiltIn) ||
+      (effectiveAgentName && !ROLE_STYLES[effectiveAgentName.toLowerCase()]),
+  );
+  const roleStyle = isCustomAgent
+    ? customStyle
+    : (ROLE_STYLES[role.toLowerCase()] ?? customStyle);
+  const displayLabel = effectiveAgentName ?? roleStyle.label;
 
   const outputText = useMemo(() => extractSubagentOutputText(result), [result]);
 
@@ -193,7 +211,7 @@ export function SubagentTraceStep({
             </TraceIcon>
             <Badge
               variant="outline"
-              title={agentId}
+              title={effectiveAgentId}
               className={cn(
                 "px-1.5 py-0 font-mono text-[10px] uppercase",
                 roleStyle.bg,

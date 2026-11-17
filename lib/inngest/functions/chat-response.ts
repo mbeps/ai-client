@@ -32,24 +32,32 @@ import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { Agent } from "@/types/agent/agent";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
 /**
  * Registers MCP tools when supported by the active model, or determines external server status.
+ * Separately registers isolated MCP tools for linked subagents so subagent MCP tools
+ * never leak into the parent orchestrator's active tool set.
  *
  * @param isToolCallingModel - Whether the resolved model supports function calling
- * @param servers - Active external MCP servers
- * @param selectedTools - Explicitly selected tool identifiers
- * @returns Registered tool state, source mapping, cleanup callback, and external availability flag
+ * @param servers - Active external MCP servers for the parent orchestrator
+ * @param selectedTools - Explicitly selected tool identifiers for the parent orchestrator
+ * @param subagentServers - External MCP servers required by linked subagents
+ * @param linkedSubagents - Linked subagents whose tool configurations may reference external MCP servers
+ * @returns Registered tool state, subagent tool pool, source mapping, cleanup callback, and external availability flag
  * @author Maruf Bepary
  */
 async function setupChatMcpTools(
   isToolCallingModel: boolean,
   servers: unknown,
   selectedTools?: string[],
+  subagentServers?: unknown,
+  linkedSubagents?: readonly { tools: string[] }[],
 ): Promise<{
   mcpTools: Record<string, any>;
+  subagentMcpTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
   mcpCleanup: () => Promise<void>;
   hasExternalMcpTools: boolean;
@@ -59,6 +67,7 @@ async function setupChatMcpTools(
       (Array.isArray(servers) ? servers.length : 0) > 0;
     return {
       mcpTools: {},
+      subagentMcpTools: {},
       toolSourceMap: {},
       mcpCleanup: async () => {},
       hasExternalMcpTools: hasExternalServers,
@@ -69,8 +78,35 @@ async function setupChatMcpTools(
     servers as any,
     selectedTools,
   );
+
+  if (Array.isArray(subagentServers) && subagentServers.length > 0) {
+    const subagentSelectedTools = Array.from(
+      new Set(
+        (linkedSubagents ?? [])
+          .flatMap((a) => a.tools)
+          .filter((t) => !t.startsWith("internal:tool:")),
+      ),
+    );
+    if (subagentSelectedTools.length > 0) {
+      const subMcp = await registerMcpTools(
+        subagentServers as any,
+        subagentSelectedTools,
+      );
+      return {
+        mcpTools,
+        subagentMcpTools: { ...mcpTools, ...subMcp.mcpTools },
+        toolSourceMap: { ...subMcp.toolSourceMap, ...toolSourceMap },
+        mcpCleanup: async () => {
+          await Promise.allSettled([mcpCleanup(), subMcp.mcpCleanup()]);
+        },
+        hasExternalMcpTools: Object.keys(mcpTools).length > 0,
+      };
+    }
+  }
+
   return {
     mcpTools,
+    subagentMcpTools: mcpTools,
     toolSourceMap,
     mcpCleanup,
     hasExternalMcpTools: Object.keys(mcpTools).length > 0,
@@ -109,6 +145,7 @@ async function executeModelStreamPipeline(options: {
   accumulator: ExecutionAccumulator;
   persistAbortedResponse: () => Promise<boolean>;
   reasoningEffort?: ReasoningEffort;
+  linkedSubagents?: readonly Agent[];
 }): Promise<void> {
   const {
     chatId,
@@ -127,6 +164,7 @@ async function executeModelStreamPipeline(options: {
     result,
     accumulator,
     persistAbortedResponse,
+    linkedSubagents,
   } = options;
 
   const safeFinishReason = Promise.resolve(result.finishReason).catch(
@@ -140,6 +178,7 @@ async function executeModelStreamPipeline(options: {
     emit,
     toolSourceMap,
     accumulator.completedTools,
+    linkedSubagents,
   );
 
   accumulator.accumulatedText = streamState.accumulatedText;
@@ -258,11 +297,13 @@ export const generateChatResponse = inngest.createFunction(
       reasoningEffort,
       selectedServerIds,
       selectedTools,
+      selectedAgentId,
       selectedAssistantId,
       selectedSkillIds,
       selectedKbIds,
       subagentsEnabled,
       subagentModelId,
+      subagentIds,
     } = event.data;
 
     const { controller: abortController, release: releaseAbortController } =
@@ -303,8 +344,10 @@ export const generateChatResponse = inngest.createFunction(
           subagentModelId,
           selectedServerIds,
           selectedKbIds,
+          selectedAgentId,
           selectedAssistantId,
           selectedSkillIds,
+          selectedSubagentIds: subagentIds,
         });
 
       resolvedModelId = resolved.modelId;
@@ -314,6 +357,8 @@ export const generateChatResponse = inngest.createFunction(
         isToolCallingModel,
         ctx.servers,
         selectedTools,
+        ctx.subagentServers,
+        ctx.linkedSubagents,
       );
       mcpCleanup = mcpState.mcpCleanup;
 
@@ -347,6 +392,7 @@ export const generateChatResponse = inngest.createFunction(
         assistantMessageId,
         isToolCallingModel,
         mcpTools: mcpState.mcpTools,
+        subagentMcpTools: mcpState.subagentMcpTools,
         selectedTools,
         ctx,
         fileAttachments,
@@ -413,6 +459,7 @@ export const generateChatResponse = inngest.createFunction(
         accumulator,
         persistAbortedResponse,
         reasoningEffort,
+        linkedSubagents: ctx.linkedSubagents,
       });
     } catch (error: unknown) {
       await handleChatExecutionError(

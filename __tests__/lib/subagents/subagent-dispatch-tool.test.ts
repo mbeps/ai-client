@@ -3,7 +3,11 @@ import { BUILT_IN_AGENTS } from "@/config/built-in-agents";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { DEFAULT_AGENT_GUARDRAILS } from "@/drizzle/schemas/agent-schema";
 import { constructSubagentPrompt } from "@/lib/subagents/construct-subagent-prompt";
-import { createSubagentDispatchTool } from "@/lib/subagents/create-subagent-dispatch-tool";
+import {
+  createSubagentDispatchTool,
+  filterToolsForAgent,
+  resolveTargetAgent,
+} from "@/lib/subagents/create-subagent-dispatch-tool";
 import { getSubagentTools } from "@/lib/subagents/get-subagent-tools";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
 import type { Agent } from "@/types/agent/agent";
@@ -344,6 +348,9 @@ describe("subagent-dispatch-tool", () => {
         search_knowledge_base: { description: "isolated-kb" },
         delegate_task: { description: "should-be-stripped" },
       }));
+      const buildKnowledgebaseTools = vi.fn(async (kbIds: string[]) => ({
+        search_knowledge_base: { description: `kb:${kbIds.join(",")}` },
+      }));
 
       const dispatchTool = createSubagentDispatchTool({
         defaultModel: mockDefaultModel,
@@ -354,6 +361,7 @@ describe("subagent-dispatch-tool", () => {
         allowedSubagents: [BUILT_IN_AGENTS[0], customAgent],
         resolveModelById,
         buildIsolatedTools,
+        buildKnowledgebaseTools,
         scratchpadContext: {
           chatId: "chat-iso-1",
           messageId: "msg-iso-1",
@@ -495,6 +503,78 @@ describe("subagent-dispatch-tool", () => {
       }
 
       expect(capturedConfig.model).toBe(mockDefaultModel);
+    });
+
+    it("falls back to roleAlias in resolveTargetAgent when agentIdentifier does not match and matches sanitised tool names in filterToolsForAgent", async () => {
+      const resolved = resolveTargetAgent(
+        [BUILT_IN_AGENTS[0]],
+        "non-existent-agent-id",
+        "researcher",
+      );
+      expect(resolved?.id).toBe("builtin:researcher");
+
+      const filtered = filterToolsForAgent(
+        {
+          mcp_server_search: { description: "sanitised mcp tool" },
+          unselected_tool: { description: "other" },
+        },
+        ["srv1:tool:mcp.server:search"],
+        ["kb-1"],
+      );
+      expect(filtered).toHaveProperty("mcp_server_search");
+      expect(filtered).not.toHaveProperty("unselected_tool");
+    });
+
+    it("awaits async resolveModelById and lists available subagents in agent inputSchema description", async () => {
+      let capturedConfig: any;
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config;
+        this.stream = vi.fn().mockResolvedValue({ stream: {} });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield { id: "m-1", role: "assistant", parts: [] };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const customWithModel: Agent = {
+        ...BUILT_IN_AGENTS[0],
+        id: "custom-async-1",
+        name: "Async Researcher",
+        modelId: "async-model-1",
+      };
+
+      const asyncResolveModel = vi.fn(async (id: string) => ({
+        modelId: `awaited:${id}`,
+      }));
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: mockTools,
+        allowedSubagents: [customWithModel],
+        resolveModelById: asyncResolveModel,
+      });
+
+      const shape = (dispatchTool.inputSchema as any).shape;
+      expect(shape.agent.description).toContain(
+        'Available subagents: Async Researcher (id: "custom-async-1")',
+      );
+      expect(shape.role.description).toContain(
+        "for custom subagents, pass their ID or name in 'agent'",
+      );
+
+      for await (const _ of dispatchTool.execute(
+        {
+          agent: "custom-async-1",
+          taskBrief: "Test async model resolution",
+        },
+        { abortSignal: undefined } as any,
+      )) {
+        // exhaust
+      }
+
+      expect(asyncResolveModel).toHaveBeenCalledWith("async-model-1");
+      expect(capturedConfig.model).toEqual({ modelId: "awaited:async-model-1" });
     });
 
     it("returns STATUS: BLOCKED when requested agent is not in allowedSubagents or missing", async () => {

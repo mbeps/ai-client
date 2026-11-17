@@ -1,6 +1,5 @@
 import { tool } from "ai";
 import { PROMPTS } from "@/config/prompts";
-import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { runKbSubagent } from "@/lib/rag/run-kb-subagent";
 import { searchKnowledgeBaseSchema } from "@/schemas/chat/chat";
 
@@ -40,15 +39,12 @@ export function registerKnowledgebaseTool(
   targetKbIds: string[],
   kbIsReady: boolean,
   userId: string,
-  selectedTools?: string[],
+  _selectedTools?: string[],
   subagentConfig?: KnowledgebaseSubagentConfig,
 ): Record<string, any> {
-  const isGated =
-    targetKbIds.length > 0 &&
-    kbIsReady &&
-    (selectedTools === undefined ||
-      selectedTools.includes(INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE) ||
-      selectedTools.includes("search_knowledge_base"));
+  // search_knowledge_base is an automatic capability when KBs are attached and ready,
+  // not a user-toggled tool in selectedTools (which only carries MCP/canvas/memory).
+  const isGated = targetKbIds.length > 0 && kbIsReady;
 
   if (!isGated) {
     return {};

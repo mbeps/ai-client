@@ -176,14 +176,16 @@ export async function loadTransformContext({
       (s.toolIds || []).includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT),
     );
 
-  /* 3. Register MCP tools */
+  /* 3. Register MCP tools (and KB search tool when knowledge bases are attached) */
+  const hasKbIds = Boolean(kbIds && kbIds.length > 0);
   const { mcpTools, toolSourceMap, mcpCleanup } = await registerMcpTools(
     allServers as any,
     undefined,
     effectiveArtifactToolSelected,
-    null,
-    false,
+    hasKbIds ? kbIds![0] : null,
+    hasKbIds,
     userId,
+    hasKbIds ? kbIds : undefined,
   );
 
   const linkedSubagents =

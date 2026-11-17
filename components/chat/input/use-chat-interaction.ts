@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useChatAttachments } from "@/components/chat/input/use-chat-attachments";
 import { useChatInputSelections } from "@/components/chat/input/use-chat-input-selections";
 import type { useChatInputServices } from "@/components/chat/input/use-chat-input-services";
@@ -198,6 +198,13 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     promptScopeContext,
     skillScopeContext,
   );
+
+  const setSubagentsEnabled = selections.setSubagentsEnabled;
+  useEffect(() => {
+    if (Boolean(mentions.selectedAssistant?.subagentIds?.length)) {
+      setSubagentsEnabled(true);
+    }
+  }, [mentions.selectedAssistant, setSubagentsEnabled]);
 
   const prompts = useChatPromptSelection(
     mentions.selectedPrompts,

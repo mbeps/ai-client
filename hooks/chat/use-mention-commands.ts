@@ -1,6 +1,12 @@
 "use client";
 
-import { type RefObject, useCallback, useMemo, useState } from "react";
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   filterAccessiblePrompts,
   type PromptScopeContext,
@@ -169,6 +175,15 @@ export function useMentionCommands(
       ? agents.find((a) => a.id === initialSelectedAssistantId) || null
       : null,
   );
+
+  useEffect(() => {
+    if (!initialSelectedAssistantId) return;
+    setSelectedAssistant(
+      (prev) =>
+        prev ??
+        (agents.find((a) => a.id === initialSelectedAssistantId) || null),
+    );
+  }, [initialSelectedAssistantId, agents]);
 
   const filteredItems = useMemo(() => {
     if (!openTrigger) return [];

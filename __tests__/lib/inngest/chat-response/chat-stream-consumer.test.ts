@@ -542,6 +542,96 @@ describe("chat-stream-consumer", () => {
       expect(tc?.result).toBeDefined();
     });
 
+    it("enriches delegate_task tool-call args with resolved agentId and agentName from linkedSubagents", async () => {
+      const emitted: any[] = [];
+      const emit = async (data: any) => {
+        emitted.push(data);
+      };
+
+      const completedTools: any[] = [];
+      const customSubagent = {
+        id: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+        name: "Maruf MCP Researcher",
+      } as any;
+
+      async function* generateChunks() {
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-custom",
+          toolName: "delegate_task",
+          input: {
+            agent: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+            role: "researcher",
+            taskBrief: "Research via MCP",
+          },
+        };
+      }
+
+      const abortController = new AbortController();
+      await consumeModelStream(
+        generateChunks(),
+        abortController.signal,
+        emit,
+        {},
+        completedTools,
+        [customSubagent],
+      );
+
+      expect(completedTools[0].args).toEqual({
+        agent: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+        role: "researcher",
+        taskBrief: "Research via MCP",
+        agentId: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+        agentName: "Maruf MCP Researcher",
+      });
+      expect(emitted[0]).toMatchObject({
+        type: "tool-call",
+        toolCallId: "sub-custom",
+        toolName: "delegate_task",
+        args: expect.objectContaining({
+          agentId: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+          agentName: "Maruf MCP Researcher",
+        }),
+      });
+
+      // Also test fallback to DEFAULT_LINKABLE_BUILT_IN_AGENTS when linkedSubagents is omitted,
+      // and when input has no matching targetAgent (leaves args unchanged)
+      const builtInCompleted: any[] = [];
+      async function* generateBuiltInAndUnmatched() {
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-builtin",
+          toolName: "internal:tool:delegate_task",
+          input: { role: "planner", taskBrief: "Plan steps" },
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-unmatched",
+          toolName: "delegate_task",
+          input: { agent: "unknown-agent", taskBrief: "Unmatched" },
+        };
+      }
+
+      await consumeModelStream(
+        generateBuiltInAndUnmatched(),
+        abortController.signal,
+        emit,
+        {},
+        builtInCompleted,
+      );
+
+      expect(builtInCompleted[0].args).toEqual({
+        role: "planner",
+        taskBrief: "Plan steps",
+        agentId: "builtin:planner",
+        agentName: "Planner",
+      });
+      expect(builtInCompleted[1].args).toEqual({
+        agent: "unknown-agent",
+        taskBrief: "Unmatched",
+      });
+    });
+
     it("handles abort signal mid-stream by flushing and returning aborted: true", async () => {
       const emitted: any[] = [];
       const emit = async (data: any) => {

@@ -126,6 +126,12 @@ const LINKABLE_BUILT_IN_AGENT_ID_SET = new Set<string>(
 );
 
 /**
+ * Built-in agent objects that can be linked into an orchestrator's `subagentIds`.
+ */
+export const DEFAULT_LINKABLE_BUILT_IN_AGENTS: readonly Agent[] =
+  BUILT_IN_AGENTS.filter((a) => LINKABLE_BUILT_IN_AGENT_ID_SET.has(a.id));
+
+/**
  * Returns true if the given ID belongs to any built-in system agent.
  */
 export function isBuiltInAgentId(id: string): boolean {

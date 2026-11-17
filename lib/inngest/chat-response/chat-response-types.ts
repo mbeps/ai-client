@@ -17,6 +17,7 @@ export interface BuildOrchestratorToolSetParams {
   assistantMessageId: string;
   isToolCallingModel: boolean;
   mcpTools: Record<string, any>;
+  subagentMcpTools?: Record<string, any>;
   selectedTools?: string[];
   ctx: {
     chatRow?: {
@@ -26,6 +27,13 @@ export interface BuildOrchestratorToolSetParams {
       assistantId?: string | null;
       knowledgebaseId?: string | null;
     };
+    agentRow?: {
+      id?: string;
+      subagentIds?: string[];
+    } | null;
+    projectRow?: {
+      subagentIds?: string[];
+    } | null;
     activeKbIds?: string[];
     activeKbId?: string | null;
     kbIsReady?: boolean;

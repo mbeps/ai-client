@@ -1,15 +1,23 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resolveTraceLineStatus,
   SubagentTraceStep,
 } from "@/components/chat/message/subagent-trace-step";
+import type { Agent } from "@/types/agent/agent";
 
 // Mock CSS imports for jsdom
 vi.mock("katex/dist/katex.min.css", () => ({}));
 vi.mock("@blocknote/mantine/style.css", () => ({}));
 vi.mock("@blocknote/core/fonts/inter.css", () => ({}));
+
+let mockStoreAgents: Agent[] = [];
+
+vi.mock("@/lib/store/use-app-store", () => ({
+  useAppStore: (selector: (s: { agents: Agent[] }) => unknown) =>
+    selector({ agents: mockStoreAgents }),
+}));
 
 // Mock ScratchpadViewerModal
 vi.mock("@/components/chat/message/scratchpad-viewer-modal", () => ({
@@ -37,6 +45,10 @@ describe("resolveTraceLineStatus", () => {
 });
 
 describe("SubagentTraceStep", () => {
+  beforeEach(() => {
+    mockStoreAgents = [];
+  });
+
   it("renders running state with task brief and role", () => {
     render(
       <SubagentTraceStep
@@ -143,5 +155,70 @@ describe("SubagentTraceStep", () => {
     const badge = screen.getByText("SQL Analyst");
     expect(badge).toBeDefined();
     expect(badge.getAttribute("title")).toBe("custom-agent-1");
+    expect(badge.className).toContain("text-purple-700");
+  });
+
+  it("resolves custom agent from store by agentId or name and uses purple styling", () => {
+    mockStoreAgents = [
+      {
+        id: "uuid-mcp-res",
+        name: "Maruf MCP Researcher",
+        isBuiltIn: false,
+      } as unknown as Agent,
+      {
+        id: "builtin:researcher",
+        name: "Researcher",
+        isBuiltIn: true,
+      } as unknown as Agent,
+    ];
+
+    const { unmount } = render(
+      <SubagentTraceStep
+        toolCallId="call-sub-7"
+        role="researcher"
+        agentId="uuid-mcp-res"
+        taskBrief="Fetch MCP data"
+        state="done"
+        result="Done"
+      />,
+    );
+
+    const badgeById = screen.getByText("Maruf MCP Researcher");
+    expect(badgeById).toBeDefined();
+    expect(badgeById.getAttribute("title")).toBe("uuid-mcp-res");
+    expect(badgeById.className).toContain("text-purple-700");
+    unmount();
+
+    // Also test lookup by role matching custom agent name case-insensitively when agentId is absent
+    const { unmount: unmount2 } = render(
+      <SubagentTraceStep
+        toolCallId="call-sub-8"
+        role="maruf mcp researcher"
+        taskBrief="Fetch MCP data by name"
+        state="done"
+        result="Done"
+      />,
+    );
+
+    const badgeByName = screen.getByText("Maruf MCP Researcher");
+    expect(badgeByName).toBeDefined();
+    expect(badgeByName.getAttribute("title")).toBe("uuid-mcp-res");
+    expect(badgeByName.className).toContain("text-purple-700");
+    unmount2();
+
+    // Built-in agent resolved from store keeps its built-in role style (blue for researcher)
+    render(
+      <SubagentTraceStep
+        toolCallId="call-sub-9"
+        role="researcher"
+        agentId="builtin:researcher"
+        taskBrief="Standard research"
+        state="done"
+        result="Done"
+      />,
+    );
+
+    const builtInBadge = screen.getByText("Researcher");
+    expect(builtInBadge.className).toContain("text-blue-700");
   });
 });

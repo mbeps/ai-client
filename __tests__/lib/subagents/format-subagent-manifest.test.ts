@@ -44,6 +44,9 @@ describe("formatSubagentManifest", () => {
     const manifest = formatSubagentManifest([...linkableBuiltIns, custom]);
 
     expect(manifest).toContain("## Available Subagents");
+    expect(manifest).toContain(
+      "Pass the target agent's exact ID or name in `agent` (do not use `role` for custom subagents), a self-contained `taskBrief`, and optional `inputData`:",
+    );
     expect(manifest).toContain("delegate_task");
     expect(manifest).toContain("builtin:researcher");
     expect(manifest).toContain("Researcher");

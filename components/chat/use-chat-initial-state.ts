@@ -55,13 +55,21 @@ function resolveInitialModelId(
 }
 
 /**
- * Resolves initial subagents.
+ * Resolves initial subagent enablement and model override.
+ * Prioritizes an explicit user toggle saved in the last user message metadata;
+ * otherwise auto-enables subagents when the active assistant or project has linked subagents.
  *
  * @param thread - Array of chat messages in the conversation
- * @returns The resolved result
+ * @param currentProject - Active project configuration
+ * @param currentAssistant - Active assistant/agent configuration
+ * @returns Initial subagent enabled flag and optional model override
  * @author Maruf Bepary
  */
-function resolveInitialSubagents(thread: Message[]): {
+function resolveInitialSubagents(
+  thread: Message[],
+  currentProject?: Project,
+  currentAssistant?: Agent,
+): {
   initialSubagentsEnabled: boolean;
   initialSubagentModelId: string | undefined;
 } {
@@ -70,13 +78,18 @@ function resolveInitialSubagents(thread: Message[]): {
     const { subagentsEnabled, subagentModelId } = parseMessageMetadata(
       lastUserMessage.metadata,
     );
-    return {
-      initialSubagentsEnabled: subagentsEnabled ?? false,
-      initialSubagentModelId: subagentModelId,
-    };
+    if (subagentsEnabled !== undefined) {
+      return {
+        initialSubagentsEnabled: subagentsEnabled,
+        initialSubagentModelId: subagentModelId,
+      };
+    }
   }
+  const hasEntitySubagents =
+    Boolean(currentAssistant?.subagentIds?.length) ||
+    Boolean(currentProject?.subagentIds?.length);
   return {
-    initialSubagentsEnabled: false,
+    initialSubagentsEnabled: hasEntitySubagents,
     initialSubagentModelId: undefined,
   };
 }
@@ -119,12 +132,20 @@ function resolveInitialTools(
  *
  * @param chat - Target chat
  * @param currentProject - Target current project
+ * @param currentAssistant - Target current assistant
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function resolveInitialKbIds(chat?: Chat, currentProject?: Project): string[] {
-  const kbId = chat?.knowledgebaseId ?? currentProject?.knowledgebaseId;
-  return kbId ? [kbId] : [];
+function resolveInitialKbIds(
+  chat?: Chat,
+  currentProject?: Project,
+  currentAssistant?: Agent,
+): string[] {
+  const primaryKbId = chat?.knowledgebaseId ?? currentProject?.knowledgebaseId;
+  const agentKbIds = currentAssistant?.knowledgebaseIds ?? [];
+  return Array.from(
+    new Set([...(primaryKbId ? [primaryKbId] : []), ...agentKbIds]),
+  );
 }
 
 /**
@@ -198,7 +219,7 @@ export function resolveInitialChatConfig(
   chat: Chat | undefined,
 ): InitialChatConfig {
   const { initialSubagentsEnabled, initialSubagentModelId } =
-    resolveInitialSubagents(thread);
+    resolveInitialSubagents(thread, currentProject, currentAssistant);
   const { initialServerIds, initialSelectedTools } = resolveInitialTools(
     currentProject,
     currentAssistant,
@@ -216,7 +237,7 @@ export function resolveInitialChatConfig(
     initialReasoningEffort: resolveInitialReasoningEffort(thread),
     initialServerIds,
     initialSelectedTools,
-    initialKbIds: resolveInitialKbIds(chat, currentProject),
+    initialKbIds: resolveInitialKbIds(chat, currentProject, currentAssistant),
     initialSkillIds: resolveInitialSkillIds(currentAssistant, currentProject),
   };
 }

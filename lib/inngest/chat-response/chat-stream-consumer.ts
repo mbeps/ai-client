@@ -1,3 +1,4 @@
+import { DEFAULT_LINKABLE_BUILT_IN_AGENTS } from "@/config/built-in-agents";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import {
   createInlineReasoningParser,
@@ -11,7 +12,9 @@ import type {
 } from "@/lib/inngest/chat-response/chat-response-types";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
+import { resolveTargetAgent } from "@/lib/subagents/create-subagent-dispatch-tool";
 import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
+import type { Agent } from "@/types/agent/agent";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -59,11 +62,14 @@ export function createStreamEmitter(
 
 /**
  * Handles a tool-call chunk by updating completedTools and emitting event.
+ * When `delegate_task` is called, enriches `args` with the resolved `agentId` and `agentName`
+ * so the frontend trace badge can display custom subagent names instead of generic role aliases.
  *
  * @param chunk - Target chunk
  * @param completedTools - Target completed tools
  * @param toolSourceMap - Target tool source map
  * @param emit - Target emit
+ * @param linkedSubagents - Optional linked subagents to resolve custom agent metadata against
  * @returns The resolved result
  * @author Maruf Bepary
  */
@@ -72,9 +78,28 @@ async function handleToolCallChunk(
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
   emit: (data: ChatStreamEvent) => Promise<void>,
+  linkedSubagents?: readonly Agent[],
 ): Promise<void> {
   const serverName = toolSourceMap[chunk.toolName];
-  const args = chunk.input;
+  let args = chunk.input;
+  const isSubagent =
+    chunk.toolName === "delegate_task" ||
+    chunk.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK;
+  if (isSubagent && chunk.input && typeof chunk.input === "object") {
+    const rawInput = chunk.input as Record<string, unknown>;
+    const targetAgent = resolveTargetAgent(
+      linkedSubagents ?? DEFAULT_LINKABLE_BUILT_IN_AGENTS,
+      typeof rawInput.agent === "string" ? rawInput.agent : undefined,
+      typeof rawInput.role === "string" ? rawInput.role : undefined,
+    );
+    if (targetAgent) {
+      args = {
+        ...rawInput,
+        agentId: targetAgent.id,
+        agentName: targetAgent.name,
+      };
+    }
+  }
   completedTools.push({
     toolCallId: chunk.toolCallId,
     toolName: chunk.toolName,
@@ -180,9 +205,16 @@ async function handleNonDeltaChunk(
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
   emit: (data: ChatStreamEvent) => Promise<void>,
+  linkedSubagents?: readonly Agent[],
 ): Promise<void> {
   if (chunk.type === "tool-call") {
-    await handleToolCallChunk(chunk, completedTools, toolSourceMap, emit);
+    await handleToolCallChunk(
+      chunk,
+      completedTools,
+      toolSourceMap,
+      emit,
+      linkedSubagents,
+    );
   } else if (chunk.type === "tool-result") {
     await handleToolResultChunk(chunk, completedTools, toolSourceMap, emit);
   } else if (chunk.type === "tool-error") {
@@ -267,6 +299,7 @@ export async function consumeModelStream(
   emit: (data: ChatStreamEvent) => Promise<void>,
   toolSourceMap: Record<string, string>,
   completedTools: CompletedToolRecord[],
+  linkedSubagents?: readonly Agent[],
 ): Promise<ConsumeModelStreamResult> {
   const flushReasoning = async (): Promise<void> => {
     if (ctx.bufferedReasoning.length === 0) return;
@@ -338,7 +371,13 @@ export async function consumeModelStream(
         await handleStreamReasoningDelta(directReasoning, ctx);
       } else {
         await ctx.flushDeltas();
-        await handleNonDeltaChunk(chunk, completedTools, toolSourceMap, emit);
+        await handleNonDeltaChunk(
+          chunk,
+          completedTools,
+          toolSourceMap,
+          emit,
+          linkedSubagents,
+        );
       }
     }
   }

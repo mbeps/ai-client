@@ -225,6 +225,22 @@ describe("useMentionCommands", () => {
       );
       expect(result.current.selectedAssistant).toBeNull();
     });
+
+    it("hydrates selectedAssistant when agents load asynchronously after mount", () => {
+      useAppStore.setState({ agents: [] });
+      const setInput = vi.fn();
+      const { result, rerender } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, undefined, "a1"),
+      );
+      expect(result.current.selectedAssistant).toBeNull();
+
+      act(() => {
+        useAppStore.setState({ agents: SAMPLE_ASSISTANTS });
+      });
+      rerender();
+
+      expect(result.current.selectedAssistant).toEqual(SAMPLE_ASSISTANTS[0]);
+    });
   });
 
   describe("slash command detection (/)", () => {

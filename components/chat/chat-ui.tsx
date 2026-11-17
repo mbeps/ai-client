@@ -188,6 +188,9 @@ export function ChatUI({
     initialServerIds,
     initialSelectedTools,
     initialKbIds,
+    initialSkillIds,
+    initialSubagentsEnabled,
+    initialSubagentModelId,
   );
 
   if (!chat) {

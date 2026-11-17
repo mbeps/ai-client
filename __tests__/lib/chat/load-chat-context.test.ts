@@ -505,5 +505,92 @@ describe("loadChatContext KB ownership", () => {
       ["builtin:planner"],
     );
     expect(overrideCtx.linkedSubagents.map((a) => a.id)).toEqual(["builtin:planner"]);
+    expect(overrideCtx.subagentServers).toEqual([]);
+  });
+
+  it("populates subagentServers from linkedSubagents tools even when parent selectedServerIds is empty", async () => {
+    chainable.__queueWhere([
+      {
+        id: "chat-sub-srv",
+        projectId: null,
+        agentId: "orch-1",
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+        projectSubagentIds: [],
+      },
+    ]);
+    chainable.__queueWhere([
+      {
+        id: "orch-1",
+        name: "Orchestrator",
+        prompt: "Orchestrate",
+        skillMode: "dynamic",
+        skillIds: [],
+        knowledgebaseIds: [],
+        subagentIds: ["sub-mcp-1"],
+      },
+    ]);
+    chainable.__queueWhere([
+      { id: "srv-sub", name: "Subagent MCP", url: "https://sub.example.com/mcp" },
+      { id: "srv-unused", name: "Unused MCP", url: "https://unused.example.com/mcp" },
+    ]);
+    chainable.__queueWhere([]); // installed mcp servers
+    chainable.__queueWhere([]); // user skills
+    chainable.__queueWhere([
+      {
+        id: "sub-mcp-1",
+        userId: "user-1",
+        name: "Maruf MCP Researcher",
+        description: "Uses MCP",
+        prompt: "Search MCP",
+        subagentPrompt: null,
+        modelId: null,
+        knowledgebaseIds: [],
+        tools: ["srv-sub:tool:web_search", "internal:tool:search_knowledge_base"],
+        skillMode: "dynamic",
+        skillIds: [],
+        promptMode: "all",
+        promptIds: [],
+        subagentIds: [],
+        guardrails: { maxSteps: 8, scratchpadAccess: "read_only", isolateTools: true },
+        avatar: null,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    ]);
+
+    const ctx = await loadChatContext("chat-sub-srv", "user-1", []);
+
+    expect(ctx.servers).toEqual([]);
+    expect(ctx.subagentServers).toHaveLength(1);
+    expect(ctx.subagentServers[0].id).toBe("srv-sub");
+
+    // Also test retrieveRelevantMemories rejection fallback
+    const { retrieveRelevantMemories } = await import(
+      "@/lib/memory/retrieve-relevant-memories"
+    );
+    vi.mocked(retrieveRelevantMemories).mockRejectedValueOnce(
+      new Error("Memory DB error"),
+    );
+    chainable.__queueWhere([
+      {
+        id: "chat-mem-err",
+        projectId: null,
+        agentId: null,
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+        projectSubagentIds: [],
+      },
+    ]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+    chainable.__queueWhere([]);
+
+    const memErrCtx = await loadChatContext("chat-mem-err", "user-1");
+    expect(memErrCtx.userMemories).toEqual([]);
   });
 });

@@ -19,7 +19,7 @@ export function formatSubagentManifest(subagents: readonly Agent[]): string {
 
   return [
     "## Available Subagents",
-    "You can delegate self-contained tasks to the following subagents using the `delegate_task` tool. Pass the target agent's ID (or name/role) in `agent`, a self-contained `taskBrief`, and optional `inputData`:",
+    "You can delegate self-contained tasks to the following subagents using the `delegate_task` tool. Pass the target agent's exact ID or name in `agent` (do not use `role` for custom subagents), a self-contained `taskBrief`, and optional `inputData`:",
     "",
     ...lines,
   ].join("\n");

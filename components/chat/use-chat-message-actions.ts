@@ -215,7 +215,9 @@ export function useChatMessageActions({
 }
 
 /**
- * Custom hook that provides use initial chat auto send functionality.
+ * Automatically sends an initial message once when a newly created chat mounts with empty history.
+ * Forwards resolved entity skills, subagent enablement, and active agent/assistant IDs so
+ * the first turn executes with the full orchestrator configuration.
  *
  * @param chat - Target chat
  * @param initialMessage - Target initial message
@@ -225,7 +227,9 @@ export function useChatMessageActions({
  * @param initialServerIds - Target initial server ids
  * @param initialSelectedTools - Target initial selected tools
  * @param initialKbIds - Target initial kb ids
- * @returns Hook state and control handlers.
+ * @param initialSkillIds - Target initial skill ids
+ * @param initialSubagentsEnabled - Target initial subagents enabled flag
+ * @param initialSubagentModelId - Target initial subagent model id
  * @author Maruf Bepary
  */
 export function useInitialChatAutoSend(
@@ -242,11 +246,16 @@ export function useInitialChatAutoSend(
     assistantId?: string,
     kbIds?: string[],
     skillIds?: string[],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
   ) => void,
   initialModelId: string | undefined,
   initialServerIds: string[],
   initialSelectedTools: string[],
   initialKbIds: string[],
+  initialSkillIds?: string[],
+  initialSubagentsEnabled?: boolean,
+  initialSubagentModelId?: string,
 ) {
   const sentInitial = useRef(false);
 
@@ -265,9 +274,11 @@ export function useInitialChatAutoSend(
       initialServerIds,
       initialSelectedTools,
       undefined,
-      chat.assistantId ?? undefined,
+      chat.agentId ?? chat.assistantId ?? undefined,
       initialKbIds,
-      [],
+      initialSkillIds ?? [],
+      initialSubagentsEnabled,
+      initialSubagentModelId,
     );
   }, [
     chat,
@@ -278,6 +289,9 @@ export function useInitialChatAutoSend(
     initialServerIds,
     initialSelectedTools,
     initialKbIds,
+    initialSkillIds,
+    initialSubagentsEnabled,
+    initialSubagentModelId,
   ]);
 }
 

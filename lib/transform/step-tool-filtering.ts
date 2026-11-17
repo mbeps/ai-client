@@ -4,7 +4,10 @@ import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
-import { createSubagentDispatchTool } from "@/lib/subagents/create-subagent-dispatch-tool";
+import {
+  createSubagentDispatchTool,
+  filterToolsForAgent,
+} from "@/lib/subagents/create-subagent-dispatch-tool";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
@@ -89,6 +92,9 @@ function isToolAllowed(
   stepServerNames: Set<string>,
   allowedToolIds: Set<string>,
 ): boolean {
+  if (toolName === "search_knowledge_base" && source === "System") {
+    return true;
+  }
   const isInternal = source === "Internal" || source === "System";
   const fromAllowedServer = isInternal || stepServerNames.has(source);
 
@@ -222,6 +228,12 @@ export function filterStepTools(params: FilterStepToolsParams): {
       defaultModel: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
       availableTools: { ...filteredTools },
       allowedSubagents: linkedSubagents,
+      buildIsolatedTools: (agent) =>
+        filterToolsForAgent(
+          { ...runMcpTools, ...filteredTools },
+          agent.tools,
+          agent.knowledgebaseIds,
+        ),
     });
   }
 

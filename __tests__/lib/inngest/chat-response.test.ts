@@ -2029,6 +2029,109 @@ describe("generateChatResponse Inngest Function", () => {
         }),
       );
     });
+
+    it("registers subagentServers MCP tools separately from parent servers and cleans up both on completion", async () => {
+      const subCleanup = vi.fn(async () => {});
+      mockRegisterMcpTools
+        .mockResolvedValueOnce({
+          mcpTools: {},
+          toolSourceMap: {},
+          mcpCleanup: mockMcpCleanup,
+        })
+        .mockResolvedValueOnce({
+          mcpTools: { subagent_only_mcp_tool: { description: "sub mcp" } },
+          toolSourceMap: { subagent_only_mcp_tool: "SubMCP" },
+          mcpCleanup: subCleanup,
+        });
+
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        subagentServers: [{ id: "srv-sub", name: "SubMCP", url: "https://sub.mcp" }],
+        linkedSubagents: [
+          {
+            id: "sub-1",
+            name: "Maruf MCP Researcher",
+            tools: ["srv-sub:tool:subagent_only_mcp_tool", "internal:tool:search_knowledge_base"],
+            knowledgebaseIds: [],
+            skillMode: "dynamic",
+            skillIds: [],
+            guardrails: { maxSteps: 8, scratchpadAccess: "read_only", isolateTools: true },
+          },
+        ],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: { id: "orch-1", subagentIds: ["sub-1"] },
+      });
+
+      const fn = (generateChatResponse as any).fn;
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-sub-mcp",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+            selectedAgentId: "orch-1",
+            subagentIds: ["sub-1"],
+          },
+        },
+      });
+
+      expect(mockLoadChatContext).toHaveBeenCalledWith(
+        "chat-sub-mcp",
+        "user-1",
+        undefined,
+        undefined,
+        "orch-1",
+        undefined,
+        undefined,
+        ["sub-1"],
+      );
+      expect(mockRegisterMcpTools).toHaveBeenCalledTimes(2);
+      expect(mockRegisterMcpTools).toHaveBeenNthCalledWith(
+        2,
+        [{ id: "srv-sub", name: "SubMCP", url: "https://sub.mcp" }],
+        ["srv-sub:tool:subagent_only_mcp_tool"],
+      );
+      const streamTools = mockStreamText.mock.calls[0][0].tools;
+      // Parent orchestrator must NOT get subagent_only_mcp_tool directly
+      expect(streamTools.subagent_only_mcp_tool).toBeUndefined();
+      // Delegate task should be enabled
+      expect(streamTools.delegate_task).toBeDefined();
+      expect(mockMcpCleanup).toHaveBeenCalled();
+      expect(subCleanup).toHaveBeenCalled();
+
+      // Also test when subagentServers is non-empty but linkedSubagents only have internal tools (or undefined)
+      mockRegisterMcpTools.mockClear();
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        subagentServers: [{ id: "srv-sub", name: "SubMCP", url: "https://sub.mcp" }],
+        linkedSubagents: undefined,
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: null,
+      });
+
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-sub-mcp-empty-tools",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockRegisterMcpTools).toHaveBeenCalledTimes(1);
+    });
   });
 });
 
