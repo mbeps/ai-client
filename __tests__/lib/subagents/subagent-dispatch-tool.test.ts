@@ -29,6 +29,7 @@ vi.mock("ai", async (importOriginal) => {
   return {
     ...actual,
     ToolLoopAgent: vi.fn(),
+    streamText: vi.fn(),
     readUIMessageStream: vi.fn(),
     toUIMessageStream: vi.fn(),
     isStepCount: vi.fn().mockReturnValue("step-count-checker"),
@@ -743,6 +744,127 @@ describe("subagent-dispatch-tool", () => {
 
       expect(yielded).toHaveLength(1);
       expect(yielded[0].parts[0].text).toContain("STATUS: BLOCKED - Worker execution failed: Subagent worker failed");
+    });
+
+    it("attaches execution metadata (modelId, durationMs, stepCount, maxSteps, finishReason, usage) to the final yielded chunk", async () => {
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({
+            inputTokens: 120,
+            outputTokens: 45,
+            totalTokens: 165,
+          }),
+          finishReason: Promise.resolve("stop"),
+          steps: Promise.resolve([{ stepType: "initial" }, { stepType: "tool-result" }]),
+        });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield {
+          id: "m-meta-1",
+          role: "assistant",
+          parts: [{ type: "text", text: "STATUS: DONE\n\nSummary." }],
+        };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: { modelId: "gpt-4o-mini" },
+        availableTools: mockTools,
+      });
+
+      const yielded: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Check metadata" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded.push(chunk);
+      }
+
+      const finalChunk = yielded[yielded.length - 1];
+      expect(finalChunk.metadata).toMatchObject({
+        modelId: "gpt-4o-mini",
+        stepCount: 2,
+        maxSteps: 10,
+        finishReason: "stop",
+        usage: {
+          promptTokens: 120,
+          completionTokens: 45,
+          totalTokens: 165,
+        },
+      });
+      expect(typeof finalChunk.metadata.durationMs).toBe("number");
+    });
+
+    it("runs a tool-free fallback synthesis pass when worker finishes tool calls with no text output", async () => {
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({ inputTokens: 80, outputTokens: 20, totalTokens: 100 }),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([{ stepType: "initial" }]),
+          response: Promise.resolve({
+            messages: [
+              {
+                role: "assistant",
+                content: [{ type: "tool-call", toolCallId: "tc-1", toolName: "scratchpad_write", input: { filePath: "notes.md" } }],
+              },
+              {
+                role: "tool",
+                content: [{ type: "tool-result", toolCallId: "tc-1", toolName: "scratchpad_write", output: { type: "text", value: "Saved notes.md" } }],
+              },
+            ],
+          }),
+        });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield {
+          id: "m-synth-1",
+          role: "assistant",
+          parts: [
+            {
+              type: "tool-scratchpad_write",
+              toolCallId: "tc-1",
+              state: "output-available",
+              input: { filePath: "notes.md" },
+              output: { success: true, filePath: "notes.md" },
+            },
+          ],
+        };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "STATUS: DONE\n\n";
+          yield "Synthesized findings from scratchpad.";
+        })(),
+        totalUsage: Promise.resolve({ inputTokens: 40, outputTokens: 15, totalTokens: 55 }),
+        finishReason: Promise.resolve("stop"),
+      } as any);
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: { modelId: "gpt-4o-mini" },
+        availableTools: mockTools,
+      });
+
+      const yielded: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Research MCP" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded.push(chunk);
+      }
+
+      expect(aiModule.streamText).toHaveBeenCalledTimes(1);
+      const finalChunk = yielded[yielded.length - 1];
+      const textParts = finalChunk.parts.filter((p: any) => p.type === "text");
+      expect(textParts.map((p: any) => p.text).join("")).toContain(
+        "STATUS: DONE\n\nSynthesized findings from scratchpad.",
+      );
+      expect(finalChunk.metadata?.usage?.totalTokens).toBe(155);
     });
 
     describe("toModelOutput", () => {

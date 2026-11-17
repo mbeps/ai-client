@@ -542,6 +542,73 @@ describe("chat-stream-consumer", () => {
       expect(tc?.result).toBeDefined();
     });
 
+    it("preserves structured UIMessage parts and metadata on final delegate_task tool-result while bounding oversized tool outputs", async () => {
+      const emitted: any[] = [];
+      const emit = async (data: any) => {
+        emitted.push(data);
+      };
+
+      const completedTools: any[] = [];
+      const longToolOutput = "X".repeat(5000);
+      const subagentUiMessage = {
+        id: "run-1",
+        role: "assistant",
+        parts: [
+          { type: "reasoning", text: "Thinking through the KB..." },
+          {
+            type: "tool-search_knowledge_base",
+            toolCallId: "inner-tc-1",
+            state: "output-available",
+            input: { query: "MCP" },
+            output: longToolOutput,
+          },
+          { type: "text", text: "STATUS: DONE\n\nFound MCP details." },
+        ],
+        metadata: {
+          modelId: "gpt-4o-mini",
+          durationMs: 1250,
+          stepCount: 2,
+          maxSteps: 10,
+          finishReason: "stop",
+        },
+      };
+
+      async function* generateChunks() {
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-ui-1",
+          toolName: "delegate_task",
+          input: { role: "researcher", taskBrief: "Research MCP" },
+        };
+        yield {
+          type: "tool-result",
+          toolCallId: "sub-ui-1",
+          toolName: "delegate_task",
+          output: subagentUiMessage,
+          preliminary: false,
+        };
+      }
+
+      const abortController = new AbortController();
+      await consumeModelStream(
+        generateChunks(),
+        abortController.signal,
+        emit,
+        {},
+        completedTools,
+      );
+
+      const tc = completedTools.find((t) => t.toolCallId === "sub-ui-1");
+      expect(tc?.result).toMatchObject({
+        id: "run-1",
+        role: "assistant",
+        metadata: { modelId: "gpt-4o-mini", durationMs: 1250 },
+      });
+      expect(tc?.result.parts).toHaveLength(3);
+      expect(tc?.result.parts[1].output.length).toBeLessThan(4200);
+      expect(tc?.result.parts[1].output).toContain("[... truncated]");
+    });
+
     it("enriches delegate_task tool-call args with resolved agentId and agentName from linkedSubagents", async () => {
       const emitted: any[] = [];
       const emit = async (data: any) => {

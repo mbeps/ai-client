@@ -13,7 +13,6 @@ import type {
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { resolveTargetAgent } from "@/lib/subagents/create-subagent-dispatch-tool";
-import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Agent } from "@/types/agent/agent";
 
 const log = getLogger(["inngest", "chat", "response"]);
@@ -115,8 +114,63 @@ async function handleToolCallChunk(
   });
 }
 
+const MAX_SUBAGENT_PART_OUTPUT_CHARS = 4000;
+
+function boundToolPartOutput(output: unknown): unknown {
+  if (typeof output === "string") {
+    return output.length > MAX_SUBAGENT_PART_OUTPUT_CHARS
+      ? `${output.slice(0, MAX_SUBAGENT_PART_OUTPUT_CHARS)}\n[... truncated]`
+      : output;
+  }
+  if (output !== null && typeof output === "object") {
+    try {
+      const serialized = JSON.stringify(output);
+      if (serialized.length > MAX_SUBAGENT_PART_OUTPUT_CHARS) {
+        return `${serialized.slice(0, MAX_SUBAGENT_PART_OUTPUT_CHARS)}\n[... truncated]`;
+      }
+    } catch {
+      return "[unserializable output]";
+    }
+  }
+  return output;
+}
+
 /**
- * Handles a tool-result chunk by sanitizing output and emitting event.
+ * Preserves the structured subagent UIMessage (parts + metadata) for UI rendering
+ * and PostgreSQL persistence while capping oversized nested tool outputs.
+ */
+function boundSubagentResultForPersistence(rawResult: unknown): unknown {
+  if (rawResult === undefined || rawResult === null) {
+    return "Subagent finished with no text output.";
+  }
+  if (typeof rawResult !== "object") {
+    return rawResult;
+  }
+  const msg = rawResult as Record<string, unknown>;
+  if (!Array.isArray(msg.parts)) {
+    return rawResult;
+  }
+  return {
+    ...msg,
+    parts: msg.parts.map((part) => {
+      if (
+        part &&
+        typeof part === "object" &&
+        "output" in part &&
+        (part as { output?: unknown }).output !== undefined
+      ) {
+        return {
+          ...part,
+          output: boundToolPartOutput((part as { output?: unknown }).output),
+        };
+      }
+      return part;
+    }),
+  };
+}
+
+/**
+ * Handles a tool-result chunk by bounding subagent UIMessage payloads and emitting event.
  *
  * @param chunk - Target chunk
  * @param completedTools - Target completed tools
@@ -138,7 +192,7 @@ async function handleToolResultChunk(
     chunk.toolName === "delegate_task" ||
     chunk.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK;
   const finalResult = isSubagent
-    ? sanitizeSubagentOutput(rawResult)
+    ? boundSubagentResultForPersistence(rawResult)
     : rawResult;
 
   if (tc && !isPreliminary) {
