@@ -1,11 +1,14 @@
+const mockEnv = vi.hoisted(() => ({
+  DATABASE_URL: "postgresql://test:test@localhost:5432/test",
+  BETTER_AUTH_SECRET: "test-secret",
+  BETTER_AUTH_URL: "http://localhost:3000",
+  NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+  NODE_ENV: "test",
+  RAG_MODE: "hybrid" as "hybrid" | "vector" | "file_read",
+}));
+
 vi.mock("@/config/env", () => ({
-  env: {
-    DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-    BETTER_AUTH_SECRET: "test-secret",
-    BETTER_AUTH_URL: "http://localhost:3000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    NODE_ENV: "test",
-  },
+  env: mockEnv,
 }));
 
 const chainable = vi.hoisted(() => {
@@ -39,11 +42,14 @@ import { setDefaultEmbeddingModel } from "@/actions/models/set-default-embedding
 describe("setDefaultEmbeddingModel action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnv.RAG_MODE = "hybrid";
     chainable.select.mockReturnValue(chainable);
     chainable.from.mockReturnValue(chainable);
     chainable.insert.mockReturnValue(chainable);
     chainable.values.mockReturnValue(chainable);
     chainable.onConflictDoUpdate.mockResolvedValue(undefined);
+    chainable.update.mockReturnValue(chainable);
+    chainable.set.mockReturnValue(chainable);
   });
 
   it("throws NotFound if model does not exist or lacks embedding capability", async () => {
@@ -56,11 +62,22 @@ describe("setDefaultEmbeddingModel action", () => {
     }
   });
 
-  it("sets default embedding model successfully", async () => {
+  it("sets default embedding model successfully and marks KBs stale in hybrid mode", async () => {
     chainable.where.mockResolvedValueOnce([{ id: "model-1" }]);
 
     const res = await setDefaultEmbeddingModel("model-1");
     expect(res).toEqual({ ok: true, value: undefined });
     expect(chainable.insert).toHaveBeenCalled();
+    expect(chainable.update).toHaveBeenCalled();
+  });
+
+  it("skips marking knowledgebases stale when RAG_MODE is file_read", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    chainable.where.mockResolvedValueOnce([{ id: "model-1" }]);
+
+    const res = await setDefaultEmbeddingModel("model-1");
+    expect(res).toEqual({ ok: true, value: undefined });
+    expect(chainable.insert).toHaveBeenCalled();
+    expect(chainable.update).not.toHaveBeenCalled();
   });
 });

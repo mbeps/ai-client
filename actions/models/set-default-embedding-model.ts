@@ -1,6 +1,7 @@
 "use server";
 
 import { and, eq, inArray } from "drizzle-orm";
+import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { aiModel } from "@/drizzle/schemas/ai-model-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
@@ -63,14 +64,16 @@ export const setDefaultEmbeddingModel = defineAction(
         },
       });
 
-    // Mark all user's knowledgebases as stale
-    await db
-      .update(knowledgebase)
-      .set({
-        indexStatus: "stale",
-        updatedAt: new Date(),
-      })
-      .where(eq(knowledgebase.userId, session.user.id));
+    if (env.RAG_MODE !== "file_read") {
+      // Mark all user's knowledgebases as stale
+      await db
+        .update(knowledgebase)
+        .set({
+          indexStatus: "stale",
+          updatedAt: new Date(),
+        })
+        .where(eq(knowledgebase.userId, session.user.id));
+    }
 
     log.info("Default embedding model updated (id: {modelId})", {
       modelId,
