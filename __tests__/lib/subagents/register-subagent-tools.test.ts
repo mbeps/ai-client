@@ -23,6 +23,37 @@ describe("registerScratchpadTools", () => {
     workerRole: "researcher",
   };
 
+  describe("scratchpadAccess modes", () => {
+    it("registers write, read, and list tools for read_write (default)", () => {
+      const tools = registerScratchpadTools(context);
+      expect(Object.keys(tools).sort()).toEqual([
+        "scratchpad_list",
+        "scratchpad_read",
+        "scratchpad_write",
+      ]);
+    });
+
+    it("registers only read and list tools for read_only", () => {
+      const tools = registerScratchpadTools({
+        ...context,
+        scratchpadAccess: "read_only",
+      });
+      expect(Object.keys(tools).sort()).toEqual([
+        "scratchpad_list",
+        "scratchpad_read",
+      ]);
+      expect(tools).not.toHaveProperty("scratchpad_write");
+    });
+
+    it("registers no tools for none", () => {
+      const tools = registerScratchpadTools({
+        ...context,
+        scratchpadAccess: "none",
+      });
+      expect(tools).toEqual({});
+    });
+  });
+
   describe("scratchpad_write", () => {
     it("successfully writes file to scratchpad", async () => {
       vi.mocked(upsertScratchpadFile).mockResolvedValueOnce({

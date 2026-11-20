@@ -4,6 +4,11 @@ import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import {
+  type SubagentLinkTx,
+  validateTargetSubagentIds,
+  withSubagentLinkLock,
+} from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
@@ -54,21 +59,52 @@ export const updateTransformAgent = defineAction(
     if (validated.skillIds !== undefined) values.skillIds = validated.skillIds;
     if (validated.knowledgeBaseIds !== undefined)
       values.knowledgeBaseIds = validated.knowledgeBaseIds;
+    if (validated.subagentIds !== undefined)
+      values.subagentIds = validated.subagentIds;
     if (validated.requiresFileUpload !== undefined)
       values.requiresFileUpload = validated.requiresFileUpload;
     if (validated.steps !== undefined)
       values.steps = JSON.stringify(validated.steps);
 
-    const [row] = await db
-      .update(transformAgent)
-      .set(values)
-      .where(
-        and(
-          eq(transformAgent.id, id),
-          eq(transformAgent.userId, session.user.id),
-        ),
-      )
-      .returning();
+    const persistUpdate = async (executor: SubagentLinkTx) => {
+      const [updated] = await executor
+        .update(transformAgent)
+        .set(values)
+        .where(
+          and(
+            eq(transformAgent.id, id),
+            eq(transformAgent.userId, session.user.id),
+          ),
+        )
+        .returning();
+      return updated;
+    };
+
+    let row: TransformAgentRow | undefined;
+    if (validated.subagentIds && validated.subagentIds.length > 0) {
+      const subagentIds = validated.subagentIds;
+      const txResult = await withSubagentLinkLock(
+        session.user.id,
+        async (tx) => {
+          const linkCheck = await validateTargetSubagentIds(
+            session.user.id,
+            subagentIds,
+            undefined,
+            tx,
+          );
+          if (!linkCheck.ok) {
+            return linkCheck;
+          }
+          return ok((await persistUpdate(tx)) as TransformAgentRow | undefined);
+        },
+      );
+      if (!txResult.ok) {
+        return txResult;
+      }
+      row = txResult.value;
+    } else {
+      row = (await persistUpdate(db)) as TransformAgentRow | undefined;
+    }
 
     if (!row) {
       return fail({
@@ -77,6 +113,6 @@ export const updateTransformAgent = defineAction(
       });
     }
 
-    return ok(row as TransformAgentRow);
+    return ok(row);
   },
 );

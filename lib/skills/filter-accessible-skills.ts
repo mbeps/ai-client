@@ -8,9 +8,17 @@ import type { Skill } from "@/types/skill/skill";
  */
 export interface SkillScopeContext {
   projectId?: string | null;
+  agentId?: string | null;
   assistantId?: string | null;
   skillMode?: SkillMode;
   skillIds?: string[];
+}
+
+function getSkillAgentIds(skill: Skill): string[] {
+  if (skill.agentIds && skill.agentIds.length > 0) {
+    return skill.agentIds;
+  }
+  return skill.assistantIds ?? [];
 }
 
 /**
@@ -40,10 +48,12 @@ export function filterAccessibleSkills(
 ): Skill[] {
   const {
     projectId,
+    agentId,
     assistantId,
     skillMode = "dynamic",
     skillIds = [],
   } = context;
+  const effectiveAgentId = agentId ?? assistantId;
 
   if (skillMode === "none") {
     return [];
@@ -51,21 +61,22 @@ export function filterAccessibleSkills(
 
   const enabledSkills = skills.filter((s) => s.enabled);
 
-  if (projectId || assistantId) {
+  if (projectId || effectiveAgentId) {
     return enabledSkills.filter((s) => {
       const isProjectScoped = Boolean(
         projectId && s.projectIds?.includes(projectId),
       );
-      const isAssistantScoped = Boolean(
-        assistantId && s.assistantIds?.includes(assistantId),
+      const skillAgentIds = getSkillAgentIds(s);
+      const isAgentScoped = Boolean(
+        effectiveAgentId && skillAgentIds.includes(effectiveAgentId),
       );
-      if (isProjectScoped || isAssistantScoped) {
+      if (isProjectScoped || isAgentScoped) {
         return true;
       }
 
       const isGlobal =
         (!s.projectIds || s.projectIds.length === 0) &&
-        (!s.assistantIds || s.assistantIds.length === 0);
+        skillAgentIds.length === 0;
 
       if (!isGlobal) {
         return false;
@@ -81,6 +92,6 @@ export function filterAccessibleSkills(
   return enabledSkills.filter(
     (s) =>
       (!s.projectIds || s.projectIds.length === 0) &&
-      (!s.assistantIds || s.assistantIds.length === 0),
+      getSkillAgentIds(s).length === 0,
   );
 }

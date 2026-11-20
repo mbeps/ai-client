@@ -46,8 +46,8 @@ vi.mock("@/actions/chats/update-message-metadata", () => ({
 vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/actions/assistants/list-assistants", () => ({
-  listAssistants: vi.fn(),
+vi.mock("@/actions/agents/list-agents", () => ({
+  listAgents: vi.fn(),
 }));
 vi.mock("@/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
 vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
@@ -95,7 +95,7 @@ describe("useCreateChat", () => {
     expect(mockPush).toHaveBeenCalledWith("/projects/proj-1/chat-def");
   });
 
-  it("navigates to the assistant-scoped chat URL when assistantId is provided", async () => {
+  it("navigates to the agent-scoped chat URL when agentId is provided", async () => {
     vi.spyOn(useAppStore.getState(), "createChatDb").mockResolvedValueOnce(
       "chat-ghi",
     );
@@ -103,10 +103,10 @@ describe("useCreateChat", () => {
     const { result } = renderHook(() => useCreateChat());
 
     await act(async () => {
-      await result.current("New Chat", undefined, "asst-1");
+      await result.current("New Chat", undefined, "agent-1");
     });
 
-    expect(mockPush).toHaveBeenCalledWith("/assistants/asst-1/chat-ghi");
+    expect(mockPush).toHaveBeenCalledWith("/agents/agent-1/chat-ghi");
   });
 
   it("uses 'New Chat' as the default title", async () => {

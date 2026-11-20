@@ -20,7 +20,7 @@ import type {
   MentionTrigger,
 } from "@/hooks/chat/use-mention-commands";
 import { cn } from "@/lib/utils";
-import type { Assistant } from "@/types/assistant/assistant";
+import type { Agent } from "@/types/agent/agent";
 
 /**
  * Represents mention commands props.
@@ -194,11 +194,11 @@ export function MentionCommands({
                   >
                     <div className="flex w-full flex-col overflow-hidden">
                       <span className="truncate font-medium">
-                        {(item as Assistant).name}
+                        {(item as Agent).name}
                       </span>
-                      {(item as Assistant).description && (
+                      {(item as Agent).description && (
                         <span className="text-muted-foreground truncate text-xs">
-                          {(item as Assistant).description}
+                          {(item as Agent).description}
                         </span>
                       )}
                     </div>

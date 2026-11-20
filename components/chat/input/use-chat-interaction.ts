@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useChatAttachments } from "@/components/chat/input/use-chat-attachments";
 import { useChatInputSelections } from "@/components/chat/input/use-chat-input-selections";
 import type { useChatInputServices } from "@/components/chat/input/use-chat-input-services";
@@ -33,6 +33,7 @@ export interface ChatInteractionProps {
     subagentsEnabled?: boolean,
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
   ) => void;
   isLoading?: boolean;
   servers?: (McpServer | PublicMcpServer)[];
@@ -48,6 +49,7 @@ export interface ChatInteractionProps {
   activeChatAssistantId?: string | null;
   initialSubagentsEnabled?: boolean;
   initialSubagentModelId?: string;
+  initialSubagentIds?: readonly string[] | string[];
   projectId?: string | null;
   assistantId?: string | null;
   promptMode?: "all" | "none" | "specific";
@@ -199,6 +201,42 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     skillScopeContext,
   );
 
+  const { setSubagentsEnabled, setSelectedSubagentIds } = selections;
+  const restoredAssistantIdRef = useRef<string | undefined>(
+    props.initialSelectedAssistantId,
+  );
+  const hasRestoredDelegation =
+    props.initialSubagentsEnabled !== undefined ||
+    props.initialSubagentIds !== undefined;
+
+  useEffect(() => {
+    const selectedAssistant = mentions.selectedAssistant;
+    if (!selectedAssistant) {
+      if (restoredAssistantIdRef.current !== undefined) {
+        restoredAssistantIdRef.current = undefined;
+      }
+      return;
+    }
+
+    if (
+      hasRestoredDelegation &&
+      selectedAssistant.id === restoredAssistantIdRef.current
+    ) {
+      return;
+    }
+
+    restoredAssistantIdRef.current = undefined;
+    if (selectedAssistant.subagentIds?.length) {
+      setSubagentsEnabled(true);
+      setSelectedSubagentIds([...selectedAssistant.subagentIds]);
+    }
+  }, [
+    mentions.selectedAssistant,
+    hasRestoredDelegation,
+    setSubagentsEnabled,
+    setSelectedSubagentIds,
+  ]);
+
   const prompts = useChatPromptSelection(
     mentions.selectedPrompts,
     mentions.setSelectedPrompts,
@@ -235,6 +273,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     selectedSkills: selections.selectedSkills,
     subagentsEnabled: selections.subagentsEnabled,
     subagentModelId: selections.subagentModelId,
+    selectedSubagentIds: selections.selectedSubagentIds,
     reasoningEffort: options.reasoningEffort,
     handleCommandKeyDown: mentions.handleKeyDown,
   });

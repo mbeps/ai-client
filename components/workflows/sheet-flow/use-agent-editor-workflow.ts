@@ -67,6 +67,7 @@ export function useAgentEditorWorkflow(params: UseAgentEditorWorkflowParams) {
         skillMode: form.skillMode,
         skillIds: form.skillIds,
         knowledgeBaseIds: form.knowledgeBaseIds,
+        subagentIds: form.subagentIds,
         requiresFileUpload: form.requiresFileUpload,
         steps: form.steps,
       });

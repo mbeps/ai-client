@@ -1,3 +1,4 @@
+import { resolveBuiltInAgentByRoleOrId } from "@/config/built-in-agents";
 import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
 import type { ToolCallState } from "@/types/tool/tool-call";
@@ -25,6 +26,8 @@ export type TraceStep =
       key: string;
       toolCallId: string;
       role: string;
+      agentId?: string;
+      agentName?: string;
       taskBrief: string;
       inputData?: string;
       result?: unknown;
@@ -62,13 +65,51 @@ function parseArgsObject(args: unknown): Record<string, unknown> {
   return {};
 }
 
+/**
+ * Extracts subagent delegation parameters from tool call arguments.
+ * Prioritizes explicit `agent` and enriched `agentId`/`agentName` fields over `role`
+ * so custom subagent delegations are not overwritten when models also supply a fallback role.
+ *
+ * @param args - Raw tool call arguments from streaming or persisted state
+ * @returns Normalized subagent role, agentId, agentName, taskBrief, and inputData
+ * @author Maruf Bepary
+ */
 function extractSubagentParams(args: unknown): {
   role: string;
+  agentId?: string;
+  agentName?: string;
   taskBrief: string;
   inputData?: string;
 } {
   const obj = parseArgsObject(args);
-  const role = typeof obj.role === "string" && obj.role ? obj.role : "worker";
+  const rawAgent =
+    typeof obj.agent === "string" && obj.agent.trim()
+      ? obj.agent.trim()
+      : undefined;
+  const rawRole =
+    typeof obj.role === "string" && obj.role.trim()
+      ? obj.role.trim()
+      : undefined;
+  const explicitAgentId =
+    typeof obj.agentId === "string" && obj.agentId.trim()
+      ? obj.agentId.trim()
+      : undefined;
+  const agentId = explicitAgentId ?? rawAgent;
+  const role = rawAgent ?? rawRole ?? "worker";
+  const resolvedBuiltIn = rawAgent
+    ? resolveBuiltInAgentByRoleOrId(rawAgent)
+    : rawRole
+      ? resolveBuiltInAgentByRoleOrId(rawRole)
+      : undefined;
+  const isUuid =
+    rawAgent !== undefined &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      rawAgent,
+    );
+  const agentName =
+    typeof obj.agentName === "string" && obj.agentName.trim()
+      ? obj.agentName.trim()
+      : (resolvedBuiltIn?.name ?? (rawAgent && !isUuid ? rawAgent : undefined));
   const taskBrief =
     typeof obj.taskBrief === "string" && obj.taskBrief
       ? obj.taskBrief
@@ -82,7 +123,7 @@ function extractSubagentParams(args: unknown): {
         ? obj.input
         : undefined;
 
-  return { role, taskBrief, inputData };
+  return { role, agentId, agentName, taskBrief, inputData };
 }
 
 function resolveStepState(
@@ -114,12 +155,15 @@ function createToolOrSubagentStep({
   state,
 }: CreateToolOrSubagentStepParams): TraceStep {
   if (toolName === "delegate_task") {
-    const { role, taskBrief, inputData } = extractSubagentParams(args);
+    const { role, agentId, agentName, taskBrief, inputData } =
+      extractSubagentParams(args);
     return {
       kind: "subagent",
       key,
       toolCallId,
       role,
+      ...(agentId ? { agentId } : {}),
+      ...(agentName ? { agentName } : {}),
       taskBrief,
       inputData,
       result,

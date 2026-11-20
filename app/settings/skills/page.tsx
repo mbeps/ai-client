@@ -21,7 +21,7 @@ export default function SkillsPage() {
   const skills = useAppStore((state) => state.skills);
   const loadSkills = useAppStore((state) => state.loadSkills);
   const [scopeFilter, setScopeFilter] = useState<
-    "all" | "global" | "project" | "assistant"
+    "all" | "global" | "project" | "agent"
   >("all");
 
   return (
@@ -54,7 +54,7 @@ export default function SkillsPage() {
       }
       extraFilters={
         <div className="flex items-center gap-1.5 overflow-x-auto">
-          {(["all", "global", "project", "assistant"] as const).map((s) => (
+          {(["all", "global", "project", "agent"] as const).map((s) => (
             <Button
               key={s}
               size="sm"
@@ -68,20 +68,21 @@ export default function SkillsPage() {
                   ? "Global"
                   : s === "project"
                     ? "Projects"
-                    : "Assistants"}
+                    : "Agents"}
             </Button>
           ))}
         </div>
       }
       customFilterFn={(s) => {
+        const agentIds = s.agentIds?.length
+          ? s.agentIds
+          : (s.assistantIds ?? []);
         const isGlobal =
-          (!s.projectIds || s.projectIds.length === 0) &&
-          (!s.assistantIds || s.assistantIds.length === 0);
+          (!s.projectIds || s.projectIds.length === 0) && agentIds.length === 0;
         if (scopeFilter === "global") return isGlobal;
         if (scopeFilter === "project")
           return Boolean(s.projectIds && s.projectIds.length > 0);
-        if (scopeFilter === "assistant")
-          return Boolean(s.assistantIds && s.assistantIds.length > 0);
+        if (scopeFilter === "agent") return agentIds.length > 0;
         return true;
       }}
       filterFn={(s, q) =>

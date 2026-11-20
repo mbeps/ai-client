@@ -37,8 +37,8 @@ vi.mock("@/actions/chats/update-message-metadata", () => ({
 vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/actions/assistants/list-assistants", () => ({
-  listAssistants: vi.fn(),
+vi.mock("@/actions/agents/list-agents", () => ({
+  listAgents: vi.fn(),
 }));
 vi.mock("@/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
 vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({

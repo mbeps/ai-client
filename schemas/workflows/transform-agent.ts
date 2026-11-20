@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { subagentTargetIdField } from "@/schemas/agent/agent";
 import {
   descriptionField,
   nameField,
@@ -52,6 +53,7 @@ export const createTransformAgentSchema = z.object({
   skillMode: skillModeSchema.optional(),
   skillIds: skillIdsSchema.optional(),
   knowledgeBaseIds: z.array(z.string()).optional().default([]),
+  subagentIds: z.array(subagentTargetIdField).optional(),
   requiresFileUpload: z.boolean().optional().default(true),
   steps: z.array(transformStepSchema).optional().default([]),
 });
@@ -67,6 +69,7 @@ export const updateTransformAgentSchema = createTransformAgentSchema
     skillMode: true,
     skillIds: true,
     knowledgeBaseIds: true,
+    subagentIds: true,
     requiresFileUpload: true,
     steps: true,
   })
@@ -79,6 +82,7 @@ export const updateTransformAgentSchema = createTransformAgentSchema
     skillMode: z.enum(["dynamic", "none", "specific"]).optional(),
     skillIds: z.array(z.string()).optional(),
     knowledgeBaseIds: z.array(z.string()).optional(),
+    subagentIds: z.array(subagentTargetIdField).optional(),
     requiresFileUpload: z.boolean().optional(),
     steps: z.array(transformStepSchema).optional(),
   });

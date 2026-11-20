@@ -264,7 +264,7 @@ describe("createPrompt", () => {
       ok: false,
       error: expect.objectContaining({
         code: "NOT_FOUND",
-        message: "One or more assistants not found",
+        message: "One or more agents not found",
       }),
     });
   });
@@ -452,7 +452,7 @@ describe("updatePrompt", () => {
       ok: false,
       error: expect.objectContaining({
         code: "NOT_FOUND",
-        message: "One or more assistants not found",
+        message: "One or more agents not found",
       }),
     });
   });

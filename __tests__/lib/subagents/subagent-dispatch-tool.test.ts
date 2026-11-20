@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
+import { BUILT_IN_AGENTS } from "@/config/built-in-agents";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { DEFAULT_AGENT_GUARDRAILS } from "@/drizzle/schemas/agent-schema";
 import { constructSubagentPrompt } from "@/lib/subagents/construct-subagent-prompt";
-import { createSubagentDispatchTool } from "@/lib/subagents/create-subagent-dispatch-tool";
+import {
+  createSubagentDispatchTool,
+  filterToolsForAgent,
+  resolveTargetAgent,
+} from "@/lib/subagents/create-subagent-dispatch-tool";
 import { getSubagentTools } from "@/lib/subagents/get-subagent-tools";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
+import type { Agent } from "@/types/agent/agent";
 import * as aiModule from "ai";
 
 vi.mock("@/lib/subagents/register-subagent-tools", () => ({
@@ -22,6 +29,7 @@ vi.mock("ai", async (importOriginal) => {
   return {
     ...actual,
     ToolLoopAgent: vi.fn(),
+    streamText: vi.fn(),
     readUIMessageStream: vi.fn(),
     toUIMessageStream: vi.fn(),
     isStepCount: vi.fn().mockReturnValue("step-count-checker"),
@@ -33,6 +41,7 @@ describe("subagent-dispatch-tool", () => {
     it("strictly strips delegate_task and manage_artifact", () => {
       const mockTools = {
         delegate_task: { description: "delegate" },
+        [INTERNAL_TOOL_IDS.DELEGATE_TASK]: { description: "delegate internal" },
         manage_artifact: { description: "manage artifact" },
         [INTERNAL_TOOL_IDS.MANAGE_ARTIFACT]: { description: "manage artifact full" },
         scratchpad_write: { description: "write" },
@@ -48,6 +57,7 @@ describe("subagent-dispatch-tool", () => {
 
       // Verify strict exclusion
       expect(result).not.toHaveProperty("delegate_task");
+      expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.DELEGATE_TASK);
       expect(result).not.toHaveProperty("manage_artifact");
       expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
     });
@@ -93,6 +103,65 @@ describe("subagent-dispatch-tool", () => {
       expect(prompt).toContain("REPORTING CONTRACT");
       expect(prompt).toContain("STATUS: DONE");
       expect(prompt).toContain("scratchpad_write");
+    });
+
+    it("combines custom agent prompt, subagentPrompt, scratchpadAccess modes, scratchpadFiles, and preloaded skills", () => {
+      const customAgent: Agent = {
+        id: "agent-sql-1",
+        userId: "user-1",
+        name: "SQL Analyst",
+        description: "SQL expert",
+        prompt: "You are a PostgreSQL specialist.",
+        subagentPrompt: "Always check EXPLAIN ANALYZE.",
+        modelId: "gpt-4o",
+        knowledgebaseIds: [],
+        tools: [],
+        skillMode: "dynamic",
+        skillIds: [],
+        promptMode: "all",
+        promptIds: [],
+        subagentIds: [],
+        guardrails: {
+          maxSteps: 15,
+          scratchpadAccess: "read_only",
+          isolateTools: true,
+        },
+        avatar: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const readOnlyPrompt = constructSubagentPrompt({
+        isSubagent: true,
+        agentRole: "SQL Analyst",
+        agent: customAgent,
+        parentInvocationId: "inv-2",
+        runId: "run-2",
+        allocatedModel: "gpt-4o",
+        scratchpadAccess: "read_only",
+        scratchpadFiles: ["notes/schema.md"],
+        preloadedSkillInstructions: ["## Skill: sql-tuning\nUse indexes."],
+      });
+
+      expect(readOnlyPrompt).toContain("You are a PostgreSQL specialist.");
+      expect(readOnlyPrompt).toContain("Always check EXPLAIN ANALYZE.");
+      expect(readOnlyPrompt).toContain("read-only access to the shared scratchpad");
+      expect(readOnlyPrompt).not.toContain("Use scratchpad_write");
+      expect(readOnlyPrompt).toContain("notes/schema.md");
+      expect(readOnlyPrompt).toContain("## Skill: sql-tuning");
+
+      const nonePrompt = constructSubagentPrompt({
+        isSubagent: true,
+        agentRole: "SQL Analyst",
+        agent: { ...customAgent, guardrails: { ...customAgent.guardrails, scratchpadAccess: "none" } },
+        parentInvocationId: "inv-3",
+        runId: "run-3",
+        allocatedModel: "gpt-4o",
+        scratchpadAccess: "none",
+      });
+
+      expect(nonePrompt).not.toContain("scratchpad_write");
+      expect(nonePrompt).not.toContain("scratchpad_read");
     });
   });
 
@@ -190,7 +259,7 @@ describe("subagent-dispatch-tool", () => {
       }
 
       expect(capturedConfig.model).toBe("plain-model-string");
-      expect(capturedConfig.instructions).toContain("Role: WORKER");
+      expect(capturedConfig.instructions).toContain("Role: Worker (builtin:worker)");
     });
 
     it("binds scratchpad tools with the worker role when scratchpadContext is provided", async () => {
@@ -232,9 +301,338 @@ describe("subagent-dispatch-tool", () => {
         chatId: "chat-attr-1",
         messageId: "msg-attr-1",
         workerRole: "researcher",
+        scratchpadAccess: "read_write",
       });
       expect(capturedConfig.tools).toHaveProperty("scratchpad_write");
       expect(capturedConfig.tools.scratchpad_write.workerRole).toBe("researcher");
+    });
+
+    it("resolves custom allowedSubagents by id or name, enforces guardrails, modelId, and isolateTools", async () => {
+      let capturedConfig: any;
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config;
+        this.stream = vi.fn().mockResolvedValue({ stream: {} });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield { id: "m-1", role: "assistant", parts: [{ type: "text", text: "STATUS: DONE" }] };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const customAgent: Agent = {
+        id: "11111111-1111-4111-8111-111111111111",
+        userId: "user-1",
+        name: "Data Analyst",
+        description: "Analyzes CSVs",
+        prompt: "You analyze data.",
+        subagentPrompt: "Keep answers tabular.",
+        modelId: "custom-model-id",
+        knowledgebaseIds: ["kb-1"],
+        tools: ["search_knowledge_base"],
+        skillMode: "dynamic",
+        skillIds: [],
+        promptMode: "all",
+        promptIds: [],
+        subagentIds: [],
+        guardrails: {
+          maxSteps: 22,
+          scratchpadAccess: "read_only",
+          isolateTools: true,
+        },
+        avatar: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const resolveModelById = vi.fn((id: string) => ({ modelId: `resolved:${id}` }));
+      const buildIsolatedTools = vi.fn(async () => ({
+        search_knowledge_base: { description: "isolated-kb" },
+        delegate_task: { description: "should-be-stripped" },
+      }));
+      const buildKnowledgebaseTools = vi.fn(async (kbIds: string[]) => ({
+        search_knowledge_base: { description: `kb:${kbIds.join(",")}` },
+      }));
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: {
+          search_knowledge_base: { description: "parent-kb" },
+          other_tool: { description: "parent-other" },
+        },
+        allowedSubagents: [BUILT_IN_AGENTS[0], customAgent],
+        resolveModelById,
+        buildIsolatedTools,
+        buildKnowledgebaseTools,
+        scratchpadContext: {
+          chatId: "chat-iso-1",
+          messageId: "msg-iso-1",
+        },
+      });
+
+      const generator = dispatchTool.execute(
+        {
+          agent: "Data Analyst",
+          taskBrief: "Analyze dataset",
+        },
+        { abortSignal: undefined } as any,
+      );
+
+      for await (const _ of generator) {
+        // exhaust
+      }
+
+      expect(resolveModelById).toHaveBeenCalledWith("custom-model-id");
+      expect(capturedConfig.model).toEqual({ modelId: "resolved:custom-model-id" });
+      expect(aiModule.isStepCount).toHaveBeenCalledWith(22);
+      expect(buildIsolatedTools).toHaveBeenCalledWith(customAgent);
+      expect(capturedConfig.tools).toHaveProperty("search_knowledge_base");
+      expect(capturedConfig.tools).not.toHaveProperty("delegate_task");
+      expect(capturedConfig.tools).not.toHaveProperty("other_tool");
+      expect(registerScratchpadTools).toHaveBeenCalledWith({
+        chatId: "chat-iso-1",
+        messageId: "msg-iso-1",
+        workerRole: "Data Analyst",
+        scratchpadAccess: "read_only",
+      });
+      expect(capturedConfig.instructions).toContain("You analyze data.");
+      expect(capturedConfig.instructions).toContain("Keep answers tabular.");
+    });
+
+    it("filters availableTools by targetAgent.tools when isolateTools is true and buildIsolatedTools is omitted", async () => {
+      let capturedConfig: any;
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config;
+        this.stream = vi.fn().mockResolvedValue({ stream: {} });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield { id: "m-1", role: "assistant", parts: [] };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const customAgent: Agent = {
+        id: "22222222-2222-4222-8222-222222222222",
+        userId: "user-1",
+        name: "Focused Worker",
+        description: "Uses only allowed tools",
+        prompt: "Focused prompt",
+        subagentPrompt: "",
+        modelId: null,
+        knowledgebaseIds: [],
+        tools: [
+          "internal:tool:search_knowledge_base",
+          "srv1:tool:fetch_data",
+          "srv1:tool:",
+          "custom_raw_tool",
+        ],
+        skillMode: "none",
+        skillIds: [],
+        promptMode: "none",
+        promptIds: [],
+        subagentIds: [],
+        guardrails: {
+          ...DEFAULT_AGENT_GUARDRAILS,
+          maxSteps: 5,
+          scratchpadAccess: "none",
+          isolateTools: true,
+        },
+        avatar: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: {
+          search_knowledge_base: { description: "kb" },
+          fetch_data: { description: "mcp" },
+          custom_raw_tool: { description: "raw" },
+          save_memory: { description: "memory" },
+        },
+        allowedSubagents: [customAgent],
+      });
+
+      const generator = dispatchTool.execute(
+        {
+          agent: "22222222-2222-4222-8222-222222222222",
+          taskBrief: "Run focused task",
+        },
+        { abortSignal: undefined } as any,
+      );
+
+      for await (const _ of generator) {
+        // exhaust
+      }
+
+      expect(capturedConfig.tools).toHaveProperty("search_knowledge_base");
+      expect(capturedConfig.tools).toHaveProperty("fetch_data");
+      expect(capturedConfig.tools).toHaveProperty("custom_raw_tool");
+      expect(capturedConfig.tools).not.toHaveProperty("save_memory");
+    });
+
+    it("resolves builtin: prefix in agent parameter and falls back to defaultModel when resolveModelById is omitted", async () => {
+      let capturedConfig: any;
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config;
+        this.stream = vi.fn().mockResolvedValue({ stream: {} });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield { id: "m-1", role: "assistant", parts: [] };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const customWithModel = {
+        ...BUILT_IN_AGENTS[0],
+        modelId: "some-model-id",
+      };
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: mockTools,
+        allowedSubagents: [customWithModel],
+      });
+
+      for await (const _ of dispatchTool.execute(
+        {
+          agent: "builtin:researcher",
+          taskBrief: "Research with builtin prefix",
+        },
+        { abortSignal: undefined } as any,
+      )) {
+        // exhaust
+      }
+
+      expect(capturedConfig.model).toBe(mockDefaultModel);
+    });
+
+    it("falls back to roleAlias in resolveTargetAgent when agentIdentifier does not match and matches sanitised tool names in filterToolsForAgent", async () => {
+      const resolved = resolveTargetAgent(
+        [BUILT_IN_AGENTS[0]],
+        "non-existent-agent-id",
+        "researcher",
+      );
+      expect(resolved?.id).toBe("builtin:researcher");
+
+      const filtered = filterToolsForAgent(
+        {
+          mcp_server_search: { description: "sanitised mcp tool" },
+          unselected_tool: { description: "other" },
+        },
+        ["srv1:tool:mcp.server:search"],
+        ["kb-1"],
+      );
+      expect(filtered).toHaveProperty("mcp_server_search");
+      expect(filtered).not.toHaveProperty("unselected_tool");
+    });
+
+    it("awaits async resolveModelById and lists available subagents in agent inputSchema description", async () => {
+      let capturedConfig: any;
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+        capturedConfig = config;
+        this.stream = vi.fn().mockResolvedValue({ stream: {} });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield { id: "m-1", role: "assistant", parts: [] };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const customWithModel: Agent = {
+        ...BUILT_IN_AGENTS[0],
+        id: "custom-async-1",
+        name: "Async Researcher",
+        modelId: "async-model-1",
+      };
+
+      const asyncResolveModel = vi.fn(async (id: string) => ({
+        modelId: `awaited:${id}`,
+      }));
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: mockTools,
+        allowedSubagents: [customWithModel],
+        resolveModelById: asyncResolveModel,
+      });
+
+      const shape = (dispatchTool.inputSchema as any).shape;
+      expect(shape.agent.description).toContain(
+        'Available subagents: Async Researcher (id: "custom-async-1")',
+      );
+      expect(shape.role.description).toContain(
+        "for custom subagents, pass their ID or name in 'agent'",
+      );
+
+      for await (const _ of dispatchTool.execute(
+        {
+          agent: "custom-async-1",
+          taskBrief: "Test async model resolution",
+        },
+        { abortSignal: undefined } as any,
+      )) {
+        // exhaust
+      }
+
+      expect(asyncResolveModel).toHaveBeenCalledWith("async-model-1");
+      expect(capturedConfig.model).toEqual({ modelId: "awaited:async-model-1" });
+    });
+
+    it("returns STATUS: BLOCKED when requested agent is not in allowedSubagents or missing", async () => {
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: mockTools,
+        allowedSubagents: [BUILT_IN_AGENTS[0]],
+      });
+
+      const unlinkedChunks: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        {
+          agent: "non-existent-agent",
+          taskBrief: "Do something",
+        },
+        { abortSignal: undefined } as any,
+      )) {
+        unlinkedChunks.push(chunk);
+      }
+
+      expect(unlinkedChunks).toHaveLength(1);
+      expect(unlinkedChunks[0].parts[0].text).toContain("STATUS: BLOCKED");
+      expect(unlinkedChunks[0].parts[0].text).toContain("builtin:researcher");
+
+      const emptyChunks: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        {
+          taskBrief: "Do something without agent",
+        },
+        { abortSignal: undefined } as any,
+      )) {
+        emptyChunks.push(chunk);
+      }
+
+      expect(emptyChunks).toHaveLength(1);
+      expect(emptyChunks[0].parts[0].text).toContain("STATUS: BLOCKED");
+
+      const emptyAllowedTool = createSubagentDispatchTool({
+        defaultModel: mockDefaultModel,
+        availableTools: mockTools,
+        allowedSubagents: [],
+      });
+
+      const roleBlockedChunks: any[] = [];
+      for await (const chunk of emptyAllowedTool.execute(
+        {
+          role: "planner",
+          taskBrief: "Plan with no allowed subagents",
+        },
+        { abortSignal: undefined } as any,
+      )) {
+        roleBlockedChunks.push(chunk);
+      }
+
+      expect(roleBlockedChunks).toHaveLength(1);
+      expect(roleBlockedChunks[0].parts[0].text).toContain("planner");
+      expect(roleBlockedChunks[0].parts[0].text).toContain("Available subagents: none.");
     });
 
     it("throttles intermediate UI chunks to at least 150ms and emits the final chunk", async () => {
@@ -346,6 +744,351 @@ describe("subagent-dispatch-tool", () => {
 
       expect(yielded).toHaveLength(1);
       expect(yielded[0].parts[0].text).toContain("STATUS: BLOCKED - Worker execution failed: Subagent worker failed");
+    });
+
+    it("attaches execution metadata (modelId, durationMs, stepCount, maxSteps, finishReason, usage) to the final yielded chunk", async () => {
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({
+            inputTokens: 120,
+            outputTokens: 45,
+            totalTokens: 165,
+          }),
+          finishReason: Promise.resolve("stop"),
+          steps: Promise.resolve([{ stepType: "initial" }, { stepType: "tool-result" }]),
+        });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield {
+          id: "m-meta-1",
+          role: "assistant",
+          parts: [{ type: "text", text: "STATUS: DONE\n\nSummary." }],
+        };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: { modelId: "gpt-4o-mini" },
+        availableTools: mockTools,
+      });
+
+      const yielded: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Check metadata" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded.push(chunk);
+      }
+
+      const finalChunk = yielded[yielded.length - 1];
+      expect(finalChunk.metadata).toMatchObject({
+        modelId: "gpt-4o-mini",
+        stepCount: 2,
+        maxSteps: 10,
+        finishReason: "stop",
+        usage: {
+          promptTokens: 120,
+          completionTokens: 45,
+          totalTokens: 165,
+        },
+      });
+      expect(typeof finalChunk.metadata.durationMs).toBe("number");
+    });
+
+    it("runs a tool-free fallback synthesis pass when worker finishes tool calls with no text output", async () => {
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({ inputTokens: 80, outputTokens: 20, totalTokens: 100 }),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([{ stepType: "initial" }]),
+          response: Promise.resolve({
+            messages: [
+              {
+                role: "assistant",
+                content: [{ type: "tool-call", toolCallId: "tc-1", toolName: "scratchpad_write", input: { filePath: "notes.md" } }],
+              },
+              {
+                role: "tool",
+                content: [{ type: "tool-result", toolCallId: "tc-1", toolName: "scratchpad_write", output: { type: "text", value: "Saved notes.md" } }],
+              },
+            ],
+          }),
+        });
+      });
+
+      const mockStreamAsyncIterator = async function* () {
+        yield {
+          id: "m-synth-1",
+          role: "assistant",
+          parts: [
+            {
+              type: "tool-scratchpad_write",
+              toolCallId: "tc-1",
+              state: "output-available",
+              input: { filePath: "notes.md" },
+              output: { success: true, filePath: "notes.md" },
+            },
+          ],
+        };
+      };
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "STATUS: DONE\n\n";
+          yield "Synthesized findings from scratchpad.";
+        })(),
+        totalUsage: Promise.resolve({ inputTokens: 40, outputTokens: 15, totalTokens: 55 }),
+        finishReason: Promise.resolve("stop"),
+      } as any);
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: { modelId: "gpt-4o-mini" },
+        availableTools: mockTools,
+      });
+
+      const yielded: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Research MCP" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded.push(chunk);
+      }
+
+      expect(aiModule.streamText).toHaveBeenCalledTimes(1);
+      const finalChunk = yielded[yielded.length - 1];
+      const textParts = finalChunk.parts.filter((p: any) => p.type === "text");
+      expect(textParts.map((p: any) => p.text).join("")).toContain(
+        "STATUS: DONE\n\nSynthesized findings from scratchpad.",
+      );
+      expect(finalChunk.metadata?.usage?.totalTokens).toBe(155);
+    });
+
+    it("gracefully ignores rejected metadata promises from streamResult and synthResult", async () => {
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.reject(new Error("usage err")),
+          finishReason: Promise.reject(new Error("finish err")),
+          steps: Promise.reject(new Error("steps err")),
+          response: Promise.reject(new Error("response err")),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield {
+            id: "m-rej-1",
+            role: "assistant",
+            parts: [{ type: "text", text: "STATUS: DONE" }],
+          };
+        })() as any,
+      );
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: { modelId: "gpt-4o-mini" },
+        availableTools: mockTools,
+      });
+
+      const yielded1: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Reject stream metadata" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded1.push(chunk);
+      }
+      expect(yielded1[yielded1.length - 1].metadata).toMatchObject({
+        modelId: "gpt-4o-mini",
+        maxSteps: 10,
+      });
+
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({}),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([]),
+          response: Promise.resolve({
+            messages: [{ role: "assistant", content: [] }],
+          }),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield { id: "m-rej-2", role: "assistant", parts: [] };
+        })() as any,
+      );
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "STATUS: DONE";
+        })(),
+        totalUsage: Promise.reject(new Error("synth usage err")),
+        finishReason: Promise.reject(new Error("synth finish err")),
+      } as any);
+
+      const yielded2: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Reject synth metadata" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded2.push(chunk);
+      }
+      expect(yielded2[yielded2.length - 1].metadata?.usage).toBeUndefined();
+    });
+
+    it("handles partial usage objects, empty synth stream, missing parts, existing chunk metadata, and empty stream", async () => {
+      // Case 1: streamResult has promptTokens/completionTokens without totalTokens,
+      // synthResult has undefined usage (covers mergeUsage !b and normalizeUsage promptTokens/completionTokens)
+      // plus lastChunk has non-array parts, existing metadata, and whitespace-only synthText.
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({ promptTokens: 10, completionTokens: 5 }),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([]),
+          response: Promise.resolve({
+            messages: [{ role: "assistant", content: [] }],
+          }),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield { id: "m-edge-1", role: "assistant", metadata: { existing: true } };
+        })() as any,
+      );
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "   ";
+        })(),
+        totalUsage: Promise.resolve(undefined),
+        finishReason: Promise.resolve(undefined),
+      } as any);
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: { modelId: "gpt-4o-mini" },
+        availableTools: mockTools,
+      });
+
+      const yielded1: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Edge metadata 1" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded1.push(chunk);
+      }
+      expect(yielded1[yielded1.length - 1].metadata).toMatchObject({
+        existing: true,
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+      });
+
+      // Case 2: mergeUsage with sparse fields on both sides (covers ?? 0 fallbacks)
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({ completionTokens: 2 }),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([]),
+          response: Promise.resolve({
+            messages: [{ role: "assistant", content: [] }],
+          }),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield { id: "m-edge-2", role: "assistant", parts: [] };
+        })() as any,
+      );
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "Done";
+        })(),
+        totalUsage: Promise.resolve({ promptTokens: 3 }),
+        finishReason: Promise.resolve("stop"),
+      } as any);
+
+      const yielded2: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Edge metadata 2" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded2.push(chunk);
+      }
+      expect(yielded2[yielded2.length - 1].metadata?.usage).toEqual({
+        promptTokens: 3,
+        completionTokens: 2,
+        totalTokens: 0,
+      });
+
+      // Case 2b: mergeUsage with only totalTokens on both sides
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({ totalTokens: 1 }),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([]),
+          response: Promise.resolve({
+            messages: [{ role: "assistant", content: [] }],
+          }),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield { id: "m-edge-2b", role: "assistant", parts: [] };
+        })() as any,
+      );
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "Done";
+        })(),
+        totalUsage: Promise.resolve({ totalTokens: 2 }),
+        finishReason: Promise.resolve("stop"),
+      } as any);
+
+      const yielded2b: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Edge metadata 2b" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded2b.push(chunk);
+      }
+      expect(yielded2b[yielded2b.length - 1].metadata?.usage).toEqual({
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 3,
+      });
+
+      // Case 3: Empty UIMessage stream (lastChunk is undefined)
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve(undefined),
+          finishReason: Promise.resolve("stop"),
+          steps: Promise.resolve([]),
+        });
+      });
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {})() as any,
+      );
+
+      const yielded3: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Empty stream" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded3.push(chunk);
+      }
+      expect(yielded3).toHaveLength(0);
     });
 
     describe("toModelOutput", () => {
@@ -464,6 +1207,129 @@ describe("subagent-dispatch-tool", () => {
           "[... Output truncated to 8,000 characters for context efficiency. Full details are stored in the scratchpad.]",
         );
         expect(result.value.startsWith("A".repeat(8000))).toBe(true);
+      });
+    });
+
+    describe("security and resolution regressions", () => {
+      it("resolves explicit agent ID before falling back to case-insensitive name match", () => {
+        const agentA = {
+          ...BUILT_IN_AGENTS[0],
+          id: "agent-a",
+          name: "b",
+        };
+        const agentB = {
+          ...BUILT_IN_AGENTS[1],
+          id: "b",
+          name: "Agent B",
+        };
+        const resolved = resolveTargetAgent([agentA, agentB], "b");
+        expect(resolved?.id).toBe("b");
+      });
+
+      it("enforces server identity in filterToolsForAgent when toolIdentity maps are provided", () => {
+        const pool = {
+          search: { name: "srv2-search" },
+          search_2: { name: "srv2-search-renamed" },
+          other_tool: { name: "srv1-other" },
+          search_knowledge_base: { name: "kb-tool" },
+        };
+        const toolIdentity = {
+          toolServerIdMap: {
+            search: "srv2",
+            search_2: "srv2",
+            other_tool: "srv1",
+          },
+          toolSourceMap: {
+            search: "Server 2",
+            search_2: "Server 2",
+            other_tool: "Server 1",
+          },
+        };
+
+        const filteredForSrv1 = filterToolsForAgent(
+          pool,
+          ["srv1:tool:search", "srv1:tool:other_tool"],
+          [],
+          toolIdentity,
+        );
+        expect(filteredForSrv1).not.toHaveProperty("search");
+        expect(filteredForSrv1).not.toHaveProperty("search_2");
+        expect(filteredForSrv1).toHaveProperty("other_tool");
+
+        const filteredForSrv2 = filterToolsForAgent(
+          pool,
+          ["srv2:tool:search", "", "non_existent"],
+          [],
+          toolIdentity,
+        );
+        expect(filteredForSrv2).toHaveProperty("search");
+        expect(filteredForSrv2).toHaveProperty("search_2");
+        expect(filteredForSrv2).not.toHaveProperty("other_tool");
+        expect(filteredForSrv2).not.toHaveProperty("search_knowledge_base");
+      });
+
+      it("strips inherited scratchpad tools when isolateTools is false and scratchpadAccess is none or read_only", async () => {
+        let capturedConfig: any;
+        (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+          capturedConfig = config;
+          this.stream = vi.fn().mockResolvedValue({ stream: {} });
+        });
+        const mockStreamAsyncIterator = async function* () {
+          yield { id: "m-1", role: "assistant", parts: [] };
+        };
+        vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+        const readOnlyAgent: Agent = {
+          id: "33333333-3333-4333-8333-333333333333",
+          userId: "user-1",
+          name: "Read Only Worker",
+          description: "Cannot write scratchpad",
+          prompt: "Prompt",
+          subagentPrompt: "",
+          modelId: null,
+          knowledgebaseIds: [],
+          tools: [],
+          skillMode: "none",
+          skillIds: [],
+          promptMode: "none",
+          promptIds: [],
+          subagentIds: [],
+          guardrails: {
+            maxSteps: 5,
+            scratchpadAccess: "none",
+            isolateTools: false,
+          },
+          avatar: null,
+          isBuiltIn: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        vi.mocked(registerScratchpadTools).mockReturnValueOnce({});
+
+        const dispatchTool = createSubagentDispatchTool({
+          defaultModel: mockDefaultModel,
+          availableTools: {
+            scratchpad_write: { description: "parent-write" },
+            scratchpad_read: { description: "parent-read" },
+            scratchpad_list: { description: "parent-list" },
+            safe_tool: { description: "parent-safe" },
+          },
+          allowedSubagents: [readOnlyAgent],
+          scratchpadContext: { chatId: "c1", messageId: "m1" },
+        });
+
+        for await (const _ of dispatchTool.execute(
+          { agent: readOnlyAgent.id, taskBrief: "Run safely" },
+          { abortSignal: undefined } as any,
+        )) {
+          // exhaust
+        }
+
+        expect(capturedConfig.tools).toHaveProperty("safe_tool");
+        expect(capturedConfig.tools).not.toHaveProperty("scratchpad_write");
+        expect(capturedConfig.tools).not.toHaveProperty("scratchpad_read");
+        expect(capturedConfig.tools).not.toHaveProperty("scratchpad_list");
       });
     });
   });

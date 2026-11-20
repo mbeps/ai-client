@@ -32,25 +32,94 @@ import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { Agent } from "@/types/agent/agent";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
 /**
  * Registers MCP tools when supported by the active model, or determines external server status.
+ * Separately registers isolated MCP tools for linked subagents so subagent MCP tools
+ * never leak into the parent orchestrator's active tool set.
  *
  * @param isToolCallingModel - Whether the resolved model supports function calling
- * @param servers - Active external MCP servers
- * @param selectedTools - Explicitly selected tool identifiers
- * @returns Registered tool state, source mapping, cleanup callback, and external availability flag
+ * @param servers - Active external MCP servers for the parent orchestrator
+ * @param selectedTools - Explicitly selected tool identifiers for the parent orchestrator
+ * @param subagentServers - External MCP servers required by linked subagents
+ * @param linkedSubagents - Linked subagents whose tool configurations may reference external MCP servers
+ * @returns Registered tool state, subagent tool pool, source mapping, cleanup callback, and external availability flag
  * @author Maruf Bepary
  */
+function mergeSubagentMcpTools(
+  parentMcpTools: Record<string, any>,
+  parentToolSourceMap: Record<string, string>,
+  parentToolServerIdMap: Record<string, string>,
+  subMcp: {
+    mcpTools: Record<string, any>;
+    toolSourceMap: Record<string, string>;
+    toolServerIdMap?: Record<string, string>;
+  },
+): {
+  subagentMcpTools: Record<string, any>;
+  mergedToolSourceMap: Record<string, string>;
+  mergedToolServerIdMap: Record<string, string>;
+} {
+  const subagentMcpTools: Record<string, any> = { ...parentMcpTools };
+  const mergedToolSourceMap: Record<string, string> = {
+    ...parentToolSourceMap,
+  };
+  const mergedToolServerIdMap: Record<string, string> = {
+    ...parentToolServerIdMap,
+  };
+
+  for (const [name, toolDef] of Object.entries(subMcp.mcpTools)) {
+    const incomingServerId = subMcp.toolServerIdMap?.[name];
+    const incomingServerName = subMcp.toolSourceMap[name];
+
+    if (!(name in subagentMcpTools)) {
+      subagentMcpTools[name] = toolDef;
+      if (incomingServerName) mergedToolSourceMap[name] = incomingServerName;
+      if (incomingServerId) mergedToolServerIdMap[name] = incomingServerId;
+      continue;
+    }
+
+    const existingServerId = mergedToolServerIdMap[name];
+    const existingServerName = mergedToolSourceMap[name];
+    if (
+      (incomingServerId && existingServerId === incomingServerId) ||
+      (!incomingServerId &&
+        incomingServerName &&
+        existingServerName === incomingServerName)
+    ) {
+      continue;
+    }
+
+    let counter = 2;
+    let finalName = `${name.slice(0, 62)}_${counter}`;
+    while (finalName in subagentMcpTools) {
+      counter++;
+      const suffix = `_${counter}`;
+      finalName = `${name.slice(0, Math.max(1, 64 - suffix.length))}${suffix}`;
+    }
+
+    subagentMcpTools[finalName] = toolDef;
+    if (incomingServerName) mergedToolSourceMap[finalName] = incomingServerName;
+    if (incomingServerId) mergedToolServerIdMap[finalName] = incomingServerId;
+  }
+
+  return { subagentMcpTools, mergedToolSourceMap, mergedToolServerIdMap };
+}
+
 async function setupChatMcpTools(
   isToolCallingModel: boolean,
   servers: unknown,
   selectedTools?: string[],
+  subagentServers?: unknown,
+  linkedSubagents?: readonly { tools: string[] }[],
 ): Promise<{
   mcpTools: Record<string, any>;
+  subagentMcpTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
+  toolServerIdMap: Record<string, string>;
   mcpCleanup: () => Promise<void>;
   hasExternalMcpTools: boolean;
 }> {
@@ -59,19 +128,54 @@ async function setupChatMcpTools(
       (Array.isArray(servers) ? servers.length : 0) > 0;
     return {
       mcpTools: {},
+      subagentMcpTools: {},
       toolSourceMap: {},
+      toolServerIdMap: {},
       mcpCleanup: async () => {},
       hasExternalMcpTools: hasExternalServers,
     };
   }
 
-  const { mcpTools, toolSourceMap, mcpCleanup } = await registerMcpTools(
-    servers as any,
-    selectedTools,
-  );
-  return {
+  const {
     mcpTools,
     toolSourceMap,
+    toolServerIdMap = {},
+    mcpCleanup,
+  } = await registerMcpTools(servers as any, selectedTools);
+
+  if (Array.isArray(subagentServers) && subagentServers.length > 0) {
+    const subagentSelectedTools = Array.from(
+      new Set(
+        (linkedSubagents ?? [])
+          .flatMap((a) => a.tools)
+          .filter((t) => !t.startsWith("internal:tool:")),
+      ),
+    );
+    if (subagentSelectedTools.length > 0) {
+      const subMcp = await registerMcpTools(
+        subagentServers as any,
+        subagentSelectedTools,
+      );
+      const { subagentMcpTools, mergedToolSourceMap, mergedToolServerIdMap } =
+        mergeSubagentMcpTools(mcpTools, toolSourceMap, toolServerIdMap, subMcp);
+      return {
+        mcpTools,
+        subagentMcpTools,
+        toolSourceMap: mergedToolSourceMap,
+        toolServerIdMap: mergedToolServerIdMap,
+        mcpCleanup: async () => {
+          await Promise.allSettled([mcpCleanup(), subMcp.mcpCleanup()]);
+        },
+        hasExternalMcpTools: Object.keys(mcpTools).length > 0,
+      };
+    }
+  }
+
+  return {
+    mcpTools,
+    subagentMcpTools: mcpTools,
+    toolSourceMap,
+    toolServerIdMap,
     mcpCleanup,
     hasExternalMcpTools: Object.keys(mcpTools).length > 0,
   };
@@ -109,6 +213,7 @@ async function executeModelStreamPipeline(options: {
   accumulator: ExecutionAccumulator;
   persistAbortedResponse: () => Promise<boolean>;
   reasoningEffort?: ReasoningEffort;
+  linkedSubagents?: readonly Agent[];
 }): Promise<void> {
   const {
     chatId,
@@ -127,6 +232,7 @@ async function executeModelStreamPipeline(options: {
     result,
     accumulator,
     persistAbortedResponse,
+    linkedSubagents,
   } = options;
 
   const safeFinishReason = Promise.resolve(result.finishReason).catch(
@@ -140,6 +246,7 @@ async function executeModelStreamPipeline(options: {
     emit,
     toolSourceMap,
     accumulator.completedTools,
+    linkedSubagents,
   );
 
   accumulator.accumulatedText = streamState.accumulatedText;
@@ -258,11 +365,13 @@ export const generateChatResponse = inngest.createFunction(
       reasoningEffort,
       selectedServerIds,
       selectedTools,
+      selectedAgentId,
       selectedAssistantId,
       selectedSkillIds,
       selectedKbIds,
       subagentsEnabled,
       subagentModelId,
+      subagentIds,
     } = event.data;
 
     const { controller: abortController, release: releaseAbortController } =
@@ -303,8 +412,10 @@ export const generateChatResponse = inngest.createFunction(
           subagentModelId,
           selectedServerIds,
           selectedKbIds,
+          selectedAgentId,
           selectedAssistantId,
           selectedSkillIds,
+          selectedSubagentIds: subagentIds,
         });
 
       resolvedModelId = resolved.modelId;
@@ -314,6 +425,8 @@ export const generateChatResponse = inngest.createFunction(
         isToolCallingModel,
         ctx.servers,
         selectedTools,
+        ctx.subagentServers,
+        ctx.linkedSubagents,
       );
       mcpCleanup = mcpState.mcpCleanup;
 
@@ -347,6 +460,9 @@ export const generateChatResponse = inngest.createFunction(
         assistantMessageId,
         isToolCallingModel,
         mcpTools: mcpState.mcpTools,
+        subagentMcpTools: mcpState.subagentMcpTools,
+        toolSourceMap: mcpState.toolSourceMap,
+        toolServerIdMap: mcpState.toolServerIdMap,
         selectedTools,
         ctx,
         fileAttachments,
@@ -366,7 +482,7 @@ export const generateChatResponse = inngest.createFunction(
       const systemPrompt = buildSystemPrompt(
         userSettings?.globalSystemPrompt,
         ctx.projectRow?.globalPrompt,
-        ctx.assistantRow?.prompt,
+        ctx.agentRow?.prompt,
         isToolCallingModel && hasKbTool,
         {
           attachmentNames: fileAttachments.map((a) => a.name),
@@ -376,6 +492,7 @@ export const generateChatResponse = inngest.createFunction(
           userContext: { name: userName, email: userEmail },
           userMemories: ctx.userMemories,
           isSubagentDelegationEnabled,
+          availableSubagents: ctx.linkedSubagents,
           canvasArtifacts,
         },
       );
@@ -412,6 +529,7 @@ export const generateChatResponse = inngest.createFunction(
         accumulator,
         persistAbortedResponse,
         reasoningEffort,
+        linkedSubagents: ctx.linkedSubagents,
       });
     } catch (error: unknown) {
       await handleChatExecutionError(

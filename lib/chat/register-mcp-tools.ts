@@ -26,20 +26,23 @@ function filterSelectedMcpTools(
 ): {
   tools: Record<string, any>;
   toolSourceMap: Record<string, string>;
+  toolServerIdMap: Record<string, string>;
 } {
   if (selectedTools === undefined) {
     return {
       tools: result.tools,
       toolSourceMap: { ...result.toolSourceMap },
+      toolServerIdMap: { ...(result.toolServerIdMap ?? {}) },
     };
   }
 
   if (selectedTools.length === 0) {
-    return { tools: {}, toolSourceMap: {} };
+    return { tools: {}, toolSourceMap: {}, toolServerIdMap: {} };
   }
 
   const tools: Record<string, any> = {};
   const toolSourceMap: Record<string, string> = {};
+  const toolServerIdMap: Record<string, string> = {};
 
   for (const [name, toolDef] of Object.entries(result.tools)) {
     const serverId = result.toolServerIdMap?.[name];
@@ -51,10 +54,13 @@ function filterSelectedMcpTools(
     if (isSelected) {
       tools[name] = toolDef;
       toolSourceMap[name] = result.toolSourceMap[name];
+      if (serverId) {
+        toolServerIdMap[name] = serverId;
+      }
     }
   }
 
-  return { tools, toolSourceMap };
+  return { tools, toolSourceMap, toolServerIdMap };
 }
 
 /**
@@ -89,26 +95,42 @@ async function loadScopedMcpTools(
 ): Promise<{
   tools: Record<string, any>;
   toolSourceMap: Record<string, string>;
+  toolServerIdMap: Record<string, string>;
   cleanup: () => Promise<void>;
 }> {
   if (scopedServers.length === 0) {
-    return { tools: {}, toolSourceMap: {}, cleanup: async () => {} };
+    return {
+      tools: {},
+      toolSourceMap: {},
+      toolServerIdMap: {},
+      cleanup: async () => {},
+    };
   }
 
   try {
     const result = await getMcpTools(scopedServers, selectedTools);
     const filtered = filterSelectedMcpTools(result, selectedTools);
-    const sanitised = sanitiseToolNames(filtered.tools, filtered.toolSourceMap);
+    const sanitised = sanitiseToolNames(
+      filtered.tools,
+      filtered.toolSourceMap,
+      filtered.toolServerIdMap,
+    );
     return {
       tools: sanitised.tools,
       toolSourceMap: sanitised.toolSourceMap,
+      toolServerIdMap: sanitised.toolServerIdMap,
       cleanup: result.cleanup,
     };
   } catch (error) {
     log.warn("Failed to load MCP tools: {error}", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return { tools: {}, toolSourceMap: {}, cleanup: async () => {} };
+    return {
+      tools: {},
+      toolSourceMap: {},
+      toolServerIdMap: {},
+      cleanup: async () => {},
+    };
   }
 }
 
@@ -150,10 +172,8 @@ function registerLegacyInternalTools(
       options.userId,
       options.selectedTools,
     );
-    if (kbTools.search_knowledge_base) {
-      Object.assign(mcpTools, kbTools);
-      toolSourceMap.search_knowledge_base = "System";
-    }
+    Object.assign(mcpTools, kbTools);
+    toolSourceMap.search_knowledge_base = "System";
   }
 }
 
@@ -186,12 +206,11 @@ export async function registerMcpTools(
 ): Promise<{
   mcpTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
+  toolServerIdMap: Record<string, string>;
   mcpCleanup: () => Promise<void>;
 }> {
-  const { tools, toolSourceMap, cleanup } = await loadScopedMcpTools(
-    scopedServers,
-    selectedTools,
-  );
+  const { tools, toolSourceMap, toolServerIdMap, cleanup } =
+    await loadScopedMcpTools(scopedServers, selectedTools);
 
   registerLegacyInternalTools(tools, toolSourceMap, {
     isArtifactToolSelected,
@@ -202,5 +221,10 @@ export async function registerMcpTools(
     selectedTools,
   });
 
-  return { mcpTools: tools, toolSourceMap, mcpCleanup: cleanup };
+  return {
+    mcpTools: tools,
+    toolSourceMap,
+    toolServerIdMap,
+    mcpCleanup: cleanup,
+  };
 }

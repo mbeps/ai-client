@@ -38,6 +38,16 @@ describe("ROUTES — static paths", () => {
     expect(ROUTES.ASSISTANTS.new).toBe("/assistants/new");
   });
 
+  it("AGENTS paths and dynamic helpers", () => {
+    expect(ROUTES.AGENTS.path).toBe("/agents");
+    expect(ROUTES.AGENTS.name).toBe("Agents");
+    expect(ROUTES.AGENTS.new).toBe("/agents/new");
+    expect(ROUTES.AGENTS.detail("agent-1")).toBe("/agents/agent-1");
+    expect(ROUTES.AGENTS.chat("agent-1", "chat-1")).toBe(
+      "/agents/agent-1/chat-1",
+    );
+  });
+
   it("KNOWLEDGEBASES path", () => {
     expect(ROUTES.KNOWLEDGEBASES.path).toBe("/knowledgebases");
   });

@@ -27,6 +27,7 @@ export interface UserMessageEditProps {
   initialSelectedSkillIds?: string[] | null;
   initialSubagentsEnabled?: boolean | null;
   initialSubagentModelId?: string | null;
+  initialSubagentIds?: readonly string[] | string[] | null;
   initialReasoningEffort?: ReasoningEffort | null;
   servers?: (McpServer | PublicMcpServer)[];
   activeChatAssistantId?: string | null;
@@ -44,6 +45,7 @@ export interface UserMessageEditProps {
     subagentsEnabled?: boolean,
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
   ) => void;
   onCancel: () => void;
 }
@@ -101,6 +103,7 @@ export function UserMessageBody({
         initialSelectedSkillIds={editProps.initialSelectedSkillIds ?? undefined}
         initialSubagentsEnabled={editProps.initialSubagentsEnabled ?? undefined}
         initialSubagentModelId={editProps.initialSubagentModelId ?? undefined}
+        initialSubagentIds={editProps.initialSubagentIds ?? undefined}
         initialReasoningEffort={editProps.initialReasoningEffort ?? undefined}
         servers={editProps.servers}
         thread={editProps.thread}

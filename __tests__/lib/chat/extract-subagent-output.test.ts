@@ -34,5 +34,24 @@ describe("extractSubagentOutputText", () => {
     expect(extractSubagentOutputText({})).toBe("Task completed.");
     expect(extractSubagentOutputText({ count: 5 })).toBe("Task completed.");
   });
+
+  it("strips <think>...</think> and other reasoning blocks from extracted text", () => {
+    expect(
+      extractSubagentOutputText(
+        "<think>Internal reasoning monologue.</think>STATUS: DONE\n\nClean findings.",
+      ),
+    ).toBe("STATUS: DONE\n\nClean findings.");
+
+    expect(
+      extractSubagentOutputText({
+        parts: [
+          {
+            type: "text",
+            text: "<thought>Drafting...</thought>Final answer.",
+          },
+        ],
+      }),
+    ).toBe("Final answer.");
+  });
 });
 

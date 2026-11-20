@@ -216,6 +216,7 @@ export function useStreamResponse(
       subagentsEnabled?: boolean,
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
+      subagentIds?: string[],
     ): Promise<string> => {
       const promptIds = Array.isArray(selectedPromptId)
         ? selectedPromptId
@@ -238,6 +239,7 @@ export function useStreamResponse(
         selectedSkillIds,
         subagentsEnabled,
         subagentModelId,
+        subagentIds,
         reasoningEffort,
         addMessage,
         updateMessageAttachments,

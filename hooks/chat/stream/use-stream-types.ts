@@ -27,6 +27,7 @@ export interface BuildMetadataOptions {
   selectedSkillIds?: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
+  subagentIds?: string[];
   reasoningEffort?: ReasoningEffort;
 }
 
@@ -70,6 +71,7 @@ export interface StreamRequestOptions {
   selectedKbIds?: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
+  subagentIds?: string[];
   reasoningEffort?: ReasoningEffort;
 }
 
@@ -147,6 +149,7 @@ export interface StreamResponseExecutionParams {
   selectedSkillIds: string[];
   subagentsEnabled?: boolean;
   subagentModelId?: string;
+  subagentIds?: string[];
   reasoningEffort?: ReasoningEffort;
   addMessage: (chatId: string, message: any) => void;
   updateMessageAttachments: (

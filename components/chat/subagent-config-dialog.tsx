@@ -1,17 +1,27 @@
 "use client";
 
-import { Check, ShieldCheck, X } from "lucide-react";
+import { Check, ExternalLink, X } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { ReasoningEffortSlider } from "@/components/chat/input/reasoning-effort-selector";
 import { SubagentModelSelect } from "@/components/chat/subagent-model-select";
+import { SubagentPicker } from "@/components/shared/subagent-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { BUILT_IN_AGENTS } from "@/config/built-in-agents";
+import { ROUTES } from "@/config/routes";
+import { useUserModels } from "@/hooks/use-user-models";
+import { useAppStore } from "@/lib/store/use-app-store";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { Agent } from "@/types/agent/agent";
 
 /**
  * Represents subagent config dialog props.
@@ -25,14 +35,23 @@ export interface SubagentConfigDialogProps {
   onToggleSubagents: (enabled: boolean) => void;
   subagentModelId?: string;
   onSubagentModelChange: (modelId: string | undefined) => void;
+  subagentReasoningEffort?: ReasoningEffort;
+  onSubagentReasoningEffortChange?: (effort: ReasoningEffort) => void;
+  agents?: Agent[];
+  selectedSubagentIds?: string[];
+  onToggleSubagentId?: (agentId: string) => void;
+  onSelectSubagentIds?: (agentIds: string[]) => void;
+  excludeAgentId?: string;
 }
+
+const NOOP_TOGGLE = () => {};
 
 /**
  * Dedicated dialog for configuring worker subagents.
  *
- * Provides a clean modal styled consistently with the other resource pickers
- * (PickerDialog), including header border, Cancel and Done buttons with icons,
- * and simplified typography.
+ * Mirrors PickerDialog sizing, scrollable body, and footer action bar
+ * (Manage Agents link, Cancel, Done) while exposing subagent toggle,
+ * worker model selection, and collapsible SubagentPicker.
  *
  * @author Maruf Bepary
  */
@@ -43,98 +62,125 @@ export function SubagentConfigDialog({
   onToggleSubagents,
   subagentModelId,
   onSubagentModelChange,
+  subagentReasoningEffort,
+  onSubagentReasoningEffortChange,
+  agents: agentsProp,
+  selectedSubagentIds,
+  onToggleSubagentId,
+  onSelectSubagentIds,
+  excludeAgentId,
 }: SubagentConfigDialogProps) {
+  const storeAgents = useAppStore((s) => s.agents);
+  const rawAgents = agentsProp ?? storeAgents ?? [];
+  const agents = rawAgents.length > 0 ? rawAgents : BUILT_IN_AGENTS;
+  const { models } = useUserModels("chat");
+  const [internalReasoningEffort, setInternalReasoningEffort] =
+    useState<ReasoningEffort>("medium");
+
+  const selectedModel = subagentModelId
+    ? models.find(
+        (m) => m.id === subagentModelId || m.modelId === subagentModelId,
+      )
+    : undefined;
+  const supportsReasoningEffort =
+    Boolean(selectedModel?.reasoningEffortFormat) &&
+    selectedModel?.reasoningEffortFormat !== "none";
+
+  const activeReasoningEffort =
+    subagentReasoningEffort ?? internalReasoningEffort;
+  const handleReasoningEffortChange = (effort: ReasoningEffort) => {
+    setInternalReasoningEffort(effort);
+    onSubagentReasoningEffortChange?.(effort);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col overflow-hidden p-0 sm:max-w-md">
-        <DialogHeader className="border-b px-4 py-3.5 pr-12">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-h-[680px] sm:max-w-lg">
+        <DialogHeader className="flex-row items-center justify-between border-b px-4 py-3.5 pr-12">
           <DialogTitle className="flex items-center gap-2 text-base font-semibold">
             <span>Subagents</span>
             <Badge
               variant="outline"
-              className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 font-mono text-[10px] font-semibold tracking-wider text-purple-700 uppercase dark:text-purple-300"
+              className="border-purple-500/30 bg-purple-500/10 px-1.5 py-0 text-[10px] font-semibold tracking-wider text-purple-700 uppercase dark:text-purple-300"
             >
               BETA
             </Badge>
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-xs">
-            Delegate complex tasks to isolated worker subagents with shared
-            scratchpad memory.
-          </DialogDescription>
+          <Switch
+            checked={subagentsEnabled}
+            onCheckedChange={onToggleSubagents}
+            aria-label="Toggle subagents"
+          />
         </DialogHeader>
 
-        <div className="space-y-4 p-4">
-          {/* Main Toggle */}
-          <div className="border-border bg-card flex items-center justify-between rounded-lg border p-3">
-            <span className="text-foreground text-sm font-medium">
-              Enable Subagents
-            </span>
-            <Switch
-              checked={subagentsEnabled}
-              onCheckedChange={onToggleSubagents}
-              aria-label="Toggle subagents"
-            />
-          </div>
-
-          {/* Worker Model Selection */}
-          <div className="space-y-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pt-3 pb-4">
+          <div className="shrink-0 space-y-2">
             <label className="text-foreground text-xs font-medium">
               Worker Subagent Model
             </label>
-            <p className="text-muted-foreground text-xs">
-              Select a dedicated model for worker subagents, or inherit the
-              orchestrator&apos;s model.
-            </p>
             <SubagentModelSelect
               value={subagentModelId}
               onValueChange={onSubagentModelChange}
               disabled={!subagentsEnabled}
             />
+            {supportsReasoningEffort && (
+              <div className="border-border bg-card rounded-lg border p-3">
+                <ReasoningEffortSlider
+                  value={activeReasoningEffort}
+                  onChange={handleReasoningEffortChange}
+                  disabled={!subagentsEnabled}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Topological Sandboxing Notice */}
-          <div className="border-border/60 bg-muted/30 space-y-1 rounded-lg border p-3 text-xs leading-relaxed">
-            <div className="text-foreground flex items-center gap-1.5 font-medium">
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
-              Tool Inheritance &amp; Sandboxing
-            </div>
-            <p className="text-muted-foreground text-[11px] leading-relaxed">
-              Worker subagents dynamically inherit all tools enabled on the main
-              chat (MCP servers, knowledge bases, skills, memory). Canvas
-              artifacts (
-              <code className="bg-muted rounded px-1 py-0.5 font-mono text-[10px]">
-                manage_artifact
-              </code>
-              ) and recursive delegation (
-              <code className="bg-muted rounded px-1 py-0.5 font-mono text-[10px]">
-                delegate_task
-              </code>
-              ) are permanently locked out.
-            </p>
-          </div>
+          <Separator />
+
+          <SubagentPicker
+            agents={agents}
+            selectedIds={selectedSubagentIds ?? []}
+            onToggle={onToggleSubagentId ?? NOOP_TOGGLE}
+            onSelectIds={onSelectSubagentIds}
+            excludeAgentId={excludeAgentId}
+            disabled={!subagentsEnabled}
+            defaultExpanded={false}
+            columns={1}
+          />
         </div>
 
-        {/* Dialog Footer with Cancel and Done */}
-        <div className="bg-muted/20 flex shrink-0 items-center justify-end gap-2 border-t px-4 py-3">
+        <div className="bg-muted/20 flex shrink-0 items-center justify-between border-t px-4 py-3">
           <Button
-            type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            onClick={() => onOpenChange(false)}
-            className="gap-2"
+            asChild
+            className="text-muted-foreground hover:text-foreground h-8 gap-1.5 text-xs"
           >
-            <X className="h-4 w-4" />
-            Cancel
+            <Link href={ROUTES.AGENTS.path} onClick={() => onOpenChange(false)}>
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span>Manage Agents</span>
+            </Link>
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            className="gap-2 px-6"
-          >
-            <Check className="h-4 w-4" />
-            Done
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="gap-2 px-6"
+            >
+              <Check className="h-4 w-4" />
+              Done
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

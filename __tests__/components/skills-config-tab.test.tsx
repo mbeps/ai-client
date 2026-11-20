@@ -113,19 +113,20 @@ describe("SkillsConfigTab", () => {
     );
   });
 
-  it("renders Assistant Skills section and handles assistant specific skills", () => {
+  it("renders Agent Skills section and handles agent specific skills", () => {
     const assistantSkill: Skill = {
       ...mockSkills[0],
       id: "asst-sk-1",
       name: "asst-skill",
       displayName: "Assistant Skill",
       projectIds: [],
+      agentIds: ["asst-1"],
       assistantIds: ["asst-1"],
     };
 
     render(
       <SkillsConfigTab
-        assistantId="asst-1"
+        agentId="asst-1"
         skillMode="dynamic"
         onSkillModeChange={vi.fn()}
         selectedSkillIds={new Set()}
@@ -134,12 +135,12 @@ describe("SkillsConfigTab", () => {
       />,
     );
 
-    expect(screen.getByText("Assistant Skills")).toBeInTheDocument();
+    expect(screen.getByText("Agent Skills")).toBeInTheDocument();
     expect(screen.getByText("Assistant Skill")).toBeInTheDocument();
     const newSkillLink = screen.getByRole("link", { name: /new skill/i });
     expect(newSkillLink).toHaveAttribute(
       "href",
-      "/settings/skills/new?assistantId=asst-1",
+      "/settings/skills/new?agentId=asst-1",
     );
   });
 

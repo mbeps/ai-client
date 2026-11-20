@@ -28,6 +28,7 @@ const basePromptFields = {
       "Shortcuts can only contain letters, numbers, dots, underscores, and hyphens",
     ),
   projectIds: z.array(z.string()).default([]),
+  agentIds: z.array(z.string()).optional(),
   assistantIds: z.array(z.string()).default([]),
 };
 
@@ -58,10 +59,11 @@ export const createPromptSchema = z.object(basePromptFields);
  */
 export const updatePromptSchema = z
   .object(basePromptFields)
-  .omit({ projectIds: true, assistantIds: true })
+  .omit({ projectIds: true, agentIds: true, assistantIds: true })
   .partial()
   .extend({
     projectIds: z.array(z.string()).optional(),
+    agentIds: z.array(z.string()).optional(),
     assistantIds: z.array(z.string()).optional(),
   });
 
@@ -81,6 +83,7 @@ export const promptSchema = z.object({
   shortcut: z.string().min(1).max(50),
   content: z.string().min(1),
   projectIds: z.array(z.string()).default([]),
+  agentIds: z.array(z.string()).optional(),
   assistantIds: z.array(z.string()).default([]),
   createdAt: z.date(),
   updatedAt: z.date(),

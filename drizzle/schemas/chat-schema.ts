@@ -18,7 +18,7 @@ export const chat = pgTable(
     title: text("title").notNull(),
     userId: userForeignKeyColumn(),
     projectId: text("project_id"),
-    assistantId: text("assistant_id"),
+    agentId: text("agent_id"),
     knowledgebaseId: text("knowledgebase_id"),
     currentLeafId: text("current_leaf_id"),
     ...timestampColumns(),

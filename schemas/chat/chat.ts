@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { PROMPTS } from "@/config/prompts";
+import {
+  agentIdOrBuiltInField,
+  subagentTargetIdField,
+} from "@/schemas/agent/agent";
 import { reasoningEffortSchema } from "@/schemas/providers/provider-registry";
 import { dateField, idField } from "@/schemas/shared-fields";
 
@@ -45,6 +49,7 @@ export const persistMessageSchema = z
 export const createChatSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   projectId: idField.nullable().optional(),
+  agentId: agentIdOrBuiltInField.nullable().optional(),
   assistantId: idField.nullable().optional(),
 });
 
@@ -86,9 +91,11 @@ export const chatSchema = z.object({
   id: idField,
   title: z.string(),
   projectId: idField.nullable().optional(),
+  agentId: agentIdOrBuiltInField.nullable().optional(),
   assistantId: idField.nullable().optional(),
   knowledgebaseId: idField.nullable().optional(),
   projectName: z.string().optional(),
+  agentName: z.string().optional(),
   assistantName: z.string().optional(),
   createdAt: dateField.optional(),
   updatedAt: z.date(),
@@ -143,10 +150,12 @@ export const chatRequestSchema = z
     model: z.string().max(100).optional(),
     selectedServerIds: z.array(z.string()).max(20).optional(),
     selectedTools: z.array(z.string()).max(100).optional(),
+    selectedAgentId: agentIdOrBuiltInField.optional(),
     selectedAssistantId: idField.optional(),
     selectedSkillIds: z.array(z.string()).max(20).optional(),
     selectedKbIds: z.array(idField).max(5).optional(),
     subagentsEnabled: z.boolean().optional(),
+    subagentIds: z.array(subagentTargetIdField).max(20).optional(),
     subagentModelId: z.string().max(100).optional(),
     reasoningEffort: reasoningEffortSchema.optional(),
   })

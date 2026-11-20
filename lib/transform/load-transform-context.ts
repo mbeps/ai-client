@@ -7,6 +7,7 @@ import {
   userMcpServerInstall,
 } from "@/drizzle/schemas/mcp-server-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
+import { resolveLinkedSubagents } from "@/lib/agents/resolve-linked-subagents";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
@@ -37,6 +38,7 @@ interface LoadTransformContextArgs {
     tools?: string[];
     skillMode?: SkillMode;
     skillIds?: string[];
+    subagentIds?: string[];
     steps: string;
   };
   modelOverride?: string | null;
@@ -174,15 +176,22 @@ export async function loadTransformContext({
       (s.toolIds || []).includes(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT),
     );
 
-  /* 3. Register MCP tools */
+  /* 3. Register MCP tools (and KB search tool when knowledge bases are attached) */
+  const hasKbIds = Boolean(kbIds && kbIds.length > 0);
   const { mcpTools, toolSourceMap, mcpCleanup } = await registerMcpTools(
     allServers as any,
     undefined,
     effectiveArtifactToolSelected,
-    null,
-    false,
+    hasKbIds ? kbIds![0] : null,
+    hasKbIds,
     userId,
+    hasKbIds ? kbIds : undefined,
   );
+
+  const linkedSubagents =
+    agentRow.subagentIds && agentRow.subagentIds.length > 0
+      ? await resolveLinkedSubagents(userId, agentRow.subagentIds)
+      : [];
 
   return {
     allServers,
@@ -190,6 +199,7 @@ export async function loadTransformContext({
     kbContext,
     availableSkills,
     selectedSkills,
+    linkedSubagents,
     mcpTools,
     toolSourceMap,
     mcpCleanup,

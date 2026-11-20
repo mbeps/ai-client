@@ -193,9 +193,10 @@ describe("loadTransformContext", () => {
       expect.anything(),
       undefined,
       true, // effectiveArtifactToolSelected from agentRow.tools
-      null,
-      false,
+      "kb-1",
+      true,
       "user-1",
+      ["kb-1"],
     );
   });
 
@@ -257,6 +258,7 @@ describe("loadTransformContext", () => {
         description: "agent desc",
         modelId: null,
         knowledgeBaseIds: ["kb-1"],
+        subagentIds: ["builtin:researcher"],
         steps: JSON.stringify([{ toolIds: ["internal:tool:manage_artifact"] }]),
       },
     });

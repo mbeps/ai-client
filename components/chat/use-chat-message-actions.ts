@@ -106,6 +106,7 @@ export function useChatMessageActions({
       subagentsEnabled?: boolean,
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
+      subagentIds?: string[],
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -122,6 +123,7 @@ export function useChatMessageActions({
         subagentsEnabled,
         subagentModelId,
         reasoningEffort,
+        subagentIds,
       );
     },
     [chat?.currentLeafId, streamResponse],
@@ -142,6 +144,7 @@ export function useChatMessageActions({
       subagentsEnabled?: boolean,
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
+      subagentIds?: string[],
     ) => {
       const msg = chat?.messages[id];
       if (!msg) return;
@@ -160,6 +163,7 @@ export function useChatMessageActions({
         subagentsEnabled,
         subagentModelId,
         reasoningEffort,
+        subagentIds,
       );
     },
     [chat, streamResponse],
@@ -186,6 +190,7 @@ export function useChatMessageActions({
         payload.subagentsEnabled,
         payload.subagentModelId,
         payload.reasoningEffort,
+        payload.subagentIds,
       );
     },
     [chat, streamResponse],
@@ -215,7 +220,9 @@ export function useChatMessageActions({
 }
 
 /**
- * Custom hook that provides use initial chat auto send functionality.
+ * Automatically sends an initial message once when a newly created chat mounts with empty history.
+ * Forwards resolved entity skills, subagent enablement, and active agent/assistant IDs so
+ * the first turn executes with the full orchestrator configuration.
  *
  * @param chat - Target chat
  * @param initialMessage - Target initial message
@@ -225,7 +232,9 @@ export function useChatMessageActions({
  * @param initialServerIds - Target initial server ids
  * @param initialSelectedTools - Target initial selected tools
  * @param initialKbIds - Target initial kb ids
- * @returns Hook state and control handlers.
+ * @param initialSkillIds - Target initial skill ids
+ * @param initialSubagentsEnabled - Target initial subagents enabled flag
+ * @param initialSubagentModelId - Target initial subagent model id
  * @author Maruf Bepary
  */
 export function useInitialChatAutoSend(
@@ -242,16 +251,25 @@ export function useInitialChatAutoSend(
     assistantId?: string,
     kbIds?: string[],
     skillIds?: string[],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
   ) => void,
   initialModelId: string | undefined,
   initialServerIds: string[],
   initialSelectedTools: string[],
   initialKbIds: string[],
+  initialSkillIds?: string[],
+  initialSubagentsEnabled?: boolean,
+  initialSubagentModelId?: string,
+  initialSubagentIds?: string[],
+  isReady = true,
 ) {
   const sentInitial = useRef(false);
 
   useEffect(() => {
-    if (!initialMessage || !chat || sentInitial.current) return;
+    if (!initialMessage || !chat || !isReady || sentInitial.current) return;
     sentInitial.current = true;
     onInitialMessageSent?.();
     clearMsgQueryParamFromUrl();
@@ -265,9 +283,13 @@ export function useInitialChatAutoSend(
       initialServerIds,
       initialSelectedTools,
       undefined,
-      chat.assistantId ?? undefined,
+      chat.agentId ?? chat.assistantId ?? undefined,
       initialKbIds,
-      [],
+      initialSkillIds ?? [],
+      initialSubagentsEnabled,
+      initialSubagentModelId,
+      undefined,
+      initialSubagentIds,
     );
   }, [
     chat,
@@ -278,6 +300,11 @@ export function useInitialChatAutoSend(
     initialServerIds,
     initialSelectedTools,
     initialKbIds,
+    initialSkillIds,
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialSubagentIds,
+    isReady,
   ]);
 }
 

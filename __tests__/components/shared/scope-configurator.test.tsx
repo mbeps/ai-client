@@ -18,7 +18,7 @@ describe("ScopeConfigurator", () => {
   beforeEach(() => {
     useAppStore.setState({
       projects: mockProjects as any,
-      assistants: mockAssistants as any,
+      agents: mockAssistants as any,
     });
   });
 
@@ -40,7 +40,7 @@ describe("ScopeConfigurator", () => {
 
     // Scoped section selectors are not displayed
     expect(screen.queryByText("Projects")).not.toBeInTheDocument();
-    expect(screen.queryByText("Assistants")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agents")).not.toBeInTheDocument();
   });
 
   it("renders Scoped mode active initially when projectIds or assistantIds are non-empty", () => {
@@ -58,7 +58,7 @@ describe("ScopeConfigurator", () => {
 
     expect(screen.getByText("2 active")).toBeInTheDocument();
     expect(screen.getByText("Projects")).toBeInTheDocument();
-    expect(screen.getByText("Assistants")).toBeInTheDocument();
+    expect(screen.getByText("Agents")).toBeInTheDocument();
   });
 
   it("switches to Scoped mode on click and reveals multi-selectors", async () => {
@@ -77,7 +77,7 @@ describe("ScopeConfigurator", () => {
 
     expect(scopedRadio).toHaveAttribute("aria-checked", "true");
     expect(screen.getByText("Projects")).toBeInTheDocument();
-    expect(screen.getByText("Assistants")).toBeInTheDocument();
+    expect(screen.getByText("Agents")).toBeInTheDocument();
   });
 
   it("clears projectIds and assistantIds when switching back to Global mode", async () => {

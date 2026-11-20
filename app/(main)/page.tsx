@@ -33,7 +33,7 @@ export default function HomePage() {
   const { models: chatModels, isLoading: isModelsLoading } =
     useUserModels("chat");
 
-  useResourceHydration(["mcpServers", "assistants", "prompts", "skills"]);
+  useResourceHydration(["mcpServers", "agents", "prompts", "skills"]);
 
   const enabledServers = useMemo(() => {
     return mcpServers.filter((s) => s.enabled);
@@ -69,10 +69,10 @@ export default function HomePage() {
       description: "Manage workspaces",
     },
     {
-      label: "Assistants",
+      label: "Agents",
       icon: Bot,
-      href: ROUTES.ASSISTANTS.path,
-      description: "Custom AI personas",
+      href: ROUTES.AGENTS.path,
+      description: "Custom AI agents",
     },
     {
       label: "Knowledgebases",

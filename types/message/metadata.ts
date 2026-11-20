@@ -32,6 +32,11 @@ export type MessageUsage = {
  * @property {string | null} finishReason - Why the model stopped generating (e.g. "stop", "length")
  * @property {number | null} durationMs - Wall-clock generation time in milliseconds
  *
+ * @property {boolean | undefined} subagentsEnabled - Whether subagent delegation was enabled for this message
+ * @property {string | undefined} subagentModelId - Model identifier used by worker subagents
+ * @property {string[] | undefined} subagentIds - Explicitly selected subagent IDs for this message
+ * @property {string | undefined} assistantId - Assistant identifier active for this message
+ *
  * @author Maruf Bepary
  */
 export type ParsedMessageMetadata = {
@@ -53,5 +58,6 @@ export type ParsedMessageMetadata = {
   durationMs: number | null;
   subagentsEnabled?: boolean;
   subagentModelId?: string;
+  subagentIds?: string[];
   assistantId?: string;
 };

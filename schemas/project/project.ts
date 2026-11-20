@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { subagentTargetIdField } from "@/schemas/agent/agent";
 import { promptIdsSchema, promptModeSchema } from "@/schemas/prompt/prompt";
 import {
   contentField,
@@ -30,6 +31,7 @@ export const createProjectSchema = z.object({
   skillIds: skillIdsSchema.optional(),
   promptMode: promptModeSchema.optional(),
   promptIds: promptIdsSchema.optional(),
+  subagentIds: z.array(subagentTargetIdField).optional(),
   knowledgebaseId: z.string().nullable().optional(),
 });
 
@@ -88,6 +90,7 @@ export const projectSchema = z.object({
   skillIds: skillIdsSchema,
   promptMode: promptModeSchema,
   promptIds: promptIdsSchema,
+  subagentIds: z.array(subagentTargetIdField).optional(),
   knowledgebaseId: idField.nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),

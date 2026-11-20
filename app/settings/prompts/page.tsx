@@ -22,7 +22,7 @@ export default function PromptsPage() {
   const prompts = useAppStore((state) => state.prompts);
   const loadPrompts = useAppStore((state) => state.loadPrompts);
   const [scopeFilter, setScopeFilter] = useState<
-    "all" | "global" | "project" | "assistant"
+    "all" | "global" | "project" | "agent"
   >("all");
 
   return (
@@ -47,7 +47,7 @@ export default function PromptsPage() {
       }
       extraFilters={
         <div className="flex items-center gap-1.5 overflow-x-auto">
-          {(["all", "global", "project", "assistant"] as const).map((s) => (
+          {(["all", "global", "project", "agent"] as const).map((s) => (
             <Button
               key={s}
               size="sm"
@@ -61,20 +61,21 @@ export default function PromptsPage() {
                   ? "Global"
                   : s === "project"
                     ? "Projects"
-                    : "Assistants"}
+                    : "Agents"}
             </Button>
           ))}
         </div>
       }
       customFilterFn={(p) => {
+        const agentIds = p.agentIds?.length
+          ? p.agentIds
+          : (p.assistantIds ?? []);
         const isGlobal =
-          (!p.projectIds || p.projectIds.length === 0) &&
-          (!p.assistantIds || p.assistantIds.length === 0);
+          (!p.projectIds || p.projectIds.length === 0) && agentIds.length === 0;
         if (scopeFilter === "global") return isGlobal;
         if (scopeFilter === "project")
           return Boolean(p.projectIds && p.projectIds.length > 0);
-        if (scopeFilter === "assistant")
-          return Boolean(p.assistantIds && p.assistantIds.length > 0);
+        if (scopeFilter === "agent") return agentIds.length > 0;
         return true;
       }}
       filterFn={(p, q) =>

@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
-import { AssistantOptions } from "@/components/assistant/assistant-options";
+import { AgentOptions } from "@/components/agent/agent-options";
 import { ChatOptions } from "@/components/chat/chat-options";
 import { KnowledgebaseOptions } from "@/components/knowledgebase/knowledgebase-options";
 import { ProjectOptions } from "@/components/project/project-options";
@@ -19,11 +19,11 @@ import { useAppStore } from "@/lib/store/use-app-store";
  */
 export function EntityOptions() {
   const pathname = usePathname();
-  const { chats, projects, assistants } = useAppStore(
+  const { chats, projects, agents } = useAppStore(
     useShallow((s) => ({
       chats: s.chats,
       projects: s.projects,
-      assistants: s.assistants,
+      agents: s.agents,
     })),
   );
   const { normalizedKnowledgebases } = useKnowledgebases();
@@ -43,9 +43,9 @@ export function EntityOptions() {
     const project = projects.find((p) => p.id === segment);
     if (project) return <ProjectOptions project={project} />;
 
-    // Check if the segment is an Assistant ID
-    const assistant = assistants.find((a) => a.id === segment);
-    if (assistant) return <AssistantOptions assistant={assistant} />;
+    // Check if the segment is an Agent ID
+    const agent = agents.find((a) => a.id === segment);
+    if (agent) return <AgentOptions agent={agent} />;
 
     // Check if the segment is a Knowledgebase ID
     const kb = normalizedKnowledgebases.find((kb) => kb.id === segment);

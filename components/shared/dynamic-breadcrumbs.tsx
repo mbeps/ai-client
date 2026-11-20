@@ -29,6 +29,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
 const ROUTE_LABELS: Record<string, string> = {
   chats: "Chats",
   projects: "Projects",
+  agents: "Agents",
   assistants: "Assistants",
   knowledgebases: "Knowledge Bases",
   tools: "Tools",
@@ -60,7 +61,7 @@ const UUID_REGEX =
  */
 interface StoreLookupEntities {
   projects: Array<{ id: string }>;
-  assistants: Array<{ id: string }>;
+  agents: Array<{ id: string }>;
   prompts: Array<{ id: string }>;
   skills: Array<{ id: string }>;
   mcpServers: Array<{ id: string }>;
@@ -78,11 +79,13 @@ interface BreadcrumbLabelContext {
     title?: string;
     projectId?: string | null;
     projectName?: string | null;
+    agentId?: string | null;
+    agentName?: string | null;
     assistantId?: string | null;
     assistantName?: string | null;
   };
   projects: Array<{ id: string; name: string }>;
-  assistants: Array<{ id: string; name: string }>;
+  agents: Array<{ id: string; name: string }>;
   prompts: Array<{ id: string; title: string }>;
   skills: Array<{ id: string; name: string; displayName?: string | null }>;
   mcpServers: Array<{ id: string; name: string }>;
@@ -241,7 +244,7 @@ function isSegmentInStore(
 ): boolean {
   if (chatId === segment && hasCurrentChat) return true;
   if (store.projects.some((p) => p.id === segment)) return true;
-  if (store.assistants.some((a) => a.id === segment)) return true;
+  if (store.agents.some((a) => a.id === segment)) return true;
   if (store.prompts.some((p) => p.id === segment)) return true;
   if (store.skills.some((s) => s.id === segment)) return true;
   if (store.mcpServers.some((s) => s.id === segment)) return true;
@@ -273,7 +276,7 @@ function resolveStoreEntityLabel(
   ctx: Pick<
     BreadcrumbLabelContext,
     | "projects"
-    | "assistants"
+    | "agents"
     | "prompts"
     | "skills"
     | "mcpServers"
@@ -283,8 +286,8 @@ function resolveStoreEntityLabel(
   const project = ctx.projects.find((p) => p.id === segment);
   if (project) return project.name;
 
-  const assistant = ctx.assistants.find((a) => a.id === segment);
-  if (assistant) return assistant.name;
+  const agent = ctx.agents.find((a) => a.id === segment);
+  if (agent) return agent.name;
 
   const prompt = ctx.prompts.find((p) => p.id === segment);
   if (prompt) return prompt.title;
@@ -295,8 +298,8 @@ function resolveStoreEntityLabel(
   const mcp = ctx.mcpServers.find((s) => s.id === segment);
   if (mcp) return mcp.name;
 
-  const agent = ctx.transformAgents.find((a) => a.id === segment);
-  if (agent) return agent.name;
+  const transformAgent = ctx.transformAgents.find((a) => a.id === segment);
+  if (transformAgent) return transformAgent.name;
 
   return undefined;
 }
@@ -314,6 +317,9 @@ function resolveChatParentLabel(
 ): string | undefined {
   if (chatData.projectId === segment && chatData.projectName) {
     return chatData.projectName;
+  }
+  if (chatData.agentId === segment && chatData.agentName) {
+    return chatData.agentName;
   }
   if (chatData.assistantId === segment && chatData.assistantName) {
     return chatData.assistantName;
@@ -378,7 +384,7 @@ export function DynamicBreadcrumbs() {
   const pathname = usePathname();
   const {
     projects,
-    assistants,
+    agents,
     prompts,
     skills,
     mcpServers,
@@ -386,7 +392,7 @@ export function DynamicBreadcrumbs() {
     transformAgents,
     loadProjects,
     loadPrompts,
-    loadAssistants,
+    loadAgents,
     loadSkills,
     loadMcpServers,
     loadPublicMcpServers,
@@ -394,7 +400,7 @@ export function DynamicBreadcrumbs() {
   } = useAppStore(
     useShallow((state) => ({
       projects: state.projects,
-      assistants: state.assistants,
+      agents: state.agents,
       prompts: state.prompts,
       skills: state.skills,
       mcpServers: state.mcpServers,
@@ -402,7 +408,7 @@ export function DynamicBreadcrumbs() {
       transformAgents: state.transformAgents,
       loadProjects: state.loadProjects,
       loadPrompts: state.loadPrompts,
-      loadAssistants: state.loadAssistants,
+      loadAgents: state.loadAgents,
       loadSkills: state.loadSkills,
       loadMcpServers: state.loadMcpServers,
       loadPublicMcpServers: state.loadPublicMcpServers,
@@ -424,9 +430,9 @@ export function DynamicBreadcrumbs() {
     ) {
       return pathSegments[1];
     }
-    // /projects/[id]/[chatId] or /assistants/[id]/[chatId]
+    // /projects/[id]/[chatId] or /agents/[id]/[chatId]
     if (
-      (pathSegments[0] === "projects" || pathSegments[0] === "assistants") &&
+      (pathSegments[0] === "projects" || pathSegments[0] === "agents") &&
       pathSegments.length >= 3 &&
       pathSegments[2] &&
       UUID_REGEX.test(pathSegments[2])
@@ -452,12 +458,12 @@ export function DynamicBreadcrumbs() {
     }
   }, [projects.length, loadProjects]);
 
-  // Load assistants if not available
+  // Load agents if not available
   React.useEffect(() => {
-    if (assistants.length === 0) {
-      loadAssistants().catch(() => {});
+    if (agents.length === 0) {
+      loadAgents().catch(() => {});
     }
-  }, [assistants.length, loadAssistants]);
+  }, [agents.length, loadAgents]);
 
   // Load prompts if not available
   React.useEffect(() => {
@@ -510,7 +516,7 @@ export function DynamicBreadcrumbs() {
             segment,
             {
               projects,
-              assistants,
+              agents,
               prompts,
               skills,
               mcpServers,
@@ -554,7 +560,7 @@ export function DynamicBreadcrumbs() {
   }, [
     pathname,
     projects,
-    assistants,
+    agents,
     prompts,
     skills,
     mcpServers,
@@ -579,7 +585,7 @@ export function DynamicBreadcrumbs() {
             isChatSegment,
             currentChatData,
             projects,
-            assistants,
+            agents,
             prompts,
             skills,
             mcpServers,

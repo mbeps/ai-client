@@ -67,6 +67,7 @@ describe("resolveRegeneratePayload", () => {
         selectedSkillIds: ["sk1"],
         subagentsEnabled: true,
         subagentModelId: "sub-model",
+        subagentIds: ["builtin:researcher", "custom-1"],
       }),
     });
     const chat = makeChat([
@@ -88,6 +89,7 @@ describe("resolveRegeneratePayload", () => {
       selectedSkillIds: ["sk1"],
       subagentsEnabled: true,
       subagentModelId: "sub-model",
+      subagentIds: ["builtin:researcher", "custom-1"],
     });
   });
 
@@ -117,6 +119,7 @@ describe("resolveRegeneratePayload", () => {
       selectedSkillIds: [],
       subagentsEnabled: undefined,
       subagentModelId: undefined,
+      subagentIds: undefined,
     });
   });
 
@@ -250,5 +253,18 @@ describe("resolveRegeneratePayload", () => {
     ]);
 
     expect(resolveRegeneratePayload(chat, "a1")?.payload.reasoningEffort).toBe("high");
+  });
+
+  it("preserves an explicitly empty subagentIds array on parent message metadata", () => {
+    const parent = makeMessage({
+      id: "u1",
+      metadata: JSON.stringify({ subagentIds: [] }),
+    });
+    const chat = makeChat([
+      parent,
+      makeMessage({ id: "a1", role: "assistant", parentId: "u1" }),
+    ]);
+
+    expect(resolveRegeneratePayload(chat, "a1")?.payload.subagentIds).toEqual([]);
   });
 });

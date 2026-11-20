@@ -1,6 +1,7 @@
 import type { ModelMessage } from "ai";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { Agent } from "@/types/agent/agent";
 import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
 export type { CompletedToolRecord };
@@ -16,18 +17,30 @@ export interface BuildOrchestratorToolSetParams {
   assistantMessageId: string;
   isToolCallingModel: boolean;
   mcpTools: Record<string, any>;
+  subagentMcpTools?: Record<string, any>;
+  toolSourceMap?: Record<string, string>;
+  toolServerIdMap?: Record<string, string>;
   selectedTools?: string[];
   ctx: {
     chatRow?: {
       id: string;
       projectId?: string | null;
+      agentId?: string | null;
       assistantId?: string | null;
       knowledgebaseId?: string | null;
     };
+    agentRow?: {
+      id?: string;
+      subagentIds?: string[];
+    } | null;
+    projectRow?: {
+      subagentIds?: string[];
+    } | null;
     activeKbIds?: string[];
     activeKbId?: string | null;
     kbIsReady?: boolean;
     availableSkills: any[];
+    linkedSubagents?: Agent[];
   };
   fileAttachments: Array<{ name: string; key: string; type?: string }>;
   isMemoryEnabled: boolean;

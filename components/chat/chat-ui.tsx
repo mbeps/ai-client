@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { AgentBar } from "@/components/chat/agent-bar";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
-import { AssistantBar } from "@/components/chat/assistant-bar";
 import { CanvasReopenButton } from "@/components/chat/canvas-reopen-button";
 import { ChatInput } from "@/components/chat/chat-input";
 import {
@@ -31,6 +31,7 @@ import { useChatStore } from "@/components/chat/use-chat-ui-store";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import { hydratedResources } from "@/lib/store/hydrated-resources";
 import type { Chat } from "@/types/chat/chat";
 
 export { resolveActiveChat } from "@/components/chat/use-chat-initial-state";
@@ -70,17 +71,17 @@ export function ChatUI({
     setCurrentLeafDb,
     setKnowledgebaseDb,
     mcpServers,
-    assistants,
+    agents,
     userSettings,
     projects,
     updateMessageMetadataDb,
   } = useChatStore(chatId);
   const chat = resolveActiveChat(storeChat, initialChat, chatId);
 
-  useResourceHydration([
+  const hydration = useResourceHydration([
     "mcpServers",
     "publicMcpServers",
-    "assistants",
+    "agents",
     "projects",
     "prompts",
     "skills",
@@ -88,7 +89,10 @@ export function ChatUI({
     "userSettings",
   ]);
 
-  const currentAssistant = findAssistant(assistants, chat?.assistantId);
+  const currentAssistant = findAssistant(
+    agents,
+    chat?.agentId ?? chat?.assistantId,
+  );
   const currentProject = findProject(projects, chat?.projectId);
 
   const thread = useMemo(
@@ -100,6 +104,7 @@ export function ChatUI({
     initialModelId,
     initialSubagentsEnabled,
     initialSubagentModelId,
+    initialSubagentIds,
     initialReasoningEffort,
     initialServerIds,
     initialSelectedTools,
@@ -176,6 +181,18 @@ export function ChatUI({
 
   const scrollRef = useChatScrollToBottom();
 
+  const chatAgentId = chat?.agentId ?? chat?.assistantId;
+  const isAgentsReady =
+    !chatAgentId ||
+    Boolean(currentAssistant) ||
+    hydratedResources.has("agents");
+  const isProjectsReady =
+    !chat?.projectId ||
+    Boolean(currentProject) ||
+    hydratedResources.has("projects");
+  const isInitialContextReady =
+    !hydration?.isLoading && isAgentsReady && isProjectsReady;
+
   useInitialChatAutoSend(
     chat,
     initialMessage,
@@ -185,6 +202,11 @@ export function ChatUI({
     initialServerIds,
     initialSelectedTools,
     initialKbIds,
+    initialSkillIds,
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialSubagentIds,
+    isInitialContextReady,
   );
 
   if (!chat) {
@@ -195,7 +217,7 @@ export function ChatUI({
     );
   }
 
-  const chatAssistantId = chat.assistantId;
+  const chatAssistantId = chat.agentId ?? chat.assistantId;
   const activeArtifactId = activeArtifact?.id;
   const assistantName = currentAssistant?.name;
   const assistantPrompt = currentAssistant?.prompt ?? undefined;
@@ -211,7 +233,7 @@ export function ChatUI({
   return (
     <div className="relative flex h-full w-full overflow-hidden">
       <div className="relative flex h-full min-w-0 flex-1 flex-col">
-        <AssistantBar assistantName={assistantName} />
+        <AgentBar agentName={assistantName} />
 
         <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
           <div className="px-4 py-6 md:px-8">
@@ -266,11 +288,12 @@ export function ChatUI({
               initialModelId={initialModelId}
               initialSubagentsEnabled={initialSubagentsEnabled}
               initialSubagentModelId={initialSubagentModelId}
+              initialSubagentIds={initialSubagentIds}
               initialReasoningEffort={initialReasoningEffort}
               onKnowledgebaseChange={handleKbChange}
               thread={thread}
               projectId={chat?.projectId}
-              assistantId={chat?.assistantId}
+              assistantId={chatAssistantId}
               promptMode={
                 currentProject?.promptMode || currentAssistant?.promptMode
               }

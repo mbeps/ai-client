@@ -59,7 +59,7 @@ export default function PromptDetailPage() {
   const prompt = prompts.find((p) => p.id === promptId);
   const loadPrompts = useAppStore((state) => state.loadPrompts);
 
-  useResourceHydration(["projects", "assistants", "prompts"]);
+  useResourceHydration(["projects", "agents", "prompts"]);
 
   const [loading, setLoading] = useState(prompts.length === 0);
   const [savingSettings, setSavingSettings] = useState(false);

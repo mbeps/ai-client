@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { resolveInitialChatConfig } from "@/components/chat/use-chat-initial-state";
 import { scrollElementToBottom } from "@/components/chat/use-chat-message-actions";
 import { reconstructThread } from "@/lib/chat/reconstruct-thread";
-import type { Assistant } from "@/types/assistant/assistant";
+import type { Agent } from "@/types/agent/agent";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
 import type { Project } from "@/types/project/project";
@@ -82,7 +82,7 @@ export function filterEnabledMcpServers<T extends { enabled: boolean }>(
 export function useChatInitialSelections(
   thread: Message[],
   currentProject: Project | undefined,
-  currentAssistant: Assistant | undefined,
+  currentAssistant: Agent | undefined,
   userSettings: UserSettingsRow | null,
   chat: Chat | undefined,
 ) {

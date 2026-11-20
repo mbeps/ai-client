@@ -3,6 +3,23 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ResponseTimeline } from "@/components/chat/message/response-timeline";
 
+vi.mock("@/actions/subagents/get-scratchpad", () => ({
+  getScratchpadFilesAction: vi.fn().mockResolvedValue({
+    ok: true,
+    value: [
+      {
+        id: "sp-1",
+        filePath: "arch.md",
+        content: "notes",
+        writtenByRole: "researcher",
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  }),
+}));
+
 vi.mock("@/components/chat/message/scratchpad-viewer-modal", () => ({
   ScratchpadViewerModal: ({ open }: { open: boolean }) =>
     open ? <div data-testid="scratchpad-modal">Scratchpad Modal Content</div> : null,
@@ -99,10 +116,14 @@ describe("ResponseTimeline", () => {
     );
 
     expect(screen.getByText(/Researcher/i)).toBeInTheDocument();
-    expect(screen.getByText("Survey codebase architecture")).toBeInTheDocument();
     expect(screen.getByText("Completed")).toBeInTheDocument();
 
-    const scratchpadButton = screen.getByRole("button", { name: /Scratchpad/i });
+    await user.click(screen.getByRole("button", { name: /Researcher/i }));
+    expect(screen.getByText("Survey codebase architecture")).toBeInTheDocument();
+
+    const scratchpadButton = await screen.findByRole("button", {
+      name: /Scratchpad/i,
+    });
     expect(scratchpadButton).toBeInTheDocument();
 
     await user.click(scratchpadButton);

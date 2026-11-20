@@ -15,6 +15,7 @@ import {
   filterStepTools,
   resolveStepFileContext,
 } from "@/lib/transform/step-tool-filtering";
+import type { Agent } from "@/types/agent/agent";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { SkillRow } from "@/types/skill/skill-row";
@@ -49,6 +50,7 @@ export interface RunTransformStepsOptions {
   singleStep?: boolean;
   initialWorkbookFilePath?: string | null;
   dryRun?: boolean;
+  linkedSubagents?: Agent[];
 }
 
 /** Parameters for step execution context preparation. */
@@ -65,6 +67,8 @@ interface PrepareStepExecutionParams {
   activeWorkbookFilePath: string | null;
   currentAttachmentRows: AttachmentRow[];
   dryRun?: boolean;
+  linkedSubagents?: Agent[];
+  resolvedProvider?: ResolvedProvider;
 }
 
 /** Resolved step preparation context. */
@@ -96,6 +100,7 @@ async function prepareStepExecution(
     kbContext: params.kbContext,
     fileContext,
     dryRun: params.dryRun,
+    linkedSubagents: params.linkedSubagents,
   });
 
   return { filteredTools, toolSourceMap, stepServerNames, systemPrompt };
@@ -131,6 +136,7 @@ export async function runTransformSteps({
   singleStep,
   initialWorkbookFilePath,
   dryRun,
+  linkedSubagents,
 }: RunTransformStepsOptions) {
   const skillCatalog = availableSkills ?? [];
   const preloadedSkills = selectedSkills ?? [];
@@ -187,6 +193,8 @@ export async function runTransformSteps({
         activeWorkbookFilePath,
         currentAttachmentRows,
         dryRun,
+        linkedSubagents,
+        resolvedProvider,
       });
 
     let turnResult: StepModelTurnResult;

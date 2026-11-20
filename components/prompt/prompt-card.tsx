@@ -36,26 +36,29 @@ interface PromptCardProps {
 export function PromptCard({ prompt }: PromptCardProps) {
   const loadPrompts = useAppStore((state) => state.loadPrompts);
   const projects = useAppStore((state) => state.projects);
-  const assistants = useAppStore((state) => state.assistants);
+  const agents = useAppStore((state) => state.agents);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const detailUrl = ROUTES.SETTINGS.PROMPTS.detail(prompt.id);
 
   const projectCount = prompt.projectIds?.length ?? 0;
-  const assistantCount = prompt.assistantIds?.length ?? 0;
+  const resolvedAgentIds = prompt.agentIds?.length
+    ? prompt.agentIds
+    : (prompt.assistantIds ?? []);
+  const agentCount = resolvedAgentIds.length;
 
   let scopeLabel = "Global";
-  if (projectCount > 0 && assistantCount > 0) {
-    scopeLabel = `${projectCount} Proj, ${assistantCount} Asst`;
+  if (projectCount > 0 && agentCount > 0) {
+    scopeLabel = `${projectCount} Proj, ${agentCount} Agent`;
   } else if (projectCount === 1) {
     scopeLabel = `Project: ${projects.find((p) => p.id === prompt.projectIds[0])?.name || "Project"}`;
   } else if (projectCount > 1) {
     scopeLabel = `${projectCount} Projects`;
-  } else if (assistantCount === 1) {
-    scopeLabel = `Assistant: ${assistants.find((a) => a.id === prompt.assistantIds[0])?.name || "Assistant"}`;
-  } else if (assistantCount > 1) {
-    scopeLabel = `${assistantCount} Assistants`;
+  } else if (agentCount === 1) {
+    scopeLabel = `Agent: ${agents.find((a) => a.id === resolvedAgentIds[0])?.name || "Agent"}`;
+  } else if (agentCount > 1) {
+    scopeLabel = `${agentCount} Agents`;
   }
 
   const handleDelete = async () => {

@@ -50,9 +50,10 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
   const allChats = Object.values(storeChats);
 
   const customFilterFn = (chat: Chat) => {
+    const resolvedAgentId = chat.agentId ?? chat.assistantId;
     if (filter === "project" && !chat.projectId) return false;
-    if (filter === "assistant" && !chat.assistantId) return false;
-    if (filter === "none" && (chat.projectId || chat.assistantId)) return false;
+    if (filter === "agent" && !resolvedAgentId) return false;
+    if (filter === "none" && (chat.projectId || resolvedAgentId)) return false;
     return true;
   };
 
@@ -83,7 +84,7 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
           <SelectContent>
             <SelectItem value="all">All Chats</SelectItem>
             <SelectItem value="project">In Projects</SelectItem>
-            <SelectItem value="assistant">With Assistants</SelectItem>
+            <SelectItem value="agent">With Agents</SelectItem>
             <SelectItem value="none">Standalone</SelectItem>
           </SelectContent>
         </Select>

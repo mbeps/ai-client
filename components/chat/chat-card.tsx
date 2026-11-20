@@ -26,10 +26,11 @@ interface ChatCardProps {
  * @param props.chat - The chat to display.
  */
 export function ChatCard({ chat }: ChatCardProps) {
+  const agentId = chat.agentId ?? chat.assistantId;
   const targetHref = chat.projectId
     ? ROUTES.PROJECTS.chat(chat.projectId, chat.id)
-    : chat.assistantId
-      ? ROUTES.ASSISTANTS.chat(chat.assistantId, chat.id)
+    : agentId
+      ? ROUTES.AGENTS.chat(agentId, chat.id)
       : ROUTES.CHATS.detail(chat.id);
 
   const formattedDate = useMemo(() => {
@@ -65,8 +66,8 @@ export function ChatCard({ chat }: ChatCardProps) {
                 <span>
                   {chat.projectId
                     ? "Project Chat"
-                    : chat.assistantId
-                      ? "Assistant Chat"
+                    : agentId
+                      ? "Agent Chat"
                       : "Standalone Chat"}
                 </span>
                 {formattedDate && (

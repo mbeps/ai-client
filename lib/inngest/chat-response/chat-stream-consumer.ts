@@ -1,3 +1,4 @@
+import { DEFAULT_LINKABLE_BUILT_IN_AGENTS } from "@/config/built-in-agents";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import {
   createInlineReasoningParser,
@@ -11,7 +12,8 @@ import type {
 } from "@/lib/inngest/chat-response/chat-response-types";
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
-import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
+import { resolveTargetAgent } from "@/lib/subagents/create-subagent-dispatch-tool";
+import type { Agent } from "@/types/agent/agent";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -59,11 +61,14 @@ export function createStreamEmitter(
 
 /**
  * Handles a tool-call chunk by updating completedTools and emitting event.
+ * When `delegate_task` is called, enriches `args` with the resolved `agentId` and `agentName`
+ * so the frontend trace badge can display custom subagent names instead of generic role aliases.
  *
  * @param chunk - Target chunk
  * @param completedTools - Target completed tools
  * @param toolSourceMap - Target tool source map
  * @param emit - Target emit
+ * @param linkedSubagents - Optional linked subagents to resolve custom agent metadata against
  * @returns The resolved result
  * @author Maruf Bepary
  */
@@ -72,9 +77,28 @@ async function handleToolCallChunk(
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
   emit: (data: ChatStreamEvent) => Promise<void>,
+  linkedSubagents?: readonly Agent[],
 ): Promise<void> {
   const serverName = toolSourceMap[chunk.toolName];
-  const args = chunk.input;
+  let args = chunk.input;
+  const isSubagent =
+    chunk.toolName === "delegate_task" ||
+    chunk.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK;
+  if (isSubagent && chunk.input && typeof chunk.input === "object") {
+    const rawInput = chunk.input as Record<string, unknown>;
+    const targetAgent = resolveTargetAgent(
+      linkedSubagents ?? DEFAULT_LINKABLE_BUILT_IN_AGENTS,
+      typeof rawInput.agent === "string" ? rawInput.agent : undefined,
+      typeof rawInput.role === "string" ? rawInput.role : undefined,
+    );
+    if (targetAgent) {
+      args = {
+        ...rawInput,
+        agentId: targetAgent.id,
+        agentName: targetAgent.name,
+      };
+    }
+  }
   completedTools.push({
     toolCallId: chunk.toolCallId,
     toolName: chunk.toolName,
@@ -90,8 +114,63 @@ async function handleToolCallChunk(
   });
 }
 
+const MAX_SUBAGENT_PART_OUTPUT_CHARS = 4000;
+
+function boundToolPartOutput(output: unknown): unknown {
+  if (typeof output === "string") {
+    return output.length > MAX_SUBAGENT_PART_OUTPUT_CHARS
+      ? `${output.slice(0, MAX_SUBAGENT_PART_OUTPUT_CHARS)}\n[... truncated]`
+      : output;
+  }
+  if (output !== null && typeof output === "object") {
+    try {
+      const serialized = JSON.stringify(output);
+      if (serialized.length > MAX_SUBAGENT_PART_OUTPUT_CHARS) {
+        return `${serialized.slice(0, MAX_SUBAGENT_PART_OUTPUT_CHARS)}\n[... truncated]`;
+      }
+    } catch {
+      return "[unserializable output]";
+    }
+  }
+  return output;
+}
+
 /**
- * Handles a tool-result chunk by sanitizing output and emitting event.
+ * Preserves the structured subagent UIMessage (parts + metadata) for UI rendering
+ * and PostgreSQL persistence while capping oversized nested tool outputs.
+ */
+function boundSubagentResultForPersistence(rawResult: unknown): unknown {
+  if (rawResult === undefined || rawResult === null) {
+    return "Subagent finished with no text output.";
+  }
+  if (typeof rawResult !== "object") {
+    return rawResult;
+  }
+  const msg = rawResult as Record<string, unknown>;
+  if (!Array.isArray(msg.parts)) {
+    return rawResult;
+  }
+  return {
+    ...msg,
+    parts: msg.parts.map((part) => {
+      if (
+        part &&
+        typeof part === "object" &&
+        "output" in part &&
+        (part as { output?: unknown }).output !== undefined
+      ) {
+        return {
+          ...part,
+          output: boundToolPartOutput((part as { output?: unknown }).output),
+        };
+      }
+      return part;
+    }),
+  };
+}
+
+/**
+ * Handles a tool-result chunk by bounding subagent UIMessage payloads and emitting event.
  *
  * @param chunk - Target chunk
  * @param completedTools - Target completed tools
@@ -113,7 +192,7 @@ async function handleToolResultChunk(
     chunk.toolName === "delegate_task" ||
     chunk.toolName === INTERNAL_TOOL_IDS.DELEGATE_TASK;
   const finalResult = isSubagent
-    ? sanitizeSubagentOutput(rawResult)
+    ? boundSubagentResultForPersistence(rawResult)
     : rawResult;
 
   if (tc && !isPreliminary) {
@@ -180,9 +259,16 @@ async function handleNonDeltaChunk(
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
   emit: (data: ChatStreamEvent) => Promise<void>,
+  linkedSubagents?: readonly Agent[],
 ): Promise<void> {
   if (chunk.type === "tool-call") {
-    await handleToolCallChunk(chunk, completedTools, toolSourceMap, emit);
+    await handleToolCallChunk(
+      chunk,
+      completedTools,
+      toolSourceMap,
+      emit,
+      linkedSubagents,
+    );
   } else if (chunk.type === "tool-result") {
     await handleToolResultChunk(chunk, completedTools, toolSourceMap, emit);
   } else if (chunk.type === "tool-error") {
@@ -267,6 +353,7 @@ export async function consumeModelStream(
   emit: (data: ChatStreamEvent) => Promise<void>,
   toolSourceMap: Record<string, string>,
   completedTools: CompletedToolRecord[],
+  linkedSubagents?: readonly Agent[],
 ): Promise<ConsumeModelStreamResult> {
   const flushReasoning = async (): Promise<void> => {
     if (ctx.bufferedReasoning.length === 0) return;
@@ -338,7 +425,13 @@ export async function consumeModelStream(
         await handleStreamReasoningDelta(directReasoning, ctx);
       } else {
         await ctx.flushDeltas();
-        await handleNonDeltaChunk(chunk, completedTools, toolSourceMap, emit);
+        await handleNonDeltaChunk(
+          chunk,
+          completedTools,
+          toolSourceMap,
+          emit,
+          linkedSubagents,
+        );
       }
     }
   }

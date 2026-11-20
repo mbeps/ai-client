@@ -82,7 +82,7 @@ describe("Prompt Form Tabs", () => {
           updatedAt: new Date(),
         },
       ],
-      assistants: [
+      agents: [
         {
           id: "asst-1",
           userId: "u1",

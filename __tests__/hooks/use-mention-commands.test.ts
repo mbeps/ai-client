@@ -41,8 +41,8 @@ vi.mock("@/actions/chats/update-message-metadata", () => ({
 vi.mock("@/actions/projects/list-projects", () => ({
   listProjects: vi.fn(),
 }));
-vi.mock("@/actions/assistants/list-assistants", () => ({
-  listAssistants: vi.fn(),
+vi.mock("@/actions/agents/list-agents", () => ({
+  listAgents: vi.fn(),
 }));
 vi.mock("@/actions/prompts/list-prompts", () => ({ listPrompts: vi.fn() }));
 vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
@@ -53,7 +53,7 @@ vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
 const RESET_STATE = {
   chats: {} as Record<string, Chat>,
   projects: [],
-  assistants: [],
+  agents: [],
   prompts: [],
   knowledgebases: [],
   mcpServers: [],
@@ -138,7 +138,7 @@ describe("useMentionCommands", () => {
     useAppStore.setState(RESET_STATE);
     useAppStore.setState({
       prompts: SAMPLE_PROMPTS,
-      assistants: SAMPLE_ASSISTANTS,
+      agents: SAMPLE_ASSISTANTS,
       skills: [],
       mcpPrompts: [],
     });
@@ -224,6 +224,22 @@ describe("useMentionCommands", () => {
         useMentionCommands("", setInput, textareaRef, null, undefined, "unknown-asst"),
       );
       expect(result.current.selectedAssistant).toBeNull();
+    });
+
+    it("hydrates selectedAssistant when agents load asynchronously after mount", () => {
+      useAppStore.setState({ agents: [] });
+      const setInput = vi.fn();
+      const { result, rerender } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef, null, undefined, "a1"),
+      );
+      expect(result.current.selectedAssistant).toBeNull();
+
+      act(() => {
+        useAppStore.setState({ agents: SAMPLE_ASSISTANTS });
+      });
+      rerender();
+
+      expect(result.current.selectedAssistant).toEqual(SAMPLE_ASSISTANTS[0]);
     });
   });
 

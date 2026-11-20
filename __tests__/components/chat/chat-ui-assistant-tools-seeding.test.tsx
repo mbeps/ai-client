@@ -2,7 +2,8 @@ import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatUI } from "@/components/chat/chat-ui";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
-import type { Assistant } from "@/types/assistant/assistant";
+import { DEFAULT_AGENT_GUARDRAILS } from "@/drizzle/schemas/agent-schema";
+import type { Agent } from "@/types/agent/agent";
 import type { Chat } from "@/types/chat/chat";
 import type { Project } from "@/types/project/project";
 
@@ -14,8 +15,8 @@ vi.mock("@/components/chat/artifact-panel", () => ({
   ArtifactPanel: () => null,
 }));
 
-vi.mock("@/components/chat/assistant-bar", () => ({
-  AssistantBar: () => null,
+vi.mock("@/components/chat/agent-bar", () => ({
+  AgentBar: () => null,
 }));
 
 vi.mock("@/components/chat/message-thread", () => ({
@@ -71,15 +72,22 @@ vi.mock("@/lib/store/use-app-store", () => ({
 
 describe("ChatUI - assistant tools seeding", () => {
   it("hands empty initialSelectedTools to ChatInput when assistant has canvas disabled", () => {
-    const assistant: Assistant = {
+    const assistant: Agent = {
       id: "asst-1",
       userId: "user-1",
       name: "Markdown Converter",
       description: "Converts text into markdown",
       prompt: "Raw markdown only",
+      subagentPrompt: "",
+      modelId: null,
+      knowledgebaseIds: [],
       tools: [], // Canvas is disabled!
       skillMode: "dynamic",
       skillIds: [],
+      promptMode: "all",
+      promptIds: [],
+      subagentIds: [],
+      guardrails: { ...DEFAULT_AGENT_GUARDRAILS },
       avatar: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -101,7 +109,7 @@ describe("ChatUI - assistant tools seeding", () => {
       chats: { [chat.id]: chat },
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [assistant],
+      agents: [assistant],
       projects: [],
       prompts: [],
       skills: [],
@@ -151,7 +159,7 @@ describe("ChatUI - assistant tools seeding", () => {
       chats: { [chat.id]: chat },
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [],
+      agents: [],
       projects: [project],
       prompts: [],
       skills: [],

@@ -91,7 +91,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
     expect(mcpTools.search_knowledge_base).toBeUndefined();
   });
 
-  it("does NOT register search_knowledge_base when kbIsReady is true but selectedTools excludes it", async () => {
+  it("registers search_knowledge_base when kbIsReady is true even if selectedTools omits it", async () => {
     const { mcpTools } = await registerMcpTools(
       [],
       ["other_tool"],
@@ -101,7 +101,7 @@ describe("registerMcpTools — search_knowledge_base (T3.3/T3.4)", () => {
       "user-1",
     );
 
-    expect(mcpTools.search_knowledge_base).toBeUndefined();
+    expect(mcpTools.search_knowledge_base).toBeDefined();
   });
 
   it("does NOT query the database for KB readiness (T3.4)", async () => {
@@ -582,5 +582,25 @@ describe("registerMcpTools — fallback branches", () => {
     expect(mcpTools).toHaveProperty("github_create_issue");
     expect(mcpTools).not.toHaveProperty("github.create_issue");
     expect(toolSourceMap.github_create_issue).toBe("GitHub");
+  });
+
+  it("filters selectedTools by serverName when toolServerIdMap has no entry for the tool", async () => {
+    const getMcpToolsMock = vi.mocked(getMcpTools);
+    getMcpToolsMock.mockResolvedValueOnce({
+      tools: {
+        ping: { description: "Ping" },
+      },
+      toolSourceMap: { ping: "GitHub" },
+      toolServerIdMap: {},
+      cleanup: vi.fn(),
+    });
+
+    const { mcpTools, toolServerIdMap } = await registerMcpTools(
+      [{ id: "srv-1", name: "GitHub" }] as any,
+      ["GitHub:tool:ping"],
+    );
+
+    expect(mcpTools).toHaveProperty("ping");
+    expect(toolServerIdMap).toEqual({});
   });
 });

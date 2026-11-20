@@ -1,6 +1,8 @@
 import { PROMPTS } from "@/config/prompts";
 import { formatActiveSkill } from "@/lib/skills/format-active-skill";
 import { formatSkillCatalog } from "@/lib/skills/format-skill-catalog";
+import { formatSubagentManifest } from "@/lib/subagents/format-subagent-manifest";
+import type { Agent } from "@/types/agent/agent";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Skill, SkillSummary } from "@/types/skill/skill";
 
@@ -16,6 +18,7 @@ export interface SystemPromptOptions {
   userContext?: { name?: string | null; email?: string | null };
   userMemories?: string[];
   isSubagentDelegationEnabled?: boolean;
+  availableSubagents?: readonly Agent[];
   canvasArtifacts?: ArtifactData[];
 }
 
@@ -136,9 +139,12 @@ export function buildSystemPrompt(
     );
   }
 
-  // Orchestrator directives when subagent delegation is active
+  // Orchestrator directives and available subagents manifest when delegation is active
   if (options.isSubagentDelegationEnabled) {
     systemParts.push(PROMPTS.SYSTEM.ORCHESTRATOR_DIRECTIVES);
+    if (options.availableSubagents && options.availableSubagents.length > 0) {
+      systemParts.push(formatSubagentManifest(options.availableSubagents));
+    }
   }
 
   if (systemParts.length === 0) {

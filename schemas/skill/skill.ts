@@ -49,6 +49,7 @@ const baseSkillFields = {
   files: z.array(skillFileSchema).default([]),
   enabled: z.boolean().default(true),
   projectIds: z.array(z.string()).default([]),
+  agentIds: z.array(z.string()).optional(),
   assistantIds: z.array(z.string()).default([]),
 };
 
@@ -91,6 +92,7 @@ export const skillSchema = z.object({
   files: z.array(skillFileSchema).default([]),
   enabled: z.boolean().default(true),
   projectIds: z.array(z.string()).default([]),
+  agentIds: z.array(z.string()).optional(),
   assistantIds: z.array(z.string()).default([]),
   createdAt: dateField,
   updatedAt: dateField,

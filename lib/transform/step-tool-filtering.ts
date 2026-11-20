@@ -1,12 +1,19 @@
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
 import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
+import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
+import {
+  createSubagentDispatchTool,
+  filterToolsForAgent,
+} from "@/lib/subagents/create-subagent-dispatch-tool";
 import type { AttachmentRow } from "@/lib/transform/build-file-context";
 import { buildFileContext } from "@/lib/transform/build-file-context";
 import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
+import type { Agent } from "@/types/agent/agent";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 import type { SkillSummary } from "@/types/skill/skill";
 import type { TransformStep } from "@/types/transform/transform-step";
@@ -87,6 +94,9 @@ function isToolAllowed(
   stepServerNames: Set<string>,
   allowedToolIds: Set<string>,
 ): boolean {
+  if (toolName === "search_knowledge_base" && source === "System") {
+    return true;
+  }
   const isInternal = source === "Internal" || source === "System";
   const fromAllowedServer = isInternal || stepServerNames.has(source);
 
@@ -148,6 +158,8 @@ export interface FilterStepToolsParams {
   activeWorkbookFilePath: string | null;
   currentAttachmentRows: AttachmentRow[];
   dryRun?: boolean;
+  linkedSubagents?: Agent[];
+  resolvedProvider?: ResolvedProvider;
 }
 
 /**
@@ -173,6 +185,8 @@ export function filterStepTools(params: FilterStepToolsParams): {
     activeWorkbookFilePath,
     currentAttachmentRows,
     dryRun,
+    linkedSubagents,
+    resolvedProvider,
   } = params;
 
   const stepServerNames = resolveStepServerNames(step, allServers);
@@ -204,6 +218,45 @@ export function filterStepTools(params: FilterStepToolsParams): {
   );
   if (allowSkillAuthoring) {
     Object.assign(filteredTools, registerSkillAuthoringTools(userId));
+  }
+
+  if (
+    allowedToolIds.has(INTERNAL_TOOL_IDS.DELEGATE_TASK) &&
+    linkedSubagents &&
+    linkedSubagents.length > 0 &&
+    resolvedProvider
+  ) {
+    filteredTools.delegate_task = createSubagentDispatchTool({
+      defaultModel: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
+      availableTools: { ...filteredTools },
+      allowedSubagents: linkedSubagents,
+      resolveModelById: async (modelId: string) => {
+        const targetResolved = await resolveProvider(userId, modelId).catch(
+          () => null,
+        );
+        return targetResolved
+          ? targetResolved.sdkProvider.chat(targetResolved.modelId)
+          : undefined;
+      },
+      buildIsolatedTools: (agent) =>
+        filterToolsForAgent(
+          Object.fromEntries(
+            Object.entries({ ...runMcpTools, ...filteredTools }).filter(
+              ([toolName]) =>
+                toolName !== "search_knowledge_base" &&
+                !(dryRun && isSpreadsheetMutationTool(toolName)),
+            ),
+          ),
+          agent.tools,
+          agent.knowledgebaseIds,
+          { toolSourceMap: runToolSourceMap },
+        ),
+      buildKnowledgebaseTools: (kbIds) =>
+        registerKnowledgebaseTool(kbIds, true, userId, undefined, {
+          model: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
+          contextWindow: resolvedProvider.modelRow?.contextWindow ?? undefined,
+        }),
+    });
   }
 
   const toolSourceMap = Object.fromEntries(

@@ -159,6 +159,7 @@ describe("buildTraceSteps", () => {
         key: "active-sub-1",
         toolCallId: "sub-1",
         role: "researcher",
+        agentName: "Researcher",
         taskBrief: "Find latest papers",
         inputData: "Topic: AI",
         result: undefined,
@@ -185,6 +186,123 @@ describe("buildTraceSteps", () => {
         inputData: undefined,
         result: { error: "Failed" },
         state: "error",
+      });
+    });
+
+    it("extracts agentId and agentName when delegate_task is called with agent parameter", () => {
+      const active: ToolCallState[] = [
+        {
+          toolCallId: "sub-agent-1",
+          toolName: "delegate_task",
+          args: {
+            agent: "builtin:researcher",
+            taskBrief: "Research topic",
+          },
+          status: "calling",
+        },
+        {
+          toolCallId: "sub-agent-2",
+          toolName: "delegate_task",
+          args: {
+            agent: "11111111-1111-4111-8111-111111111111",
+            agentName: "SQL Analyst",
+            taskBrief: "Analyze query",
+          },
+          result: "Done",
+          status: "complete",
+        },
+      ];
+
+      const steps = buildTraceSteps({ activeToolCalls: active });
+
+      expect(steps[0]).toMatchObject({
+        kind: "subagent",
+        role: "builtin:researcher",
+        agentId: "builtin:researcher",
+        agentName: "Researcher",
+      });
+      expect(steps[1]).toMatchObject({
+        kind: "subagent",
+        role: "11111111-1111-4111-8111-111111111111",
+        agentId: "11111111-1111-4111-8111-111111111111",
+        agentName: "SQL Analyst",
+      });
+    });
+
+    it("prioritizes agent over role and resolves explicit agentId or non-UUID agent names", () => {
+      const active: ToolCallState[] = [
+        {
+          toolCallId: "sub-priority-1",
+          toolName: "delegate_task",
+          args: {
+            agent: "11111111-1111-4111-8111-111111111111",
+            role: "researcher",
+            agentId: "22222222-2222-4222-8222-222222222222",
+            agentName: "Maruf MCP Researcher",
+            taskBrief: "Query MCP docs",
+          },
+          status: "calling",
+        },
+        {
+          toolCallId: "sub-priority-2",
+          toolName: "delegate_task",
+          args: {
+            agent: "Maruf Knowledgebase Researcher",
+            role: "researcher",
+            taskBrief: "Search KB",
+          },
+          status: "calling",
+        },
+        {
+          toolCallId: "sub-priority-3",
+          toolName: "delegate_task",
+          args: {
+            agent: "33333333-3333-4333-8333-333333333333",
+            role: "researcher",
+            taskBrief: "Historical UUID call without agentName",
+          },
+          status: "calling",
+        },
+        {
+          toolCallId: "sub-priority-4",
+          toolName: "delegate_task",
+          args: {
+            role: "builtin:planner",
+            taskBrief: "Role fallback to built-in",
+          },
+          status: "calling",
+        },
+      ];
+
+      const steps = buildTraceSteps({ activeToolCalls: active });
+
+      expect(steps[0]).toMatchObject({
+        kind: "subagent",
+        role: "11111111-1111-4111-8111-111111111111",
+        agentId: "22222222-2222-4222-8222-222222222222",
+        agentName: "Maruf MCP Researcher",
+      });
+      expect(steps[1]).toMatchObject({
+        kind: "subagent",
+        role: "Maruf Knowledgebase Researcher",
+        agentId: "Maruf Knowledgebase Researcher",
+        agentName: "Maruf Knowledgebase Researcher",
+      });
+      expect(steps[2]).toEqual({
+        kind: "subagent",
+        key: "active-sub-priority-3",
+        toolCallId: "sub-priority-3",
+        role: "33333333-3333-4333-8333-333333333333",
+        agentId: "33333333-3333-4333-8333-333333333333",
+        taskBrief: "Historical UUID call without agentName",
+        inputData: undefined,
+        result: undefined,
+        state: "running",
+      });
+      expect(steps[3]).toMatchObject({
+        kind: "subagent",
+        role: "builtin:planner",
+        agentName: "Planner",
       });
     });
   });
@@ -241,6 +359,7 @@ describe("buildTraceSteps", () => {
           key: "persisted-call-sub",
           toolCallId: "call-sub",
           role: "planner",
+          agentName: "Planner",
           taskBrief: "Plan sprint",
           inputData: undefined,
           result: "Plan created",

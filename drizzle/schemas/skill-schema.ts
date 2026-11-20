@@ -46,10 +46,7 @@ export const skill = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    assistantIds: text("assistant_ids")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    agentIds: text("agent_ids").array().notNull().default(sql`'{}'::text[]`),
     ...timestampColumns(),
   },
   (table) => [

@@ -12,8 +12,8 @@ vi.mock("@/components/chat/artifact-panel", () => ({
   ArtifactPanel: () => null,
 }));
 
-vi.mock("@/components/chat/assistant-bar", () => ({
-  AssistantBar: () => null,
+vi.mock("@/components/chat/agent-bar", () => ({
+  AgentBar: () => null,
 }));
 
 vi.mock("@/components/chat/message-thread", () => ({
@@ -44,6 +44,8 @@ vi.mock("@/hooks/use-resource-hydration", () => ({
   useResourceHydration: () => ({ isLoading: false, loadingResources: [] }),
 }));
 
+const mockStreamResponse = vi.fn();
+
 vi.mock("@/hooks/chat/use-stream-response", () => ({
   useStreamResponse: () => ({
     isLoading: false,
@@ -51,7 +53,7 @@ vi.mock("@/hooks/chat/use-stream-response", () => ({
     streamingReasoning: null,
     isStreamingReasoning: false,
     activeToolCalls: [],
-    streamResponse: vi.fn(),
+    streamResponse: mockStreamResponse,
     stopStream: vi.fn(),
   }),
 }));
@@ -86,7 +88,7 @@ function renderChatUI(chat: Chat) {
     chats: { [chat.id]: chat },
     mcpServers: [],
     loadMcpServers: vi.fn().mockResolvedValue([]),
-    assistants: [],
+    agents: [],
     projects: [],
     prompts: [],
     skills: [],
@@ -110,7 +112,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       chats: {},
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [
+      agents: [
         {
           id: "asst-1",
           name: "Helper",
@@ -142,7 +144,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       chats: {},
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [],
+      agents: [],
       projects: [
         {
           id: "proj-1",
@@ -171,7 +173,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       chats: {},
       mcpServers: [],
       loadMcpServers: vi.fn().mockResolvedValue([]),
-      assistants: [
+      agents: [
         {
           id: "asst-1",
           name: "Helper",
@@ -193,5 +195,60 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
     render(<ChatUI chatId="chat-1" initialChat={chat} />);
 
     expect(lastChatInputProps?.initialSelectedSkillIds).toEqual([]);
+  });
+
+  it("forwards initialSkillIds, initialSubagentsEnabled, initialSubagentModelId, and agentId on initialMessage auto-send", () => {
+    mockStreamResponse.mockClear();
+    mockStoreState = {
+      chats: {},
+      mcpServers: [],
+      loadMcpServers: vi.fn().mockResolvedValue([]),
+      agents: [
+        {
+          id: "agent-orch-1",
+          name: "Orchestrator",
+          skillMode: "specific",
+          skillIds: ["sk-1"],
+          subagentIds: ["sub-1"],
+        },
+      ],
+      projects: [],
+      prompts: [],
+      skills: [],
+      userSettings: null,
+      updateMessageMetadataDb: vi.fn(),
+      deleteMessageDb: vi.fn(),
+      setCurrentLeafDb: vi.fn(),
+      setKnowledgebaseDb: vi.fn(),
+    };
+
+    const chat = buildChat({ agentId: "agent-orch-1", assistantId: null });
+    render(
+      <ChatUI
+        chatId="chat-1"
+        initialChat={chat}
+        initialMessage="Research Maruf"
+      />,
+    );
+
+    expect(lastChatInputProps?.initialSubagentsEnabled).toBe(true);
+    expect(lastChatInputProps?.initialSubagentIds).toEqual(["sub-1"]);
+    expect(mockStreamResponse).toHaveBeenCalledWith(
+      expect.any(String),
+      "Research Maruf",
+      null,
+      [],
+      "",
+      [],
+      expect.any(Array),
+      undefined,
+      "agent-orch-1",
+      [],
+      ["sk-1"],
+      true,
+      undefined,
+      undefined,
+      ["sub-1"],
+    );
   });
 });

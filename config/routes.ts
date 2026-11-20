@@ -19,8 +19,11 @@ const CHATS_BASE = "/chats" as const;
 /** Base path segment for project routes. */
 const PROJECTS_BASE = "/projects" as const;
 
-/** Base path segment for assistant routes. */
+/** Base path segment for assistant routes (legacy Phase 1 compatibility). */
 const ASSISTANTS_BASE = "/assistants" as const;
+
+/** Base path segment for unified agent routes. */
+const AGENTS_BASE = "/agents" as const;
 
 /** Base path segment for knowledge base routes. */
 const KNOWLEDGEBASES_BASE = "/knowledgebases" as const;
@@ -84,6 +87,14 @@ export const ROUTES = {
     detail: (id: string) => `${ASSISTANTS_BASE}/${id}` as const,
     chat: (assistantId: string, chatId: string) =>
       `${ASSISTANTS_BASE}/${assistantId}/${chatId}` as const,
+  },
+  AGENTS: {
+    path: AGENTS_BASE,
+    name: "Agents",
+    new: `${AGENTS_BASE}/new` as const,
+    detail: (id: string) => `${AGENTS_BASE}/${id}` as const,
+    chat: (agentId: string, chatId: string) =>
+      `${AGENTS_BASE}/${agentId}/${chatId}` as const,
   },
   KNOWLEDGEBASES: {
     path: KNOWLEDGEBASES_BASE,

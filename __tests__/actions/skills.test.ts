@@ -218,7 +218,7 @@ describe("createSkill", () => {
       ok: false,
       error: expect.objectContaining({
         code: "NOT_FOUND",
-        message: "One or more assistants not found",
+        message: "One or more agents not found",
       }),
     });
   });
@@ -358,7 +358,7 @@ describe("updateSkill", () => {
       ok: false,
       error: expect.objectContaining({
         code: "NOT_FOUND",
-        message: "One or more assistants not found",
+        message: "One or more agents not found",
       }),
     });
   });

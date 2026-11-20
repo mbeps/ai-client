@@ -16,7 +16,7 @@ export function useChatStore(chatId: string) {
   const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
-  const assistants = useAppStore((state) => state.assistants);
+  const agents = useAppStore((state) => state.agents);
   const userSettings = useAppStore((state) => state.userSettings);
   const projects = useAppStore((state) => state.projects);
   const updateMessageMetadataDb = useAppStore(
@@ -29,7 +29,7 @@ export function useChatStore(chatId: string) {
     setKnowledgebaseDb,
     mcpServers,
     loadMcpServers,
-    assistants,
+    agents,
     userSettings,
     projects,
     updateMessageMetadataDb,

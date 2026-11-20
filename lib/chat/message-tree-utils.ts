@@ -113,7 +113,7 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
     id: row.id,
     title: row.title,
     projectId: row.projectId ?? undefined,
-    assistantId: row.assistantId ?? undefined,
+    assistantId: row.agentId ?? undefined,
     knowledgebaseId: row.knowledgebaseId ?? undefined,
     projectName: row.projectName,
     assistantName: row.assistantName,

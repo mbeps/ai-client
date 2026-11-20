@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { db } from "@/drizzle/db";
-import { assistant } from "@/drizzle/schemas/assistant-schema";
+import { agent } from "@/drizzle/schemas/agent-schema";
 import { project } from "@/drizzle/schemas/project-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
@@ -67,24 +67,17 @@ export const updateSkill = defineAction(
       }
     }
 
-    if (
-      validatedData.data.assistantIds &&
-      validatedData.data.assistantIds.length > 0
-    ) {
+    const agentIds =
+      validatedData.data.agentIds ?? validatedData.data.assistantIds;
+    if (agentIds && agentIds.length > 0) {
       const owned = await db
-        .select({ id: assistant.id })
-        .from(assistant)
-        .where(
-          whereOwner(
-            assistant,
-            validatedData.data.assistantIds,
-            session.user.id,
-          ),
-        );
-      if (owned.length !== validatedData.data.assistantIds.length) {
+        .select({ id: agent.id })
+        .from(agent)
+        .where(whereOwner(agent, agentIds, session.user.id));
+      if (owned.length !== agentIds.length) {
         return fail({
           code: ERROR_CODE.NOT_FOUND,
-          message: "One or more assistants not found",
+          message: "One or more agents not found",
         });
       }
     }

@@ -32,11 +32,14 @@ describe("registerKnowledgebaseTool", () => {
     expect(tools.search_knowledge_base).toBeDefined();
   });
 
-  it("does not register tool when selectedTools excludes search_knowledge_base", () => {
-    const tools = registerKnowledgebaseTool(["kb-1"], true, "user-1", [
+  it("registers tool even when selectedTools is empty or excludes search_knowledge_base", () => {
+    const toolsEmpty = registerKnowledgebaseTool(["kb-1"], true, "user-1", []);
+    expect(toolsEmpty.search_knowledge_base).toBeDefined();
+
+    const toolsOther = registerKnowledgebaseTool(["kb-1"], true, "user-1", [
       INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
     ]);
-    expect(tools.search_knowledge_base).toBeUndefined();
+    expect(toolsOther.search_knowledge_base).toBeDefined();
   });
 
   it("does not register tool when targetKbIds is empty", () => {

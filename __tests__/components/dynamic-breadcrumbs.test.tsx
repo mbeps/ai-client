@@ -55,7 +55,7 @@ describe("DynamicBreadcrumbs", () => {
     vi.clearAllMocks();
     useAppStore.setState({
       projects: [],
-      assistants: [],
+      agents: [],
       prompts: [],
       skills: [
         {
@@ -179,20 +179,29 @@ describe("DynamicBreadcrumbs", () => {
     expect(mockGetTransformRun).not.toHaveBeenCalled();
   });
 
-  it("does not call getTransformRun for assistant chat route /assistants/[id]/[chatId]", async () => {
+  it("does not call getTransformRun for agent chat route /agents/[id]/[chatId]", async () => {
     const assistantId = "33333333-3333-4333-8333-333333333333";
     const chatId = "44444444-4444-4444-8444-444444444444";
 
     useAppStore.setState({
-      assistants: [
+      agents: [
         {
           id: assistantId,
           userId: "user-1",
           name: "Coding Assistant",
           description: "",
-          instructions: "",
+          prompt: "",
           tools: [],
-          knowledgebaseId: null,
+          skillMode: "dynamic",
+          skillIds: [],
+          promptMode: "all",
+          promptIds: [],
+          avatar: null,
+          subagentPrompt: "",
+          modelId: null,
+          knowledgebaseIds: [],
+          subagentIds: [],
+          guardrails: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -202,6 +211,7 @@ describe("DynamicBreadcrumbs", () => {
           id: chatId,
           title: "Assistant Chat Session",
           userId: "user-1",
+          agentId: assistantId,
           assistantId,
           messages: {},
           currentLeafId: null,
@@ -211,11 +221,11 @@ describe("DynamicBreadcrumbs", () => {
       },
     });
 
-    mockPathname.mockReturnValue(`/assistants/${assistantId}/${chatId}`);
+    mockPathname.mockReturnValue(`/agents/${assistantId}/${chatId}`);
 
     render(<DynamicBreadcrumbs />);
 
-    expect(screen.getByText("Assistants")).toBeDefined();
+    expect(screen.getByText("Agents")).toBeDefined();
     expect(screen.getByText("Coding Assistant")).toBeDefined();
     expect(screen.getByText("Assistant Chat Session")).toBeDefined();
     expect(mockGetTransformRun).not.toHaveBeenCalled();

@@ -1,4 +1,4 @@
-import type { Assistant } from "@/types/assistant/assistant";
+import type { Agent } from "@/types/agent/agent";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { AttachmentRow } from "@/types/attachment/attachment-row";
 import type { AddMessageParams } from "@/types/chat/add-message-params";
@@ -39,10 +39,9 @@ export type AppState = {
   projects: Project[];
 
   /**
-   * All custom AI assistants.
-   * Reusable chat personas with system prompts and tool configurations.
+   * All unified AI Agents (built-in + custom).
    */
-  assistants: Assistant[];
+  agents: Agent[];
 
   /**
    * All quick-insert prompts (slash-commands).
@@ -228,12 +227,20 @@ export type AppState = {
   loadProjects: () => Promise<void>;
 
   /**
-   * Loads all custom AI assistants for the current user from the server.
-   * Populates assistants array on app startup.
+   * Loads all unified AI Agents (custom + built-in) for the current user from the server.
+   * Populates agents array on app startup.
    *
-   * @returns Promise resolving when assistants are loaded
+   * @returns Promise resolving when agents are loaded
    */
-  loadAssistants: () => Promise<void>;
+  loadAgents: () => Promise<void>;
+
+  /**
+   * Removes an agent from the in-memory store and unbinds its ID from
+   * parent agents, projects, and chats.
+   *
+   * @param agentId - ID of the deleted agent
+   */
+  deleteAgent: (agentId: string) => void;
 
   /**
    * Loads all quick-insert prompts for the current user from the server.
@@ -318,7 +325,7 @@ export type AppState = {
   createChatDb: (
     title?: string,
     projectId?: string,
-    assistantId?: string,
+    agentId?: string,
   ) => Promise<string>;
 
   /**

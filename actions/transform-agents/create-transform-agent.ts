@@ -3,6 +3,11 @@
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import {
+  type SubagentLinkTx,
+  validateTargetSubagentIds,
+  withSubagentLinkLock,
+} from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
@@ -37,24 +42,53 @@ export const createTransformAgent = defineAction(
       });
     }
     const validated = parsed.data;
+    const subagentIds = validated.subagentIds ?? [];
+    const insertTransformAgent = async (executor: SubagentLinkTx) => {
+      const [inserted] = await executor
+        .insert(transformAgent)
+        .values({
+          name: validated.name,
+          description: validated.description ?? null,
+          globalContext: validated.globalContext ?? null,
+          modelId: validated.modelId ?? null,
+          tools: validated.tools,
+          skillMode: validated.skillMode,
+          skillIds: validated.skillIds,
+          knowledgeBaseIds: validated.knowledgeBaseIds,
+          subagentIds,
+          requiresFileUpload: validated.requiresFileUpload,
+          steps: JSON.stringify(validated.steps),
+          userId: session.user.id,
+        })
+        .returning();
+      return inserted;
+    };
 
-    const [row] = await db
-      .insert(transformAgent)
-      .values({
-        name: validated.name,
-        description: validated.description ?? null,
-        globalContext: validated.globalContext ?? null,
-        modelId: validated.modelId ?? null,
-        tools: validated.tools,
-        skillMode: validated.skillMode,
-        skillIds: validated.skillIds,
-        knowledgeBaseIds: validated.knowledgeBaseIds,
-        requiresFileUpload: validated.requiresFileUpload,
-        steps: JSON.stringify(validated.steps),
-        userId: session.user.id,
-      })
-      .returning();
+    let row: TransformAgentRow;
+    if (subagentIds.length > 0) {
+      const txResult = await withSubagentLinkLock(
+        session.user.id,
+        async (tx) => {
+          const linkCheck = await validateTargetSubagentIds(
+            session.user.id,
+            subagentIds,
+            undefined,
+            tx,
+          );
+          if (!linkCheck.ok) {
+            return linkCheck;
+          }
+          return ok((await insertTransformAgent(tx)) as TransformAgentRow);
+        },
+      );
+      if (!txResult.ok) {
+        return txResult;
+      }
+      row = txResult.value;
+    } else {
+      row = (await insertTransformAgent(db)) as TransformAgentRow;
+    }
 
-    return ok(row as TransformAgentRow);
+    return ok(row);
   },
 );

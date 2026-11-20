@@ -27,10 +27,7 @@ export const prompt = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    assistantIds: text("assistant_ids")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+    agentIds: text("agent_ids").array().notNull().default(sql`'{}'::text[]`),
     ...timestampColumns(),
   },
   (table) => [index("prompt_user_id_idx").on(table.userId)],

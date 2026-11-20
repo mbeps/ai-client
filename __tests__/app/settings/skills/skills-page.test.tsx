@@ -56,7 +56,7 @@ vi.mock("@/lib/store/use-app-store", () => ({
     selector({
       skills: mockSkills,
       projects: [{ id: "proj-1", name: "Alpha Project" }],
-      assistants: [{ id: "asst-1", name: "Beta Assistant" }],
+      agents: [{ id: "asst-1", name: "Beta Assistant" }],
       loadSkills: mockLoadSkills,
       loadError: null,
     }),
@@ -96,7 +96,7 @@ describe("SkillsPage", () => {
     expect(screen.getByText("Writing Plans")).toBeInTheDocument();
     expect(screen.queryByText("Brainstorming")).not.toBeInTheDocument();
 
-    const assistantsFilterBtn = screen.getByRole("button", { name: "Assistants" });
+    const assistantsFilterBtn = screen.getByRole("button", { name: "Agents" });
     await user.click(assistantsFilterBtn);
 
     expect(screen.getByText("Karpathy Guidelines")).toBeInTheDocument();

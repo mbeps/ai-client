@@ -34,7 +34,8 @@ export interface UseAgentEditorFormParams {
  */
 export function useAgentEditorForm(params: UseAgentEditorFormParams) {
   const { id, isNew, handleApiError } = params;
-  const { mcpServers, loadMcpServers, skills, loadSkills } = useAppStore();
+  const { mcpServers, loadMcpServers, skills, loadSkills, agents, loadAgents } =
+    useAppStore();
   const { normalizedKnowledgebases: knowledgebases } = useKnowledgebases();
 
   const [name, setName] = useState("");
@@ -47,6 +48,7 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
   const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<Set<string>>(
     new Set(),
   );
+  const [subagentIds, setSubagentIds] = useState<string[]>([]);
   const [requiresFileUpload, setRequiresFileUpload] = useState(true);
   const [steps, setSteps] = useState<TransformStep[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -58,7 +60,17 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
     if (skills.length === 0) {
       loadSkills();
     }
-  }, [mcpServers.length, loadMcpServers, skills.length, loadSkills]);
+    if (agents.length === 0) {
+      loadAgents();
+    }
+  }, [
+    mcpServers.length,
+    loadMcpServers,
+    skills.length,
+    loadSkills,
+    agents.length,
+    loadAgents,
+  ]);
 
   useEffect(() => {
     if (isNew) return;
@@ -81,6 +93,7 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
             setSkillMode,
             setSkillIds,
             setKnowledgeBaseIds,
+            setSubagentIds,
             setRequiresFileUpload,
             setSteps,
           });
@@ -144,6 +157,8 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
     setSkillIds,
     knowledgeBaseIds,
     setKnowledgeBaseIds,
+    subagentIds,
+    setSubagentIds,
     requiresFileUpload,
     setRequiresFileUpload,
     steps,
@@ -151,6 +166,7 @@ export function useAgentEditorForm(params: UseAgentEditorFormParams) {
     isLoading,
     mcpServers,
     skills,
+    agents,
     knowledgebases,
     addStep,
     updateStep,

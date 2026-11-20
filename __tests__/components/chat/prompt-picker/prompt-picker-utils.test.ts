@@ -206,14 +206,15 @@ describe("filterAccessiblePrompts", () => {
     updatedAt: new Date(),
   };
 
-  const assistantPrompt1: Prompt = {
-    id: "asst1",
-    title: "Assistant 1 Prompt",
+  const agentPrompt1: Prompt = {
+    id: "agent1",
+    title: "Agent 1 Prompt",
     shortcut: "a1",
-    content: "Assistant 1 content",
+    content: "Agent 1 content",
     userId: "u1",
     projectIds: [],
-    assistantIds: ["asst-1"],
+    agentIds: ["agent-1"],
+    assistantIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -225,7 +226,8 @@ describe("filterAccessiblePrompts", () => {
     content: "Dual content",
     userId: "u1",
     projectIds: ["proj-a", "proj-b"],
-    assistantIds: ["asst-1"],
+    agentIds: ["agent-1"],
+    assistantIds: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -235,7 +237,7 @@ describe("filterAccessiblePrompts", () => {
     globalPrompt2,
     projectPromptA,
     projectPromptB,
-    assistantPrompt1,
+    agentPrompt1,
     dualPrompt,
   ];
 
@@ -269,38 +271,38 @@ describe("filterAccessiblePrompts", () => {
     expect(accessible.map((p) => p.id)).toEqual(["g2", "pA", "dual1"]);
   });
 
-  it("in assistant chat with promptMode 'all': includes current assistant prompts and all global prompts", () => {
+  it("in agent chat with promptMode 'all': includes current agent prompts and all global prompts", () => {
     const accessible = filterAccessiblePrompts(allPrompts, {
-      assistantId: "asst-1",
+      agentId: "agent-1",
       promptMode: "all",
     });
-    expect(accessible.map((p) => p.id)).toEqual(["g1", "g2", "asst1", "dual1"]);
+    expect(accessible.map((p) => p.id)).toEqual(["g1", "g2", "agent1", "dual1"]);
   });
 
-  it("in assistant chat with promptMode 'none': includes only current assistant prompts", () => {
+  it("in agent chat with promptMode 'none': includes only current agent prompts", () => {
     const accessible = filterAccessiblePrompts(allPrompts, {
-      assistantId: "asst-1",
+      agentId: "agent-1",
       promptMode: "none",
     });
-    expect(accessible.map((p) => p.id)).toEqual(["asst1", "dual1"]);
+    expect(accessible.map((p) => p.id)).toEqual(["agent1", "dual1"]);
   });
 
-  it("in assistant chat with promptMode 'specific': includes current assistant prompts and allowed global prompts", () => {
+  it("in agent chat with promptMode 'specific': includes current agent prompts and allowed global prompts", () => {
     const accessible = filterAccessiblePrompts(allPrompts, {
-      assistantId: "asst-1",
+      agentId: "agent-1",
       promptMode: "specific",
       allowedPromptIds: ["g1"],
     });
-    expect(accessible.map((p) => p.id)).toEqual(["g1", "asst1", "dual1"]);
+    expect(accessible.map((p) => p.id)).toEqual(["g1", "agent1", "dual1"]);
   });
 
-  it("in chat with both project and assistant: includes prompts matching either scope", () => {
+  it("in chat with both project and agent: includes prompts matching either scope", () => {
     const accessible = filterAccessiblePrompts(allPrompts, {
       projectId: "proj-a",
-      assistantId: "asst-1",
+      agentId: "agent-1",
       promptMode: "none",
     });
-    expect(accessible.map((p) => p.id)).toEqual(["pA", "asst1", "dual1"]);
+    expect(accessible.map((p) => p.id)).toEqual(["pA", "agent1", "dual1"]);
   });
 });
 

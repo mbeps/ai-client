@@ -38,7 +38,7 @@ interface SkillCardProps {
 export function SkillCard({ skill }: SkillCardProps) {
   const loadSkills = useAppStore((state) => state.loadSkills);
   const projects = useAppStore((state) => state.projects);
-  const assistants = useAppStore((state) => state.assistants);
+  const agents = useAppStore((state) => state.agents);
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -46,19 +46,22 @@ export function SkillCard({ skill }: SkillCardProps) {
   const detailUrl = ROUTES.SETTINGS.SKILLS.detail(skill.id);
 
   const projectCount = skill.projectIds?.length ?? 0;
-  const assistantCount = skill.assistantIds?.length ?? 0;
+  const resolvedAgentIds = skill.agentIds?.length
+    ? skill.agentIds
+    : (skill.assistantIds ?? []);
+  const agentCount = resolvedAgentIds.length;
 
   let scopeLabel = "Global";
-  if (projectCount > 0 && assistantCount > 0) {
-    scopeLabel = `${projectCount} Proj, ${assistantCount} Asst`;
+  if (projectCount > 0 && agentCount > 0) {
+    scopeLabel = `${projectCount} Proj, ${agentCount} Agent`;
   } else if (projectCount === 1) {
     scopeLabel = `Project: ${projects.find((p) => p.id === skill.projectIds[0])?.name || "Project"}`;
   } else if (projectCount > 1) {
     scopeLabel = `${projectCount} Projects`;
-  } else if (assistantCount === 1) {
-    scopeLabel = `Assistant: ${assistants.find((a) => a.id === skill.assistantIds[0])?.name || "Assistant"}`;
-  } else if (assistantCount > 1) {
-    scopeLabel = `${assistantCount} Assistants`;
+  } else if (agentCount === 1) {
+    scopeLabel = `Agent: ${agents.find((a) => a.id === resolvedAgentIds[0])?.name || "Agent"}`;
+  } else if (agentCount > 1) {
+    scopeLabel = `${agentCount} Agents`;
   }
 
   const handleToggle = async (checked: boolean) => {

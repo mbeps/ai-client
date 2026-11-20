@@ -542,6 +542,240 @@ describe("chat-stream-consumer", () => {
       expect(tc?.result).toBeDefined();
     });
 
+    it("preserves structured UIMessage parts and metadata on final delegate_task tool-result while bounding oversized tool outputs", async () => {
+      const emitted: any[] = [];
+      const emit = async (data: any) => {
+        emitted.push(data);
+      };
+
+      const completedTools: any[] = [];
+      const longToolOutput = "X".repeat(5000);
+      const subagentUiMessage = {
+        id: "run-1",
+        role: "assistant",
+        parts: [
+          { type: "reasoning", text: "Thinking through the KB..." },
+          {
+            type: "tool-search_knowledge_base",
+            toolCallId: "inner-tc-1",
+            state: "output-available",
+            input: { query: "MCP" },
+            output: longToolOutput,
+          },
+          { type: "text", text: "STATUS: DONE\n\nFound MCP details." },
+        ],
+        metadata: {
+          modelId: "gpt-4o-mini",
+          durationMs: 1250,
+          stepCount: 2,
+          maxSteps: 10,
+          finishReason: "stop",
+        },
+      };
+
+      async function* generateChunks() {
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-ui-1",
+          toolName: "delegate_task",
+          input: { role: "researcher", taskBrief: "Research MCP" },
+        };
+        yield {
+          type: "tool-result",
+          toolCallId: "sub-ui-1",
+          toolName: "delegate_task",
+          output: subagentUiMessage,
+          preliminary: false,
+        };
+      }
+
+      const abortController = new AbortController();
+      await consumeModelStream(
+        generateChunks(),
+        abortController.signal,
+        emit,
+        {},
+        completedTools,
+      );
+
+      const tc = completedTools.find((t) => t.toolCallId === "sub-ui-1");
+      expect(tc?.result).toMatchObject({
+        id: "run-1",
+        role: "assistant",
+        metadata: { modelId: "gpt-4o-mini", durationMs: 1250 },
+      });
+      expect(tc?.result.parts).toHaveLength(3);
+      expect(tc?.result.parts[1].output.length).toBeLessThan(4200);
+      expect(tc?.result.parts[1].output).toContain("[... truncated]");
+    });
+
+    it("bounds oversized and unserializable object outputs and passes through primitive or non-parts subagent results", async () => {
+      const emit = async () => {};
+      const completedTools: any[] = [];
+      const circular: Record<string, unknown> = {};
+      circular.self = circular;
+
+      async function* generateChunks() {
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-obj",
+          toolName: "delegate_task",
+          input: {},
+        };
+        yield {
+          type: "tool-result",
+          toolCallId: "sub-obj",
+          toolName: "delegate_task",
+          output: {
+            parts: [
+              { type: "tool-a", output: { data: "Z".repeat(5000) } },
+              { type: "tool-b", output: { ok: true } },
+              { type: "tool-c", output: circular },
+              { type: "tool-d", output: "ok" },
+              { type: "tool-e", output: 42 },
+            ],
+          },
+          preliminary: false,
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-prim",
+          toolName: "delegate_task",
+          input: {},
+        };
+        yield {
+          type: "tool-result",
+          toolCallId: "sub-prim",
+          toolName: "delegate_task",
+          output: "plain-string-result",
+          preliminary: false,
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-noparts",
+          toolName: "delegate_task",
+          input: {},
+        };
+        yield {
+          type: "tool-result",
+          toolCallId: "sub-noparts",
+          toolName: "delegate_task",
+          output: { summary: "no parts array" },
+          preliminary: false,
+        };
+      }
+
+      await consumeModelStream(
+        generateChunks(),
+        new AbortController().signal,
+        emit,
+        {},
+        completedTools,
+      );
+
+      const objRes = completedTools.find((t) => t.toolCallId === "sub-obj")?.result;
+      expect(objRes.parts[0].output).toContain("[... truncated]");
+      expect(objRes.parts[1].output).toEqual({ ok: true });
+      expect(objRes.parts[2].output).toBe("[unserializable output]");
+
+      expect(
+        completedTools.find((t) => t.toolCallId === "sub-prim")?.result,
+      ).toBe("plain-string-result");
+      expect(
+        completedTools.find((t) => t.toolCallId === "sub-noparts")?.result,
+      ).toEqual({ summary: "no parts array" });
+    });
+
+    it("enriches delegate_task tool-call args with resolved agentId and agentName from linkedSubagents", async () => {
+      const emitted: any[] = [];
+      const emit = async (data: any) => {
+        emitted.push(data);
+      };
+
+      const completedTools: any[] = [];
+      const customSubagent = {
+        id: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+        name: "Maruf MCP Researcher",
+      } as any;
+
+      async function* generateChunks() {
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-custom",
+          toolName: "delegate_task",
+          input: {
+            agent: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+            role: "researcher",
+            taskBrief: "Research via MCP",
+          },
+        };
+      }
+
+      const abortController = new AbortController();
+      await consumeModelStream(
+        generateChunks(),
+        abortController.signal,
+        emit,
+        {},
+        completedTools,
+        [customSubagent],
+      );
+
+      expect(completedTools[0].args).toEqual({
+        agent: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+        role: "researcher",
+        taskBrief: "Research via MCP",
+        agentId: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+        agentName: "Maruf MCP Researcher",
+      });
+      expect(emitted[0]).toMatchObject({
+        type: "tool-call",
+        toolCallId: "sub-custom",
+        toolName: "delegate_task",
+        args: expect.objectContaining({
+          agentId: "26c9a870-8a7c-4b8b-9f1a-111111111111",
+          agentName: "Maruf MCP Researcher",
+        }),
+      });
+
+      // Also test fallback to DEFAULT_LINKABLE_BUILT_IN_AGENTS when linkedSubagents is omitted,
+      // and when input has no matching targetAgent (leaves args unchanged)
+      const builtInCompleted: any[] = [];
+      async function* generateBuiltInAndUnmatched() {
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-builtin",
+          toolName: "internal:tool:delegate_task",
+          input: { role: "planner", taskBrief: "Plan steps" },
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-unmatched",
+          toolName: "delegate_task",
+          input: { agent: "unknown-agent", taskBrief: "Unmatched" },
+        };
+      }
+
+      await consumeModelStream(
+        generateBuiltInAndUnmatched(),
+        abortController.signal,
+        emit,
+        {},
+        builtInCompleted,
+      );
+
+      expect(builtInCompleted[0].args).toEqual({
+        role: "planner",
+        taskBrief: "Plan steps",
+        agentId: "builtin:planner",
+        agentName: "Planner",
+      });
+      expect(builtInCompleted[1].args).toEqual({
+        agent: "unknown-agent",
+        taskBrief: "Unmatched",
+      });
+    });
+
     it("handles abort signal mid-stream by flushing and returning aborted: true", async () => {
       const emitted: any[] = [];
       const emit = async (data: any) => {
