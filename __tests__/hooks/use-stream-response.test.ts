@@ -212,6 +212,43 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     });
   });
 
+  it("forwards subagentIds in /api/chat request body and persisted metadata", async () => {
+    const { result } = renderHook(() => useStreamResponse("chat-1"));
+
+    await act(async () => {
+      await result.current.streamResponse(
+        "user-msg-sub",
+        "hello",
+        null,
+        [],
+        "gpt-x",
+        [],
+        [],
+        undefined,
+        undefined,
+        [],
+        [],
+        true,
+        "worker-1",
+        "medium",
+        ["builtin:researcher", "custom-leaf-1"],
+      );
+    });
+
+    const [url, init] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("/api/chat");
+    const body = JSON.parse(init.body);
+    expect(body.subagentIds).toEqual(["builtin:researcher", "custom-leaf-1"]);
+    expect(mockPersist).toHaveBeenCalledWith(
+      "chat-1",
+      expect.objectContaining({
+        metadata: expect.stringContaining(
+          '"subagentIds":["builtin:researcher","custom-leaf-1"]',
+        ),
+      }),
+    );
+  });
+
   it("does not send selectedPromptId or selectedPromptIds in the request body to /api/chat", async () => {
     mockStoreState.prompts = [
       { id: "prompt-1", content: "Prompt instructions" },

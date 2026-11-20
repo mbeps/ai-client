@@ -218,6 +218,7 @@ export function parseMessageMetadata(
         typeof parsed.subagentModelId === "string"
           ? parsed.subagentModelId
           : undefined,
+      subagentIds: parseStringArray(parsed.subagentIds) ?? undefined,
       assistantId:
         typeof parsed.assistantId === "string" ? parsed.assistantId : undefined,
     };

@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
@@ -32,6 +33,8 @@ interface MessageThreadProps {
     selectedSkillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
   ) => void;
   /** Callback to delete a message. */
   onDelete: (id: string) => void;

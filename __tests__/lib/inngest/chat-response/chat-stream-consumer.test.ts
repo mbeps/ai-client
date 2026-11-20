@@ -609,6 +609,83 @@ describe("chat-stream-consumer", () => {
       expect(tc?.result.parts[1].output).toContain("[... truncated]");
     });
 
+    it("bounds oversized and unserializable object outputs and passes through primitive or non-parts subagent results", async () => {
+      const emit = async () => {};
+      const completedTools: any[] = [];
+      const circular: Record<string, unknown> = {};
+      circular.self = circular;
+
+      async function* generateChunks() {
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-obj",
+          toolName: "delegate_task",
+          input: {},
+        };
+        yield {
+          type: "tool-result",
+          toolCallId: "sub-obj",
+          toolName: "delegate_task",
+          output: {
+            parts: [
+              { type: "tool-a", output: { data: "Z".repeat(5000) } },
+              { type: "tool-b", output: { ok: true } },
+              { type: "tool-c", output: circular },
+              { type: "tool-d", output: "ok" },
+              { type: "tool-e", output: 42 },
+            ],
+          },
+          preliminary: false,
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-prim",
+          toolName: "delegate_task",
+          input: {},
+        };
+        yield {
+          type: "tool-result",
+          toolCallId: "sub-prim",
+          toolName: "delegate_task",
+          output: "plain-string-result",
+          preliminary: false,
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "sub-noparts",
+          toolName: "delegate_task",
+          input: {},
+        };
+        yield {
+          type: "tool-result",
+          toolCallId: "sub-noparts",
+          toolName: "delegate_task",
+          output: { summary: "no parts array" },
+          preliminary: false,
+        };
+      }
+
+      await consumeModelStream(
+        generateChunks(),
+        new AbortController().signal,
+        emit,
+        {},
+        completedTools,
+      );
+
+      const objRes = completedTools.find((t) => t.toolCallId === "sub-obj")?.result;
+      expect(objRes.parts[0].output).toContain("[... truncated]");
+      expect(objRes.parts[1].output).toEqual({ ok: true });
+      expect(objRes.parts[2].output).toBe("[unserializable output]");
+
+      expect(
+        completedTools.find((t) => t.toolCallId === "sub-prim")?.result,
+      ).toBe("plain-string-result");
+      expect(
+        completedTools.find((t) => t.toolCallId === "sub-noparts")?.result,
+      ).toEqual({ summary: "no parts array" });
+    });
+
     it("enriches delegate_task tool-call args with resolved agentId and agentName from linkedSubagents", async () => {
       const emitted: any[] = [];
       const emit = async (data: any) => {

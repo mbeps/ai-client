@@ -150,10 +150,8 @@ function registerLegacyInternalTools(
       options.userId,
       options.selectedTools,
     );
-    if (kbTools.search_knowledge_base) {
-      Object.assign(mcpTools, kbTools);
-      toolSourceMap.search_knowledge_base = "System";
-    }
+    Object.assign(mcpTools, kbTools);
+    toolSourceMap.search_knowledge_base = "System";
   }
 }
 

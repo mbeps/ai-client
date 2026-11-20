@@ -867,6 +867,230 @@ describe("subagent-dispatch-tool", () => {
       expect(finalChunk.metadata?.usage?.totalTokens).toBe(155);
     });
 
+    it("gracefully ignores rejected metadata promises from streamResult and synthResult", async () => {
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.reject(new Error("usage err")),
+          finishReason: Promise.reject(new Error("finish err")),
+          steps: Promise.reject(new Error("steps err")),
+          response: Promise.reject(new Error("response err")),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield {
+            id: "m-rej-1",
+            role: "assistant",
+            parts: [{ type: "text", text: "STATUS: DONE" }],
+          };
+        })() as any,
+      );
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: { modelId: "gpt-4o-mini" },
+        availableTools: mockTools,
+      });
+
+      const yielded1: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Reject stream metadata" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded1.push(chunk);
+      }
+      expect(yielded1[yielded1.length - 1].metadata).toMatchObject({
+        modelId: "gpt-4o-mini",
+        maxSteps: 10,
+      });
+
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({}),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([]),
+          response: Promise.resolve({
+            messages: [{ role: "assistant", content: [] }],
+          }),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield { id: "m-rej-2", role: "assistant", parts: [] };
+        })() as any,
+      );
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "STATUS: DONE";
+        })(),
+        totalUsage: Promise.reject(new Error("synth usage err")),
+        finishReason: Promise.reject(new Error("synth finish err")),
+      } as any);
+
+      const yielded2: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Reject synth metadata" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded2.push(chunk);
+      }
+      expect(yielded2[yielded2.length - 1].metadata?.usage).toBeUndefined();
+    });
+
+    it("handles partial usage objects, empty synth stream, missing parts, existing chunk metadata, and empty stream", async () => {
+      // Case 1: streamResult has promptTokens/completionTokens without totalTokens,
+      // synthResult has undefined usage (covers mergeUsage !b and normalizeUsage promptTokens/completionTokens)
+      // plus lastChunk has non-array parts, existing metadata, and whitespace-only synthText.
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({ promptTokens: 10, completionTokens: 5 }),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([]),
+          response: Promise.resolve({
+            messages: [{ role: "assistant", content: [] }],
+          }),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield { id: "m-edge-1", role: "assistant", metadata: { existing: true } };
+        })() as any,
+      );
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "   ";
+        })(),
+        totalUsage: Promise.resolve(undefined),
+        finishReason: Promise.resolve(undefined),
+      } as any);
+
+      const dispatchTool = createSubagentDispatchTool({
+        defaultModel: { modelId: "gpt-4o-mini" },
+        availableTools: mockTools,
+      });
+
+      const yielded1: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Edge metadata 1" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded1.push(chunk);
+      }
+      expect(yielded1[yielded1.length - 1].metadata).toMatchObject({
+        existing: true,
+        usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+      });
+
+      // Case 2: mergeUsage with sparse fields on both sides (covers ?? 0 fallbacks)
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({ completionTokens: 2 }),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([]),
+          response: Promise.resolve({
+            messages: [{ role: "assistant", content: [] }],
+          }),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield { id: "m-edge-2", role: "assistant", parts: [] };
+        })() as any,
+      );
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "Done";
+        })(),
+        totalUsage: Promise.resolve({ promptTokens: 3 }),
+        finishReason: Promise.resolve("stop"),
+      } as any);
+
+      const yielded2: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Edge metadata 2" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded2.push(chunk);
+      }
+      expect(yielded2[yielded2.length - 1].metadata?.usage).toEqual({
+        promptTokens: 3,
+        completionTokens: 2,
+        totalTokens: 0,
+      });
+
+      // Case 2b: mergeUsage with only totalTokens on both sides
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve({ totalTokens: 1 }),
+          finishReason: Promise.resolve("tool-calls"),
+          steps: Promise.resolve([]),
+          response: Promise.resolve({
+            messages: [{ role: "assistant", content: [] }],
+          }),
+        });
+      });
+
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {
+          yield { id: "m-edge-2b", role: "assistant", parts: [] };
+        })() as any,
+      );
+
+      vi.mocked(aiModule.streamText).mockReturnValue({
+        textStream: (async function* () {
+          yield "Done";
+        })(),
+        totalUsage: Promise.resolve({ totalTokens: 2 }),
+        finishReason: Promise.resolve("stop"),
+      } as any);
+
+      const yielded2b: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Edge metadata 2b" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded2b.push(chunk);
+      }
+      expect(yielded2b[yielded2b.length - 1].metadata?.usage).toEqual({
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 3,
+      });
+
+      // Case 3: Empty UIMessage stream (lastChunk is undefined)
+      (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any) {
+        this.stream = vi.fn().mockResolvedValue({
+          stream: {},
+          totalUsage: Promise.resolve(undefined),
+          finishReason: Promise.resolve("stop"),
+          steps: Promise.resolve([]),
+        });
+      });
+      vi.mocked(aiModule.readUIMessageStream).mockReturnValue(
+        (async function* () {})() as any,
+      );
+
+      const yielded3: any[] = [];
+      for await (const chunk of dispatchTool.execute(
+        { role: "researcher", taskBrief: "Empty stream" },
+        { abortSignal: undefined } as any,
+      )) {
+        yielded3.push(chunk);
+      }
+      expect(yielded3).toHaveLength(0);
+    });
+
     describe("toModelOutput", () => {
       const dispatchTool = createSubagentDispatchTool({
         defaultModel: mockDefaultModel,

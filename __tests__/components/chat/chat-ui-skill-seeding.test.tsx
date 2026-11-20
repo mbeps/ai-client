@@ -232,6 +232,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
     );
 
     expect(lastChatInputProps?.initialSubagentsEnabled).toBe(true);
+    expect(lastChatInputProps?.initialSubagentIds).toEqual(["sub-1"]);
     expect(mockStreamResponse).toHaveBeenCalledWith(
       expect.any(String),
       "Research Maruf",
@@ -247,6 +248,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       true,
       undefined,
       undefined,
+      ["sub-1"],
     );
   });
 });

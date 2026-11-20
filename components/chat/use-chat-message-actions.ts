@@ -106,6 +106,7 @@ export function useChatMessageActions({
       subagentsEnabled?: boolean,
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
+      subagentIds?: string[],
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -122,6 +123,7 @@ export function useChatMessageActions({
         subagentsEnabled,
         subagentModelId,
         reasoningEffort,
+        subagentIds,
       );
     },
     [chat?.currentLeafId, streamResponse],
@@ -142,6 +144,7 @@ export function useChatMessageActions({
       subagentsEnabled?: boolean,
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
+      subagentIds?: string[],
     ) => {
       const msg = chat?.messages[id];
       if (!msg) return;
@@ -160,6 +163,7 @@ export function useChatMessageActions({
         subagentsEnabled,
         subagentModelId,
         reasoningEffort,
+        subagentIds,
       );
     },
     [chat, streamResponse],
@@ -186,6 +190,7 @@ export function useChatMessageActions({
         payload.subagentsEnabled,
         payload.subagentModelId,
         payload.reasoningEffort,
+        payload.subagentIds,
       );
     },
     [chat, streamResponse],
@@ -248,6 +253,8 @@ export function useInitialChatAutoSend(
     skillIds?: string[],
     subagentsEnabled?: boolean,
     subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
   ) => void,
   initialModelId: string | undefined,
   initialServerIds: string[],
@@ -256,6 +263,7 @@ export function useInitialChatAutoSend(
   initialSkillIds?: string[],
   initialSubagentsEnabled?: boolean,
   initialSubagentModelId?: string,
+  initialSubagentIds?: string[],
 ) {
   const sentInitial = useRef(false);
 
@@ -279,6 +287,8 @@ export function useInitialChatAutoSend(
       initialSkillIds ?? [],
       initialSubagentsEnabled,
       initialSubagentModelId,
+      undefined,
+      initialSubagentIds,
     );
   }, [
     chat,
@@ -292,6 +302,7 @@ export function useInitialChatAutoSend(
     initialSkillIds,
     initialSubagentsEnabled,
     initialSubagentModelId,
+    initialSubagentIds,
   ]);
 }
 

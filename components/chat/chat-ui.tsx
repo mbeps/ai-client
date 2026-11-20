@@ -103,6 +103,7 @@ export function ChatUI({
     initialModelId,
     initialSubagentsEnabled,
     initialSubagentModelId,
+    initialSubagentIds,
     initialReasoningEffort,
     initialServerIds,
     initialSelectedTools,
@@ -191,6 +192,7 @@ export function ChatUI({
     initialSkillIds,
     initialSubagentsEnabled,
     initialSubagentModelId,
+    initialSubagentIds,
   );
 
   if (!chat) {
@@ -272,6 +274,7 @@ export function ChatUI({
               initialModelId={initialModelId}
               initialSubagentsEnabled={initialSubagentsEnabled}
               initialSubagentModelId={initialSubagentModelId}
+              initialSubagentIds={initialSubagentIds}
               initialReasoningEffort={initialReasoningEffort}
               onKnowledgebaseChange={handleKbChange}
               thread={thread}

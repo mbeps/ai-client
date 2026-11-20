@@ -80,6 +80,7 @@ interface MessageBubbleProps {
     subagentsEnabled?: boolean,
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
   ) => void;
   /** Callback to regenerate an assistant response. */
   onRegenerate?: (id: string) => void;
@@ -210,6 +211,7 @@ export function MessageBubble(props: MessageBubbleProps) {
       subagentsEnabled?: boolean,
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
+      subagentIds?: string[],
     ) => {
       onEdit(
         message.id,
@@ -225,6 +227,7 @@ export function MessageBubble(props: MessageBubbleProps) {
         subagentsEnabled,
         subagentModelId,
         reasoningEffort,
+        subagentIds,
       );
       handleCancel();
     },
@@ -300,6 +303,7 @@ export function MessageBubble(props: MessageBubbleProps) {
                         viewData.parsedMetadata.subagentsEnabled,
                       initialSubagentModelId:
                         viewData.parsedMetadata.subagentModelId,
+                      initialSubagentIds: viewData.parsedMetadata.subagentIds,
                       initialReasoningEffort:
                         viewData.parsedMetadata.reasoningEffort,
                       servers,

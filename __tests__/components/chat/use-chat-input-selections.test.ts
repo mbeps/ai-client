@@ -3,6 +3,7 @@ import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { useChatInputSelections } from "@/components/chat/input/use-chat-input-selections";
 import { useChatInteraction } from "@/components/chat/input/use-chat-interaction";
+import { LINKABLE_BUILT_IN_AGENT_IDS } from "@/config/built-in-agents";
 import { useAppStore } from "@/lib/store/use-app-store";
 
 vi.mock("@/config/env", () => ({
@@ -125,5 +126,68 @@ describe("useChatInputSelections - knowledgebase sync & mentions", () => {
     });
 
     expect(result.current.selections.subagentsEnabled).toBe(true);
+    expect(result.current.selections.selectedSubagentIds).toEqual(["sub-1"]);
+  });
+
+  it("defaults selectedSubagentIds to LINKABLE_BUILT_IN_AGENT_IDS and syncs on hydration", () => {
+    const { result, rerender } = renderHook(
+      (props: typeof baseProps & { initialSubagentIds?: string[] }) =>
+        useChatInputSelections(props),
+      { initialProps: baseProps },
+    );
+
+    expect(result.current.selectedSubagentIds).toEqual([
+      ...LINKABLE_BUILT_IN_AGENT_IDS,
+    ]);
+
+    rerender({
+      ...baseProps,
+      initialSubagentIds: ["builtin:planner", "custom-1"],
+    });
+
+    expect(result.current.selectedSubagentIds).toEqual([
+      "builtin:planner",
+      "custom-1",
+    ]);
+  });
+
+  it("toggles and bulk-selects subagent IDs via handleToggleSubagentId and handleSelectSubagentIds", () => {
+    const { result } = renderHook(() =>
+      useChatInputSelections({
+        ...baseProps,
+        initialSubagentIds: ["builtin:researcher"],
+      }),
+    );
+
+    expect(result.current.selectedSubagentIds).toEqual(["builtin:researcher"]);
+
+    act(() => {
+      result.current.handleToggleSubagentId("custom-1");
+    });
+    expect(result.current.selectedSubagentIds).toEqual([
+      "builtin:researcher",
+      "custom-1",
+    ]);
+
+    act(() => {
+      result.current.handleToggleSubagentId("builtin:researcher");
+    });
+    expect(result.current.selectedSubagentIds).toEqual(["custom-1"]);
+
+    act(() => {
+      result.current.handleSelectSubagentIds([
+        "builtin:planner",
+        "builtin:worker",
+      ]);
+    });
+    expect(result.current.selectedSubagentIds).toEqual([
+      "builtin:planner",
+      "builtin:worker",
+    ]);
+
+    act(() => {
+      result.current.handleSelectSubagentIds([]);
+    });
+    expect(result.current.selectedSubagentIds).toEqual([]);
   });
 });

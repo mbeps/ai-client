@@ -193,9 +193,10 @@ describe("loadTransformContext", () => {
       expect.anything(),
       undefined,
       true, // effectiveArtifactToolSelected from agentRow.tools
-      null,
-      false,
+      "kb-1",
+      true,
       "user-1",
+      ["kb-1"],
     );
   });
 

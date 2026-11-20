@@ -278,15 +278,16 @@ export function createSubagentDispatchTool(
       } = targetAgent.guardrails;
       const effectiveMaxSteps = Math.min(Math.max(rawMaxSteps, 1), 30);
 
+      const isolatedAgentTools = buildIsolatedTools
+        ? await buildIsolatedTools(targetAgent)
+        : filterToolsForAgent(
+            availableTools,
+            targetAgent.tools,
+            targetAgent.knowledgebaseIds,
+          );
       const baseFilteredTools = isolateTools
-        ? buildIsolatedTools
-          ? await buildIsolatedTools(targetAgent)
-          : filterToolsForAgent(
-              availableTools,
-              targetAgent.tools,
-              targetAgent.knowledgebaseIds,
-            )
-        : availableTools;
+        ? isolatedAgentTools
+        : { ...availableTools, ...isolatedAgentTools };
 
       const targetKbIds = targetAgent.knowledgebaseIds;
       const agentKbTools =

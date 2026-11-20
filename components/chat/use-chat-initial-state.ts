@@ -1,3 +1,4 @@
+import { LINKABLE_BUILT_IN_AGENT_IDS } from "@/config/built-in-agents";
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
@@ -72,25 +73,40 @@ function resolveInitialSubagents(
 ): {
   initialSubagentsEnabled: boolean;
   initialSubagentModelId: string | undefined;
+  initialSubagentIds: string[];
 } {
   const lastUserMessage = [...thread].reverse().find((m) => m.role === "user");
-  if (lastUserMessage?.metadata) {
-    const { subagentsEnabled, subagentModelId } = parseMessageMetadata(
-      lastUserMessage.metadata,
-    );
-    if (subagentsEnabled !== undefined) {
-      return {
-        initialSubagentsEnabled: subagentsEnabled,
-        initialSubagentModelId: subagentModelId,
-      };
-    }
-  }
+  const lastUserMeta = lastUserMessage?.metadata
+    ? parseMessageMetadata(lastUserMessage.metadata)
+    : undefined;
+
   const hasEntitySubagents =
     Boolean(currentAssistant?.subagentIds?.length) ||
     Boolean(currentProject?.subagentIds?.length);
+
+  const initialSubagentsEnabled =
+    lastUserMeta?.subagentsEnabled !== undefined
+      ? lastUserMeta.subagentsEnabled
+      : hasEntitySubagents;
+
+  const initialSubagentModelId =
+    lastUserMeta?.subagentsEnabled !== undefined
+      ? lastUserMeta.subagentModelId
+      : undefined;
+
+  const initialSubagentIds =
+    lastUserMeta?.subagentIds !== undefined
+      ? lastUserMeta.subagentIds
+      : currentAssistant?.subagentIds?.length
+        ? [...currentAssistant.subagentIds]
+        : currentProject?.subagentIds?.length
+          ? [...currentProject.subagentIds]
+          : [...LINKABLE_BUILT_IN_AGENT_IDS];
+
   return {
-    initialSubagentsEnabled: hasEntitySubagents,
-    initialSubagentModelId: undefined,
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialSubagentIds,
   };
 }
 
@@ -193,6 +209,7 @@ export interface InitialChatConfig {
   initialModelId: string | undefined;
   initialSubagentsEnabled: boolean;
   initialSubagentModelId: string | undefined;
+  initialSubagentIds: string[];
   initialReasoningEffort: ReasoningEffort;
   initialServerIds: string[];
   initialSelectedTools: string[];
@@ -218,8 +235,11 @@ export function resolveInitialChatConfig(
   userSettings: UserSettingsRow | null,
   chat: Chat | undefined,
 ): InitialChatConfig {
-  const { initialSubagentsEnabled, initialSubagentModelId } =
-    resolveInitialSubagents(thread, currentProject, currentAssistant);
+  const {
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialSubagentIds,
+  } = resolveInitialSubagents(thread, currentProject, currentAssistant);
   const { initialServerIds, initialSelectedTools } = resolveInitialTools(
     currentProject,
     currentAssistant,
@@ -234,6 +254,7 @@ export function resolveInitialChatConfig(
     ),
     initialSubagentsEnabled,
     initialSubagentModelId,
+    initialSubagentIds,
     initialReasoningEffort: resolveInitialReasoningEffort(thread),
     initialServerIds,
     initialSelectedTools,

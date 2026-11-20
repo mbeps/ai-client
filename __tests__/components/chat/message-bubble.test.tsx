@@ -83,6 +83,7 @@ vi.mock("@/hooks/use-api-error", () => ({
 
 import { MessageBubble } from "@/components/chat/message-bubble";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { LINKABLE_BUILT_IN_AGENT_IDS } from "@/config/built-in-agents";
 import { SITE_CONFIG } from "@/config/site";
 
 describe("MessageBubble message editing", () => {
@@ -182,6 +183,7 @@ describe("MessageBubble message editing", () => {
       false,
       undefined,
       "medium",
+      [...LINKABLE_BUILT_IN_AGENT_IDS],
     );
 
     // Exits edit mode
@@ -266,6 +268,7 @@ describe("MessageBubble message editing", () => {
       false,
       undefined,
       "medium",
+      [...LINKABLE_BUILT_IN_AGENT_IDS],
     );
   });
 
@@ -310,6 +313,47 @@ describe("MessageBubble message editing", () => {
       false,
       undefined,
       "medium",
+      [...LINKABLE_BUILT_IN_AGENT_IDS],
+    );
+  });
+
+  it("preserves subagentIds from message metadata when editing", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const msgWithSubagents: Message = {
+      ...mockUserMessage,
+      metadata: JSON.stringify({
+        model: "gpt-4o",
+        selectedServerIds: [],
+        selectedTools: [],
+        subagentsEnabled: true,
+        subagentIds: ["builtin:researcher", "custom-leaf-1"],
+      }),
+    };
+
+    renderMessageBubble({ message: msgWithSubagents, onEdit });
+
+    const editBtn = screen.getByRole("button", { name: /edit message/i });
+    await user.click(editBtn);
+
+    const saveBtn = screen.getByRole("button", { name: /save & submit/i });
+    await user.click(saveBtn);
+
+    expect(onEdit).toHaveBeenCalledWith(
+      "msg-1",
+      "Original question for AI",
+      [],
+      "gpt-4o",
+      [],
+      [],
+      undefined,
+      undefined,
+      [],
+      [],
+      true,
+      undefined,
+      "medium",
+      ["builtin:researcher", "custom-leaf-1"],
     );
   });
 

@@ -49,6 +49,7 @@ export interface ChatInputProps {
     subagentsEnabled?: boolean,
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -137,6 +138,9 @@ export interface ChatInputProps {
 
   /** Initial worker subagent model ID. */
   initialSubagentModelId?: string;
+
+  /** Initial selected subagent IDs. */
+  initialSubagentIds?: readonly string[] | string[];
 
   /** Initial reasoning effort level for reasoning-capable models. */
   initialReasoningEffort?: ReasoningEffort;
@@ -437,6 +441,14 @@ export function ChatInput(props: ChatInputProps) {
         onToggleSubagents={interaction.selections.setSubagentsEnabled}
         subagentModelId={interaction.selections.subagentModelId}
         onSubagentModelChange={interaction.selections.setSubagentModelId}
+        selectedSubagentIds={interaction.selections.selectedSubagentIds}
+        onToggleSubagentId={interaction.selections.handleToggleSubagentId}
+        onSelectSubagentIds={interaction.selections.handleSelectSubagentIds}
+        excludeAgentId={
+          props.activeChatAssistantId ??
+          interaction.mentions.selectedAssistant?.id ??
+          undefined
+        }
       />
     </div>
   );

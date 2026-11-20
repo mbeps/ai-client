@@ -47,4 +47,31 @@ describe("buildMetadata", () => {
     expect(meta.subagentModelId).toBe("worker-1");
     expect(meta.reasoningEffort).toBe("low");
   });
+
+  it("includes subagentIds when provided (including empty array) and omits when undefined", () => {
+    const withIds = buildMetadata({
+      model: "gpt-4o",
+      selectedServerIds: [],
+      selectedTools: [],
+      subagentIds: ["builtin:researcher", "custom-1"],
+    });
+    expect(withIds.subagentIds).toEqual(["builtin:researcher", "custom-1"]);
+
+    const withEmpty = buildMetadata({
+      model: "gpt-4o",
+      selectedServerIds: [],
+      selectedTools: [],
+      subagentIds: [],
+    });
+    expect(withEmpty.subagentIds).toEqual([]);
+
+    const withoutIds = buildMetadata({
+      model: "gpt-4o",
+      selectedServerIds: [],
+      selectedTools: [],
+    });
+    expect(Object.prototype.hasOwnProperty.call(withoutIds, "subagentIds")).toBe(
+      false,
+    );
+  });
 });

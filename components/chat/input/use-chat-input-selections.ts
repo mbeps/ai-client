@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LINKABLE_BUILT_IN_AGENT_IDS } from "@/config/built-in-agents";
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
 import { useChatToolsStore } from "@/lib/store/use-chat-tools-store";
@@ -19,6 +20,7 @@ export interface ChatInputSelectionsOptions {
   onKnowledgebaseChange?: (kbIds: string[]) => void;
   initialSubagentsEnabled?: boolean;
   initialSubagentModelId?: string;
+  initialSubagentIds?: readonly string[] | string[];
 }
 
 const EMPTY_STRING_ARRAY: string[] = [];
@@ -273,18 +275,23 @@ function useSkillSelections(initialSkillIds?: string[]) {
  *
  * @param initialSubagentsEnabled - The initial subagents enabled parameter.
  * @param initialSubagentModelId - The initial subagent model id parameter.
+ * @param initialSubagentIds - The initial selected subagent IDs parameter.
  * @returns Hook state and control handlers.
  * @author Maruf Bepary
  */
 function useSubagentSelections(
   initialSubagentsEnabled?: boolean,
   initialSubagentModelId?: string,
+  initialSubagentIds?: readonly string[] | string[],
 ) {
   const [subagentsEnabled, setSubagentsEnabled] = useState(
     Boolean(initialSubagentsEnabled),
   );
   const [subagentModelId, setSubagentModelId] = useState<string | undefined>(
     initialSubagentModelId,
+  );
+  const [selectedSubagentIds, setSelectedSubagentIds] = useState<string[]>(() =>
+    Array.from(initialSubagentIds ?? LINKABLE_BUILT_IN_AGENT_IDS),
   );
   const [isSubagentDialogOpen, setIsSubagentDialogOpen] = useState(false);
 
@@ -296,11 +303,39 @@ function useSubagentSelections(
     setSubagentModelId(initialSubagentModelId);
   }, [initialSubagentModelId]);
 
+  const subagentIdsSeedKey = (
+    initialSubagentIds ?? LINKABLE_BUILT_IN_AGENT_IDS
+  ).join("::");
+  const lastSubagentIdsSeedKey = useRef(subagentIdsSeedKey);
+  useEffect(() => {
+    if (lastSubagentIdsSeedKey.current === subagentIdsSeedKey) return;
+    lastSubagentIdsSeedKey.current = subagentIdsSeedKey;
+    setSelectedSubagentIds(
+      Array.from(initialSubagentIds ?? LINKABLE_BUILT_IN_AGENT_IDS),
+    );
+  }, [subagentIdsSeedKey, initialSubagentIds]);
+
+  const handleToggleSubagentId = useCallback((agentId: string) => {
+    setSelectedSubagentIds((prev) =>
+      prev.includes(agentId)
+        ? prev.filter((id) => id !== agentId)
+        : [...prev, agentId],
+    );
+  }, []);
+
+  const handleSelectSubagentIds = useCallback((agentIds: string[]) => {
+    setSelectedSubagentIds([...agentIds]);
+  }, []);
+
   return {
     subagentsEnabled,
     setSubagentsEnabled,
     subagentModelId,
     setSubagentModelId,
+    selectedSubagentIds,
+    setSelectedSubagentIds,
+    handleToggleSubagentId,
+    handleSelectSubagentIds,
     isSubagentDialogOpen,
     setIsSubagentDialogOpen,
   };
@@ -324,6 +359,7 @@ export function useChatInputSelections(props: ChatInputSelectionsOptions) {
   const subagents = useSubagentSelections(
     props.initialSubagentsEnabled,
     props.initialSubagentModelId,
+    props.initialSubagentIds,
   );
 
   return {

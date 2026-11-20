@@ -138,11 +138,27 @@ describe("parseMessageMetadata", () => {
     const raw = JSON.stringify({
       subagentsEnabled: true,
       subagentModelId: "gpt-4o",
+      subagentIds: ["builtin:researcher", "custom-1"],
     });
 
     const result = parseMessageMetadata(raw);
     expect(result.subagentsEnabled).toBe(true);
     expect(result.subagentModelId).toBe("gpt-4o");
+    expect(result.subagentIds).toEqual(["builtin:researcher", "custom-1"]);
+  });
+
+  it("preserves empty subagentIds array and returns undefined when absent or non-array", () => {
+    expect(
+      parseMessageMetadata(JSON.stringify({ subagentIds: [] })).subagentIds,
+    ).toEqual([]);
+    expect(parseMessageMetadata(JSON.stringify({})).subagentIds).toBeUndefined();
+    expect(
+      parseMessageMetadata(JSON.stringify({ subagentIds: null })).subagentIds,
+    ).toBeUndefined();
+    expect(
+      parseMessageMetadata(JSON.stringify({ subagentIds: "builtin:researcher" }))
+        .subagentIds,
+    ).toBeUndefined();
   });
 
   it("returns toolData with an empty toolResults array when toolResults is not an array", () => {

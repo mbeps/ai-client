@@ -33,6 +33,7 @@ export interface ChatInteractionProps {
     subagentsEnabled?: boolean,
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
   ) => void;
   isLoading?: boolean;
   servers?: (McpServer | PublicMcpServer)[];
@@ -48,6 +49,7 @@ export interface ChatInteractionProps {
   activeChatAssistantId?: string | null;
   initialSubagentsEnabled?: boolean;
   initialSubagentModelId?: string;
+  initialSubagentIds?: readonly string[] | string[];
   projectId?: string | null;
   assistantId?: string | null;
   promptMode?: "all" | "none" | "specific";
@@ -199,12 +201,13 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     skillScopeContext,
   );
 
-  const setSubagentsEnabled = selections.setSubagentsEnabled;
+  const { setSubagentsEnabled, setSelectedSubagentIds } = selections;
   useEffect(() => {
     if (mentions.selectedAssistant?.subagentIds?.length) {
       setSubagentsEnabled(true);
+      setSelectedSubagentIds([...mentions.selectedAssistant.subagentIds]);
     }
-  }, [mentions.selectedAssistant, setSubagentsEnabled]);
+  }, [mentions.selectedAssistant, setSubagentsEnabled, setSelectedSubagentIds]);
 
   const prompts = useChatPromptSelection(
     mentions.selectedPrompts,
@@ -242,6 +245,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     selectedSkills: selections.selectedSkills,
     subagentsEnabled: selections.subagentsEnabled,
     subagentModelId: selections.subagentModelId,
+    selectedSubagentIds: selections.selectedSubagentIds,
     reasoningEffort: options.reasoningEffort,
     handleCommandKeyDown: mentions.handleKeyDown,
   });

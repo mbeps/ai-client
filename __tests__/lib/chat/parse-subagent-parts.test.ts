@@ -116,5 +116,62 @@ describe("parseSubagentResult", () => {
       isStreamingText: false,
       hasScratchpadWrite: false,
     });
+
+    expect(
+      parseSubagentResult({
+        id: "no-parts",
+        metadata: { modelId: "gpt-4o" },
+      }),
+    ).toEqual({
+      reasoningText: "",
+      isStreamingReasoning: false,
+      toolSteps: [],
+      textContent: "Task completed.",
+      isStreamingText: false,
+      hasScratchpadWrite: false,
+      metadata: { modelId: "gpt-4o" },
+    });
+
+    expect(parseSubagentResult({ id: "no-parts-no-meta" }).metadata).toBeUndefined();
+  });
+
+  it("handles non-object parts, streaming reasoning, and failed scratchpad_write", () => {
+    const result = parseSubagentResult({
+      parts: [
+        null,
+        { type: "reasoning", text: "Thinking...", state: "streaming" },
+        { type: "text", text: "<think>only</think>", state: "done" },
+        {
+          type: "tool-legacy",
+          state: "output-error",
+          args: { a: 1 },
+        },
+        {
+          type: "tool-empty",
+          state: "input-available",
+        },
+        {
+          type: "dynamic-tool",
+          toolName: "scratchpad_write",
+          toolCallId: "tc-fail",
+          state: "output-available",
+          input: {},
+          output: { success: false },
+        },
+      ],
+    });
+
+    expect(result.isStreamingReasoning).toBe(true);
+    expect(result.reasoningText).toBe("Thinking...");
+    expect(result.textContent).toBe("");
+    expect(result.isStreamingText).toBe(false);
+    expect(result.toolSteps[0]).toEqual({
+      toolCallId: "sub-tool-3",
+      toolName: "legacy",
+      args: { a: 1 },
+      result: { error: "Tool execution failed" },
+      status: "complete",
+    });
+    expect(result.hasScratchpadWrite).toBe(false);
   });
 });
