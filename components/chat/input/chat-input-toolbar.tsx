@@ -112,13 +112,10 @@ function SubagentsBadgeButton({ onOpen }: { onOpen: () => void }) {
         <button
           type="button"
           onClick={onOpen}
-          className="group flex h-7 cursor-pointer items-center gap-0 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 text-xs font-medium text-purple-700 transition-all duration-300 ease-in-out group-hover:gap-1.5 hover:bg-purple-500/20 hover:px-2.5 dark:text-purple-300"
+          className="group flex h-7 cursor-pointer items-center gap-0 space-x-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-1.5 text-xs font-medium text-purple-700 transition-all duration-300 hover:bg-purple-500/20 dark:text-purple-300"
           aria-label="Manage subagents"
         >
           <Bot className="h-3.5 w-3.5 shrink-0" />
-          <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-in-out group-hover:max-w-24 group-hover:opacity-100">
-            Subagents
-          </span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="top">Manage subagents</TooltipContent>
