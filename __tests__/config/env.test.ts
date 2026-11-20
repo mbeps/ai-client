@@ -13,6 +13,7 @@ const baseRequiredServerEnv = {
   S3_ACCESS_KEY: "key",
   S3_SECRET_KEY: "secret",
   S3_BUCKET: "bucket",
+  QDRANT_URL: "http://localhost:6333",
 };
 
 const newVars = [
@@ -114,6 +115,86 @@ describe("env configuration and validation", () => {
           true,
         ),
       ).toThrow("Invalid environment variables");
+    });
+
+    describe("RAG_MODE and Qdrant configuration", () => {
+      it("defaults RAG_MODE to hybrid when omitted", () => {
+        const parsed = validateEnv(baseRequiredServerEnv, true);
+        expect(parsed.RAG_MODE).toBe("hybrid");
+      });
+
+      it.each(["hybrid", "vector", "file_read"] as const)(
+        "accepts valid RAG_MODE=%s",
+        (mode) => {
+          const parsed = validateEnv(
+            { ...baseRequiredServerEnv, RAG_MODE: mode },
+            true,
+          );
+          expect(parsed.RAG_MODE).toBe(mode);
+        },
+      );
+
+      it("rejects invalid RAG_MODE values", () => {
+        expect(() =>
+          validateEnv(
+            { ...baseRequiredServerEnv, RAG_MODE: "invalid_mode" },
+            true,
+          ),
+        ).toThrow("Invalid environment variables");
+      });
+
+      it("requires QDRANT_URL when RAG_MODE is omitted (defaults to hybrid)", () => {
+        const { QDRANT_URL: _, ...withoutQdrant } = baseRequiredServerEnv;
+        expect(() => validateEnv(withoutQdrant, true)).toThrow(
+          "Invalid environment variables",
+        );
+      });
+
+      it("requires QDRANT_URL when RAG_MODE is hybrid or vector (missing or empty)", () => {
+        const { QDRANT_URL: _, ...withoutQdrant } = baseRequiredServerEnv;
+        for (const mode of ["hybrid", "vector"] as const) {
+          expect(() =>
+            validateEnv({ ...withoutQdrant, RAG_MODE: mode }, true),
+          ).toThrow("Invalid environment variables");
+          expect(() =>
+            validateEnv(
+              { ...withoutQdrant, RAG_MODE: mode, QDRANT_URL: "" },
+              true,
+            ),
+          ).toThrow("Invalid environment variables");
+        }
+      });
+
+      it("allows QDRANT_URL and QDRANT_API_KEY to be omitted or empty when RAG_MODE is file_read", () => {
+        const { QDRANT_URL: _, ...withoutQdrant } = baseRequiredServerEnv;
+        const parsedUnset = validateEnv(
+          { ...withoutQdrant, RAG_MODE: "file_read" },
+          true,
+        );
+        expect(parsedUnset.RAG_MODE).toBe("file_read");
+        expect(parsedUnset.QDRANT_URL).toBeUndefined();
+        expect(parsedUnset.QDRANT_API_KEY).toBeUndefined();
+
+        const parsedEmpty = validateEnv(
+          {
+            ...withoutQdrant,
+            RAG_MODE: "file_read",
+            QDRANT_URL: "",
+            QDRANT_API_KEY: "",
+          },
+          true,
+        );
+        expect(parsedEmpty.QDRANT_URL).toBeUndefined();
+        expect(parsedEmpty.QDRANT_API_KEY).toBeUndefined();
+      });
+
+      it("preserves QDRANT_API_KEY when provided", () => {
+        const parsed = validateEnv(
+          { ...baseRequiredServerEnv, QDRANT_API_KEY: "qdrant-secret" },
+          true,
+        );
+        expect(parsed.QDRANT_API_KEY).toBe("qdrant-secret");
+      });
     });
   });
 

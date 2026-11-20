@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const mockEnv = vi.hoisted(() => ({
+  RAG_MODE: "hybrid" as "hybrid" | "vector" | "file_read",
+  QDRANT_URL: "http://localhost:6333" as string | undefined,
+  QDRANT_API_KEY: undefined as string | undefined,
+}));
+
 const mockQdrantClient = vi.hoisted(() => ({
   collectionExists: vi.fn(),
   createCollection: vi.fn(),
@@ -11,11 +17,19 @@ const mockQdrantClient = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 
+const mockQdrantConstructor = vi.hoisted(() =>
+  vi.fn(function () {
+    return mockQdrantClient;
+  }),
+);
+
+vi.mock("@/config/env", () => ({
+  env: mockEnv,
+}));
+
 vi.mock("@qdrant/js-client-rest", () => {
   return {
-    QdrantClient: vi.fn(function () {
-      return mockQdrantClient;
-    }),
+    QdrantClient: mockQdrantConstructor,
   };
 });
 
@@ -34,6 +48,9 @@ import {
 describe("qdrant-client", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnv.RAG_MODE = "hybrid";
+    mockEnv.QDRANT_URL = "http://localhost:6333";
+    mockEnv.QDRANT_API_KEY = undefined;
     clearCollectionCache();
   });
 
@@ -474,6 +491,63 @@ describe("qdrant-client", () => {
         filter: {
           must: [{ key: "kbId", match: { any: ["kb-1", "kb-2"] } }],
         },
+      });
+    });
+  });
+
+  describe("file_read mode and unconfigured QDRANT_URL no-op behavior", () => {
+    it.each([
+      { label: "RAG_MODE=file_read", mode: "file_read" as const, url: "http://localhost:6333" },
+      { label: "QDRANT_URL undefined", mode: "hybrid" as const, url: undefined },
+    ])("no-ops all Qdrant operations without instantiating QdrantClient when $label", async ({ mode, url }) => {
+      mockEnv.RAG_MODE = mode;
+      mockEnv.QDRANT_URL = url;
+
+      expect(await ensureQdrantCollection(1024)).toBe("kb_chunks_1024");
+      await expect(
+        upsertChunkPoints(1024, [
+          {
+            id: "p1",
+            vector: [0.1],
+            payload: {
+              content: "c",
+              kbId: "kb1",
+              documentId: "doc1",
+              chunkIndex: 0,
+              tokenCount: 1,
+              documentName: "d.txt",
+              kbName: "KB",
+              s3Key: "k",
+            },
+          },
+        ]),
+      ).resolves.toBeUndefined();
+      expect(await searchSemanticVectors(1024, [0.1], ["kb-1"], 5)).toEqual([]);
+      expect(await searchKeywordChunks(1024, "query", ["kb-1"], 5)).toEqual([]);
+      expect(await getDocumentChunksByRange("doc-1", ["kb-1"])).toEqual([]);
+      await expect(deletePointsByDocumentId("doc-1")).resolves.toBeUndefined();
+      await expect(deletePointsByKbIds(["kb-1"])).resolves.toBeUndefined();
+
+      expect(mockQdrantConstructor).not.toHaveBeenCalled();
+      expect(mockQdrantClient.collectionExists).not.toHaveBeenCalled();
+      expect(mockQdrantClient.upsert).not.toHaveBeenCalled();
+      expect(mockQdrantClient.query).not.toHaveBeenCalled();
+      expect(mockQdrantClient.scroll).not.toHaveBeenCalled();
+      expect(mockQdrantClient.getCollections).not.toHaveBeenCalled();
+      expect(mockQdrantClient.delete).not.toHaveBeenCalled();
+    });
+
+    it("lazily instantiates QdrantClient with apiKey when configured", async () => {
+      mockEnv.QDRANT_API_KEY = "my-api-key";
+      mockQdrantClient.collectionExists.mockResolvedValue(true);
+
+      await ensureQdrantCollection(1024);
+      await ensureQdrantCollection(1536);
+
+      expect(mockQdrantConstructor).toHaveBeenCalledTimes(1);
+      expect(mockQdrantConstructor).toHaveBeenCalledWith({
+        url: "http://localhost:6333",
+        apiKey: "my-api-key",
       });
     });
   });

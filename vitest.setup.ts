@@ -30,6 +30,8 @@ process.env.INNGEST_SIGNING_KEY =
 process.env.INNGEST_DEV = process.env.INNGEST_DEV || "1";
 process.env.INNGEST_SERVE_ORIGIN =
   process.env.INNGEST_SERVE_ORIGIN || "http://localhost:3000";
+process.env.RAG_MODE = process.env.RAG_MODE || "hybrid";
+process.env.QDRANT_URL = process.env.QDRANT_URL || "http://localhost:6333";
 
 if (typeof window !== "undefined") {
   if (!global.ResizeObserver) {
