@@ -117,9 +117,13 @@ describe("SubagentPicker", () => {
       />,
     );
 
-    // Built-in Agents starts expanded; Custom Agents starts collapsed when none selected
-    expect(screen.getByText("Researcher")).toBeInTheDocument();
+    // Both groups start collapsed when defaultExpanded is false
+    expect(screen.queryByText("Researcher")).not.toBeInTheDocument();
     expect(screen.queryByText("Leaf Specialist")).not.toBeInTheDocument();
+
+    // Expand Built-in Agents
+    fireEvent.click(screen.getByText("Built-in Agents"));
+    expect(screen.getByText("Researcher")).toBeInTheDocument();
 
     // Expand Custom Agents
     fireEvent.click(screen.getByText("Custom Agents"));
