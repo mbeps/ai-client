@@ -31,6 +31,7 @@ import { useChatStore } from "@/components/chat/use-chat-ui-store";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import { hydratedResources } from "@/lib/store/hydrated-resources";
 import type { Chat } from "@/types/chat/chat";
 
 export { resolveActiveChat } from "@/components/chat/use-chat-initial-state";
@@ -77,7 +78,7 @@ export function ChatUI({
   } = useChatStore(chatId);
   const chat = resolveActiveChat(storeChat, initialChat, chatId);
 
-  useResourceHydration([
+  const hydration = useResourceHydration([
     "mcpServers",
     "publicMcpServers",
     "agents",
@@ -180,6 +181,18 @@ export function ChatUI({
 
   const scrollRef = useChatScrollToBottom();
 
+  const chatAgentId = chat?.agentId ?? chat?.assistantId;
+  const isAgentsReady =
+    !chatAgentId ||
+    Boolean(currentAssistant) ||
+    hydratedResources.has("agents");
+  const isProjectsReady =
+    !chat?.projectId ||
+    Boolean(currentProject) ||
+    hydratedResources.has("projects");
+  const isInitialContextReady =
+    !hydration?.isLoading && isAgentsReady && isProjectsReady;
+
   useInitialChatAutoSend(
     chat,
     initialMessage,
@@ -193,6 +206,7 @@ export function ChatUI({
     initialSubagentsEnabled,
     initialSubagentModelId,
     initialSubagentIds,
+    isInitialContextReady,
   );
 
   if (!chat) {

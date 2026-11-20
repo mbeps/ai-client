@@ -49,6 +49,66 @@ const log = getLogger(["inngest", "chat", "response"]);
  * @returns Registered tool state, subagent tool pool, source mapping, cleanup callback, and external availability flag
  * @author Maruf Bepary
  */
+function mergeSubagentMcpTools(
+  parentMcpTools: Record<string, any>,
+  parentToolSourceMap: Record<string, string>,
+  parentToolServerIdMap: Record<string, string>,
+  subMcp: {
+    mcpTools: Record<string, any>;
+    toolSourceMap: Record<string, string>;
+    toolServerIdMap?: Record<string, string>;
+  },
+): {
+  subagentMcpTools: Record<string, any>;
+  mergedToolSourceMap: Record<string, string>;
+  mergedToolServerIdMap: Record<string, string>;
+} {
+  const subagentMcpTools: Record<string, any> = { ...parentMcpTools };
+  const mergedToolSourceMap: Record<string, string> = {
+    ...parentToolSourceMap,
+  };
+  const mergedToolServerIdMap: Record<string, string> = {
+    ...parentToolServerIdMap,
+  };
+
+  for (const [name, toolDef] of Object.entries(subMcp.mcpTools)) {
+    const incomingServerId = subMcp.toolServerIdMap?.[name];
+    const incomingServerName = subMcp.toolSourceMap[name];
+
+    if (!(name in subagentMcpTools)) {
+      subagentMcpTools[name] = toolDef;
+      if (incomingServerName) mergedToolSourceMap[name] = incomingServerName;
+      if (incomingServerId) mergedToolServerIdMap[name] = incomingServerId;
+      continue;
+    }
+
+    const existingServerId = mergedToolServerIdMap[name];
+    const existingServerName = mergedToolSourceMap[name];
+    if (
+      (incomingServerId && existingServerId === incomingServerId) ||
+      (!incomingServerId &&
+        incomingServerName &&
+        existingServerName === incomingServerName)
+    ) {
+      continue;
+    }
+
+    let counter = 2;
+    let finalName = `${name.slice(0, 62)}_${counter}`;
+    while (finalName in subagentMcpTools) {
+      counter++;
+      const suffix = `_${counter}`;
+      finalName = `${name.slice(0, Math.max(1, 64 - suffix.length))}${suffix}`;
+    }
+
+    subagentMcpTools[finalName] = toolDef;
+    if (incomingServerName) mergedToolSourceMap[finalName] = incomingServerName;
+    if (incomingServerId) mergedToolServerIdMap[finalName] = incomingServerId;
+  }
+
+  return { subagentMcpTools, mergedToolSourceMap, mergedToolServerIdMap };
+}
+
 async function setupChatMcpTools(
   isToolCallingModel: boolean,
   servers: unknown,
@@ -59,6 +119,7 @@ async function setupChatMcpTools(
   mcpTools: Record<string, any>;
   subagentMcpTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
+  toolServerIdMap: Record<string, string>;
   mcpCleanup: () => Promise<void>;
   hasExternalMcpTools: boolean;
 }> {
@@ -69,15 +130,18 @@ async function setupChatMcpTools(
       mcpTools: {},
       subagentMcpTools: {},
       toolSourceMap: {},
+      toolServerIdMap: {},
       mcpCleanup: async () => {},
       hasExternalMcpTools: hasExternalServers,
     };
   }
 
-  const { mcpTools, toolSourceMap, mcpCleanup } = await registerMcpTools(
-    servers as any,
-    selectedTools,
-  );
+  const {
+    mcpTools,
+    toolSourceMap,
+    toolServerIdMap = {},
+    mcpCleanup,
+  } = await registerMcpTools(servers as any, selectedTools);
 
   if (Array.isArray(subagentServers) && subagentServers.length > 0) {
     const subagentSelectedTools = Array.from(
@@ -92,10 +156,13 @@ async function setupChatMcpTools(
         subagentServers as any,
         subagentSelectedTools,
       );
+      const { subagentMcpTools, mergedToolSourceMap, mergedToolServerIdMap } =
+        mergeSubagentMcpTools(mcpTools, toolSourceMap, toolServerIdMap, subMcp);
       return {
         mcpTools,
-        subagentMcpTools: { ...mcpTools, ...subMcp.mcpTools },
-        toolSourceMap: { ...subMcp.toolSourceMap, ...toolSourceMap },
+        subagentMcpTools,
+        toolSourceMap: mergedToolSourceMap,
+        toolServerIdMap: mergedToolServerIdMap,
         mcpCleanup: async () => {
           await Promise.allSettled([mcpCleanup(), subMcp.mcpCleanup()]);
         },
@@ -108,6 +175,7 @@ async function setupChatMcpTools(
     mcpTools,
     subagentMcpTools: mcpTools,
     toolSourceMap,
+    toolServerIdMap,
     mcpCleanup,
     hasExternalMcpTools: Object.keys(mcpTools).length > 0,
   };
@@ -393,6 +461,8 @@ export const generateChatResponse = inngest.createFunction(
         isToolCallingModel,
         mcpTools: mcpState.mcpTools,
         subagentMcpTools: mcpState.subagentMcpTools,
+        toolSourceMap: mcpState.toolSourceMap,
+        toolServerIdMap: mcpState.toolServerIdMap,
         selectedTools,
         ctx,
         fileAttachments,

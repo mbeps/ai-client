@@ -583,4 +583,24 @@ describe("registerMcpTools — fallback branches", () => {
     expect(mcpTools).not.toHaveProperty("github.create_issue");
     expect(toolSourceMap.github_create_issue).toBe("GitHub");
   });
+
+  it("filters selectedTools by serverName when toolServerIdMap has no entry for the tool", async () => {
+    const getMcpToolsMock = vi.mocked(getMcpTools);
+    getMcpToolsMock.mockResolvedValueOnce({
+      tools: {
+        ping: { description: "Ping" },
+      },
+      toolSourceMap: { ping: "GitHub" },
+      toolServerIdMap: {},
+      cleanup: vi.fn(),
+    });
+
+    const { mcpTools, toolServerIdMap } = await registerMcpTools(
+      [{ id: "srv-1", name: "GitHub" }] as any,
+      ["GitHub:tool:ping"],
+    );
+
+    expect(mcpTools).toHaveProperty("ping");
+    expect(toolServerIdMap).toEqual({});
+  });
 });

@@ -4,7 +4,11 @@ import type { z } from "zod";
 import { DEFAULT_ENABLED_TOOLS } from "@/config/tools";
 import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schemas/project-schema";
-import { validateTargetSubagentIds } from "@/lib/agents/validate-subagent-links";
+import {
+  type SubagentLinkTx,
+  validateTargetSubagentIds,
+  withSubagentLinkLock,
+} from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
@@ -45,32 +49,50 @@ export const createProject = defineAction(
 
     const validated = parsed.data;
     const subagentIds = validated.subagentIds ?? [];
-    if (subagentIds.length > 0) {
-      const linkCheck = await validateTargetSubagentIds(
-        session.user.id,
-        subagentIds,
-      );
-      if (!linkCheck.ok) {
-        return linkCheck;
-      }
-    }
+    const insertProject = async (executor: SubagentLinkTx) => {
+      const [inserted] = await executor
+        .insert(project)
+        .values({
+          name: validated.name,
+          description: validated.description ?? null,
+          globalPrompt: validated.globalPrompt ?? null,
+          tools: validated.tools ?? [...DEFAULT_ENABLED_TOOLS],
+          skillMode: validated.skillMode,
+          skillIds: validated.skillIds,
+          promptMode: validated.promptMode,
+          promptIds: validated.promptIds,
+          subagentIds,
+          knowledgebaseId: validated.knowledgebaseId ?? null,
+          userId: session.user.id,
+        })
+        .returning();
+      return inserted;
+    };
 
-    const [row] = await db
-      .insert(project)
-      .values({
-        name: validated.name,
-        description: validated.description ?? null,
-        globalPrompt: validated.globalPrompt ?? null,
-        tools: validated.tools ?? [...DEFAULT_ENABLED_TOOLS],
-        skillMode: validated.skillMode,
-        skillIds: validated.skillIds,
-        promptMode: validated.promptMode,
-        promptIds: validated.promptIds,
-        subagentIds,
-        knowledgebaseId: validated.knowledgebaseId ?? null,
-        userId: session.user.id,
-      })
-      .returning();
+    let row: ProjectRow;
+    if (subagentIds.length > 0) {
+      const txResult = await withSubagentLinkLock(
+        session.user.id,
+        async (tx) => {
+          const linkCheck = await validateTargetSubagentIds(
+            session.user.id,
+            subagentIds,
+            undefined,
+            tx,
+          );
+          if (!linkCheck.ok) {
+            return linkCheck;
+          }
+          return ok(await insertProject(tx));
+        },
+      );
+      if (!txResult.ok) {
+        return txResult;
+      }
+      row = txResult.value;
+    } else {
+      row = await insertProject(db);
+    }
 
     log.info("Created Project (id: {id})", {
       id: row.id,

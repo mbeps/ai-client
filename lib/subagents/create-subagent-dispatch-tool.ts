@@ -25,6 +25,18 @@ const INTERNAL_TOOL_ID_TO_RUNTIME_NAME: Record<string, string> = {
   [INTERNAL_TOOL_IDS.MANAGE_MEMORY]: "save_memory",
 };
 
+const SCRATCHPAD_TOOL_NAMES = new Set([
+  "scratchpad_write",
+  "scratchpad_read",
+  "scratchpad_list",
+]);
+
+/** Server identity maps for disambiguating same-named MCP tools across servers. */
+export interface ToolIdentityMaps {
+  toolServerIdMap?: Record<string, string>;
+  toolSourceMap?: Record<string, string>;
+}
+
 /**
  * Parameters for creating the unified `delegate_task` dispatch tool.
  *
@@ -69,28 +81,48 @@ export function resolveTargetAgent(
     const lower = query.toLowerCase();
     const builtInId = lower.startsWith("builtin:") ? lower : `builtin:${lower}`;
 
-    const matched = allowedSubagents.find(
-      (candidate) =>
-        candidate.id === query ||
-        candidate.id === builtInId ||
-        candidate.name.toLowerCase() === lower,
+    const idMatch = allowedSubagents.find(
+      (candidate) => candidate.id === query || candidate.id === builtInId,
     );
-    if (matched) {
-      return matched;
+    if (idMatch) {
+      return idMatch;
+    }
+
+    const nameMatch = allowedSubagents.find(
+      (candidate) => candidate.name.toLowerCase() === lower,
+    );
+    if (nameMatch) {
+      return nameMatch;
     }
   }
 
   return undefined;
 }
 
+function matchesSanitisedName(
+  runtimeName: string,
+  rawName: string,
+  sanitisedName: string,
+): boolean {
+  if (runtimeName === rawName || runtimeName === sanitisedName) {
+    return true;
+  }
+  const suffixMatch = runtimeName.match(/^(.+)(_\d+)$/);
+  if (!suffixMatch) return false;
+  const [, prefix, suffix] = suffixMatch;
+  const maxPrefixLen = Math.max(1, 64 - suffix.length);
+  return prefix === sanitisedName.slice(0, maxPrefixLen);
+}
+
 /**
  * Filters a pool of runtime tools down to those explicitly configured on an isolated subagent.
  * Normalizes MCP tool identifiers (`<serverId>:tool:<toolName>`) against both raw and
- * provider-sanitised tool names so special characters (`.` or `:`) match `registerMcpTools` keys.
+ * provider-sanitised tool names while enforcing server identity when identity maps are provided.
  *
  * @param availableTools - Pool of available runtime tool instances
  * @param configuredTools - Tool identifiers configured on the target subagent
  * @param knowledgebaseIds - Optional knowledge base IDs attached to the subagent
+ * @param toolIdentity - Optional server ID/name maps for cross-server disambiguation
  * @returns Filtered dictionary of runtime tools permitted for the subagent
  * @author Maruf Bepary
  */
@@ -98,24 +130,67 @@ export function filterToolsForAgent(
   availableTools: Record<string, any>,
   configuredTools: readonly string[],
   knowledgebaseIds?: readonly string[],
+  toolIdentity?: ToolIdentityMaps,
 ): Record<string, any> {
-  const allowedRuntimeNames = new Set<string>();
+  const hasServerIdentityMaps = Boolean(
+    toolIdentity?.toolServerIdMap || toolIdentity?.toolSourceMap,
+  );
+  const serverEntries: Array<{
+    server: string;
+    rawName: string;
+    sanitisedName: string;
+  }> = [];
+  const allowedUnscopedNames = new Set<string>();
+
   for (const entry of configuredTools) {
-    const runtimeName =
-      INTERNAL_TOOL_ID_TO_RUNTIME_NAME[entry] ??
-      (entry.includes(":tool:") ? entry.split(":tool:")[1] : entry);
-    if (runtimeName) {
-      allowedRuntimeNames.add(runtimeName);
-      allowedRuntimeNames.add(sanitiseToolName(runtimeName));
+    const internalRuntime = INTERNAL_TOOL_ID_TO_RUNTIME_NAME[entry];
+    if (internalRuntime) {
+      allowedUnscopedNames.add(internalRuntime);
+      allowedUnscopedNames.add(sanitiseToolName(internalRuntime));
+      continue;
+    }
+    const sepIdx = entry.indexOf(":tool:");
+    if (sepIdx !== -1) {
+      const server = entry.slice(0, sepIdx);
+      const rawName = entry.slice(sepIdx + 6);
+      if (rawName) {
+        serverEntries.push({
+          server,
+          rawName,
+          sanitisedName: sanitiseToolName(rawName),
+        });
+      }
+      continue;
+    }
+    if (entry) {
+      allowedUnscopedNames.add(entry);
+      allowedUnscopedNames.add(sanitiseToolName(entry));
     }
   }
   if (knowledgebaseIds && knowledgebaseIds.length > 0) {
-    allowedRuntimeNames.add("search_knowledge_base");
+    allowedUnscopedNames.add("search_knowledge_base");
   }
 
   const filtered: Record<string, any> = {};
   for (const [name, toolInstance] of Object.entries(availableTools)) {
-    if (allowedRuntimeNames.has(name)) {
+    if (allowedUnscopedNames.has(name)) {
+      filtered[name] = toolInstance;
+      continue;
+    }
+    const matchedServerEntry = serverEntries.some(
+      ({ server, rawName, sanitisedName }) => {
+        if (!matchesSanitisedName(name, rawName, sanitisedName)) {
+          return false;
+        }
+        if (!hasServerIdentityMaps) {
+          return true;
+        }
+        const actualServerId = toolIdentity?.toolServerIdMap?.[name];
+        const actualServerName = toolIdentity?.toolSourceMap?.[name];
+        return actualServerId === server || actualServerName === server;
+      },
+    );
+    if (matchedServerEntry) {
       filtered[name] = toolInstance;
     }
   }
@@ -296,7 +371,11 @@ export function createSubagentDispatchTool(
           : {};
       const rawWorkerTools = { ...baseFilteredTools, ...agentKbTools };
 
-      const baseWorkerTools = getSubagentTools(rawWorkerTools);
+      const baseWorkerTools = Object.fromEntries(
+        Object.entries(getSubagentTools(rawWorkerTools)).filter(
+          ([name]) => !SCRATCHPAD_TOOL_NAMES.has(name),
+        ),
+      );
       const workerRoleLabel = targetAgent.isBuiltIn
         ? targetAgent.id.replace("builtin:", "")
         : targetAgent.name;

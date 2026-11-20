@@ -1209,5 +1209,128 @@ describe("subagent-dispatch-tool", () => {
         expect(result.value.startsWith("A".repeat(8000))).toBe(true);
       });
     });
+
+    describe("security and resolution regressions", () => {
+      it("resolves explicit agent ID before falling back to case-insensitive name match", () => {
+        const agentA = {
+          ...BUILT_IN_AGENTS[0],
+          id: "agent-a",
+          name: "b",
+        };
+        const agentB = {
+          ...BUILT_IN_AGENTS[1],
+          id: "b",
+          name: "Agent B",
+        };
+        const resolved = resolveTargetAgent([agentA, agentB], "b");
+        expect(resolved?.id).toBe("b");
+      });
+
+      it("enforces server identity in filterToolsForAgent when toolIdentity maps are provided", () => {
+        const pool = {
+          search: { name: "srv2-search" },
+          search_2: { name: "srv2-search-renamed" },
+          other_tool: { name: "srv1-other" },
+          search_knowledge_base: { name: "kb-tool" },
+        };
+        const toolIdentity = {
+          toolServerIdMap: {
+            search: "srv2",
+            search_2: "srv2",
+            other_tool: "srv1",
+          },
+          toolSourceMap: {
+            search: "Server 2",
+            search_2: "Server 2",
+            other_tool: "Server 1",
+          },
+        };
+
+        const filteredForSrv1 = filterToolsForAgent(
+          pool,
+          ["srv1:tool:search", "srv1:tool:other_tool"],
+          [],
+          toolIdentity,
+        );
+        expect(filteredForSrv1).not.toHaveProperty("search");
+        expect(filteredForSrv1).not.toHaveProperty("search_2");
+        expect(filteredForSrv1).toHaveProperty("other_tool");
+
+        const filteredForSrv2 = filterToolsForAgent(
+          pool,
+          ["srv2:tool:search", "", "non_existent"],
+          [],
+          toolIdentity,
+        );
+        expect(filteredForSrv2).toHaveProperty("search");
+        expect(filteredForSrv2).toHaveProperty("search_2");
+        expect(filteredForSrv2).not.toHaveProperty("other_tool");
+        expect(filteredForSrv2).not.toHaveProperty("search_knowledge_base");
+      });
+
+      it("strips inherited scratchpad tools when isolateTools is false and scratchpadAccess is none or read_only", async () => {
+        let capturedConfig: any;
+        (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+          capturedConfig = config;
+          this.stream = vi.fn().mockResolvedValue({ stream: {} });
+        });
+        const mockStreamAsyncIterator = async function* () {
+          yield { id: "m-1", role: "assistant", parts: [] };
+        };
+        vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+        const readOnlyAgent: Agent = {
+          id: "33333333-3333-4333-8333-333333333333",
+          userId: "user-1",
+          name: "Read Only Worker",
+          description: "Cannot write scratchpad",
+          prompt: "Prompt",
+          subagentPrompt: "",
+          modelId: null,
+          knowledgebaseIds: [],
+          tools: [],
+          skillMode: "none",
+          skillIds: [],
+          promptMode: "none",
+          promptIds: [],
+          subagentIds: [],
+          guardrails: {
+            maxSteps: 5,
+            scratchpadAccess: "none",
+            isolateTools: false,
+          },
+          avatar: null,
+          isBuiltIn: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        vi.mocked(registerScratchpadTools).mockReturnValueOnce({});
+
+        const dispatchTool = createSubagentDispatchTool({
+          defaultModel: mockDefaultModel,
+          availableTools: {
+            scratchpad_write: { description: "parent-write" },
+            scratchpad_read: { description: "parent-read" },
+            scratchpad_list: { description: "parent-list" },
+            safe_tool: { description: "parent-safe" },
+          },
+          allowedSubagents: [readOnlyAgent],
+          scratchpadContext: { chatId: "c1", messageId: "m1" },
+        });
+
+        for await (const _ of dispatchTool.execute(
+          { agent: readOnlyAgent.id, taskBrief: "Run safely" },
+          { abortSignal: undefined } as any,
+        )) {
+          // exhaust
+        }
+
+        expect(capturedConfig.tools).toHaveProperty("safe_tool");
+        expect(capturedConfig.tools).not.toHaveProperty("scratchpad_write");
+        expect(capturedConfig.tools).not.toHaveProperty("scratchpad_read");
+        expect(capturedConfig.tools).not.toHaveProperty("scratchpad_list");
+      });
+    });
   });
 });

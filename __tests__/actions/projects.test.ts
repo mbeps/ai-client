@@ -40,6 +40,8 @@ const chainable = vi.hoisted(() => {
   c.limit = vi.fn().mockImplementation(() => c);
   c.offset = vi.fn().mockImplementation(() => c);
   c.$dynamic = vi.fn().mockImplementation(() => c);
+  c.for = vi.fn().mockResolvedValue([]);
+  c.execute = vi.fn().mockResolvedValue([]);
   c.returning = vi.fn();
   c.transaction = vi.fn();
 
@@ -419,7 +421,7 @@ describe("updateProject", () => {
   });
 
   it("validates and updates subagentIds when provided", async () => {
-    chainable.where.mockResolvedValueOnce([
+    chainable.for.mockResolvedValueOnce([
       { id: VALID_UUID, name: "Leaf", subagentIds: [] },
     ]);
     chainable.returning.mockResolvedValueOnce([
@@ -433,7 +435,7 @@ describe("updateProject", () => {
   });
 
   it("rejects subagentIds when target is an orchestrator agent", async () => {
-    chainable.where.mockResolvedValueOnce([
+    chainable.for.mockResolvedValueOnce([
       { id: VALID_UUID, name: "Orchestrator", subagentIds: ["other-id"] },
     ]);
     const res = await updateProject(VALID_UUID, { subagentIds: [VALID_UUID] });
@@ -445,7 +447,7 @@ describe("updateProject", () => {
   });
 
   it("validates subagentIds in createProject and rejects invalid target", async () => {
-    chainable.where.mockResolvedValueOnce([]);
+    chainable.for.mockResolvedValueOnce([]);
     const badRes = await createProject({
       name: "Proj",
       subagentIds: [VALID_UUID],

@@ -107,14 +107,14 @@ export default function AgentDetailPage() {
   } = useAgentEditor(agentId, agent);
 
   useEffect(() => {
-    if (Object.keys(chats).length === 0) {
+    if (Object.keys(useAppStore.getState().chats).length === 0) {
       listChats()
         .then((res) => {
           if (res.ok) loadChats(res.value, []);
         })
         .catch(() => {});
     }
-  }, [chats, loadChats]);
+  }, [loadChats]);
 
   const filteredChats = useMemo(() => {
     const q = searchQuery.toLowerCase();

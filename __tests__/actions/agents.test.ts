@@ -40,6 +40,7 @@ const chainable = vi.hoisted(() => {
   c.$dynamic = vi.fn().mockImplementation(() => c);
   c.returning = vi.fn();
   c.transaction = vi.fn();
+  c.execute = vi.fn().mockResolvedValue([]);
 
   for (const m of [
     "select",
@@ -76,10 +77,20 @@ vi.mock("@/lib/auth/require-session", () => ({
 
 const mockValidateTargetSubagentIds = vi.hoisted(() => vi.fn());
 const mockValidateAgentCanBecomeOrchestrator = vi.hoisted(() => vi.fn());
+const mockAcquireSubagentLinkLock = vi.hoisted(() =>
+  vi.fn().mockResolvedValue(undefined),
+);
+const mockWithSubagentLinkLock = vi.hoisted(() =>
+  vi.fn(async (_userId: string, fn: (tx: unknown) => Promise<unknown>) =>
+    fn(chainable),
+  ),
+);
 
 vi.mock("@/lib/agents/validate-subagent-links", () => ({
   validateTargetSubagentIds: mockValidateTargetSubagentIds,
   validateAgentCanBecomeOrchestrator: mockValidateAgentCanBecomeOrchestrator,
+  acquireSubagentLinkLock: mockAcquireSubagentLinkLock,
+  withSubagentLinkLock: mockWithSubagentLinkLock,
 }));
 
 import { createAgent } from "@/actions/agents/create-agent";
@@ -186,9 +197,16 @@ describe("createAgent", () => {
       avatar: "https://example.com/avatar.png",
     });
     expect(res.ok).toBe(true);
-    expect(mockValidateTargetSubagentIds).toHaveBeenCalledWith("user-1", [
-      SUBAGENT_ID,
-    ]);
+    expect(mockWithSubagentLinkLock).toHaveBeenCalledWith(
+      "user-1",
+      expect.any(Function),
+    );
+    expect(mockValidateTargetSubagentIds).toHaveBeenCalledWith(
+      "user-1",
+      [SUBAGENT_ID],
+      undefined,
+      expect.anything(),
+    );
   });
 
   it("returns validation failure when validateTargetSubagentIds rejects", async () => {
@@ -287,14 +305,20 @@ describe("updateAgent", () => {
       avatar: null,
     });
     expect(res.ok).toBe(true);
+    expect(mockWithSubagentLinkLock).toHaveBeenCalledWith(
+      "user-1",
+      expect.any(Function),
+    );
     expect(mockValidateTargetSubagentIds).toHaveBeenCalledWith(
       "user-1",
       [SUBAGENT_ID],
       AGENT_ID,
+      expect.anything(),
     );
     expect(mockValidateAgentCanBecomeOrchestrator).toHaveBeenCalledWith(
       "user-1",
       AGENT_ID,
+      expect.anything(),
     );
   });
 

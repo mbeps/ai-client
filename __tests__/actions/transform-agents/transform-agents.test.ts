@@ -25,10 +25,15 @@ const chainable = vi.hoisted(() => {
     "update",
     "set",
     "delete",
+    "for",
   ]) {
     c[m] = vi.fn().mockImplementation(() => c);
   }
   c.returning = vi.fn().mockResolvedValue([]);
+  c.execute = vi.fn().mockResolvedValue([]);
+  c.transaction = vi.fn().mockImplementation(
+    async (fn: (tx: typeof c) => Promise<unknown>) => fn(c),
+  );
   c.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
   return c;
 });
@@ -73,10 +78,15 @@ describe("transform agents actions", () => {
       "update",
       "set",
       "delete",
+      "for",
     ]) {
       chainable[m].mockImplementation(() => chainable);
     }
     chainable.returning.mockResolvedValue([]);
+    chainable.execute.mockResolvedValue([]);
+    chainable.transaction.mockImplementation(
+      async (fn: (tx: typeof chainable) => Promise<unknown>) => fn(chainable),
+    );
     chainable.then = (onFulfilled: any) => Promise.resolve([]).then(onFulfilled);
   });
 
@@ -351,7 +361,7 @@ describe("transform agents actions", () => {
     });
 
     it("validates and persists subagentIds on create and update", async () => {
-      chainable.where.mockResolvedValueOnce([]);
+      chainable.for.mockResolvedValueOnce([]);
       const badCreate = await createTransformAgent({
         name: "WF",
         subagentIds: ["11111111-1111-4111-8111-111111111111"],
@@ -369,7 +379,7 @@ describe("transform agents actions", () => {
       });
       expect(okCreate).toEqual({ ok: true, value: created });
 
-      chainable.where.mockResolvedValueOnce([]);
+      chainable.for.mockResolvedValueOnce([]);
       const badUpdate = await updateTransformAgent(agentId, {
         subagentIds: ["11111111-1111-4111-8111-111111111111"],
       });

@@ -121,6 +121,8 @@ function buildSubagentDispatchTools(params: {
   kbSubagentContextWindow?: number;
   scratchpadContext?: { chatId: string; messageId: string };
   allowedSubagents?: BuildOrchestratorToolSetParams["ctx"]["linkedSubagents"];
+  toolServerIdMap?: Record<string, string>;
+  toolSourceMap?: Record<string, string>;
 }): Record<string, any> {
   if (!params.isSubagentDelegationEnabled) {
     return {};
@@ -150,6 +152,10 @@ function buildSubagentDispatchTools(params: {
           params.isolatedToolPool,
           targetAgent.tools,
           targetAgent.knowledgebaseIds,
+          {
+            toolServerIdMap: params.toolServerIdMap,
+            toolSourceMap: params.toolSourceMap,
+          },
         );
         const agentSkillTools =
           targetAgent.skillMode !== "none" &&
@@ -308,6 +314,8 @@ export function buildOrchestratorToolSet(
       messageId: assistantMessageId,
     },
     allowedSubagents: ctx.linkedSubagents,
+    toolServerIdMap: params.toolServerIdMap,
+    toolSourceMap: params.toolSourceMap,
   });
 
   const allTools = Object.assign(

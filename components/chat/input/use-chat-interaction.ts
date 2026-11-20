@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useChatAttachments } from "@/components/chat/input/use-chat-attachments";
 import { useChatInputSelections } from "@/components/chat/input/use-chat-input-selections";
 import type { useChatInputServices } from "@/components/chat/input/use-chat-input-services";
@@ -202,12 +202,40 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
   );
 
   const { setSubagentsEnabled, setSelectedSubagentIds } = selections;
+  const restoredAssistantIdRef = useRef<string | undefined>(
+    props.initialSelectedAssistantId,
+  );
+  const hasRestoredDelegation =
+    props.initialSubagentsEnabled !== undefined ||
+    props.initialSubagentIds !== undefined;
+
   useEffect(() => {
-    if (mentions.selectedAssistant?.subagentIds?.length) {
-      setSubagentsEnabled(true);
-      setSelectedSubagentIds([...mentions.selectedAssistant.subagentIds]);
+    const selectedAssistant = mentions.selectedAssistant;
+    if (!selectedAssistant) {
+      if (restoredAssistantIdRef.current !== undefined) {
+        restoredAssistantIdRef.current = undefined;
+      }
+      return;
     }
-  }, [mentions.selectedAssistant, setSubagentsEnabled, setSelectedSubagentIds]);
+
+    if (
+      hasRestoredDelegation &&
+      selectedAssistant.id === restoredAssistantIdRef.current
+    ) {
+      return;
+    }
+
+    restoredAssistantIdRef.current = undefined;
+    if (selectedAssistant.subagentIds?.length) {
+      setSubagentsEnabled(true);
+      setSelectedSubagentIds([...selectedAssistant.subagentIds]);
+    }
+  }, [
+    mentions.selectedAssistant,
+    hasRestoredDelegation,
+    setSubagentsEnabled,
+    setSelectedSubagentIds,
+  ]);
 
   const prompts = useChatPromptSelection(
     mentions.selectedPrompts,

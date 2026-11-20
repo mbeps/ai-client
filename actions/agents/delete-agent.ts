@@ -9,6 +9,7 @@ import { project } from "@/drizzle/schemas/project-schema";
 import { prompt } from "@/drizzle/schemas/prompt-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
 import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { acquireSubagentLinkLock } from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
 import { ERROR_CODE } from "@/lib/error/error-code";
@@ -47,6 +48,8 @@ export const deleteAgent = defineAction(
     }
 
     const deletedCount = await db.transaction(async (tx) => {
+      await acquireSubagentLinkLock(tx, session.user.id);
+
       const deleted = await tx
         .delete(agent)
         .where(whereOwner(agent, ids, session.user.id))

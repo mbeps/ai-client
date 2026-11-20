@@ -190,4 +190,71 @@ describe("useChatInputSelections - knowledgebase sync & mentions", () => {
     });
     expect(result.current.selectedSubagentIds).toEqual([]);
   });
+
+  it("preserves restored delegation settings when editing a message with initialSelectedAssistantId", () => {
+    const agentA = {
+      id: "asst-a",
+      name: "Agent A",
+      description: "First",
+      prompt: "Prompt A",
+      tools: [],
+      subagentIds: ["sub-b", "sub-c"],
+      updatedAt: new Date(),
+    } as any;
+    const agentD = {
+      id: "asst-d",
+      name: "Agent D",
+      description: "Second",
+      prompt: "Prompt D",
+      tools: [],
+      subagentIds: ["sub-e"],
+      updatedAt: new Date(),
+    } as any;
+
+    useAppStore.setState({
+      agents: [agentA, agentD],
+      prompts: [],
+      skills: [],
+      mcpPrompts: [],
+    });
+
+    const textareaRef = createRef<HTMLTextAreaElement>();
+    const { result } = renderHook(() =>
+      useChatInteraction({
+        props: {
+          onSend: vi.fn(),
+          initialSelectedAssistantId: "asst-a",
+          initialSubagentsEnabled: false,
+          initialSubagentIds: ["sub-b"],
+        },
+        services: {
+          supportsVision: true,
+          supportsTools: true,
+          hasNoModels: false,
+          modelId: "gpt-4o",
+          skills: [],
+          knowledgebases: [],
+          handleApiError: vi.fn(),
+        } as any,
+        input: "edited message",
+        setInput: vi.fn(),
+        textareaRef,
+        canMentionAssistant: true,
+      }),
+    );
+
+    expect(result.current.selections.subagentsEnabled).toBe(false);
+    expect(result.current.selections.selectedSubagentIds).toEqual(["sub-b"]);
+
+    act(() => {
+      result.current.mentions.setSelectedAssistant(agentD);
+    });
+    expect(result.current.selections.subagentsEnabled).toBe(true);
+    expect(result.current.selections.selectedSubagentIds).toEqual(["sub-e"]);
+
+    act(() => {
+      result.current.mentions.setSelectedAssistant(undefined);
+    });
+    expect(result.current.selections.subagentsEnabled).toBe(true);
+  });
 });

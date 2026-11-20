@@ -16,7 +16,10 @@ vi.mock("@/config/env", () => ({
 }));
 
 const mockDb = vi.hoisted(() => {
-  const selectWhere = vi.fn().mockResolvedValue([]);
+  const selectFor = vi.fn().mockResolvedValue([]);
+  const selectWhere = vi.fn().mockImplementation(() => ({
+    for: selectFor,
+  }));
   const selectLimit = vi.fn().mockResolvedValue([]);
   const selectFrom = vi.fn().mockImplementation(() => ({
     where: selectWhere,
@@ -24,14 +27,26 @@ const mockDb = vi.hoisted(() => {
   const select = vi.fn().mockImplementation(() => ({
     from: selectFrom,
   }));
-  return { select, selectFrom, selectWhere, selectLimit };
+  const execute = vi.fn().mockResolvedValue([]);
+  const transaction = vi.fn();
+  return {
+    select,
+    selectFrom,
+    selectWhere,
+    selectFor,
+    selectLimit,
+    execute,
+    transaction,
+  };
 });
 
 vi.mock("@/drizzle/db", () => ({ db: mockDb }));
 
 import {
+  acquireSubagentLinkLock,
   validateAgentCanBecomeOrchestrator,
   validateTargetSubagentIds,
+  withSubagentLinkLock,
 } from "@/lib/agents/validate-subagent-links";
 import { ERROR_CODE } from "@/lib/error/error-code";
 
@@ -48,8 +63,15 @@ beforeEach(() => {
   mockDb.selectFrom.mockImplementation(() => ({
     where: mockDb.selectWhere,
   }));
-  mockDb.selectWhere.mockResolvedValue([]);
+  mockDb.selectWhere.mockImplementation(() => ({
+    for: mockDb.selectFor,
+  }));
+  mockDb.selectFor.mockResolvedValue([]);
   mockDb.selectLimit.mockResolvedValue([]);
+  mockDb.execute.mockResolvedValue([]);
+  mockDb.transaction.mockImplementation(
+    async (fn: (tx: typeof mockDb) => Promise<unknown>) => fn(mockDb),
+  );
 });
 
 describe("validateTargetSubagentIds", () => {
@@ -89,7 +111,7 @@ describe("validateTargetSubagentIds", () => {
   });
 
   it("rejects missing or unowned custom agent UUIDs", async () => {
-    mockDb.selectWhere.mockResolvedValueOnce([]);
+    mockDb.selectFor.mockResolvedValueOnce([]);
     const res = await validateTargetSubagentIds(USER_ID, [LEAF_ID]);
     expect(res.ok).toBe(false);
     if (!res.ok) {
@@ -99,7 +121,7 @@ describe("validateTargetSubagentIds", () => {
   });
 
   it("rejects target custom agent that already has child subagents (Rule 1)", async () => {
-    mockDb.selectWhere.mockResolvedValueOnce([
+    mockDb.selectFor.mockResolvedValueOnce([
       { id: ORCH_ID, name: "Boss Agent", subagentIds: [LEAF_ID] },
     ]);
     const res = await validateTargetSubagentIds(USER_ID, [ORCH_ID]);
@@ -112,7 +134,7 @@ describe("validateTargetSubagentIds", () => {
   });
 
   it("accepts valid custom leaf agents (deduplicating repeated IDs)", async () => {
-    mockDb.selectWhere.mockResolvedValueOnce([
+    mockDb.selectFor.mockResolvedValueOnce([
       { id: LEAF_ID, name: "Leaf Agent", subagentIds: [] },
     ]);
     const res = await validateTargetSubagentIds(USER_ID, [
@@ -176,5 +198,22 @@ describe("validateAgentCanBecomeOrchestrator", () => {
     if (!res.ok) {
       expect(res.error.code).toBe(ERROR_CODE.INVALID_INPUT);
     }
+  });
+});
+
+describe("subagent link locking", () => {
+  it("acquireSubagentLinkLock executes a per-user advisory xact lock", async () => {
+    await acquireSubagentLinkLock(mockDb as any, USER_ID);
+    expect(mockDb.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("withSubagentLinkLock runs callback inside a locked transaction", async () => {
+    const result = await withSubagentLinkLock(USER_ID, async (tx) => {
+      expect(tx).toBe(mockDb);
+      return "done";
+    });
+    expect(result).toBe("done");
+    expect(mockDb.transaction).toHaveBeenCalledTimes(1);
+    expect(mockDb.execute).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,8 @@
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
 import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
+import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
 import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { VisionNotSupportedError } from "@/lib/error/vision-not-supported-error";
@@ -228,12 +230,32 @@ export function filterStepTools(params: FilterStepToolsParams): {
       defaultModel: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
       availableTools: { ...filteredTools },
       allowedSubagents: linkedSubagents,
+      resolveModelById: async (modelId: string) => {
+        const targetResolved = await resolveProvider(userId, modelId).catch(
+          () => null,
+        );
+        return targetResolved
+          ? targetResolved.sdkProvider.chat(targetResolved.modelId)
+          : undefined;
+      },
       buildIsolatedTools: (agent) =>
         filterToolsForAgent(
-          { ...runMcpTools, ...filteredTools },
+          Object.fromEntries(
+            Object.entries({ ...runMcpTools, ...filteredTools }).filter(
+              ([toolName]) =>
+                toolName !== "search_knowledge_base" &&
+                !(dryRun && isSpreadsheetMutationTool(toolName)),
+            ),
+          ),
           agent.tools,
           agent.knowledgebaseIds,
+          { toolSourceMap: runToolSourceMap },
         ),
+      buildKnowledgebaseTools: (kbIds) =>
+        registerKnowledgebaseTool(kbIds, true, userId, undefined, {
+          model: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
+          contextWindow: resolvedProvider.modelRow?.contextWindow ?? undefined,
+        }),
     });
   }
 

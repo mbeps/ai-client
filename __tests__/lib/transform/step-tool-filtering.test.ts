@@ -14,6 +14,16 @@ vi.mock("@/lib/chat/register-skill-tool", () => ({
   registerSkillTool: registerSkillToolMock,
 }));
 
+const registerKnowledgebaseToolMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/chat/register-knowledgebase-tool", () => ({
+  registerKnowledgebaseTool: registerKnowledgebaseToolMock,
+}));
+
+const resolveProviderMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/chat/resolve-provider", () => ({
+  resolveProvider: resolveProviderMock,
+}));
+
 describe("filterStepTools", () => {
   const baseStep: TransformStep = {
     id: "step-1",
@@ -33,6 +43,11 @@ describe("filterStepTools", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     registerSkillToolMock.mockReturnValue({ load_skill: { name: "load_skill" } });
+    registerKnowledgebaseToolMock.mockReturnValue({});
+    resolveProviderMock.mockResolvedValue({
+      modelId: "resolved-override",
+      sdkProvider: { chat: vi.fn((id: string) => ({ modelId: id })) },
+    });
     registerSkillAuthoringToolsMock.mockReturnValue({
       create_skill: { name: "create_skill" },
       update_skill: { name: "update_skill" },
@@ -196,6 +211,97 @@ describe("filterStepTools", () => {
     expect(filteredTools.fetch_data).toBeDefined();
     expect(filteredTools.search_knowledge_base).toBeDefined();
     expect(toolSourceMap.search_knowledge_base).toBe("System");
+  });
+
+  it("wires resolveModelById, scoped KB tools, and dryRun mutation filtering for linked subagents", async () => {
+    registerKnowledgebaseToolMock.mockReturnValue({
+      search_knowledge_base: { name: "subagent-kb-tool" },
+    });
+
+    const subagent = {
+      id: "sub-kb-1",
+      name: "KB Worker",
+      description: "Searches child KB",
+      modelId: "sub-model-1",
+      tools: ["srv-1:tool:fetch_data", "srv-1:tool:write_spreadsheet", "internal:tool:search_knowledge_base"],
+      knowledgebaseIds: ["kb-child-1"],
+      guardrails: { maxSteps: 5, scratchpadAccess: "none", isolateTools: true },
+    } as any;
+
+    const { filteredTools } = filterStepTools({
+      step: { ...baseStep, toolIds: [INTERNAL_TOOL_IDS.DELEGATE_TASK] },
+      agentRow: { ...baseAgent, tools: [] },
+      allServers: [{ id: "srv-1", name: "Server1" }],
+      runMcpTools: {
+        search_knowledge_base: { name: "parent-kb-tool" },
+        fetch_data: { name: "fetch_data" },
+        write_spreadsheet: { name: "write_spreadsheet" },
+      },
+      runToolSourceMap: {
+        search_knowledge_base: "System",
+        fetch_data: "Server1",
+        write_spreadsheet: "Server1",
+      },
+      userId: "u1",
+      skillCatalog: [],
+      activeWorkbookFilePath: null,
+      currentAttachmentRows: [],
+      dryRun: true,
+      linkedSubagents: [subagent],
+      resolvedProvider: {
+        modelId: "gpt-4o",
+        modelRow: { contextWindow: 128000 },
+        sdkProvider: { chat: vi.fn((id: string) => ({ modelId: id })) },
+      } as any,
+    });
+
+    for await (const _ of filteredTools.delegate_task.execute(
+      { agent: "sub-kb-1", taskBrief: "Check child KB and dryRun" },
+      { abortSignal: new AbortController().signal },
+    )) {
+      // exhaust
+    }
+
+    expect(resolveProviderMock).toHaveBeenCalledWith("u1", "sub-model-1");
+    expect(registerKnowledgebaseToolMock).toHaveBeenCalledWith(
+      ["kb-child-1"],
+      true,
+      "u1",
+      undefined,
+      expect.objectContaining({ contextWindow: 128000 }),
+    );
+
+    // Also cover resolveProvider failure fallback and missing modelRow.contextWindow
+    resolveProviderMock.mockRejectedValueOnce(new Error("Provider unavailable"));
+    const { filteredTools: fallbackTools } = filterStepTools({
+      step: { ...baseStep, toolIds: [INTERNAL_TOOL_IDS.DELEGATE_TASK] },
+      agentRow: { ...baseAgent, tools: [] },
+      allServers: [],
+      runMcpTools: {},
+      runToolSourceMap: {},
+      userId: "u1",
+      skillCatalog: [],
+      activeWorkbookFilePath: null,
+      currentAttachmentRows: [],
+      linkedSubagents: [subagent],
+      resolvedProvider: {
+        modelId: "gpt-4o",
+        sdkProvider: { chat: vi.fn((id: string) => ({ modelId: id })) },
+      } as any,
+    });
+    for await (const _ of fallbackTools.delegate_task.execute(
+      { agent: "sub-kb-1", taskBrief: "Fallback model resolution" },
+      { abortSignal: new AbortController().signal },
+    )) {
+      // exhaust
+    }
+    expect(registerKnowledgebaseToolMock).toHaveBeenLastCalledWith(
+      ["kb-child-1"],
+      true,
+      "u1",
+      undefined,
+      expect.objectContaining({ contextWindow: undefined }),
+    );
   });
 });
 

@@ -3,7 +3,11 @@
 import { z } from "zod";
 import { db } from "@/drizzle/db";
 import { project } from "@/drizzle/schemas/project-schema";
-import { validateTargetSubagentIds } from "@/lib/agents/validate-subagent-links";
+import {
+  type SubagentLinkTx,
+  validateTargetSubagentIds,
+  withSubagentLinkLock,
+} from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
 import { ERROR_CODE } from "@/lib/error/error-code";
@@ -73,21 +77,40 @@ export const updateProject = defineAction(
     }
     const validatedData = dataParsed.data;
 
-    if (validatedData.subagentIds && validatedData.subagentIds.length > 0) {
-      const linkCheck = await validateTargetSubagentIds(
-        session.user.id,
-        validatedData.subagentIds,
-      );
-      if (!linkCheck.ok) {
-        return linkCheck;
-      }
-    }
+    const persistUpdate = async (executor: SubagentLinkTx) => {
+      const [updated] = await executor
+        .update(project)
+        .set(buildProjectUpdateValues(validatedData))
+        .where(whereOwner(project, validatedId, session.user.id))
+        .returning();
+      return updated;
+    };
 
-    const [row] = await db
-      .update(project)
-      .set(buildProjectUpdateValues(validatedData))
-      .where(whereOwner(project, validatedId, session.user.id))
-      .returning();
+    let row: ProjectRow | undefined;
+    if (validatedData.subagentIds && validatedData.subagentIds.length > 0) {
+      const subagentIds = validatedData.subagentIds;
+      const txResult = await withSubagentLinkLock(
+        session.user.id,
+        async (tx) => {
+          const linkCheck = await validateTargetSubagentIds(
+            session.user.id,
+            subagentIds,
+            undefined,
+            tx,
+          );
+          if (!linkCheck.ok) {
+            return linkCheck;
+          }
+          return ok(await persistUpdate(tx));
+        },
+      );
+      if (!txResult.ok) {
+        return txResult;
+      }
+      row = txResult.value;
+    } else {
+      row = await persistUpdate(db);
+    }
 
     if (!row) {
       return fail({

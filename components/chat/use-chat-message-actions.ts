@@ -264,11 +264,12 @@ export function useInitialChatAutoSend(
   initialSubagentsEnabled?: boolean,
   initialSubagentModelId?: string,
   initialSubagentIds?: string[],
+  isReady = true,
 ) {
   const sentInitial = useRef(false);
 
   useEffect(() => {
-    if (!initialMessage || !chat || sentInitial.current) return;
+    if (!initialMessage || !chat || !isReady || sentInitial.current) return;
     sentInitial.current = true;
     onInitialMessageSent?.();
     clearMsgQueryParamFromUrl();
@@ -303,6 +304,7 @@ export function useInitialChatAutoSend(
     initialSubagentsEnabled,
     initialSubagentModelId,
     initialSubagentIds,
+    isReady,
   ]);
 }
 

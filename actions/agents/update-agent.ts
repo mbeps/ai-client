@@ -5,8 +5,10 @@ import { isBuiltInAgentId } from "@/config/built-in-agents";
 import { db } from "@/drizzle/db";
 import { agent } from "@/drizzle/schemas/agent-schema";
 import {
+  type SubagentLinkTx,
   validateAgentCanBecomeOrchestrator,
   validateTargetSubagentIds,
+  withSubagentLinkLock,
 } from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
@@ -86,30 +88,50 @@ export const updateAgent = defineAction(
     }
     const validatedData = dataParsed.data;
 
+    const persistUpdate = async (executor: SubagentLinkTx) => {
+      const [updated] = await executor
+        .update(agent)
+        .set(buildAgentUpdateValues(validatedData))
+        .where(whereOwner(agent, validatedId, session.user.id))
+        .returning();
+      return updated;
+    };
+
+    let row: AgentRow | undefined;
     if (validatedData.subagentIds && validatedData.subagentIds.length > 0) {
-      const targetCheck = await validateTargetSubagentIds(
+      const subagentIds = validatedData.subagentIds;
+      const txResult = await withSubagentLinkLock(
         session.user.id,
-        validatedData.subagentIds,
-        validatedId,
-      );
-      if (!targetCheck.ok) {
-        return targetCheck;
-      }
+        async (tx) => {
+          const targetCheck = await validateTargetSubagentIds(
+            session.user.id,
+            subagentIds,
+            validatedId,
+            tx,
+          );
+          if (!targetCheck.ok) {
+            return targetCheck;
+          }
 
-      const orchestratorCheck = await validateAgentCanBecomeOrchestrator(
-        session.user.id,
-        validatedId,
+          const orchestratorCheck = await validateAgentCanBecomeOrchestrator(
+            session.user.id,
+            validatedId,
+            tx,
+          );
+          if (!orchestratorCheck.ok) {
+            return orchestratorCheck;
+          }
+
+          return ok(await persistUpdate(tx));
+        },
       );
-      if (!orchestratorCheck.ok) {
-        return orchestratorCheck;
+      if (!txResult.ok) {
+        return txResult;
       }
+      row = txResult.value;
+    } else {
+      row = await persistUpdate(db);
     }
-
-    const [row] = await db
-      .update(agent)
-      .set(buildAgentUpdateValues(validatedData))
-      .where(whereOwner(agent, validatedId, session.user.id))
-      .returning();
 
     if (!row) {
       return fail({

@@ -18,6 +18,8 @@ export interface BuildOrchestratorToolSetParams {
   isToolCallingModel: boolean;
   mcpTools: Record<string, any>;
   subagentMcpTools?: Record<string, any>;
+  toolSourceMap?: Record<string, string>;
+  toolServerIdMap?: Record<string, string>;
   selectedTools?: string[];
   ctx: {
     chatRow?: {
