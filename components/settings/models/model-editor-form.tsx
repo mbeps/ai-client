@@ -94,7 +94,7 @@ export type ModelEditorFormProps = {
   model?: AiModelRow | null;
   providers: AiProviderRow[];
   onSuccess?: () => void;
-  onRequestDelete?: () => void;
+  onDelete?: () => Promise<void> | void;
   isDeleting?: boolean;
 };
 
@@ -109,7 +109,7 @@ export function ModelEditorForm({
   model,
   providers,
   onSuccess,
-  onRequestDelete,
+  onDelete,
   isDeleting = false,
 }: ModelEditorFormProps) {
   const isEdit = Boolean(model);
@@ -250,7 +250,7 @@ export function ModelEditorForm({
           <Sliders className="mr-2 h-4 w-4" />
           <span>Configuration</span>
         </SidebarTabsTrigger>
-        {isEdit && onRequestDelete && (
+        {isEdit && onDelete && (
           <SidebarTabsTrigger value="danger">
             <Shield className="mr-2 h-4 w-4" />
             <span>Danger Zone</span>
@@ -284,14 +284,14 @@ export function ModelEditorForm({
           <ModelConfigurationTab form={form} onChange={updateField} />
         </SidebarTabsContent>
 
-        {isEdit && onRequestDelete && (
+        {isEdit && onDelete && (
           <SidebarTabsContent value="danger">
             <DangerZoneCard
-              title="Danger Zone"
               description="Irreversible actions for this model."
               consequences="Deleting this model will permanently remove it from your available models and providers. This action cannot be undone."
-              buttonLabel="Delete Model"
-              onDelete={onRequestDelete}
+              confirmTitle={`Delete "${model?.label || model?.modelId}"?`}
+              confirmDescription="This will permanently delete this model configuration. This cannot be undone."
+              onDelete={onDelete}
               isDeleting={isDeleting}
             />
           </SidebarTabsContent>

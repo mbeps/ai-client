@@ -65,7 +65,7 @@ describe("ServerSettings UI", () => {
     });
   });
 
-  it("renders 'Delete Server' for owned server and uninstalls/reloads on confirmation", async () => {
+  it("renders 'Danger Zone' with plain Delete button for owned server and deletes/reloads on confirmation", async () => {
     vi.mocked(deleteMcpServer).mockResolvedValueOnce({
       ok: true,
       value: { deletedCount: 1 },
@@ -77,17 +77,14 @@ describe("ServerSettings UI", () => {
 
     render(<ServerSettings serverId="srv-owned" />);
 
-    // Header and trigger button should show "Delete Server"
-    expect(screen.getAllByText("Delete Server").length).toBeGreaterThan(0);
+    expect(screen.getByText("Danger Zone")).toBeInTheDocument();
     expect(screen.queryByText("Uninstall Tool")).not.toBeInTheDocument();
 
-    // Click Delete Server trigger button
-    const deleteBtn = screen.getByRole("button", { name: /delete server/i });
+    const deleteBtn = screen.getByRole("button", { name: /^delete$/i });
     fireEvent.click(deleteBtn);
 
-    // Confirm dialog appears
-    const confirmBtn = screen.getByRole("button", { name: /^delete$/i });
-    fireEvent.click(confirmBtn);
+    const confirmBtns = screen.getAllByRole("button", { name: /^delete$/i });
+    fireEvent.click(confirmBtns[confirmBtns.length - 1]);
 
     await waitFor(() => {
       expect(deleteMcpServer).toHaveBeenCalledWith("srv-owned");
@@ -110,20 +107,17 @@ describe("ServerSettings UI", () => {
 
     render(<ServerSettings serverId="srv-installed" />);
 
-    // Header and trigger button should show "Uninstall Tool"
-    expect(screen.getAllByText("Uninstall Tool").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Delete Server")).not.toBeInTheDocument();
+    expect(screen.getByText("Uninstall Tool")).toBeInTheDocument();
+    expect(screen.queryByText("Danger Zone")).not.toBeInTheDocument();
     expect(
       screen.getByText("Remove this community tool subscription from your account."),
     ).toBeInTheDocument();
 
-    // Click Uninstall Tool trigger button
-    const uninstallBtn = screen.getByRole("button", { name: /uninstall tool/i });
+    const uninstallBtn = screen.getByRole("button", { name: /^uninstall$/i });
     fireEvent.click(uninstallBtn);
 
-    // Confirm dialog appears
-    const confirmBtn = screen.getByRole("button", { name: /^delete$/i });
-    fireEvent.click(confirmBtn);
+    const confirmBtns = screen.getAllByRole("button", { name: /^uninstall$/i });
+    fireEvent.click(confirmBtns[confirmBtns.length - 1]);
 
     await waitFor(() => {
       expect(deleteMcpServer).toHaveBeenCalledWith("srv-installed");

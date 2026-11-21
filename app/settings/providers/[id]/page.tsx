@@ -11,7 +11,6 @@ import { updateProvider } from "@/actions/providers/update-provider";
 import { PageHeader } from "@/components/page-header";
 import { ProviderFormFields } from "@/components/settings/providers/provider-form-fields";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
@@ -83,7 +82,6 @@ export default function ProviderDetailPage() {
   >([{ key: "", value: "" }]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Sync form state when provider loads
   useEffect(() => {
@@ -250,24 +248,15 @@ export default function ProviderDetailPage() {
 
         <SidebarTabsContent value="danger">
           <DangerZoneCard
-            title="Danger Zone"
             description="Irreversible actions for this provider."
             consequences="Deleting this provider will permanently remove it and all associated models. This action cannot be undone."
-            buttonLabel="Delete Provider"
-            onDelete={() => setShowDeleteDialog(true)}
+            confirmTitle={`Delete "${provider.name}"?`}
+            confirmDescription="This will permanently delete the provider and all its associated models. This cannot be undone."
+            onDelete={handleDelete}
             isDeleting={isDeleting}
           />
         </SidebarTabsContent>
       </SidebarTabs>
-
-      <DeleteConfirmDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDelete}
-        title={`Delete "${provider.name}"?`}
-        description="This will permanently delete the provider and all its associated models. This cannot be undone."
-        loading={isDeleting}
-      />
     </PageContainer>
   );
 }

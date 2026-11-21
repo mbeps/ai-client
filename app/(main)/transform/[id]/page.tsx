@@ -2,7 +2,6 @@
 
 import { useParams } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { PageContainer } from "@/components/shared/page-container";
 import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
@@ -98,7 +97,7 @@ export default function AgentEditorPage() {
         onModelIdChange={workflow.form.setModelId}
         requiresFileUpload={workflow.form.requiresFileUpload}
         onRequiresFileUploadChange={workflow.form.setRequiresFileUpload}
-        onOpenDeleteDialog={() => workflow.setShowDeleteDialog(true)}
+        onDelete={workflow.handleDelete}
         isDeleting={workflow.isDeleting}
         agents={workflow.form.agents}
         subagentIds={workflow.form.subagentIds}
@@ -109,15 +108,6 @@ export default function AgentEditorPage() {
               : [...prev, subId],
           )
         }
-      />
-
-      <DeleteConfirmDialog
-        isOpen={workflow.showDeleteDialog}
-        onClose={() => workflow.setShowDeleteDialog(false)}
-        onConfirm={workflow.handleDelete}
-        title={`Delete "${workflow.form.name}"?`}
-        description="This will permanently delete the transform agent and its configuration. This cannot be undone."
-        loading={workflow.isDeleting}
       />
     </PageContainer>
   );

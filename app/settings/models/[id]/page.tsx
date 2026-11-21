@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { deleteModel } from "@/actions/models/delete-model";
 import { PageHeader } from "@/components/page-header";
 import { ModelEditorForm } from "@/components/settings/models/model-editor-form";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
 import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,6 @@ export default function ModelDetailPage() {
   } = useUserModels("chat");
 
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const isLoading = providersLoading || modelsLoading;
   const model = rawModels.find((m) => m.id === modelId);
@@ -93,20 +91,11 @@ export default function ModelDetailPage() {
       <ModelEditorForm
         model={model}
         providers={providers}
-        onRequestDelete={() => setShowDeleteDialog(true)}
+        onDelete={handleDelete}
         isDeleting={isDeleting}
         onSuccess={() => {
           void refreshModels();
         }}
-      />
-
-      <DeleteConfirmDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDelete}
-        title={`Delete "${model.label || model.modelId}"?`}
-        description="This will permanently delete this model configuration. This cannot be undone."
-        loading={isDeleting}
       />
     </PageContainer>
   );

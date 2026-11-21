@@ -40,7 +40,6 @@ export function useAgentEditorWorkflow(params: UseAgentEditorWorkflowParams) {
   const hasNoModels = !isModelsLoading && chatModels.length === 0;
 
   const [isSaving, setIsSaving] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { runs, isLoadingRuns } = useAgentRuns(id, isNew, handleApiError);
@@ -124,8 +123,6 @@ export function useAgentEditorWorkflow(params: UseAgentEditorWorkflowParams) {
     isModelBlocked,
     isSaveDisabled,
     hasNoModels,
-    showDeleteDialog,
-    setShowDeleteDialog,
     isDeleting,
     handleSave,
     handleDelete,

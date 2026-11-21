@@ -29,7 +29,6 @@ import { AgentSubagentsTab } from "@/components/agent/agent-subagents-tab";
 import { AgentToolsTab } from "@/components/agent/agent-tools-tab";
 import { useAgentEditor } from "@/components/agent/use-agent-editor";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { EntityDetailHeader } from "@/components/shared/entity-detail-header";
 import { PageContainer } from "@/components/shared/page-container";
 import {
@@ -90,7 +89,6 @@ export default function AgentDetailPage() {
   );
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const {
@@ -390,24 +388,16 @@ export default function AgentDetailPage() {
         {!isBuiltIn && (
           <SidebarTabsContent value="danger">
             <DangerZoneCard
-              title="Delete Agent"
               description="Permanently delete this agent."
               consequences="Existing chats will remain as standalone conversations and linked subagent references will be removed."
-              buttonLabel="Delete Agent"
-              onDelete={() => setDeleteDialogOpen(true)}
+              confirmTitle="Delete Agent"
+              confirmDescription={`Are you sure you want to delete "${agent.name}"? This action cannot be undone.`}
+              onDelete={handleDelete}
+              isDeleting={deleting}
             />
           </SidebarTabsContent>
         )}
       </SidebarTabs>
-
-      <DeleteConfirmDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        title="Delete Agent"
-        description={`Are you sure you want to delete "${agent.name}"? This action cannot be undone.`}
-        onConfirm={handleDelete}
-        loading={deleting}
-      />
     </PageContainer>
   );
 }

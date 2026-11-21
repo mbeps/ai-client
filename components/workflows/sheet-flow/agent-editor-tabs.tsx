@@ -84,7 +84,7 @@ export interface AgentEditorTabsProps {
   onModelIdChange: (modelId: string) => void;
   requiresFileUpload: boolean;
   onRequiresFileUploadChange: (requires: boolean) => void;
-  onOpenDeleteDialog: () => void;
+  onDelete: () => Promise<void> | void;
   isDeleting: boolean;
   agents?: Agent[];
   subagentIds?: string[];
@@ -130,7 +130,7 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
     onModelIdChange,
     requiresFileUpload,
     onRequiresFileUploadChange,
-    onOpenDeleteDialog,
+    onDelete,
     isDeleting,
     agents = [],
     subagentIds = [],
@@ -317,11 +317,11 @@ export function AgentEditorTabs(props: AgentEditorTabsProps) {
       {!isNew && (
         <SidebarTabsContent value="danger">
           <DangerZoneCard
-            title="Danger Zone"
             description="Irreversible actions for this transform agent."
             consequences="Deleting this agent will permanently remove its configuration and steps. Past runs will be preserved but dissociated. This action cannot be undone."
-            buttonLabel="Delete Agent"
-            onDelete={onOpenDeleteDialog}
+            confirmTitle={`Delete "${name}"?`}
+            confirmDescription="This will permanently delete the transform agent and its configuration. This cannot be undone."
+            onDelete={onDelete}
             isDeleting={isDeleting}
           />
         </SidebarTabsContent>

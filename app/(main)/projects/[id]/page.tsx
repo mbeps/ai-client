@@ -26,7 +26,6 @@ import { ProjectSettingsTab } from "@/components/project/project-settings-tab";
 import { ProjectSubagentsTab } from "@/components/project/project-subagents-tab";
 import { ProjectToolsTab } from "@/components/project/project-tools-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { EntityDetailHeader } from "@/components/shared/entity-detail-header";
 import { PageContainer } from "@/components/shared/page-container";
 import {
@@ -291,7 +290,6 @@ function useProjectDeletion(projectId: string) {
   const router = useRouter();
   const loadProjects = useAppStore((state) => state.loadProjects);
   const [deleting, setDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -309,8 +307,6 @@ function useProjectDeletion(projectId: string) {
 
   return {
     deleting,
-    showDeleteDialog,
-    setShowDeleteDialog,
     handleDelete,
   };
 }
@@ -366,6 +362,7 @@ function useProjectChats(projectId: string) {
  */
 type ProjectPageTabsProps = {
   projectId: string;
+  projectName: string;
   tab: string;
   onTabChange: (tab: string) => void;
   projectChats: ReturnType<typeof useProjectChats>;
@@ -386,6 +383,7 @@ type ProjectPageTabsProps = {
 function ProjectPageTabs(props: ProjectPageTabsProps) {
   const {
     projectId,
+    projectName,
     tab,
     onTabChange,
     projectChats,
@@ -541,11 +539,11 @@ function ProjectPageTabs(props: ProjectPageTabsProps) {
 
       <SidebarTabsContent value="danger">
         <DangerZoneCard
-          title="Danger Zone"
           description="Irreversible actions for this project."
           consequences="Deleting this project will permanently remove it. Chats will be dissociated but not deleted. This action cannot be undone."
-          buttonLabel="Delete Project"
-          onDelete={() => deletion.setShowDeleteDialog(true)}
+          confirmTitle={`Delete "${projectName}"?`}
+          confirmDescription="This will permanently delete this project. Associated chats and data will remain accessible. This action cannot be undone."
+          onDelete={deletion.handleDelete}
           isDeleting={deletion.deleting}
         />
       </SidebarTabsContent>
@@ -638,6 +636,7 @@ export default function ProjectPage() {
 
       <ProjectPageTabs
         projectId={projectId}
+        projectName={project.name}
         tab={tab}
         onTabChange={setTab}
         projectChats={projectChats}
@@ -646,15 +645,6 @@ export default function ProjectPage() {
         mcpServers={mcpServers}
         skills={skills}
         deletion={deletion}
-      />
-
-      <DeleteConfirmDialog
-        isOpen={deletion.showDeleteDialog}
-        onClose={() => deletion.setShowDeleteDialog(false)}
-        onConfirm={deletion.handleDelete}
-        title={`Delete "${project.name}"?`}
-        description="This will permanently delete this project. Associated chats and data will remain accessible. This action cannot be undone."
-        loading={deletion.deleting}
       />
     </PageContainer>
   );
