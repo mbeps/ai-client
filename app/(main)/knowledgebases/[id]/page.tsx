@@ -20,7 +20,6 @@ import { KbSettingsTab } from "@/components/knowledgebase/kb-settings-tab";
 import { KbStatsCards } from "@/components/knowledgebase/kb-stats-cards";
 import { UploadDocumentDialog } from "@/components/knowledgebase/upload-document-dialog";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { PageContainer } from "@/components/shared/page-container";
 import {
@@ -448,7 +447,7 @@ type KnowledgebasePageTabsProps = {
   chatModels: UserModelOption[];
   embeddingModelLabel: string;
   globalKbModelLabel?: string;
-  onDeleteClick: () => void;
+  onDelete: () => Promise<void> | void;
   isDeleting: boolean;
   ragMode: RagMode;
 };
@@ -475,7 +474,7 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
     chatModels,
     embeddingModelLabel,
     globalKbModelLabel,
-    onDeleteClick,
+    onDelete,
     isDeleting,
     ragMode,
   } = props;
@@ -557,11 +556,11 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
 
       <SidebarTabsContent value="danger">
         <DangerZoneCard
-          title="Delete Knowledgebase"
           description="Once you delete a knowledge base, there is no going back. Please be certain."
           consequences="Deleting this knowledge base will permanently remove all associated documents and vector embeddings from our system."
-          buttonLabel="Delete Knowledgebase"
-          onDelete={onDeleteClick}
+          confirmTitle="Delete Knowledgebase"
+          confirmDescription={`Are you sure you want to delete "${kb.name}"? This cannot be undone.`}
+          onDelete={onDelete}
           isDeleting={isDeleting}
         />
       </SidebarTabsContent>
@@ -633,10 +632,7 @@ export default function KnowledgebasePage() {
   }
 
   return (
-    <PageContainer
-      variant={resolvedTab === "graph" ? "wide" : "default"}
-      className="space-y-6"
-    >
+    <PageContainer variant="default" className="space-y-6">
       <KnowledgebaseHeader kb={state.kb} />
 
       {state.hasNoModels ? (
@@ -657,7 +653,7 @@ export default function KnowledgebasePage() {
         chatModels={state.chatModels}
         embeddingModelLabel={state.embeddingModelLabel}
         globalKbModelLabel={state.globalKbModelLabel}
-        onDeleteClick={() => state.deletion.setShowDelete(true)}
+        onDelete={state.deletion.handleDelete}
         isDeleting={state.deletion.isDeleting}
         ragMode={state.ragMode}
       />
@@ -666,15 +662,6 @@ export default function KnowledgebasePage() {
         open={state.docs.showUpload}
         onOpenChange={state.docs.setShowUpload}
         onUpload={state.docs.handleUploadFile}
-      />
-
-      <DeleteConfirmDialog
-        isOpen={state.deletion.showDelete}
-        onClose={() => state.deletion.setShowDelete(false)}
-        onConfirm={state.deletion.handleDelete}
-        title="Delete Knowledgebase"
-        description={`Are you sure you want to delete "${state.kb.name}"? This cannot be undone.`}
-        loading={state.deletion.isDeleting}
       />
     </PageContainer>
   );

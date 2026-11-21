@@ -23,8 +23,6 @@ import { AgentGuardrailsTab } from "@/components/agent/agent-guardrails-tab";
 import { AgentKnowledgebasesTab } from "@/components/agent/agent-knowledgebases-tab";
 import { AgentPromptTab } from "@/components/agent/agent-prompt-tab";
 import { AgentSettingsTab } from "@/components/agent/agent-settings-tab";
-import { AgentSubagentsTab } from "@/components/agent/agent-subagents-tab";
-import { AgentToolsTab } from "@/components/agent/agent-tools-tab";
 import {
   type AgentFormState,
   buildInitialAgentForm,
@@ -38,6 +36,8 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
+import { SubagentsConfigTab } from "@/components/shared/subagents-config-tab";
+import { ToolsConfigTab } from "@/components/shared/tools-config-tab";
 import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
@@ -239,7 +239,7 @@ export default function NewAgentPage() {
         </SidebarTabsContent>
 
         <SidebarTabsContent value="tools">
-          <AgentToolsTab
+          <ToolsConfigTab
             mcpServers={mcpServers}
             selectedTools={form.selectedTools}
             onToggleTool={(serverId, toolName) =>
@@ -265,6 +265,7 @@ export default function NewAgentPage() {
             onSave={handleCreate}
             isSaving={isCreating}
             saveLabel="Create Agent"
+            description="Select tools and resources enabled for direct chats and isolated subagent runs with this agent."
           />
         </SidebarTabsContent>
 
@@ -306,7 +307,9 @@ export default function NewAgentPage() {
         </SidebarTabsContent>
 
         <SidebarTabsContent value="subagents">
-          <AgentSubagentsTab
+          <SubagentsConfigTab
+            title="Linked Subagents"
+            description="Link Leaf Agents or Built-in Agents that this agent can delegate tasks to via delegate_task. Linking subagents makes this an Orchestrator Agent."
             agents={agents}
             selectedSubagentIds={form.selectedSubagentIds}
             onToggleSubagent={(id) =>

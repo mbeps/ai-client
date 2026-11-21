@@ -20,16 +20,13 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { deleteAgent } from "@/actions/agents/delete-agent";
 import { listChats } from "@/actions/chats/list-chats";
-import { AgentChatsTab } from "@/components/agent/agent-chats-tab";
 import { AgentGuardrailsTab } from "@/components/agent/agent-guardrails-tab";
 import { AgentKnowledgebasesTab } from "@/components/agent/agent-knowledgebases-tab";
 import { AgentPromptTab } from "@/components/agent/agent-prompt-tab";
 import { AgentSettingsTab } from "@/components/agent/agent-settings-tab";
-import { AgentSubagentsTab } from "@/components/agent/agent-subagents-tab";
-import { AgentToolsTab } from "@/components/agent/agent-tools-tab";
 import { useAgentEditor } from "@/components/agent/use-agent-editor";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { EntityChatsTab } from "@/components/shared/entity-chats-tab";
 import { EntityDetailHeader } from "@/components/shared/entity-detail-header";
 import { PageContainer } from "@/components/shared/page-container";
 import {
@@ -39,6 +36,8 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
+import { SubagentsConfigTab } from "@/components/shared/subagents-config-tab";
+import { ToolsConfigTab } from "@/components/shared/tools-config-tab";
 import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -90,7 +89,6 @@ export default function AgentDetailPage() {
   );
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const {
@@ -234,10 +232,11 @@ export default function AgentDetailPage() {
         </SidebarTabsList>
 
         <SidebarTabsContent value="chats">
-          <AgentChatsTab
+          <EntityChatsTab
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
             filteredChats={filteredChats}
+            emptyMessage="No chats with this agent yet."
           />
         </SidebarTabsContent>
 
@@ -287,7 +286,7 @@ export default function AgentDetailPage() {
         </SidebarTabsContent>
 
         <SidebarTabsContent value="tools">
-          <AgentToolsTab
+          <ToolsConfigTab
             mcpServers={mcpServers}
             selectedTools={form.selectedTools}
             onToggleTool={(serverId, toolName) =>
@@ -312,6 +311,7 @@ export default function AgentDetailPage() {
             }
             onSave={handleSaveTools}
             isSaving={saving}
+            description="Select tools and resources enabled for direct chats and isolated subagent runs with this agent."
             disabled={isBuiltIn}
           />
         </SidebarTabsContent>
@@ -356,7 +356,9 @@ export default function AgentDetailPage() {
         </SidebarTabsContent>
 
         <SidebarTabsContent value="subagents">
-          <AgentSubagentsTab
+          <SubagentsConfigTab
+            title="Linked Subagents"
+            description="Link Leaf Agents or Built-in Agents that this agent can delegate tasks to via delegate_task. Linking subagents makes this an Orchestrator Agent."
             agentId={agent.id}
             agents={agents}
             selectedSubagentIds={form.selectedSubagentIds}
@@ -390,24 +392,16 @@ export default function AgentDetailPage() {
         {!isBuiltIn && (
           <SidebarTabsContent value="danger">
             <DangerZoneCard
-              title="Delete Agent"
               description="Permanently delete this agent."
               consequences="Existing chats will remain as standalone conversations and linked subagent references will be removed."
-              buttonLabel="Delete Agent"
-              onDelete={() => setDeleteDialogOpen(true)}
+              confirmTitle="Delete Agent"
+              confirmDescription={`Are you sure you want to delete "${agent.name}"? This action cannot be undone.`}
+              onDelete={handleDelete}
+              isDeleting={deleting}
             />
           </SidebarTabsContent>
         )}
       </SidebarTabs>
-
-      <DeleteConfirmDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        title="Delete Agent"
-        description={`Are you sure you want to delete "${agent.name}"? This action cannot be undone.`}
-        onConfirm={handleDelete}
-        loading={deleting}
-      />
     </PageContainer>
   );
 }

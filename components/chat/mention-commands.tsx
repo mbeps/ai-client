@@ -18,6 +18,7 @@ import {
 import type {
   MentionItem,
   MentionTrigger,
+  MentionTypeFilter,
 } from "@/hooks/chat/use-mention-commands";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/types/agent/agent";
@@ -30,6 +31,7 @@ import type { Agent } from "@/types/agent/agent";
 interface MentionCommandsProps {
   items: MentionItem[];
   trigger: MentionTrigger;
+  typeFilter?: MentionTypeFilter | null;
   selectedIndex: number;
   onSelect: (item: MentionItem) => void;
   onClose: () => void;
@@ -37,14 +39,15 @@ interface MentionCommandsProps {
 }
 
 /**
- * Dropdown menu for mention commands (prompts & skills via `/`, assistants via `@`, knowledgebases via `#`).
- * Separates Skills into their own distinct group from Prompts.
+ * Dropdown menu for unified slash commands (`/`) covering skills, prompts, assistants, and knowledgebases.
+ * Separates each category into its own distinct group.
  *
  * @author Maruf Bepary
  */
 export function MentionCommands({
   items,
   trigger,
+  typeFilter,
   selectedIndex,
   onSelect,
   className,
@@ -57,12 +60,14 @@ export function MentionCommands({
   const knowledgebaseItems = items.filter(isKnowledgebaseItem);
 
   const getEmptyMessage = () => {
-    switch (trigger) {
-      case "/":
-        return "skills or prompts";
-      case "@":
+    switch (typeFilter) {
+      case "skill":
+        return "skills";
+      case "prompt":
+        return "prompts";
+      case "agent":
         return "assistants";
-      case "#":
+      case "knowledgebase":
         return "knowledgebases";
       default:
         return "items";
@@ -84,7 +89,7 @@ export function MentionCommands({
         <CommandList className="max-h-[300px]">
           <CommandEmpty>No {getEmptyMessage()} found.</CommandEmpty>
 
-          {trigger === "/" && skillItems.length > 0 && (
+          {skillItems.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center gap-1.5">
@@ -120,7 +125,7 @@ export function MentionCommands({
             </CommandGroup>
           )}
 
-          {trigger === "/" && promptItems.length > 0 && (
+          {promptItems.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center gap-1.5">
@@ -170,7 +175,7 @@ export function MentionCommands({
             </CommandGroup>
           )}
 
-          {trigger === "@" && assistantItems.length > 0 && (
+          {assistantItems.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center gap-1.5">
@@ -208,7 +213,7 @@ export function MentionCommands({
             </CommandGroup>
           )}
 
-          {trigger === "#" && knowledgebaseItems.length > 0 && (
+          {knowledgebaseItems.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center gap-1.5">

@@ -21,7 +21,6 @@ import { PageHeader } from "@/components/page-header";
 import { ProjectKnowledgebaseTab } from "@/components/project/project-knowledgebase-tab";
 import { ProjectPromptTab } from "@/components/project/project-prompt-tab";
 import { ProjectSettingsTab } from "@/components/project/project-settings-tab";
-import { ProjectToolsTab } from "@/components/project/project-tools-tab";
 import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
@@ -30,6 +29,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
+import { ToolsConfigTab } from "@/components/shared/tools-config-tab";
 import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
@@ -286,7 +286,7 @@ export default function NewProjectPage() {
         </SidebarTabsContent>
 
         <SidebarTabsContent value="tools">
-          <ProjectToolsTab
+          <ToolsConfigTab
             mcpServers={mcpServers}
             selectedTools={form.selectedTools}
             onToggleTool={onToggleTool}
@@ -294,6 +294,7 @@ export default function NewProjectPage() {
             onSave={handleCreate}
             isSaving={isCreating}
             saveLabel="Create Project"
+            description="Select tools and resources that should be enabled by default for all new chats in this project."
           />
         </SidebarTabsContent>
 

@@ -161,3 +161,8 @@
   background-image: none;
   animation: none;
 }
+
+/* Blend BlockNote's editor surface seamlessly with Shadcn container backgrounds */
+.bn-container .bn-editor {
+  background-color: transparent;
+}

@@ -7,22 +7,24 @@ import { Input } from "@/components/ui/input";
 import type { Chat } from "@/types/chat/chat";
 
 /**
- * Props for the AgentChatsTab component.
+ * Props for the EntityChatsTab component.
  */
-export interface AgentChatsTabProps {
+export interface EntityChatsTabProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   filteredChats: Chat[];
+  emptyMessage: string;
 }
 
 /**
- * Chats tab for an Agent: search filter, grid of chat cards, and empty state.
+ * Shared chats tab for an Agent or Project: search filter, grid of chat cards, and empty state.
  */
-export function AgentChatsTab({
+export function EntityChatsTab({
   searchQuery,
   onSearchQueryChange,
   filteredChats,
-}: AgentChatsTabProps) {
+  emptyMessage,
+}: EntityChatsTabProps) {
   return (
     <div className="space-y-4">
       <div className="relative w-full sm:max-w-xs">
@@ -41,11 +43,7 @@ export function AgentChatsTab({
         ))}
         {filteredChats.length === 0 && (
           <EmptyState
-            message={
-              searchQuery
-                ? "No chats match your search."
-                : "No chats with this agent yet."
-            }
+            message={searchQuery ? "No chats match your search." : emptyMessage}
           />
         )}
       </div>

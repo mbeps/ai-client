@@ -1,17 +1,11 @@
 "use client";
 
+import { Info } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { setDefaultChatModel } from "@/actions/models/set-default-chat-model";
 import { setDefaultEmbeddingModel } from "@/actions/models/set-default-embedding-model";
 import { setDefaultKbModel } from "@/actions/models/set-default-kb-model";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Combobox,
   ComboboxContent,
@@ -20,6 +14,11 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { UserModelOption } from "@/hooks/use-user-models";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 import type { CommonError } from "@/types/error/common-error";
@@ -52,11 +51,11 @@ type DefaultModelPickerProps = {
 };
 
 /**
- * Props for a single default model selector card.
+ * Props for a single default model selector row.
  *
  * @author Maruf Bepary
  */
-type ModelSelectCardProps = {
+type ModelSelectRowProps = {
   title: string;
   description: string;
   items: ModelItem[];
@@ -83,11 +82,11 @@ function toItem(model: UserModelOption): ModelItem {
 }
 
 /**
- * Reusable card containing a labelled combobox selector for a model default.
+ * Reusable row containing a labelled combobox selector and tooltip description for a model default.
  *
  * @author Maruf Bepary
  */
-function ModelSelectCard({
+function ModelSelectRow({
   title,
   description,
   items,
@@ -96,14 +95,28 @@ function ModelSelectCard({
   emptyText,
   disabled,
   onSelect,
-}: ModelSelectCardProps) {
+}: ModelSelectRowProps) {
   return (
-    <Card className="shadow-none">
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div
+      data-slot="default-model-row"
+      className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">{title}</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={`${title} description`}
+              className="text-muted-foreground hover:text-foreground inline-flex items-center"
+            >
+              <Info className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">{description}</TooltipContent>
+        </Tooltip>
+      </div>
+      <div className="w-full sm:w-72 sm:shrink-0">
         <Combobox
           items={items}
           value={value}
@@ -135,8 +148,8 @@ function ModelSelectCard({
             </ComboboxList>
           </ComboboxContent>
         </Combobox>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -213,8 +226,8 @@ export function DefaultModelPicker({
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <ModelSelectCard
+    <div className="divide-y rounded-lg border">
+      <ModelSelectRow
         title="Default Chat Model"
         description="Used when chat requests do not specify a configured model."
         items={chatItems}
@@ -231,7 +244,7 @@ export function DefaultModelPicker({
         }
       />
 
-      <ModelSelectCard
+      <ModelSelectRow
         title="Default Embedding Model"
         description="Used by RAG ingestion and retrieval for all knowledge bases."
         items={embeddingItems}
@@ -248,7 +261,7 @@ export function DefaultModelPicker({
         }
       />
 
-      <ModelSelectCard
+      <ModelSelectRow
         title="Default Knowledge Base Model"
         description="Used to extract document metadata and relations when ingesting documents."
         items={kbItems}

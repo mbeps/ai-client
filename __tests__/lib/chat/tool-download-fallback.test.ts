@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { executeToolDownloadFallback } from "@/lib/chat/tool-download-fallback";
+import {
+  executeToolDownloadFallback,
+  isFileProducerOrMutationTool,
+  isStagingTool,
+} from "@/lib/chat/tool-download-fallback";
 import { extractMessageDownloads } from "@/lib/chat/extract-message-downloads";
 import type { CompletedToolRecord } from "@/lib/inngest/functions/chat-response";
 import type { Message } from "@/types/message/message";
@@ -506,27 +510,27 @@ describe("executeToolDownloadFallback", () => {
     const invalidPathTools: CompletedToolRecord[] = [
       {
         toolCallId: "tc-no-path",
-        toolName: "generic_tool",
+        toolName: "create_generic",
         args: { query: "search" },
       },
       {
         toolCallId: "tc-short-path",
-        toolName: "short_tool",
+        toolName: "create_short",
         args: { file_path: ".a" }, // < 3 chars
       },
       {
         toolCallId: "tc-long-path",
-        toolName: "long_tool",
+        toolName: "create_long",
         args: { file_path: "a".repeat(260) + ".txt" }, // > 260 chars
       },
       {
         toolCallId: "tc-no-ext",
-        toolName: "no_ext_tool",
+        toolName: "create_no_ext",
         args: { file_path: "fileWithoutExtension" },
       },
       {
         toolCallId: "tc-non-string",
-        toolName: "num_tool",
+        toolName: "create_num",
         args: { file_path: 12345 },
       },
     ];
@@ -659,5 +663,315 @@ describe("executeToolDownloadFallback", () => {
       expect.objectContaining({ file_path: "unmatched.pdf" }),
       expect.anything(),
     );
+  });
+
+  it("produces 0 fallback downloads for upload_file + read-only + internal tools", async () => {
+    const downloadMock = vi.fn();
+    const activeTools: Record<string, any> = {
+      upload_file: { execute: vi.fn() },
+      get_workbook_metadata: { execute: vi.fn() },
+      get_sheet_summary: { execute: vi.fn() },
+      get_file_url: { execute: vi.fn() },
+      download_file: { execute: downloadMock },
+    };
+    const toolSourceMap: Record<string, string> = {
+      upload_file: "excel-mcp-server",
+      get_workbook_metadata: "excel-mcp-server",
+      get_sheet_summary: "excel-mcp-server",
+      get_file_url: "internal",
+      download_file: "excel-mcp-server",
+    };
+    const completedTools: CompletedToolRecord[] = [
+      {
+        toolCallId: "tc-upload",
+        toolName: "upload_file",
+        args: { url: "https://s3.example.com/input.xlsx" },
+        result: { file_path: "staged_input.xlsx" },
+      },
+      {
+        toolCallId: "tc-meta",
+        toolName: "get_workbook_metadata",
+        args: { file_path: "staged_input.xlsx" },
+        result: { sheets: ["Sheet1"] },
+      },
+      {
+        toolCallId: "tc-summary",
+        toolName: "get_sheet_summary",
+        args: { file_path: "staged_input.xlsx", sheet_name: "Sheet1" },
+        result: { rows: 10 },
+      },
+      {
+        toolCallId: "tc-url",
+        toolName: "get_file_url",
+        args: { file_path: "staged_input.xlsx" },
+        result: { url: "https://s3.example.com/signed.xlsx" },
+      },
+    ];
+
+    const results = await executeToolDownloadFallback({
+      completedTools,
+      activeTools,
+      toolSourceMap,
+    });
+
+    expect(results).toHaveLength(0);
+    expect(downloadMock).not.toHaveBeenCalled();
+  });
+
+  it("triggers download_file when upload_file is followed by write_cells with file_path in upload_file.result and write_cells.args", async () => {
+    const downloadMock = vi.fn().mockResolvedValue({
+      file_content: "base64content",
+      filename: "staged_budget.xlsx",
+    });
+    const activeTools: Record<string, any> = {
+      upload_file: { execute: vi.fn() },
+      write_cells: { execute: vi.fn() },
+      download_file: { execute: downloadMock },
+    };
+    const toolSourceMap: Record<string, string> = {
+      upload_file: "excel-mcp-server",
+      write_cells: "excel-mcp-server",
+      download_file: "excel-mcp-server",
+    };
+    const completedTools: CompletedToolRecord[] = [
+      {
+        toolCallId: "tc-upload",
+        toolName: "upload_file",
+        args: { url: "https://s3.example.com/budget.xlsx" },
+        result: { file_path: "staged_budget.xlsx" },
+      },
+      {
+        toolCallId: "tc-write",
+        toolName: "write_cells",
+        args: {
+          file_path: "staged_budget.xlsx",
+          sheet_name: "Sheet1",
+          data: [["Updated"]],
+        },
+        result: { ok: true },
+      },
+    ];
+
+    const results = await executeToolDownloadFallback({
+      completedTools,
+      activeTools,
+      toolSourceMap,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(downloadMock).toHaveBeenCalledWith(
+      expect.objectContaining({ file_path: "staged_budget.xlsx" }),
+      expect.anything(),
+    );
+  });
+
+  it("falls back to latest staged file path on same server when mutation tool omits file_path in args and result", async () => {
+    const downloadMock = vi.fn().mockResolvedValue({
+      file_content: "base64content",
+      filename: "latest_staged.xlsx",
+    });
+    const activeTools: Record<string, any> = {
+      upload_file: { execute: vi.fn() },
+      format_cells: { execute: vi.fn() },
+      download_file: { execute: downloadMock },
+    };
+    const toolSourceMap: Record<string, string> = {
+      upload_file: "excel-mcp-server",
+      format_cells: "excel-mcp-server",
+      download_file: "excel-mcp-server",
+    };
+    const completedTools: CompletedToolRecord[] = [
+      {
+        toolCallId: "tc-upload-empty",
+        toolName: "upload_file",
+        args: { url: "https://s3.example.com/no-ext" },
+        result: { ok: true },
+      },
+      {
+        toolCallId: "tc-upload-args-only",
+        toolName: "upload_file",
+        args: { file_path: "args_staged.xlsx" },
+        result: { ok: true },
+      },
+      {
+        toolCallId: "tc-upload-new",
+        toolName: "upload_file",
+        args: { url: "https://s3.example.com/new.xlsx" },
+        result: { file_path: "latest_staged.xlsx" },
+      },
+      {
+        toolCallId: "tc-format",
+        toolName: "format_cells",
+        args: { range: "A1:B2", bold: true },
+        result: { formatted: true },
+      },
+    ];
+
+    const results = await executeToolDownloadFallback({
+      completedTools,
+      activeTools,
+      toolSourceMap,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(downloadMock).toHaveBeenCalledWith(
+      expect.objectContaining({ file_path: "latest_staged.xlsx" }),
+      expect.anything(),
+    );
+  });
+
+  it("never triggers fallback downloads for web search or retrieval tools with URL or file-like args", async () => {
+    const downloadMock = vi.fn();
+    const activeTools: Record<string, any> = {
+      web_search: { execute: vi.fn() },
+      rival_search: { execute: vi.fn() },
+      crawl_page: { execute: vi.fn() },
+      download_file: { execute: downloadMock },
+    };
+    const toolSourceMap: Record<string, string> = {
+      web_search: "web-server",
+      rival_search: "web-server",
+      crawl_page: "web-server",
+      download_file: "web-server",
+    };
+    const completedTools: CompletedToolRecord[] = [
+      {
+        toolCallId: "tc-web",
+        toolName: "web_search",
+        args: { query: "report.pdf", path: "https://example.com/report.pdf" },
+        result: { file_path: "cached_report.pdf" },
+      },
+      {
+        toolCallId: "tc-rival",
+        toolName: "rival_search",
+        args: { query: "q1", file_path: "competitor.csv" },
+        result: { output_path: "competitor.csv" },
+      },
+      {
+        toolCallId: "tc-crawl",
+        toolName: "crawl_page",
+        args: { path: "https://example.com/index.html" },
+        result: { file_path: "index.html" },
+      },
+    ];
+
+    const results = await executeToolDownloadFallback({
+      completedTools,
+      activeTools,
+      toolSourceMap,
+    });
+
+    expect(results).toHaveLength(0);
+    expect(downloadMock).not.toHaveBeenCalled();
+  });
+
+  it("does not trigger fallback downloads when tool result has error or isError: true", async () => {
+    const downloadMock = vi.fn();
+    const activeTools: Record<string, any> = {
+      upload_file: { execute: vi.fn() },
+      create_workbook: { execute: vi.fn() },
+      write_cells: { execute: vi.fn() },
+      download_file: { execute: downloadMock },
+    };
+    const toolSourceMap: Record<string, string> = {
+      upload_file: "excel-mcp-server",
+      create_workbook: "excel-mcp-server",
+      write_cells: "excel-mcp-server",
+      download_file: "excel-mcp-server",
+    };
+    const completedTools: CompletedToolRecord[] = [
+      {
+        toolCallId: "tc-upload-err",
+        toolName: "upload_file",
+        args: { url: "https://s3.example.com/fail.xlsx" },
+        result: { file_path: "failed_stage.xlsx", error: "Failed to fetch" },
+      },
+      {
+        toolCallId: "tc-create-err",
+        toolName: "create_workbook",
+        args: { file_path: "broken.xlsx" },
+        result: { error: "Permission denied" },
+      },
+      {
+        toolCallId: "tc-write-iserror",
+        toolName: "write_cells",
+        args: { file_path: "broken2.xlsx" },
+        result: { isError: true, content: [{ type: "text", text: "Crash" }] },
+      },
+    ];
+
+    const results = await executeToolDownloadFallback({
+      completedTools,
+      activeTools,
+      toolSourceMap,
+    });
+
+    expect(results).toHaveLength(0);
+    expect(downloadMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("isStagingTool & isFileProducerOrMutationTool", () => {
+  it("classifies staging tools deterministically", () => {
+    expect(isStagingTool("upload_file")).toBe(true);
+    expect(isStagingTool("upload_workbook")).toBe(true);
+    expect(isStagingTool("upload_custom_doc")).toBe(true);
+    expect(isStagingTool("load_file")).toBe(true);
+    expect(isStagingTool("load_workbook")).toBe(true);
+    expect(isStagingTool("open_file")).toBe(true);
+    expect(isStagingTool("open_workbook")).toBe(true);
+    expect(isStagingTool("import_file")).toBe(true);
+    expect(isStagingTool("stage_file")).toBe(true);
+    expect(isStagingTool("ingest_file")).toBe(true);
+    expect(isStagingTool("UPLOAD_FILE")).toBe(true);
+
+    expect(isStagingTool("create_workbook")).toBe(false);
+    expect(isStagingTool("write_cells")).toBe(false);
+    expect(isStagingTool("get_file_url")).toBe(false);
+  });
+
+  it("classifies file producer and mutation tools deterministically", () => {
+    // Producers & spreadsheet mutation tools -> true
+    expect(isFileProducerOrMutationTool("create_workbook")).toBe(true);
+    expect(isFileProducerOrMutationTool("write_cells")).toBe(true);
+    expect(isFileProducerOrMutationTool("generate_pdf")).toBe(true);
+    expect(isFileProducerOrMutationTool("format_cells")).toBe(true);
+    expect(isFileProducerOrMutationTool("append_rows")).toBe(true);
+    expect(isFileProducerOrMutationTool("mutator")).toBe(true);
+    expect(isFileProducerOrMutationTool("generator")).toBe(true);
+    expect(isFileProducerOrMutationTool("builder")).toBe(true);
+
+    // Staging tools -> false
+    expect(isFileProducerOrMutationTool("upload_file")).toBe(false);
+    expect(isFileProducerOrMutationTool("load_workbook")).toBe(false);
+    expect(isFileProducerOrMutationTool("stage_file")).toBe(false);
+
+    // Read-only tools -> false
+    expect(isFileProducerOrMutationTool("read_cells")).toBe(false);
+    expect(isFileProducerOrMutationTool("get_workbook_metadata")).toBe(false);
+    expect(isFileProducerOrMutationTool("summarize_sheet")).toBe(false);
+    expect(isFileProducerOrMutationTool("analyze_data")).toBe(false);
+    expect(isFileProducerOrMutationTool("extract_text")).toBe(false);
+    expect(isFileProducerOrMutationTool("crawl_page")).toBe(false);
+    expect(isFileProducerOrMutationTool("web_search")).toBe(false);
+
+    // Internal non-producer tools -> false
+    expect(isFileProducerOrMutationTool("get_file_url")).toBe(false);
+    expect(isFileProducerOrMutationTool("manage_artifact")).toBe(false);
+    expect(isFileProducerOrMutationTool("search_knowledge_base")).toBe(false);
+    expect(isFileProducerOrMutationTool("delegate_task")).toBe(false);
+    expect(isFileProducerOrMutationTool("save_memory")).toBe(false);
+    expect(isFileProducerOrMutationTool("manage_memory")).toBe(false);
+    expect(isFileProducerOrMutationTool("load_skill")).toBe(false);
+    expect(isFileProducerOrMutationTool("create_skill")).toBe(false);
+    expect(isFileProducerOrMutationTool("update_skill")).toBe(false);
+    expect(isFileProducerOrMutationTool("write_skill_file")).toBe(false);
+    expect(isFileProducerOrMutationTool("read_skill_file")).toBe(false);
+    expect(isFileProducerOrMutationTool("delete_skill_file")).toBe(false);
+    expect(isFileProducerOrMutationTool("scratchpad_write")).toBe(false);
+
+    // Unknown non-producer tools -> false
+    expect(isFileProducerOrMutationTool("rival_search")).toBe(false);
+    expect(isFileProducerOrMutationTool("ping")).toBe(false);
   });
 });

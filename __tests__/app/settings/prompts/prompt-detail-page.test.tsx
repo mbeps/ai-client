@@ -203,11 +203,11 @@ describe("PromptDetailPage", () => {
 
     render(<PromptDetailPage />);
 
-    const deleteBtn = screen.getByRole("button", { name: /delete prompt/i });
+    const deleteBtn = screen.getByRole("button", { name: /^delete$/i });
     await user.click(deleteBtn);
 
-    const confirmBtn = screen.getByRole("button", { name: "Delete" });
-    await user.click(confirmBtn);
+    const confirmBtns = screen.getAllByRole("button", { name: "Delete" });
+    await user.click(confirmBtns[confirmBtns.length - 1]);
 
     await waitFor(() => {
       expect(deletePrompt).toHaveBeenCalledWith("prompt-1");

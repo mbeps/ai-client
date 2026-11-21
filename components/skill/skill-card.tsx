@@ -1,14 +1,13 @@
 "use client";
 
-import { ExternalLink, Files, Trash2 } from "lucide-react";
+import { Files } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { deleteSkill } from "@/actions/skills/delete-skill";
 import { toggleSkillEnabled } from "@/actions/skills/toggle-skill";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { EntityCardActions } from "@/components/shared/entity-card-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -41,7 +40,6 @@ export function SkillCard({ skill }: SkillCardProps) {
   const agents = useAppStore((state) => state.agents);
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const detailUrl = ROUTES.SETTINGS.SKILLS.detail(skill.id);
 
@@ -159,47 +157,16 @@ export function SkillCard({ skill }: SkillCardProps) {
             </TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground h-7 w-7"
-              >
-                <Link href={detailUrl} aria-label="Open skill">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Open skill</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-destructive h-7 w-7"
-                onClick={() => setShowDeleteDialog(true)}
-                aria-label="Delete skill"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete skill</TooltipContent>
-          </Tooltip>
-
-          <DeleteConfirmDialog
-            isOpen={showDeleteDialog}
-            onClose={() => setShowDeleteDialog(false)}
-            onConfirm={handleDelete}
-            title="Delete Skill"
-            description={`Are you sure you want to delete "${
+          <EntityCardActions
+            detailUrl={detailUrl}
+            openLabel="Open skill"
+            deleteLabel="Delete skill"
+            confirmTitle="Delete Skill"
+            confirmDescription={`Are you sure you want to delete "${
               skill.displayName || skill.name
             }"? This action cannot be undone.`}
-            loading={isDeleting}
+            onConfirmDelete={handleDelete}
+            isDeleting={isDeleting}
           />
         </div>
       </div>

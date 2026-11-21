@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type {
   MentionItem,
   MentionTrigger,
+  MentionTypeFilter,
 } from "@/hooks/chat/use-mention-commands";
 import { filterAccessibleSkills } from "@/lib/skills/filter-accessible-skills";
 import { cn } from "@/lib/utils";
@@ -202,7 +203,7 @@ function resolveContainerClassName(
 function resolveInputPlaceholder(hasNoModels: boolean): string {
   return hasNoModels
     ? "Set up a provider to start chatting..."
-    : "Ask anything... Use / for skills and prompts, @ for assistant, # for knowledgebases";
+    : "Ask anything... Use / for skills, prompts, agents, and knowledgebases";
 }
 
 /**
@@ -249,6 +250,7 @@ function useMentionPlacement(
  */
 function ChatInputMentionCommands(props: {
   openTrigger: MentionTrigger | null;
+  typeFilter?: MentionTypeFilter | null;
   filteredItems: MentionItem[];
   selectedIndex: number;
   onSelect: (item: MentionItem) => void;
@@ -266,6 +268,7 @@ function ChatInputMentionCommands(props: {
     <MentionCommands
       items={props.filteredItems}
       trigger={props.openTrigger}
+      typeFilter={props.typeFilter}
       selectedIndex={props.selectedIndex}
       onSelect={props.onSelect}
       onClose={props.onClose}
@@ -339,6 +342,7 @@ export function ChatInput(props: ChatInputProps) {
     >
       <ChatInputMentionCommands
         openTrigger={interaction.mentions.openTrigger}
+        typeFilter={interaction.mentions.typeFilter}
         filteredItems={interaction.mentions.filteredItems}
         selectedIndex={interaction.mentions.selectedIndex}
         onSelect={interaction.mentions.handleSelect}
@@ -386,7 +390,7 @@ export function ChatInput(props: ChatInputProps) {
           props.textareaAriaLabel ??
           (props.submitLabel ? "Edit message" : "Chat message")
         }
-        className="max-h-30 resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+        className="max-h-30 resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
         rows={2}
         disabled={services.hasNoModels}
       />

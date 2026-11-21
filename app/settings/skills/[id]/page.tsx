@@ -9,7 +9,6 @@ import { deleteSkill } from "@/actions/skills/delete-skill";
 import { exportSkillZip } from "@/actions/skills/export-skill";
 import { updateSkill } from "@/actions/skills/update-skill";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
@@ -322,7 +321,6 @@ function useSkillEditorState(skillId: string, initialSkill: any) {
 
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -406,8 +404,6 @@ function useSkillEditorState(skillId: string, initialSkill: any) {
     directory,
     savingSettings,
     deleting,
-    showDeleteDialog,
-    setShowDeleteDialog,
     exporting,
     handleSave,
     handleDelete,
@@ -443,8 +439,6 @@ function SkillDetailPageContent({
     directory,
     savingSettings,
     deleting,
-    showDeleteDialog,
-    setShowDeleteDialog,
     exporting,
     handleSave,
     handleDelete,
@@ -452,7 +446,7 @@ function SkillDetailPageContent({
   } = useSkillEditorState(skillId, skill);
 
   return (
-    <PageContainer variant="full" className="space-y-6">
+    <PageContainer variant="default" className="space-y-6">
       <SidebarTabs value={tab} onValueChange={setTab} className="w-full">
         <SidebarTabsList>
           <SidebarTabsTrigger value="details">
@@ -546,24 +540,15 @@ function SkillDetailPageContent({
 
         <SidebarTabsContent value="danger" className="w-full flex-1">
           <DangerZoneCard
-            title="Danger Zone"
             description="Irreversible actions for this agent skill."
             consequences="Deleting this skill will permanently remove it from your skills library. This action cannot be undone."
-            buttonLabel="Delete Skill"
-            onDelete={() => setShowDeleteDialog(true)}
+            confirmTitle={`Delete "${form.displayName || form.name}"?`}
+            confirmDescription="This will permanently delete the agent skill. This cannot be undone."
+            onDelete={handleDelete}
             isDeleting={deleting}
           />
         </SidebarTabsContent>
       </SidebarTabs>
-
-      <DeleteConfirmDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDelete}
-        title={`Delete "${form.displayName || form.name}"?`}
-        description="This will permanently delete the agent skill. This cannot be undone."
-        loading={deleting}
-      />
     </PageContainer>
   );
 }

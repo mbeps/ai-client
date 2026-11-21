@@ -1,14 +1,12 @@
 "use client";
 
-import { ExternalLink, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { deleteMcpServer } from "@/actions/mcp-servers/delete-mcp-server";
 import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { EntityCardActions } from "@/components/shared/entity-card-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -47,7 +45,6 @@ export function ServerCard({ server }: ServerCardProps) {
   const loadMcpServers = useAppStore((state) => state.loadMcpServers);
   const [isToggling, setIsToggling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const detailUrl = ROUTES.CONNECTORS.detail(server.id);
 
@@ -162,51 +159,20 @@ export function ServerCard({ server }: ServerCardProps) {
             </TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground h-7 w-7"
-              >
-                <Link href={detailUrl} aria-label="Open connector">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Open connector</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-destructive h-7 w-7"
-                onClick={() => setShowDeleteDialog(true)}
-                aria-label={
-                  server.isInstalled ? "Uninstall tool" : "Delete server"
-                }
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {server.isInstalled ? "Uninstall tool" : "Delete server"}
-            </TooltipContent>
-          </Tooltip>
-
-          <DeleteConfirmDialog
-            isOpen={showDeleteDialog}
-            onClose={() => setShowDeleteDialog(false)}
-            onConfirm={handleDelete}
-            title={server.isInstalled ? "Uninstall Tool" : "Delete Server"}
-            description={`Are you sure you want to ${
+          <EntityCardActions
+            detailUrl={detailUrl}
+            openLabel="Open connector"
+            deleteLabel={
+              server.isInstalled ? "Uninstall tool" : "Delete server"
+            }
+            confirmTitle={
+              server.isInstalled ? "Uninstall Tool" : "Delete Server"
+            }
+            confirmDescription={`Are you sure you want to ${
               server.isInstalled ? "uninstall" : "delete"
             } "${server.name}"? This action cannot be undone.`}
-            loading={isDeleting}
+            onConfirmDelete={handleDelete}
+            isDeleting={isDeleting}
             confirmLabel={server.isInstalled ? "Uninstall" : "Delete"}
             confirmLoadingLabel={
               server.isInstalled ? "Uninstalling..." : "Deleting..."

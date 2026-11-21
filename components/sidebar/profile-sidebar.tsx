@@ -1,33 +1,43 @@
 "use client";
 
-import {
-  ChevronLeft,
-  Key,
-  LinkIcon,
-  LogOut,
-  Shield,
-  Trash2,
-  User,
-} from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { Key, LinkIcon, Shield, Trash2, User } from "lucide-react";
 import type * as React from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
-  SidebarSeparator,
-} from "@/components/ui/sidebar";
+  type NavSidebarItem,
+  NavSidebarShell,
+} from "@/components/sidebar/nav-sidebar-shell";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { Sidebar } from "@/components/ui/sidebar";
 import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
-import { resetClientState } from "@/lib/store/reset-client-state";
+
+const PROFILE_NAVIGATION: NavSidebarItem[] = [
+  {
+    name: "General",
+    href: ROUTES.PROFILE.GENERAL.path,
+    icon: User,
+  },
+  {
+    name: "Security",
+    href: ROUTES.PROFILE.SECURITY.path,
+    icon: Shield,
+  },
+  {
+    name: "Sessions",
+    href: ROUTES.PROFILE.SESSIONS.path,
+    icon: Key,
+  },
+  {
+    name: "Linked Accounts",
+    href: ROUTES.PROFILE.ACCOUNTS.path,
+    icon: LinkIcon,
+  },
+  {
+    name: "Danger Zone",
+    href: ROUTES.PROFILE.DANGER.path,
+    icon: Trash2,
+  },
+];
 
 /**
  * Sidebar for the /profile section.
@@ -39,114 +49,33 @@ import { resetClientState } from "@/lib/store/reset-client-state";
 export function ProfileSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const router = useRouter();
-  const pathname = usePathname();
   const { data: session } = authClient.useSession();
 
-  const navigation = [
-    {
-      name: "General",
-      href: ROUTES.PROFILE.GENERAL.path,
-      icon: User,
-    },
-    {
-      name: "Security",
-      href: ROUTES.PROFILE.SECURITY.path,
-      icon: Shield,
-    },
-    {
-      name: "Sessions",
-      href: ROUTES.PROFILE.SESSIONS.path,
-      icon: Key,
-    },
-    {
-      name: "Linked Accounts",
-      href: ROUTES.PROFILE.ACCOUNTS.path,
-      icon: LinkIcon,
-    },
-    {
-      name: "Danger Zone",
-      href: ROUTES.PROFILE.DANGER.path,
-      icon: Trash2,
-    },
-  ];
-
   return (
-    <Sidebar {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Back to Home">
-              <Link href={ROUTES.HOME.path} className="font-semibold">
-                <ChevronLeft className="size-4" />
-                <span>Back to Home</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarSeparator className="mx-0 my-2" />
-          <SidebarMenuItem>
-            <div className="flex items-center gap-3 px-3 py-2">
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage
-                  src={session?.user?.image || undefined}
-                  alt={session?.user?.name || ""}
-                />
-                <AvatarFallback className="rounded-lg">
-                  {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {session?.user?.name}
-                </span>
-                <span className="text-muted-foreground truncate text-xs">
-                  {session?.user?.email}
-                </span>
-              </div>
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarMenu>
-            {navigation.map((item) => (
-              <SidebarMenuItem key={item.name}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.name}
-                >
-                  <Link href={item.href}>
-                    <item.icon className="size-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={async () => {
-                await authClient.signOut();
-                resetClientState();
-                router.push(ROUTES.AUTH.LOGIN.path);
-              }}
-              className="text-destructive hover:text-destructive focus:text-destructive"
-            >
-              <LogOut className="size-4" />
-              <span>Log out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+    <NavSidebarShell
+      {...props}
+      navigation={PROFILE_NAVIGATION}
+      headerContent={
+        <div className="flex items-center gap-3 px-3 py-2">
+          <Avatar className="h-8 w-8 rounded-lg">
+            <AvatarImage
+              src={session?.user?.image || undefined}
+              alt={session?.user?.name || ""}
+            />
+            <AvatarFallback className="rounded-lg">
+              {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-semibold">
+              {session?.user?.name}
+            </span>
+            <span className="text-muted-foreground truncate text-xs">
+              {session?.user?.email}
+            </span>
+          </div>
+        </div>
+      }
+    />
   );
 }

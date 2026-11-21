@@ -33,7 +33,7 @@ export function TranslationTargetPane(props: TranslationTargetPaneProps) {
         value={translatedText}
         readOnly
         placeholder={isLoading ? "Translating..." : "Translation..."}
-        className="min-h-[140px] flex-1 resize-none scrollbar-thin border-0 bg-transparent p-4 text-sm leading-relaxed focus-visible:ring-0"
+        className="min-h-[140px] flex-1 resize-none scrollbar-thin border-0 bg-transparent p-4 text-sm leading-relaxed shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
 
       <div className="bg-muted/10 flex shrink-0 items-center justify-end border-t p-2">

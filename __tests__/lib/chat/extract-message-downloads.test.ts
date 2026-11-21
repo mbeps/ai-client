@@ -119,7 +119,7 @@ describe("extractMessageDownloads", () => {
             toolName: "export_report",
             result: {
               file: {
-                url: "https://storage.provider.com/exports/q4_summary.pdf",
+                url: "https://storage.s3.amazonaws.com/outputs/q4_summary.pdf",
                 name: "Q4 Final Summary",
               },
             },
@@ -142,7 +142,7 @@ describe("extractMessageDownloads", () => {
         toolName: "data_exporter",
         args: {},
         result: {
-          url: "https://example.com/archive.zip",
+          url: "https://minio.local:9000/outputs/archive.zip",
         },
       },
     ];
@@ -312,7 +312,7 @@ describe("extractMessageDownloads", () => {
             toolName: "nested_exporter",
             result: {
               structuredContent: {
-                url: "https://example.com/structured.csv",
+                url: "https://minio.local:9000/outputs/structured.csv",
               },
               files: [
                 {
@@ -327,6 +327,7 @@ describe("extractMessageDownloads", () => {
               urls: [
                 {
                   link: "https://example.com/link_item.tar",
+                  filename: "link_item.tar",
                 },
               ],
             },
@@ -345,7 +346,7 @@ describe("extractMessageDownloads", () => {
     expect(items.some((i) => i.title === "link_item.tar")).toBe(true);
   });
 
-  it("extracts from plain text tool output containing embedded URLs", () => {
+  it("extracts only storage URLs from plain text tool output", () => {
     const msg: Message = {
       ...baseMessage,
       metadata: {
@@ -360,9 +361,8 @@ describe("extractMessageDownloads", () => {
     };
 
     const items = extractMessageDownloads(msg);
-    expect(items).toHaveLength(2);
-    expect(items[0].title).toBe("archive.zip");
-    expect(items[1].title).toBe("data.csv");
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("data.csv");
   });
 
   it("extracts base64 data key when accompanied by mimeType or fileName or file_path", () => {
@@ -411,12 +411,12 @@ describe("extractMessageDownloads", () => {
                 {
                   type: "resource",
                   resource: {
-                    url: "https://example.com/res.csv",
+                    url: "https://minio.local:9000/outputs/res.csv",
                   },
                 },
                 {
                   type: "text",
-                  text: "Plain non-json text containing https://example.com/file.txt",
+                  text: "Plain non-json text containing https://minio.local:9000/outputs/file.txt",
                 },
               ],
             },
@@ -487,7 +487,7 @@ describe("extractMessageDownloads", () => {
             toolCallId: "tc-badurl",
             toolName: "bad_url_tool",
             result: {
-              url: malformedUrl,
+              download_url: malformedUrl,
             },
           },
         ],
@@ -638,14 +638,14 @@ describe("extractMessageDownloads", () => {
     expect(mcpItems[0].mimeType).toBe("image/png");
   });
 
-  it("handles plain text URLs with and without file extensions or storage domains", () => {
+  it("handles plain text URLs keeping only storage domains", () => {
     const msg: Message = {
       ...baseMessage,
       metadata: {
         toolResults: [
           {
             toolCallId: "tc-txt",
-            toolName: "web_search",
+            toolName: "storage_log",
             result:
               "Visit https://example.com/no-extension-page and https://s3.amazonaws.com/mybucket/data",
           },
@@ -728,7 +728,7 @@ describe("extractMessageDownloads", () => {
     expect(extractMessageDownloads(emptyContentMsg)).toHaveLength(0);
   });
 
-  it("extracts download from tool result using result property", () => {
+  it("extracts download from tool result using explicit download_url property", () => {
     const msg: Message = {
       ...baseMessage,
       metadata: {
@@ -736,7 +736,7 @@ describe("extractMessageDownloads", () => {
           {
             toolCallId: "tc-output-field",
             toolName: "exporter",
-            result: { url: "https://example.com/output-report.pdf" },
+            result: { download_url: "https://example.com/output-report.pdf" },
           },
         ],
       },
@@ -746,14 +746,13 @@ describe("extractMessageDownloads", () => {
     expect(items[0].title).toBe("output-report.pdf");
   });
 
-  it("labels non-storage markdown links as Link", () => {
+  it("ignores non-storage external markdown links in message content", () => {
     const msg: Message = {
       ...baseMessage,
       content: "Read the spec: [Spec Document](https://example.com/docs/spec.pdf)",
     };
     const items = extractMessageDownloads(msg);
-    expect(items).toHaveLength(1);
-    expect(items[0].source).toBe("Link");
+    expect(items).toHaveLength(0);
   });
 
   it("accepts base64url encoded binary data", () => {
@@ -791,5 +790,494 @@ describe("extractMessageDownloads", () => {
     };
     const items = extractMessageDownloads(msg);
     expect(items).toHaveLength(0);
+  });
+
+  it("excludes get_file_url tool results returning presigned attachment URLs", () => {
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-get-file-url",
+            toolName: "get_file_url",
+            result: {
+              url: "https://minio.local:9000/attachments/ITALIC%20Benchmark.xlsx?X-Amz-Signature=abc123",
+              filename: "ITALIC Benchmark.xlsx",
+            },
+          },
+        ],
+      },
+    };
+
+    expect(extractMessageDownloads(msg)).toEqual([]);
+  });
+
+  it("excludes unmodified staged file flows including explicit download_file with no mutation tool", () => {
+    const dummyBase64 =
+      "UEsDBBQAAAAIAHt0R11Gx01IlQAAAM0AAAAQAAAAZG9jUHJvcHMvYXBwLnhtbE3PTQvCMAwG4L9SdreZih6k";
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolCalls: [
+          {
+            toolCallId: "tc-upload",
+            toolName: "upload_file",
+            args: { file_url: "https://minio.local:9000/attachments/ITALIC.xlsx" },
+          },
+          {
+            toolCallId: "tc-meta",
+            toolName: "get_workbook_metadata",
+            args: { file_path: "/tmp/excel_mcp_fu5wbe_m.xlsx" },
+          },
+          {
+            toolCallId: "tc-summary",
+            toolName: "get_sheet_summary",
+            args: { file_path: "/tmp/excel_mcp_fu5wbe_m.xlsx" },
+          },
+          {
+            toolCallId: "tc-dl",
+            toolName: "download_file",
+            args: { file_path: "/tmp/excel_mcp_fu5wbe_m.xlsx" },
+          },
+        ],
+        toolResults: [
+          {
+            toolCallId: "tc-upload",
+            toolName: "upload_file",
+            result: { file_path: "/tmp/excel_mcp_fu5wbe_m.xlsx" },
+          },
+          {
+            toolCallId: "tc-meta",
+            toolName: "get_workbook_metadata",
+            result: { sheets: ["Sheet1"] },
+          },
+          {
+            toolCallId: "tc-summary",
+            toolName: "get_sheet_summary",
+            result: { rows: 10 },
+          },
+          {
+            toolCallId: "tc-dl",
+            toolName: "download_file",
+            result: {
+              file_content: dummyBase64,
+              filename: "excel_mcp_fu5wbe_m.xlsx",
+            },
+          },
+        ],
+      },
+    };
+
+    expect(extractMessageDownloads(msg)).toEqual([]);
+  });
+
+  it("extracts download when staged file is modified before download_file", () => {
+    const dummyBase64 =
+      "UEsDBBQAAAAIAHt0R11Gx01IlQAAAM0AAAAQAAAAZG9jUHJvcHMvYXBwLnhtbE3PTQvCMAwG4L9SdreZih6k";
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolCalls: [
+          {
+            toolCallId: "tc-upload",
+            toolName: "upload_file",
+            args: { file_url: "https://minio.local:9000/attachments/ITALIC.xlsx" },
+          },
+          {
+            toolCallId: "tc-write",
+            toolName: "write_cells",
+            args: { file_path: "/tmp/excel_mcp_fu5wbe_m.xlsx", range: "A1" },
+          },
+          {
+            toolCallId: "tc-dl",
+            toolName: "download_file",
+            args: { file_path: "/tmp/excel_mcp_fu5wbe_m.xlsx" },
+          },
+        ],
+        toolResults: [
+          {
+            toolCallId: "tc-upload",
+            toolName: "upload_file",
+            result: { file_path: "/tmp/excel_mcp_fu5wbe_m.xlsx" },
+          },
+          {
+            toolCallId: "tc-write",
+            toolName: "write_cells",
+            result: { ok: true },
+          },
+          {
+            toolCallId: "tc-dl",
+            toolName: "download_file",
+            result: {
+              file_content: dummyBase64,
+              filename: "excel_mcp_fu5wbe_m.xlsx",
+            },
+          },
+        ],
+      },
+    };
+
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("excel_mcp_fu5wbe_m.xlsx");
+    expect(items[0].type).toBe("spreadsheet");
+  });
+
+  it("excludes RivalSearchMCP / web search tool results from download extraction", () => {
+    const structuredSearchMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-rival",
+            toolName: "rival_search",
+            result: {
+              results: [
+                {
+                  title: "Benchmark PDF",
+                  url: "https://arxiv.org/pdf/2301.00001.pdf",
+                  link: "https://example.com/data.csv",
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(structuredSearchMsg)).toEqual([]);
+
+    const mcpTextSearchMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-web-search",
+            toolName: "web_search",
+            result: {
+              content: [
+                {
+                  type: "text",
+                  text: "Found https://example.com/report.pdf and https://github.com/org/repo/blob/main/index.ts",
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(mcpTextSearchMsg)).toEqual([]);
+  });
+
+  it("extracts only storage links when assistant markdown has both external web links and storage links", () => {
+    const msg: Message = {
+      ...baseMessage,
+      content:
+        "See [Paper](https://example.com/paper.pdf) and download [Forecast](https://storage.s3.amazonaws.com/outputs/forecast.xlsx).",
+    };
+
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("Forecast");
+    expect(items[0].url).toBe(
+      "https://storage.s3.amazonaws.com/outputs/forecast.xlsx",
+    );
+  });
+
+  it("extracts genuine file-creating tools with explicit download_url, storage url, or metadata+url", () => {
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-dl-url",
+            toolName: "generate_pdf",
+            result: { download_url: "https://cdn.example.com/out/report.pdf" },
+          },
+          {
+            toolCallId: "tc-storage",
+            toolName: "export_csv",
+            result: { url: "https://minio.local:9000/outputs/metrics.csv" },
+          },
+          {
+            toolCallId: "tc-meta-url",
+            toolName: "build_bundle",
+            result: {
+              url: "https://cdn.example.com/assets/bundle.zip",
+              filename: "bundle.zip",
+              size: 1024,
+            },
+          },
+        ],
+      },
+    };
+
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(3);
+    expect(items.map((i) => i.title)).toEqual([
+      "report.pdf",
+      "metrics.csv",
+      "bundle.zip",
+    ]);
+  });
+
+  it("skips error tool results cleanly", () => {
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-err-1",
+            toolName: "generate_pdf",
+            result: {
+              error: "Failed to generate",
+              download_url: "https://minio.local:9000/outputs/partial.pdf",
+            },
+          },
+          {
+            toolCallId: "tc-err-2",
+            toolName: "export_csv",
+            result: {
+              isError: true,
+              url: "https://minio.local:9000/outputs/failed.csv",
+            },
+          },
+        ],
+      },
+    };
+
+    expect(extractMessageDownloads(msg)).toEqual([]);
+  });
+
+  it("ignores bare non-storage URLs in markdown and unknown MCP content types", () => {
+    const msg: Message = {
+      ...baseMessage,
+      content: "Reference: https://example.com/reference.pdf",
+      metadata: {
+        toolResults: [
+          {
+            toolCallId: "tc-edge",
+            toolName: "custom_tool",
+            result: {
+              structuredContent: null,
+              content: [
+                { type: "text", text: "" },
+                { type: "unknown", data: "ignored" },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    expect(extractMessageDownloads(msg)).toEqual([]);
+  });
+
+  it("handles staged path edge cases: invalid toolCalls, errored mutations, and pathless server mutations", () => {
+    const dummyBase64 =
+      "UEsDBBQAAAAIAHt0R11Gx01IlQAAAM0AAAAQAAAAZG9jUHJvcHMvYXBwLnhtbE3PTQvCMAwG4L9SdreZih6k";
+
+    // Errored mutation should NOT mark staged file as modified
+    const erroredMutationMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolCalls: [
+          null,
+          {
+            toolCallId: "tc-up",
+            toolName: "upload_file",
+            args: { file_path: "/tmp/staged.xlsx" },
+          },
+          {
+            toolCallId: "tc-mut-err",
+            toolName: "write_cells",
+            args: { file_path: "/tmp/staged.xlsx" },
+          },
+          {
+            toolCallId: "tc-dl",
+            toolName: "download_file",
+            args: { file_path: "/tmp/staged.xlsx" },
+          },
+        ],
+        toolResults: [
+          {
+            toolCallId: "tc-up",
+            toolName: "upload_file",
+            result: { file_path: "/tmp/staged.xlsx" },
+          },
+          {
+            toolCallId: "tc-mut-err",
+            toolName: "write_cells",
+            result: { error: "Permission denied" },
+          },
+          {
+            toolCallId: "tc-dl",
+            toolName: "download_file",
+            result: { file_content: dummyBase64, filename: "staged.xlsx" },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(erroredMutationMsg)).toEqual([]);
+
+    // Pathless mutation on same server marks staged file as modified; download without path also passes
+    const pathlessMutationMsg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolCalls: [
+          {
+            toolCallId: "tc-up",
+            toolName: "upload_file",
+            args: { file_path: "/tmp/staged2.xlsx" },
+          },
+          {
+            toolCallId: "tc-mut-pathless",
+            toolName: "write_cells",
+            args: { range: "A1" },
+          },
+          {
+            toolCallId: "tc-dl-nopath",
+            toolName: "download_file",
+            args: {},
+          },
+        ],
+        toolResults: [
+          {
+            toolCallId: "tc-up",
+            toolName: "upload_file",
+            result: { file_path: "/tmp/staged2.xlsx" },
+          },
+          {
+            toolCallId: "tc-mut-pathless",
+            toolName: "write_cells",
+            result: { ok: true },
+          },
+          {
+            toolCallId: "tc-dl-nopath",
+            toolName: "download_file",
+            result: {
+              download_url: "https://minio.local:9000/outputs/staged2.xlsx",
+            },
+          },
+        ],
+      },
+    };
+    expect(extractMessageDownloads(pathlessMutationMsg)).toHaveLength(1);
+  });
+
+  it("covers serverName web-search exclusion, basename staged matching, zero-size metadata, and extensionless download_url rules", () => {
+    const dummyBase64 =
+      "UEsDBBQAAAAIAHt0R11Gx01IlQAAAM0AAAAQAAAAZG9jUHJvcHMvYXBwLnhtbE3PTQvCMAwG4L9SdreZih6k";
+
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolCalls: [
+          {
+            toolCallId: "tc-up-base",
+            toolName: "upload_file",
+            args: { file_path: "/tmp/dir1/report.xlsx" },
+          },
+          {
+            toolCallId: "tc-dl-base",
+            toolName: "download_file",
+            args: { file_path: "/other/dir2/report.xlsx" },
+          },
+        ],
+        toolResults: [
+          {
+            toolCallId: "tc-up-base",
+            toolName: "upload_file",
+            result: { file_path: "/tmp/dir1/report.xlsx" },
+          },
+          {
+            toolCallId: "tc-dl-base",
+            toolName: "download_file",
+            result: { file_content: dummyBase64, filename: "report.xlsx" },
+          },
+          {
+            toolCallId: "tc-server-search",
+            toolName: "query_tool",
+            serverName: "rival-search-mcp",
+            result: { url: "https://example.com/data.csv", filename: "data.csv" },
+          },
+          {
+            toolCallId: "tc-zero-size",
+            toolName: "generic_tool",
+            result: { url: "https://example.com/empty.csv", size: 0 },
+          },
+          {
+            toolCallId: "tc-dl-storage-noext",
+            toolName: "exporter",
+            result: { download_url: "https://minio.local:9000/outputs/artifact" },
+          },
+          {
+            toolCallId: "tc-dl-mime-noext",
+            toolName: "exporter",
+            result: {
+              download_url: "https://cdn.example.com/get?id=42",
+              mimeType: "application/pdf",
+            },
+          },
+          {
+            toolCallId: "tc-dl-invalid-noext",
+            toolName: "exporter",
+            result: { download_url: "https://cdn.example.com/page?id=99" },
+          },
+        ],
+      },
+    };
+
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(2);
+    expect(items.map((i) => i.url)).toEqual([
+      "https://minio.local:9000/outputs/artifact",
+      "https://cdn.example.com/get?id=42",
+    ]);
+  });
+
+  it("handles pathless upload_file and pathless download_file with string result while unmodified staged file exists", () => {
+    const msg: Message = {
+      ...baseMessage,
+      metadata: {
+        toolCalls: [
+          {
+            toolCallId: "tc-up-nopath",
+            toolName: "upload_file",
+            args: {},
+          },
+          {
+            toolCallId: "tc-up-withpath",
+            toolName: "upload_file",
+            args: { file_path: "/tmp/keep_unmodified.xlsx" },
+          },
+          {
+            toolCallId: "tc-dl-str",
+            toolName: "download_file",
+            args: {},
+          },
+        ],
+        toolResults: [
+          {
+            toolCallId: "tc-up-nopath",
+            toolName: "upload_file",
+            result: { ok: true },
+          },
+          {
+            toolCallId: "tc-up-withpath",
+            toolName: "upload_file",
+            result: { file_path: "/tmp/keep_unmodified.xlsx" },
+          },
+          {
+            toolCallId: "tc-dl-str",
+            toolName: "download_file",
+            result: "Saved to https://minio.local:9000/outputs/final.xlsx",
+          },
+        ],
+      },
+    };
+
+    const items = extractMessageDownloads(msg);
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("final.xlsx");
   });
 });

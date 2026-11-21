@@ -18,7 +18,6 @@ import {
 } from "@/components/prompt/prompt-form";
 import { PromptScopeTab } from "@/components/prompt/prompt-scope-tab";
 import { DangerZoneCard } from "@/components/shared/danger-zone-card";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
 import { PageContainer } from "@/components/shared/page-container";
 import {
   SidebarTabs,
@@ -64,7 +63,6 @@ export default function PromptDetailPage() {
   const [loading, setLoading] = useState(prompts.length === 0);
   const [savingSettings, setSavingSettings] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const form = useForm<PromptFormValues>({
     resolver: zodResolver(promptFormSchema),
@@ -201,26 +199,17 @@ export default function PromptDetailPage() {
 
             <SidebarTabsContent value="danger">
               <DangerZoneCard
-                title="Danger Zone"
                 description="Irreversible actions for this prompt."
                 consequences="Deleting this prompt will permanently remove it from your shortcuts. This action cannot be undone."
-                buttonLabel="Delete Prompt"
-                onDelete={() => setShowDeleteDialog(true)}
+                confirmTitle={`Delete "${prompt.title}"?`}
+                confirmDescription="This will permanently delete the prompt shortcut. This cannot be undone."
+                onDelete={handleDelete}
                 isDeleting={deleting}
               />
             </SidebarTabsContent>
           </SidebarTabs>
         </form>
       </Form>
-
-      <DeleteConfirmDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDelete}
-        title={`Delete "${prompt.title}"?`}
-        description="This will permanently delete the prompt shortcut. This cannot be undone."
-        loading={deleting}
-      />
     </PageContainer>
   );
 }

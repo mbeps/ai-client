@@ -110,7 +110,7 @@ export function UserMessageBody({
         activeChatAssistantId={editProps.activeChatAssistantId}
         canMentionAssistant={!editProps.activeChatAssistantId}
         submitLabel="Save & Submit"
-        placeholder="Edit your message... Use / for skills and prompts, @ for assistant, # for knowledgebases"
+        placeholder="Edit your message... Use / for skills, prompts, agents, and knowledgebases"
         onCancel={editProps.onCancel}
         onSend={editProps.onSend}
         className="my-2 max-w-none md:mb-0"

@@ -257,7 +257,7 @@ describe("useMentionCommands", () => {
       expect(result.current.openTrigger).toBe("/");
     });
 
-    it("shows all prompts when query is empty (/)", () => {
+    it("shows all accessible items when query is empty (/)", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef),
@@ -267,7 +267,9 @@ describe("useMentionCommands", () => {
         result.current.handleInputChange(makeInputEvent("/", 1));
       });
 
-      expect(result.current.filteredItems).toHaveLength(SAMPLE_PROMPTS.length);
+      expect(result.current.filteredItems).toHaveLength(
+        SAMPLE_PROMPTS.length + SAMPLE_ASSISTANTS.length,
+      );
     });
 
     it("filters prompts by shortcut match", () => {
@@ -285,56 +287,57 @@ describe("useMentionCommands", () => {
     });
   });
 
-  describe("mention command detection (@)", () => {
-    it("opens command palette when input starts with @", () => {
+  describe("removed legacy triggers (@, #, \\)", () => {
+    it.each(["@", "#", "\\"])("does not open command palette for %s", (char) => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
-        useMentionCommands("", setInput, textareaRef),
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
       );
 
       act(() => {
-        result.current.handleInputChange(makeInputEvent("@", 1));
+        result.current.handleInputChange(makeInputEvent(char, 1));
       });
 
-      expect(result.current.openTrigger).toBe("@");
+      expect(result.current.openTrigger).toBeNull();
+      expect(result.current.filteredItems).toHaveLength(0);
     });
+  });
 
-    it("does not open if activeChatAssistantId is set", () => {
+  describe("assistant & knowledgebase filtering via /", () => {
+    it("opens / even when activeChatAssistantId is set, but omits assistants", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef, "some-id"),
       );
 
       act(() => {
-        result.current.handleInputChange(makeInputEvent("@", 1));
+        result.current.handleInputChange(makeInputEvent("/", 1));
       });
 
-      expect(result.current.openTrigger).toBeNull();
+      expect(result.current.openTrigger).toBe("/");
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual(["p1", "p2"]);
     });
 
-    it("shows all assistants when query is empty (@)", () => {
+    it("filters assistants by name match via /", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef),
       );
 
       act(() => {
-        result.current.handleInputChange(makeInputEvent("@", 1));
-      });
-
-      expect(result.current.filteredItems).toHaveLength(
-        SAMPLE_ASSISTANTS.length,
-      );
-    });
-
-    it("filters assistants by name match", () => {
-      const setInput = vi.fn();
-      const { result } = renderHook(() =>
-        useMentionCommands("", setInput, textareaRef),
-      );
-
-      act(() => {
-        result.current.handleInputChange(makeInputEvent("@code", 5));
+        result.current.handleInputChange(makeInputEvent("/code", 5));
       });
 
       expect(result.current.filteredItems).toHaveLength(1);
@@ -342,45 +345,15 @@ describe("useMentionCommands", () => {
         "Code Reviewer",
       );
     });
-  });
 
-  describe("knowledgebase command detection (#)", () => {
-    it("opens command palette when input starts with #", () => {
+    it("filters knowledgebases by name match via /", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
       );
 
       act(() => {
-        result.current.handleInputChange(makeInputEvent("#", 1));
-      });
-
-      expect(result.current.openTrigger).toBe("#");
-    });
-
-    it("shows all knowledgebases when query is empty (#)", () => {
-      const setInput = vi.fn();
-      const { result } = renderHook(() =>
-        useMentionCommands("", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
-      );
-
-      act(() => {
-        result.current.handleInputChange(makeInputEvent("#", 1));
-      });
-
-      expect(result.current.filteredItems).toHaveLength(
-        SAMPLE_KNOWLEDGEBASES.length,
-      );
-    });
-
-    it("filters knowledgebases by name match", () => {
-      const setInput = vi.fn();
-      const { result } = renderHook(() =>
-        useMentionCommands("", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
-      );
-
-      act(() => {
-        result.current.handleInputChange(makeInputEvent("#proj", 5));
+        result.current.handleInputChange(makeInputEvent("/proj", 5));
       });
 
       expect(result.current.filteredItems).toHaveLength(1);
@@ -389,14 +362,14 @@ describe("useMentionCommands", () => {
       );
     });
 
-    it("filters knowledgebases by description match", () => {
+    it("filters knowledgebases by description match via /", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands("", setInput, textareaRef, null, undefined, undefined, true, undefined, undefined, undefined, SAMPLE_KNOWLEDGEBASES),
       );
 
       act(() => {
-        result.current.handleInputChange(makeInputEvent("#api", 4));
+        result.current.handleInputChange(makeInputEvent("/api", 4));
       });
 
       expect(result.current.filteredItems).toHaveLength(1);
@@ -426,14 +399,14 @@ describe("useMentionCommands", () => {
       expect(result.current.openTrigger).toBeNull();
     });
 
-    it("removes the @ trigger and sets selectedAssistant", () => {
+    it("removes the / trigger and sets selectedAssistant", () => {
       const setInput = vi.fn();
       const { result } = renderHook(() =>
-        useMentionCommands("@code", setInput, textareaRef),
+        useMentionCommands("/code", setInput, textareaRef),
       );
 
       act(() => {
-        result.current.handleInputChange(makeInputEvent("@code", 5));
+        result.current.handleInputChange(makeInputEvent("/code", 5));
       });
 
       act(() => {
@@ -445,12 +418,12 @@ describe("useMentionCommands", () => {
       expect(result.current.openTrigger).toBeNull();
     });
 
-    it("removes the # trigger and sets selectedKnowledgebase", () => {
+    it("removes the / trigger and sets selectedKnowledgebase", () => {
       const setInput = vi.fn();
       const onSelectKnowledgebase = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands(
-          "#proj",
+          "/proj",
           setInput,
           textareaRef,
           null,
@@ -465,7 +438,7 @@ describe("useMentionCommands", () => {
       );
 
       act(() => {
-        result.current.handleInputChange(makeInputEvent("#proj", 5));
+        result.current.handleInputChange(makeInputEvent("/proj", 5));
       });
 
       act(() => {
@@ -968,52 +941,31 @@ describe("useMentionCommands", () => {
       expect(result.current.selectedPrompts).toEqual([]);
     });
 
-    it("closes the palette without selecting when a '/' item is neither a skill nor a prompt", () => {
+    it("does nothing on ArrowDown/ArrowUp when filtered list is empty", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("/zzz", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/zzz", 4));
+      });
+      expect(result.current.filteredItems).toHaveLength(0);
+
+      act(() => {
+        expect(result.current.handleKeyDown(makeKeyEvent("ArrowDown"))).toBe(true);
+        expect(result.current.handleKeyDown(makeKeyEvent("ArrowUp"))).toBe(true);
+      });
+      expect(result.current.selectedIndex).toBe(0);
+    });
+
+    it("closes the palette without selecting when an item matches no type guard", () => {
       const setInput = vi.fn();
       const onSelectSkill = vi.fn();
-      const { result } = renderHook(() =>
-        useMentionCommands("/sum", setInput, textareaRef, null, undefined, undefined, true, undefined, onSelectSkill),
-      );
-
-      act(() => {
-        result.current.handleInputChange(makeInputEvent("/sum", 4));
-      });
-      act(() => {
-        result.current.handleSelect({ id: "other", name: "plain" } as any);
-      });
-
-      expect(setInput).toHaveBeenLastCalledWith("");
-      expect(onSelectSkill).not.toHaveBeenCalled();
-      expect(result.current.selectedPrompts).toEqual([]);
-      expect(result.current.openTrigger).toBeNull();
-    });
-
-    it("closes the palette without selecting when an '@' item is not an assistant", () => {
-      const setInput = vi.fn();
-      const { result } = renderHook(() =>
-        useMentionCommands("@code", setInput, textareaRef),
-      );
-
-      act(() => {
-        result.current.handleInputChange(makeInputEvent("@code", 5));
-      });
-      act(() => {
-        // A knowledgebase-shaped item: not an assistant, and the '#'
-        // branch of the dispatch chain must not run for a '@' trigger.
-        result.current.handleSelect(SAMPLE_KNOWLEDGEBASES[0] as any);
-      });
-
-      expect(setInput).toHaveBeenLastCalledWith("");
-      expect(result.current.selectedAssistant).toBeNull();
-      expect(result.current.openTrigger).toBeNull();
-    });
-
-    it("closes the palette without selecting when a '#' item is not a knowledgebase", () => {
-      const setInput = vi.fn();
       const onSelectKnowledgebase = vi.fn();
       const { result } = renderHook(() =>
         useMentionCommands(
-          "#proj",
+          "/",
           setInput,
           textareaRef,
           null,
@@ -1021,21 +973,23 @@ describe("useMentionCommands", () => {
           undefined,
           true,
           undefined,
-          undefined,
+          onSelectSkill,
           onSelectKnowledgebase,
-          SAMPLE_KNOWLEDGEBASES,
         ),
       );
 
       act(() => {
-        result.current.handleInputChange(makeInputEvent("#proj", 5));
+        result.current.handleInputChange(makeInputEvent("/", 1));
       });
       act(() => {
-        result.current.handleSelect(SAMPLE_PROMPTS[0] as any);
+        result.current.handleSelect({ id: "unknown", documentCount: 0 } as any);
       });
 
       expect(setInput).toHaveBeenLastCalledWith("");
+      expect(onSelectSkill).not.toHaveBeenCalled();
       expect(onSelectKnowledgebase).not.toHaveBeenCalled();
+      expect(result.current.selectedPrompts).toEqual([]);
+      expect(result.current.selectedAssistant).toBeNull();
       expect(result.current.openTrigger).toBeNull();
     });
 
@@ -1297,7 +1251,7 @@ describe("useMentionCommands", () => {
     ];
 
     beforeEach(() => {
-      useAppStore.setState({ prompts: SCOPED_PROMPTS as any });
+      useAppStore.setState({ prompts: SCOPED_PROMPTS as any, agents: [] });
     });
 
     it("filters slash command suggestions using promptScopeContext in a project chat", () => {
@@ -1392,7 +1346,7 @@ describe("useMentionCommands", () => {
     ];
 
     beforeEach(() => {
-      useAppStore.setState({ skills: SCOPED_SKILLS as any, prompts: [] });
+      useAppStore.setState({ skills: SCOPED_SKILLS as any, prompts: [], agents: [] });
     });
 
     it("filters slash command skill suggestions using skillScopeContext in a project chat", () => {
@@ -1451,6 +1405,287 @@ describe("useMentionCommands", () => {
       });
 
       expect(result.current.filteredItems).toHaveLength(0);
+    });
+  });
+
+  describe("unified slash command detection (/) and type filtering", () => {
+    it("opens command palette and lists skills, prompts, assistants, and knowledgebases", () => {
+      useAppStore.setState({
+        skills: [
+          {
+            id: "sk-1",
+            name: "python-helper",
+            displayName: "Python Helper",
+            description: "Assists with python code",
+            enabled: true,
+          },
+        ] as any,
+      });
+
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      expect(result.current.openTrigger).toBe("/");
+      expect(result.current.typeFilter).toBeNull();
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "sk-1",
+        "p1",
+        "p2",
+        "a1",
+        "a2",
+        "kb1",
+        "kb2",
+      ]);
+    });
+
+    it("filters across all item types by query when using /", () => {
+      useAppStore.setState({
+        skills: [
+          {
+            id: "sk-1",
+            name: "translate-skill",
+            displayName: "Translate Skill",
+            description: "Skill for translation",
+            enabled: true,
+          },
+        ] as any,
+      });
+
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/trans", 6));
+      });
+
+      expect(result.current.typeFilter).toBeNull();
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "sk-1",
+        "p2",
+        "a2",
+      ]);
+    });
+
+    it("omits assistants from / results when activeChatAssistantId is set", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          "a1",
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+
+      expect(result.current.openTrigger).toBe("/");
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "p1",
+        "p2",
+        "kb1",
+        "kb2",
+      ]);
+    });
+
+    it.each([
+      ["/skill", "skill", ["sk-1", "sk-2"]],
+      ["/skills", "skill", ["sk-1", "sk-2"]],
+      ["/skill python", "skill", ["sk-1"]],
+      ["/prompt", "prompt", ["p1", "p2"]],
+      ["/prompts sum", "prompt", ["p1"]],
+      ["/agent", "agent", ["a1", "a2"]],
+      ["/assistant code", "agent", ["a1"]],
+      ["/knowledgebase", "knowledgebase", ["kb1", "kb2"]],
+      ["/kb api", "knowledgebase", ["kb2"]],
+    ])(
+      "filters by type prefix %s -> typeFilter=%s",
+      (typed, expectedType, expectedIds) => {
+        useAppStore.setState({
+          skills: [
+            {
+              id: "sk-1",
+              name: "python-helper",
+              displayName: "Python Helper",
+              description: "Assists with python",
+              enabled: true,
+            },
+            {
+              id: "sk-2",
+              name: "react-helper",
+              displayName: "React Helper",
+              description: "Assists with react",
+              enabled: true,
+            },
+          ] as any,
+        });
+
+        const setInput = vi.fn();
+        const { result } = renderHook(() =>
+          useMentionCommands(
+            "",
+            setInput,
+            textareaRef,
+            null,
+            undefined,
+            undefined,
+            true,
+            undefined,
+            undefined,
+            undefined,
+            SAMPLE_KNOWLEDGEBASES,
+          ),
+        );
+
+        act(() => {
+          result.current.handleInputChange(makeInputEvent(typed, typed.length));
+        });
+
+        expect(result.current.openTrigger).toBe("/");
+        expect(result.current.typeFilter).toBe(expectedType);
+        expect(result.current.filteredItems.map((i) => i.id)).toEqual(
+          expectedIds,
+        );
+      },
+    );
+
+    it("does not treat hyphenated queries like /skill-creator as a type filter", () => {
+      useAppStore.setState({
+        skills: [
+          {
+            id: "sk-1",
+            name: "skill-creator",
+            displayName: "Skill Creator",
+            description: "Creates skills",
+            enabled: true,
+          },
+          {
+            id: "sk-2",
+            name: "other-skill",
+            displayName: "Other Skill",
+            description: "Other",
+            enabled: true,
+          },
+        ] as any,
+      });
+
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands("", setInput, textareaRef),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/skill-creator", 14));
+      });
+
+      expect(result.current.typeFilter).toBeNull();
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual(["sk-1"]);
+    });
+
+    it("selects prompt, skill, assistant, and knowledgebase items from / trigger", () => {
+      const onSelectSkill = vi.fn();
+      const onSelectKnowledgebase = vi.fn();
+      const setInput = vi.fn();
+      const sampleSkill: any = {
+        id: "sk-1",
+        name: "code-review",
+        displayName: "Code Review",
+        description: "Review code",
+        isEnabled: true,
+        isSkill: true,
+      };
+
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          onSelectSkill,
+          onSelectKnowledgebase,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/skill", 6));
+      });
+      act(() => {
+        result.current.handleSelect(sampleSkill);
+      });
+      expect(onSelectSkill).toHaveBeenCalledWith(sampleSkill);
+      expect(result.current.openTrigger).toBeNull();
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[0]);
+      });
+      expect(result.current.selectedPrompts).toEqual([SAMPLE_PROMPTS[0]]);
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_KNOWLEDGEBASES[0]);
+      });
+      expect(onSelectKnowledgebase).toHaveBeenCalledWith(
+        SAMPLE_KNOWLEDGEBASES[0],
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/", 1));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_ASSISTANTS[0]);
+      });
+      expect(result.current.selectedAssistant).toEqual(SAMPLE_ASSISTANTS[0]);
     });
   });
 });

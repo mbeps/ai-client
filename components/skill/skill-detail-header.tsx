@@ -81,7 +81,7 @@ export function SkillDetailHeader({
           onChange={(e) => onDisplayNameChange(e.target.value)}
           placeholder={name || "Skill Name"}
           aria-label="Skill name"
-          className="hover:border-border/40 focus-visible:border-border focus-visible:bg-background/80 focus-visible:ring-ring h-auto border-transparent bg-transparent p-0 text-2xl font-bold tracking-tight shadow-none focus-visible:ring-1 md:text-3xl"
+          className="hover:border-border/40 focus-visible:border-border focus-visible:bg-background/80 focus-visible:ring-ring h-auto border-transparent bg-transparent p-0 text-2xl font-bold tracking-tight shadow-none focus-visible:ring-1 md:text-3xl dark:bg-transparent"
         />
 
         {/* Editable Slash Command Slug */}
@@ -92,7 +92,7 @@ export function SkillDetailHeader({
             onChange={handleSlugChange}
             placeholder="skill-slug"
             aria-label="Skill slash command slug"
-            className="border-muted-foreground/30 h-6 w-48 bg-transparent px-1.5 py-0 font-mono text-xs shadow-none focus-visible:ring-1"
+            className="border-muted-foreground/30 h-6 w-48 bg-transparent px-1.5 py-0 font-mono text-xs shadow-none focus-visible:ring-1 dark:bg-transparent"
           />
         </div>
 

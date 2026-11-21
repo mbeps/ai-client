@@ -152,8 +152,12 @@ describe("ModelEditorForm", () => {
     // Fill Details
     const modelIdInput = screen.getByLabelText("Model ID");
     const labelInput = screen.getByLabelText("Display Label");
-    await user.type(modelIdInput, "anthropic/claude-3-7-sonnet");
-    await user.type(labelInput, "Claude 3.7 Sonnet");
+    fireEvent.change(modelIdInput, {
+      target: { value: "anthropic/claude-3-7-sonnet" },
+    });
+    fireEvent.change(labelInput, {
+      target: { value: "Claude 3.7 Sonnet" },
+    });
 
     // Click Create Model button
     const submitButton = screen.getByRole("button", { name: /create model/i });
@@ -181,7 +185,7 @@ describe("ModelEditorForm", () => {
         model={dummyModel}
         providers={dummyProviders}
         onSuccess={onSuccess}
-        onRequestDelete={vi.fn()}
+        onDelete={vi.fn()}
       />,
     );
 
@@ -193,8 +197,7 @@ describe("ModelEditorForm", () => {
 
     // Update label
     const labelInput = screen.getByLabelText("Display Label");
-    await user.clear(labelInput);
-    await user.type(labelInput, "GPT-4o Updated");
+    fireEvent.change(labelInput, { target: { value: "GPT-4o Updated" } });
 
     const saveButton = screen.getByRole("button", { name: /save changes/i });
     await user.click(saveButton);
@@ -211,20 +214,23 @@ describe("ModelEditorForm", () => {
 
   it("renders and triggers danger zone delete request", async () => {
     const user = userEvent.setup();
-    const onRequestDelete = vi.fn();
+    const onDelete = vi.fn().mockResolvedValue(undefined);
     currentQueryTab = "danger";
     render(
       <ModelEditorForm
         model={dummyModel}
         providers={dummyProviders}
-        onRequestDelete={onRequestDelete}
+        onDelete={onDelete}
       />,
     );
 
-    const deleteBtn = screen.getByRole("button", { name: /delete model/i });
+    const deleteBtn = screen.getByRole("button", { name: /^delete$/i });
     expect(deleteBtn).toBeInTheDocument();
     await user.click(deleteBtn);
 
-    expect(onRequestDelete).toHaveBeenCalled();
+    const confirmBtn = screen.getAllByRole("button", { name: /^delete$/i });
+    await user.click(confirmBtn[confirmBtn.length - 1]);
+
+    expect(onDelete).toHaveBeenCalled();
   });
 });

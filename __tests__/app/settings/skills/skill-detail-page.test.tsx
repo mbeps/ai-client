@@ -264,11 +264,11 @@ describe("SkillDetailPage", () => {
 
     render(<SkillDetailPage />);
 
-    const deleteBtn = screen.getByRole("button", { name: /delete skill/i });
+    const deleteBtn = screen.getByRole("button", { name: /^delete$/i });
     await user.click(deleteBtn);
 
-    const confirmBtn = screen.getByRole("button", { name: "Delete" });
-    await user.click(confirmBtn);
+    const confirmBtns = screen.getAllByRole("button", { name: "Delete" });
+    await user.click(confirmBtns[confirmBtns.length - 1]);
 
     await waitFor(() => {
       expect(deleteSkill).toHaveBeenCalledWith("skill-1");

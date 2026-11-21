@@ -369,4 +369,53 @@ describe("hybridSearch", () => {
     await Promise.resolve();
     await Promise.resolve();
   });
+
+  it("handles non-Error rejection in stale Qdrant cleanup and keeps all chunks when none are stale", async () => {
+    const kbSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([{ id: "kb-1", indexStatus: "ready" }]),
+    };
+    const docSelectAllLive = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([{ id: "doc-live" }]),
+    };
+    dbMock.select
+      .mockReturnValueOnce(kbSelect)
+      .mockReturnValueOnce(docSelectAllLive);
+
+    embedQueryMock.mockResolvedValue([0.1]);
+    searchSemanticVectorsMock.mockResolvedValueOnce([
+      { id: "c-live", documentId: "doc-live", content: "live" },
+    ]);
+    searchKeywordChunksMock.mockResolvedValueOnce([]);
+    applyRRFMock.mockReturnValue([
+      { id: "c-live", documentId: "doc-live", content: "live" },
+    ]);
+
+    const liveResult = await hybridSearch("kb-1", "test query", "user-1", 5);
+    expect(liveResult).toEqual([
+      { id: "c-live", documentId: "doc-live", content: "live" },
+    ]);
+
+    const docSelectNoneLive = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([]),
+    };
+    dbMock.select
+      .mockReturnValueOnce(kbSelect)
+      .mockReturnValueOnce(docSelectNoneLive);
+
+    embedQueryMock.mockResolvedValue([0.1]);
+    searchSemanticVectorsMock.mockResolvedValueOnce([
+      { id: "c-stale", documentId: "doc-deleted", content: "stale" },
+    ]);
+    searchKeywordChunksMock.mockResolvedValueOnce([]);
+    deletePointsByDocumentIdMock.mockRejectedValueOnce("string error");
+    applyRRFMock.mockReturnValue([]);
+
+    const staleResult = await hybridSearch("kb-1", "test query", "user-1", 5);
+    expect(staleResult).toEqual([]);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 });
