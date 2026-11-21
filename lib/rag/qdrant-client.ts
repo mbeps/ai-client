@@ -8,9 +8,10 @@ const log = getLogger(["app", "rag", "qdrant"]);
 /** In-memory cache of verified collections to avoid redundant HTTP collectionExists calls. */
 const verifiedCollections = new Set<string>();
 
-/** Clears the in-memory verified collections cache (used in tests). */
+/** Clears the in-memory verified collections cache and resets the Qdrant client (used in tests). */
 export function clearCollectionCache(): void {
   verifiedCollections.clear();
+  qdrantClient = null;
 }
 
 /**
@@ -27,11 +28,22 @@ export type QdrantChunkPayload = {
   s3Key: string;
 };
 
-/** Singleton Qdrant client instance connecting via configured environment variables. */
-const qdrantClient = new QdrantClient({
-  url: env.QDRANT_URL,
-  apiKey: env.QDRANT_API_KEY || undefined,
-});
+/** Lazily instantiated Qdrant client singleton. */
+let qdrantClient: QdrantClient | null = null;
+
+function isQdrantDisabled(): boolean {
+  return env.RAG_MODE === "file_read" || !env.QDRANT_URL;
+}
+
+function getQdrantClient(): QdrantClient {
+  if (!qdrantClient) {
+    qdrantClient = new QdrantClient({
+      url: env.QDRANT_URL,
+      apiKey: env.QDRANT_API_KEY || undefined,
+    });
+  }
+  return qdrantClient;
+}
 
 /**
  * Derives the collection name for a given embedding vector dimensionality.
@@ -79,11 +91,12 @@ export async function ensureQdrantCollection(
   dimensions: number,
 ): Promise<string> {
   const collectionName = getCollectionName(dimensions);
-  if (verifiedCollections.has(collectionName)) {
+  if (isQdrantDisabled() || verifiedCollections.has(collectionName)) {
     return collectionName;
   }
 
-  const existsRes = await qdrantClient.collectionExists(collectionName);
+  const client = getQdrantClient();
+  const existsRes = await client.collectionExists(collectionName);
   const exists = typeof existsRes === "boolean" ? existsRes : existsRes?.exists;
 
   if (!exists) {
@@ -92,7 +105,7 @@ export async function ensureQdrantCollection(
       dim: dimensions,
     });
 
-    await qdrantClient.createCollection(collectionName, {
+    await client.createCollection(collectionName, {
       vectors: {
         size: dimensions,
         distance: "Cosine",
@@ -109,7 +122,7 @@ export async function ensureQdrantCollection(
       { field_name: "chunkIndex", field_schema: "integer" },
     ];
     for (const idx of indexes) {
-      await qdrantClient.createPayloadIndex(collectionName, idx);
+      await client.createPayloadIndex(collectionName, idx);
     }
   }
 
@@ -131,10 +144,10 @@ export async function upsertChunkPoints(
     payload: QdrantChunkPayload;
   }>,
 ): Promise<void> {
-  if (points.length === 0) return;
+  if (isQdrantDisabled() || points.length === 0) return;
 
   const collectionName = await ensureQdrantCollection(dimensions);
-  await qdrantClient.upsert(collectionName, { wait: true, points });
+  await getQdrantClient().upsert(collectionName, { wait: true, points });
   log.debug("Upserted {count} points into Qdrant {collection}", {
     count: points.length,
     collection: collectionName,
@@ -158,7 +171,7 @@ export async function searchSemanticVectors(
   limit: number,
   documentIds?: string[],
 ): Promise<ScoredChunk[]> {
-  if (kbIds.length === 0) return [];
+  if (isQdrantDisabled() || kbIds.length === 0) return [];
 
   const collectionName = await ensureQdrantCollection(dimensions);
   const must: Record<string, unknown>[] = [
@@ -168,7 +181,7 @@ export async function searchSemanticVectors(
     must.push({ key: "documentId", match: { any: documentIds } });
   }
 
-  const res = await qdrantClient.query(collectionName, {
+  const res = await getQdrantClient().query(collectionName, {
     query: vector,
     filter: { must },
     limit,
@@ -195,7 +208,7 @@ export async function searchKeywordChunks(
   limit: number,
   documentIds?: string[],
 ): Promise<ScoredChunk[]> {
-  if (kbIds.length === 0 || !queryText.trim()) return [];
+  if (isQdrantDisabled() || kbIds.length === 0 || !queryText.trim()) return [];
 
   const collectionName = await ensureQdrantCollection(dimensions);
   const must: Record<string, unknown>[] = [
@@ -206,7 +219,7 @@ export async function searchKeywordChunks(
     must.push({ key: "documentId", match: { any: documentIds } });
   }
 
-  const res = await qdrantClient.query(collectionName, {
+  const res = await getQdrantClient().query(collectionName, {
     filter: { must },
     limit,
     with_payload: true,
@@ -231,15 +244,16 @@ export async function getDocumentChunksByRange(
   startIndex?: number,
   endIndex?: number,
 ): Promise<ScoredChunk[]> {
-  if (kbIds.length === 0) return [];
+  if (isQdrantDisabled() || kbIds.length === 0) return [];
 
-  const collectionsRes = await qdrantClient.getCollections();
+  const client = getQdrantClient();
+  const collectionsRes = await client.getCollections();
   const chunks: ScoredChunk[] = [];
 
   for (const col of collectionsRes.collections) {
     if (!col.name.startsWith("kb_chunks_")) continue;
 
-    const res = await qdrantClient.scroll(col.name, {
+    const res = await client.scroll(col.name, {
       filter: {
         must: [
           { key: "documentId", match: { value: documentId } },
@@ -269,10 +283,13 @@ export async function getDocumentChunksByRange(
 export async function deletePointsByDocumentId(
   documentId: string,
 ): Promise<void> {
-  const collectionsRes = await qdrantClient.getCollections();
+  if (isQdrantDisabled()) return;
+
+  const client = getQdrantClient();
+  const collectionsRes = await client.getCollections();
   for (const col of collectionsRes.collections) {
     if (col.name.startsWith("kb_chunks_")) {
-      await qdrantClient.delete(col.name, {
+      await client.delete(col.name, {
         wait: true,
         filter: { must: [{ key: "documentId", match: { value: documentId } }] },
       });
@@ -286,12 +303,13 @@ export async function deletePointsByDocumentId(
  * @param kbIds Knowledge base UUIDs
  */
 export async function deletePointsByKbIds(kbIds: string[]): Promise<void> {
-  if (kbIds.length === 0) return;
+  if (isQdrantDisabled() || kbIds.length === 0) return;
 
-  const collectionsRes = await qdrantClient.getCollections();
+  const client = getQdrantClient();
+  const collectionsRes = await client.getCollections();
   for (const col of collectionsRes.collections) {
     if (col.name.startsWith("kb_chunks_")) {
-      await qdrantClient.delete(col.name, {
+      await client.delete(col.name, {
         wait: true,
         filter: { must: [{ key: "kbId", match: { any: kbIds } }] },
       });

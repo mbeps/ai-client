@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
@@ -6,7 +7,10 @@ import { RagExtractionEmptyError } from "@/lib/error/rag-extraction-empty-error"
 import { getLogger } from "@/lib/logger";
 import { chunkText } from "@/lib/rag/chunk-text";
 import { embedDocuments } from "@/lib/rag/embed-documents";
-import { extractDocumentMetadata } from "@/lib/rag/extract-document-metadata";
+import {
+  type ExtractedDocumentMetadata,
+  extractDocumentMetadata,
+} from "@/lib/rag/extract-document-metadata";
 import {
   extractTextFromBuffer,
   MAX_DOCUMENT_CHARS_LIMIT,
@@ -26,6 +30,13 @@ import type {
 
 const log = getLogger(["app", "rag", "pipeline"]);
 
+const DEFAULT_DOCUMENT_METADATA: ExtractedDocumentMetadata = {
+  documentType: "general",
+  summary: "",
+  keyEntities: [],
+  tableOfContents: [],
+};
+
 /**
  * Persists intermediate ingestion step progress onto the document row so
  * polling clients reflect live sub-step transitions.
@@ -41,87 +52,56 @@ async function persistIngestSteps(
 }
 
 /**
- * Shared ingestion pipeline: extract text → chunk text → embed → extract metadata/TOC →
- * upsert into Qdrant → mark doc ready with metadata → generate bidirectional relationship graph edges.
- * Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
- *
- * Catches LLM metadata and relationship generation errors gracefully, falling back to deterministic
- * headings and excerpts so vector indexing is never blocked by provider failures.
- *
- * @param doc - Fetched kbDocument row to ingest
- * @param buffer - File content fetched from S3 storage
- * @param userId - User ID for per-user embedding and chat provider resolution
- * @param providedKbName - Optional knowledge base display name override
- * @returns Chunk and token counts of the newly inserted chunks
- * @throws {RagExtractionEmptyError} When the file contains no extractable text
- * @author Maruf Bepary
+ * Verifies the document row still exists in PostgreSQL before persisting
+ * vectors or metadata, preventing orphaned Qdrant points on concurrent delete.
  */
-export async function ingestDocumentPipeline(
-  doc: KbDocumentRow,
-  buffer: Buffer,
-  userId: string,
-  providedKbName?: string,
-  onStepChange?: (step: KbIngestStepId) => void,
-): Promise<{ chunkCount: number; tokenCount: number }> {
-  log.debug("Ingesting document (id: {docId}, name: {name})", {
-    docId: doc.id,
-    name: doc.name,
-  });
-
-  onStepChange?.("extracting");
-  const text = await extractTextFromBuffer(buffer, doc.mimeType);
-  if (!text.trim()) {
-    const error = new RagExtractionEmptyError(
-      `Document "${doc.name}" contains no readable text.`,
-    );
-    (error as any).documentName = doc.name;
-    (error as any).mimeType = doc.mimeType;
-    throw error;
-  }
-
-  // Truncation detected when extraction hit the character limit
-  const truncated = text.length >= MAX_DOCUMENT_CHARS_LIMIT;
-  const chunks = chunkText(text);
-
-  onStepChange?.("embedding");
-  let steps = createInitialIngestSteps({
-    uploading: { status: "completed" },
-    extracting: { status: "completed" },
-    embedding: { status: "loading" },
-  });
-  await persistIngestSteps(doc.id, steps);
-
-  const embeddings = await embedDocuments(chunks, userId);
-
-  // Check if document or knowledgebase was deleted concurrently before storing chunks
+async function documentExists(documentId: string): Promise<boolean> {
   const [currentDoc] = await db
     .select({ id: kbDocument.id })
     .from(kbDocument)
-    .where(eq(kbDocument.id, doc.id));
+    .where(eq(kbDocument.id, documentId));
+  return Boolean(currentDoc);
+}
 
-  if (!currentDoc) {
+/**
+ * Resolves the parent knowledge base name from an explicit override or DB lookup.
+ */
+async function resolveKbName(
+  kbId: string,
+  providedKbName?: string,
+): Promise<string> {
+  if (providedKbName !== undefined) return providedKbName;
+  const [kb] = await db
+    .select({ name: knowledgebase.name })
+    .from(knowledgebase)
+    .where(eq(knowledgebase.id, kbId));
+  return kb?.name ?? "";
+}
+
+/**
+ * Runs embedding generation, concurrent-delete guard, and Qdrant upsert.
+ * Returns `false` if the document was deleted concurrently.
+ */
+async function runEmbeddingStage(
+  doc: KbDocumentRow,
+  chunks: string[],
+  userId: string,
+  providedKbName?: string,
+): Promise<boolean> {
+  const embeddings = await embedDocuments(chunks, userId);
+
+  if (!(await documentExists(doc.id))) {
     log.info(
       "Document or Knowledge Base deleted concurrently; skipping point persistence",
-      {
-        documentId: doc.id,
-        kbId: doc.kbId,
-      },
+      { documentId: doc.id, kbId: doc.kbId },
     );
     await deletePointsByDocumentId(doc.id);
-    return { chunkCount: 0, tokenCount: 0 };
+    return false;
   }
 
-  let kbName = providedKbName;
-  if (kbName === undefined) {
-    const [kb] = await db
-      .select({ name: knowledgebase.name })
-      .from(knowledgebase)
-      .where(eq(knowledgebase.id, doc.kbId));
-    kbName = kb?.name ?? "";
-  }
+  const kbName = await resolveKbName(doc.kbId, providedKbName);
   const dimensions = embeddings[0]?.length ?? 0;
 
-  // Replace points in Qdrant: delete old points for document, then upsert new points
   await deletePointsByDocumentId(doc.id);
 
   if (dimensions > 0 && chunks.length > 0) {
@@ -144,60 +124,136 @@ export async function ingestDocumentPipeline(
     );
   }
 
-  onStepChange?.("metadata");
-  steps = {
-    ...steps,
-    embedding: { status: "completed" },
-    metadata: { status: "loading" },
-  };
-  await persistIngestSteps(doc.id, steps);
+  return true;
+}
 
-  let metadataError: string | undefined;
-  const metadata = await extractDocumentMetadata({
-    documentName: doc.name,
-    chunks,
-    userId,
-    kbId: doc.kbId,
-    onFallback: (reason) => {
-      metadataError = reason;
-    },
+/**
+ * Shared mode-aware ingestion pipeline (`hybrid` | `vector` | `file_read`):
+ * extract text → chunk text → [embed + Qdrant] → [extract metadata/TOC + relations] → mark doc ready.
+ * Used by both ingestDocument (single upload) and reindexKnowledgebase (per-doc loop).
+ *
+ * Catches LLM metadata and relationship generation errors gracefully, falling back to deterministic
+ * headings and excerpts so indexing is never blocked by provider failures.
+ *
+ * @param doc - Fetched kbDocument row to ingest
+ * @param buffer - File content fetched from S3 storage
+ * @param userId - User ID for per-user embedding and chat provider resolution
+ * @param providedKbName - Optional knowledge base display name override
+ * @param onStepChange - Optional callback invoked as each pipeline step starts
+ * @returns Chunk and token counts of the newly ingested chunks
+ * @throws {RagExtractionEmptyError} When the file contains no extractable text
+ * @author Maruf Bepary
+ */
+export async function ingestDocumentPipeline(
+  doc: KbDocumentRow,
+  buffer: Buffer,
+  userId: string,
+  providedKbName?: string,
+  onStepChange?: (step: KbIngestStepId) => void,
+): Promise<{ chunkCount: number; tokenCount: number }> {
+  const ragMode = env.RAG_MODE;
+  log.debug("Ingesting document (id: {docId}, name: {name}, mode: {ragMode})", {
+    docId: doc.id,
+    name: doc.name,
+    ragMode,
   });
 
-  const metadataEntry: KbIngestStepEntry = metadataError
-    ? { status: "failed", error: metadataError }
-    : { status: "completed" };
+  onStepChange?.("extracting");
+  const text = await extractTextFromBuffer(buffer, doc.mimeType);
+  if (!text.trim()) {
+    const error = new RagExtractionEmptyError(
+      `Document "${doc.name}" contains no readable text.`,
+    );
+    (error as any).documentName = doc.name;
+    (error as any).mimeType = doc.mimeType;
+    throw error;
+  }
 
-  onStepChange?.("relations");
-  steps = {
-    ...steps,
-    metadata: metadataEntry,
-    relations: { status: "loading" },
-  };
-  await persistIngestSteps(doc.id, steps);
+  // Truncation detected when extraction hit the character limit
+  const truncated = text.length >= MAX_DOCUMENT_CHARS_LIMIT;
+  const chunks = chunkText(text);
 
-  let relationsError: string | undefined;
-  await generateDocumentRelations({
-    doc: {
-      id: doc.id,
+  let steps = createInitialIngestSteps({
+    uploading: { status: "completed" },
+    extracting: { status: "completed" },
+  });
+
+  if (ragMode !== "file_read") {
+    onStepChange?.("embedding");
+    steps = { ...steps, embedding: { status: "loading" } };
+    await persistIngestSteps(doc.id, steps);
+
+    const persisted = await runEmbeddingStage(
+      doc,
+      chunks,
+      userId,
+      providedKbName,
+    );
+    if (!persisted) {
+      return { chunkCount: 0, tokenCount: 0 };
+    }
+    steps = { ...steps, embedding: { status: "completed" } };
+  } else if (!(await documentExists(doc.id))) {
+    log.info(
+      "Document or Knowledge Base deleted concurrently; skipping metadata persistence",
+      { documentId: doc.id, kbId: doc.kbId },
+    );
+    return { chunkCount: 0, tokenCount: 0 };
+  }
+
+  let metadata: ExtractedDocumentMetadata = DEFAULT_DOCUMENT_METADATA;
+  if (ragMode !== "vector") {
+    onStepChange?.("metadata");
+    steps = { ...steps, metadata: { status: "loading" } };
+    await persistIngestSteps(doc.id, steps);
+
+    let metadataError: string | undefined;
+    metadata = await extractDocumentMetadata({
+      documentName: doc.name,
+      chunks,
+      userId,
       kbId: doc.kbId,
-      name: doc.name,
-      documentType: metadata.documentType,
-      summary: metadata.summary,
-      keyEntities: metadata.keyEntities,
-    },
-    userId,
-    onError: (reason) => {
-      relationsError = reason;
-    },
-  });
+      onFallback: (reason) => {
+        metadataError = reason;
+      },
+    });
 
-  const relationsEntry: KbIngestStepEntry = relationsError
-    ? { status: "failed", error: relationsError }
-    : { status: "completed" };
-  steps = {
-    ...steps,
-    relations: relationsEntry,
-  };
+    const metadataEntry: KbIngestStepEntry = metadataError
+      ? { status: "failed", error: metadataError }
+      : { status: "completed" };
+
+    onStepChange?.("relations");
+    steps = {
+      ...steps,
+      metadata: metadataEntry,
+      relations: { status: "loading" },
+    };
+    await persistIngestSteps(doc.id, steps);
+
+    let relationsError: string | undefined;
+    await generateDocumentRelations({
+      doc: {
+        id: doc.id,
+        kbId: doc.kbId,
+        name: doc.name,
+        documentType: metadata.documentType,
+        summary: metadata.summary,
+        keyEntities: metadata.keyEntities,
+      },
+      userId,
+      onError: (reason) => {
+        relationsError = reason;
+      },
+    });
+
+    const relationsEntry: KbIngestStepEntry = relationsError
+      ? { status: "failed", error: relationsError }
+      : { status: "completed" };
+    steps = {
+      ...steps,
+      relations: relationsEntry,
+    };
+  }
 
   const tokenCount = chunks.reduce((s, c) => s + Math.round(c.length / 4), 0);
 
@@ -220,9 +276,10 @@ export async function ingestDocumentPipeline(
     .where(eq(kbDocument.id, doc.id));
 
   log.info(
-    "Document ingested successfully into Qdrant (id: {docId}, chunks: {chunkCount}, tokens: {tokenCount})",
+    "Document ingested successfully (id: {docId}, mode: {ragMode}, chunks: {chunkCount}, tokens: {tokenCount})",
     {
       docId: doc.id,
+      ragMode,
       chunkCount: chunks.length,
       tokenCount,
     },

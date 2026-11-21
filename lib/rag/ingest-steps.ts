@@ -1,8 +1,26 @@
-import { KB_INGEST_STEPS } from "@/config/knowledgebase";
+import { env, type RagMode } from "@/config/env";
 import type {
   KbIngestStepId,
   KbIngestStepsState,
 } from "@/types/knowledgebase/kb-ingest-steps";
+
+const ACTIVE_STEPS_BY_MODE: Record<RagMode, KbIngestStepId[]> = {
+  hybrid: ["uploading", "extracting", "embedding", "metadata", "relations"],
+  vector: ["uploading", "extracting", "embedding"],
+  file_read: ["uploading", "extracting", "metadata", "relations"],
+};
+
+/**
+ * Returns the ordered list of active ingestion step IDs for the given RAG mode.
+ *
+ * @param ragMode - Active RAG strategy (defaults to `env.RAG_MODE`)
+ * @returns Ordered array of step identifiers executed in this mode
+ */
+export function getActiveIngestStepIds(
+  ragMode: RagMode = env.RAG_MODE,
+): KbIngestStepId[] {
+  return ACTIVE_STEPS_BY_MODE[ragMode];
+}
 
 /**
  * Builds a complete initial ingestion steps map with every step defaulting to
@@ -25,27 +43,30 @@ export function createInitialIngestSteps(
 }
 
 /**
- * Builds a step map where steps prior to `failedStep` are marked `completed`,
- * `failedStep` is marked `failed` with `errorMessage`, and subsequent steps
+ * Builds a step map where active steps prior to `failedStep` are marked `completed`,
+ * `failedStep` is marked `failed` with `errorMessage`, and inactive or subsequent steps
  * remain `pending`.
  *
  * @param failedStep - The step identifier that failed
  * @param errorMessage - Human-readable error explanation
+ * @param ragMode - Active RAG strategy (defaults to `env.RAG_MODE`)
  * @returns Full five-step state record reflecting the failure boundary
  */
 export function buildFailedIngestSteps(
   failedStep: KbIngestStepId,
   errorMessage: string,
+  ragMode: RagMode = env.RAG_MODE,
 ): KbIngestStepsState {
   const result = createInitialIngestSteps();
+  const activeStepIds = getActiveIngestStepIds(ragMode);
   let seenFailure = false;
 
-  for (const step of KB_INGEST_STEPS) {
-    if (step.id === failedStep) {
-      result[step.id] = { status: "failed", error: errorMessage };
+  for (const stepId of activeStepIds) {
+    if (stepId === failedStep) {
+      result[stepId] = { status: "failed", error: errorMessage };
       seenFailure = true;
     } else if (!seenFailure) {
-      result[step.id] = { status: "completed" };
+      result[stepId] = { status: "completed" };
     }
   }
 

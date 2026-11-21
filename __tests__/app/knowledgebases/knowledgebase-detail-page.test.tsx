@@ -12,6 +12,8 @@ const mockListModels = vi.hoisted(() => vi.fn());
 const mockUploadKbDocument = vi.hoisted(() => vi.fn());
 const mockIngestKbDocument = vi.hoisted(() => vi.fn());
 const mockUpdateKnowledgebase = vi.hoisted(() => vi.fn());
+const mockGetRagConfig = vi.hoisted(() => vi.fn());
+const mockUseUserModels = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "kb-1" }),
@@ -64,14 +66,12 @@ vi.mock("@/actions/models/list-models", () => ({
   listModels: mockListModels,
 }));
 
+vi.mock("@/actions/knowledgebases/get-rag-config", () => ({
+  getRagConfig: mockGetRagConfig,
+}));
+
 vi.mock("@/hooks/use-user-models", () => ({
-  useUserModels: (type?: string) => ({
-    models:
-      type === "chat"
-        ? [{ id: "chat-1", label: "GPT-4o Mini", providerName: "OpenRouter" }]
-        : [{ id: "model-1", label: "text-embedding-3-small" }],
-    isLoading: false,
-  }),
+  useUserModels: mockUseUserModels,
 }));
 
 vi.mock("@/components/knowledgebase/kb-graph-tab", () => ({
@@ -135,6 +135,17 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+    mockGetRagConfig.mockResolvedValue({
+      ok: true,
+      value: { ragMode: "hybrid", requiresEmbedding: true },
+    });
+    mockUseUserModels.mockImplementation((type?: string) => ({
+      models:
+        type === "chat"
+          ? [{ id: "chat-1", label: "GPT-4o Mini", providerName: "OpenRouter" }]
+          : [{ id: "model-1", label: "text-embedding-3-small" }],
+      isLoading: false,
+    }));
     mockGetUserSettings.mockResolvedValue({ defaultEmbeddingModelId: "model-1" });
     mockListModels.mockResolvedValue([
       { id: "model-1", label: "text-embedding-3-small" },
@@ -509,5 +520,79 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
         metadataModelId: "chat-1",
       });
     });
+  });
+
+  it("enables upload without embedding models and shows file_read notice in settings when RAG_MODE is file_read", async () => {
+    const nuqs = await import("nuqs");
+    vi.mocked(nuqs.useQueryState).mockReturnValue([
+      "documents",
+      vi.fn(),
+    ] as unknown as ReturnType<typeof nuqs.useQueryState>);
+
+    mockGetRagConfig.mockResolvedValue({
+      ok: true,
+      value: { ragMode: "file_read", requiresEmbedding: false },
+    });
+    mockUseUserModels.mockImplementation((type?: string) => ({
+      models:
+        type === "chat"
+          ? [{ id: "chat-1", label: "GPT-4o Mini", providerName: "OpenRouter" }]
+          : [],
+      isLoading: false,
+    }));
+    mockGetKnowledgebase.mockResolvedValue({ ok: true, value: baseKb });
+    mockListDocuments.mockResolvedValue({ ok: true, value: [] });
+
+    const { rerender } = render(<KnowledgebasePage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /upload/i }),
+      ).toBeEnabled();
+    });
+
+    expect(
+      screen.queryByText(
+        "No embedding models configured. Please set up a provider with embedding support to upload documents.",
+      ),
+    ).not.toBeInTheDocument();
+
+    vi.mocked(nuqs.useQueryState).mockReturnValue([
+      "settings",
+      vi.fn(),
+    ] as unknown as ReturnType<typeof nuqs.useQueryState>);
+    rerender(<KnowledgebasePage />);
+
+    expect(
+      await screen.findByText("Not required (File Read mode)"),
+    ).toBeInTheDocument();
+  });
+
+  it("hides Graph tab and Metadata & Relations Model selector when RAG_MODE is vector", async () => {
+    const nuqs = await import("nuqs");
+    vi.mocked(nuqs.useQueryState).mockReturnValue([
+      "settings",
+      vi.fn(),
+    ] as unknown as ReturnType<typeof nuqs.useQueryState>);
+
+    mockGetRagConfig.mockResolvedValue({
+      ok: true,
+      value: { ragMode: "vector", requiresEmbedding: true },
+    });
+    mockGetKnowledgebase.mockResolvedValue({ ok: true, value: baseKb });
+    mockListDocuments.mockResolvedValue({ ok: true, value: [] });
+
+    render(<KnowledgebasePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Knowledge Base Details")).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole("tab", { name: /graph/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Metadata & Relations Model"),
+    ).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { env } from "@/config/env";
 import { RAG_CONFIG } from "@/config/rag";
 import { db } from "@/drizzle/db";
+import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { isRateLimitError } from "@/lib/error/is-rate-limit-error";
 import { KnowledgebaseNotReadyError } from "@/lib/error/knowledgebase-not-ready-error";
@@ -9,6 +10,7 @@ import { normalizeRateLimitMessage } from "@/lib/error/normalize-rate-limit-mess
 import { RateLimitError } from "@/lib/error/rate-limit-error";
 import { getLogger } from "@/lib/logger";
 import {
+  deletePointsByDocumentId,
   searchKeywordChunks,
   searchSemanticVectors,
 } from "@/lib/rag/qdrant-client";
@@ -118,5 +120,46 @@ export async function hybridSearch(
     }),
   ]);
 
-  return applyRRF(vectorRows, ftsRows, topK);
+  const candidateDocIds = [
+    ...new Set(
+      [...vectorRows, ...ftsRows]
+        .map((row) => row.documentId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  let activeVectorRows = vectorRows;
+  let activeFtsRows = ftsRows;
+
+  if (candidateDocIds.length > 0) {
+    const existingDocs = await db
+      .select({ id: kbDocument.id })
+      .from(kbDocument)
+      .where(
+        and(
+          inArray(kbDocument.id, candidateDocIds),
+          inArray(kbDocument.kbId, kbIds),
+        ),
+      );
+    const existingDocIds = new Set(existingDocs.map((d) => d.id));
+    const staleDocIds = candidateDocIds.filter((id) => !existingDocIds.has(id));
+
+    if (staleDocIds.length > 0) {
+      activeVectorRows = vectorRows.filter((r) =>
+        existingDocIds.has(r.documentId),
+      );
+      activeFtsRows = ftsRows.filter((r) => existingDocIds.has(r.documentId));
+      // Best-effort cleanup of stale Qdrant points left behind by file_read deletions.
+      void Promise.all(
+        staleDocIds.map((staleDocId) => deletePointsByDocumentId(staleDocId)),
+      ).catch((err) => {
+        log.warn("Failed to clean up stale Qdrant points: {error}", {
+          error: err instanceof Error ? err.message : String(err),
+          staleDocIds,
+        });
+      });
+    }
+  }
+
+  return applyRRF(activeVectorRows, activeFtsRows, topK);
 }

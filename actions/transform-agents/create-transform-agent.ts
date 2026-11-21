@@ -11,6 +11,7 @@ import {
 import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
+import { filterOwnedKbIds } from "@/lib/knowledgebases/filter-owned-kb-ids";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
 import { createTransformAgentSchema } from "@/schemas/workflows/transform-agent";
@@ -42,6 +43,19 @@ export const createTransformAgent = defineAction(
       });
     }
     const validated = parsed.data;
+    const uniqueKbIds = [
+      ...new Set(validated.knowledgeBaseIds.filter(Boolean)),
+    ];
+    if (uniqueKbIds.length > 0) {
+      const ownedKbIds = await filterOwnedKbIds(session.user.id, uniqueKbIds);
+      if (ownedKbIds.length !== uniqueKbIds.length) {
+        return fail({
+          code: ERROR_CODE.FORBIDDEN,
+          message: "One or more knowledge bases are not accessible",
+        });
+      }
+    }
+
     const subagentIds = validated.subagentIds ?? [];
     const insertTransformAgent = async (executor: SubagentLinkTx) => {
       const [inserted] = await executor

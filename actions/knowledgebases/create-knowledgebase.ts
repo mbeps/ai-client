@@ -1,6 +1,7 @@
 "use server";
 
 import type { z } from "zod";
+import { env } from "@/config/env";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import { createEntityFactory } from "@/lib/factories/create-entity-factory";
 import { resolveEmbeddingProvider } from "@/lib/providers/resolve-embedding-provider";
@@ -9,7 +10,7 @@ import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
 /**
  * Creates a new knowledge base for the authenticated user.
- * Verifies embedding configuration before creating the record.
+ * Verifies embedding configuration before creating the record when RAG_MODE requires embeddings.
  *
  * @param data - Knowledge base configuration (name required, description optional).
  * @returns The newly created knowledge base record.
@@ -22,7 +23,9 @@ export const createKnowledgebase = createEntityFactory<
   table: knowledgebase,
   schema: createKnowledgebaseSchema,
   beforeValidate: async (_data, userId) => {
-    await resolveEmbeddingProvider(userId);
+    if (env.RAG_MODE !== "file_read") {
+      await resolveEmbeddingProvider(userId);
+    }
   },
   mapValues: (validated, userId) => ({
     name: validated.name,

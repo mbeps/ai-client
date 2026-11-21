@@ -1,20 +1,23 @@
 // ── env must be mocked before any module that reads it ──────────────────────
+const mockEnv = vi.hoisted(() => ({
+  DATABASE_URL: "postgresql://test:test@localhost:5432/test",
+  BETTER_AUTH_SECRET: "test-secret",
+  BETTER_AUTH_URL: "http://localhost:3000",
+  NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+  S3_ENDPOINT: "http://localhost:9000",
+  S3_REGION: "us-east-1",
+  S3_ACCESS_KEY: "test",
+  S3_SECRET_KEY: "test",
+  S3_BUCKET: "test-bucket",
+  POSTMARK_SERVER_TOKEN: "test-token",
+  POSTMARK_FROM_EMAIL: "noreply@example.com",
+  NODE_ENV: "test",
+  MAX_DOCUMENT_CHARS: 500000,
+  RAG_MODE: "hybrid" as "hybrid" | "vector" | "file_read",
+}));
+
 vi.mock("@/config/env", () => ({
-  env: {
-    DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-    BETTER_AUTH_SECRET: "test-secret",
-    BETTER_AUTH_URL: "http://localhost:3000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    S3_ENDPOINT: "http://localhost:9000",
-    S3_REGION: "us-east-1",
-    S3_ACCESS_KEY: "test",
-    S3_SECRET_KEY: "test",
-    S3_BUCKET: "test-bucket",
-    POSTMARK_SERVER_TOKEN: "test-token",
-    POSTMARK_FROM_EMAIL: "noreply@example.com",
-    NODE_ENV: "test",
-    MAX_DOCUMENT_CHARS: 500000,
-  },
+  env: mockEnv,
 }));
 
 // Drizzle awaits terminate at `.where(...)` for selects and updates.
@@ -102,6 +105,7 @@ function makeDoc(_overrides: Partial<KbDocumentRow> = {}): KbDocumentRow {
 describe("ingestDocumentPipeline (Qdrant)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnv.RAG_MODE = "hybrid";
     chainable.where.mockResolvedValue([{ id: "doc-1" }]);
     extractDocumentMetadataMock.mockResolvedValue({
       documentType: "general",
@@ -428,6 +432,159 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
       uploading: { status: "completed" },
       extracting: { status: "completed" },
       embedding: { status: "completed" },
+      metadata: { status: "failed", error: "No chat model configured" },
+      relations: { status: "failed", error: "Relation LLM timeout" },
+    });
+  });
+
+  it("skips metadata and relations in vector mode while embedding and upserting to Qdrant", async () => {
+    mockEnv.RAG_MODE = "vector";
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("vector text");
+    vi.mocked(chunkText).mockReturnValue(["vector-chunk"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.3, 0.4]]);
+
+    chainable.where
+      .mockResolvedValueOnce([{ id: "doc-1" }])
+      .mockResolvedValueOnce([{ name: "Vector KB" }]);
+
+    const stepsObserved: string[] = [];
+    const result = await ingestDocumentPipeline(
+      makeDoc(),
+      Buffer.from("x"),
+      "user-1",
+      undefined,
+      (step) => stepsObserved.push(step),
+    );
+
+    expect(result).toEqual({
+      chunkCount: 1,
+      tokenCount: Math.round("vector-chunk".length / 4),
+    });
+    expect(stepsObserved).toEqual(["extracting", "embedding"]);
+    expect(embedDocuments).toHaveBeenCalledWith(["vector-chunk"], "user-1");
+    expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-1");
+    expect(upsertChunkPointsMock).toHaveBeenCalledTimes(1);
+    expect(extractDocumentMetadataMock).not.toHaveBeenCalled();
+    expect(generateDocumentRelationsMock).not.toHaveBeenCalled();
+
+    const finalUpdate = chainable.set.mock.calls.at(-1)![0];
+    expect(finalUpdate).toMatchObject({
+      status: "ready",
+      documentType: "general",
+      summary: "",
+      keyEntities: [],
+      tableOfContents: [],
+      ingestSteps: {
+        uploading: { status: "completed" },
+        extracting: { status: "completed" },
+        embedding: { status: "completed" },
+        metadata: { status: "pending" },
+        relations: { status: "pending" },
+      },
+    });
+  });
+
+  it("skips embedding and Qdrant in file_read mode while generating metadata and relations", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("file read text");
+    vi.mocked(chunkText).mockReturnValue(["chunk-1", "chunk-2"]);
+
+    chainable.where.mockResolvedValueOnce([{ id: "doc-1" }]);
+
+    const stepsObserved: string[] = [];
+    const result = await ingestDocumentPipeline(
+      makeDoc(),
+      Buffer.from("x"),
+      "user-1",
+      undefined,
+      (step) => stepsObserved.push(step),
+    );
+
+    expect(result).toEqual({
+      chunkCount: 2,
+      tokenCount:
+        Math.round("chunk-1".length / 4) + Math.round("chunk-2".length / 4),
+    });
+    expect(stepsObserved).toEqual(["extracting", "metadata", "relations"]);
+    expect(embedDocuments).not.toHaveBeenCalled();
+    expect(deletePointsByDocumentIdMock).not.toHaveBeenCalled();
+    expect(upsertChunkPointsMock).not.toHaveBeenCalled();
+    expect(extractDocumentMetadataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentName: "test.pdf",
+        chunks: ["chunk-1", "chunk-2"],
+        userId: "user-1",
+      }),
+    );
+    expect(generateDocumentRelationsMock).toHaveBeenCalledTimes(1);
+
+    const finalUpdate = chainable.set.mock.calls.at(-1)![0];
+    expect(finalUpdate).toMatchObject({
+      status: "ready",
+      documentType: "general",
+      summary: "Default summary",
+      keyEntities: ["Entity1"],
+      ingestSteps: {
+        uploading: { status: "completed" },
+        extracting: { status: "completed" },
+        embedding: { status: "pending" },
+        metadata: { status: "completed" },
+        relations: { status: "completed" },
+      },
+    });
+  });
+
+  it("handles concurrent document deletion in file_read mode without touching Qdrant or LLM", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("some text");
+    vi.mocked(chunkText).mockReturnValue(["chunk-a"]);
+
+    chainable.where.mockResolvedValueOnce([]);
+
+    const result = await ingestDocumentPipeline(
+      makeDoc(),
+      Buffer.from("x"),
+      "user-1",
+    );
+
+    expect(result).toEqual({ chunkCount: 0, tokenCount: 0 });
+    expect(embedDocuments).not.toHaveBeenCalled();
+    expect(deletePointsByDocumentIdMock).not.toHaveBeenCalled();
+    expect(upsertChunkPointsMock).not.toHaveBeenCalled();
+    expect(extractDocumentMetadataMock).not.toHaveBeenCalled();
+    expect(generateDocumentRelationsMock).not.toHaveBeenCalled();
+  });
+
+  it("records metadata/relations errors in file_read mode while keeping embedding pending", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("hello world");
+    vi.mocked(chunkText).mockReturnValue(["hello"]);
+
+    chainable.where.mockResolvedValueOnce([{ id: "doc-1" }]);
+
+    extractDocumentMetadataMock.mockImplementationOnce(async ({ onFallback }) => {
+      onFallback?.("No chat model configured");
+      return {
+        documentType: "general",
+        summary: "Fallback",
+        keyEntities: [],
+        tableOfContents: [],
+      };
+    });
+
+    generateDocumentRelationsMock.mockImplementationOnce(async ({ onError }) => {
+      onError?.("Relation LLM timeout");
+      return 0;
+    });
+
+    await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
+
+    const finalUpdate = chainable.set.mock.calls.at(-1)![0];
+    expect(finalUpdate.status).toBe("ready");
+    expect(finalUpdate.ingestSteps).toEqual({
+      uploading: { status: "completed" },
+      extracting: { status: "completed" },
+      embedding: { status: "pending" },
       metadata: { status: "failed", error: "No chat model configured" },
       relations: { status: "failed", error: "Relation LLM timeout" },
     });

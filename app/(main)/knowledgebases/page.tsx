@@ -12,6 +12,7 @@ import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner"
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
+import { useRagConfig } from "@/hooks/use-rag-config";
 import { useUserModels } from "@/hooks/use-user-models";
 import { logger } from "@/lib/logger";
 
@@ -24,8 +25,10 @@ import { logger } from "@/lib/logger";
  * @author Maruf Bepary
  */
 export default function KnowledgebasesPage() {
+  const { requiresEmbedding } = useRagConfig();
   const { models, isLoading: isModelsLoading } = useUserModels("embedding");
-  const hasNoModels = !isModelsLoading && models.length === 0;
+  const hasNoModels =
+    requiresEmbedding && !isModelsLoading && models.length === 0;
 
   const [knowledgebases, setKnowledgebases] = useState<
     KnowledgebaseWithCount[]

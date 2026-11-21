@@ -1,5 +1,8 @@
 import { registerArtifactTool } from "@/lib/chat/register-artifact-tool";
-import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
+import {
+  type KnowledgebaseSubagentConfig,
+  registerKnowledgebaseTool,
+} from "@/lib/chat/register-knowledgebase-tool";
 import { getLogger } from "@/lib/logger";
 import { getMcpTools } from "@/lib/mcp/get-mcp-tools";
 import { sanitiseToolNames } from "@/lib/mcp/sanitise-tool-names";
@@ -141,6 +144,7 @@ interface LegacyInternalToolOptions {
   kbIsReady?: boolean;
   userId?: string;
   selectedTools?: string[];
+  kbSubagentConfig?: KnowledgebaseSubagentConfig;
 }
 
 /**
@@ -171,6 +175,7 @@ function registerLegacyInternalTools(
       options.kbIsReady,
       options.userId,
       options.selectedTools,
+      options.kbSubagentConfig,
     );
     Object.assign(mcpTools, kbTools);
     toolSourceMap.search_knowledge_base = "System";
@@ -203,6 +208,7 @@ export async function registerMcpTools(
   kbIsReady?: boolean,
   userId?: string,
   activeKbIds?: string[],
+  kbSubagentConfig?: KnowledgebaseSubagentConfig,
 ): Promise<{
   mcpTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
@@ -219,6 +225,7 @@ export async function registerMcpTools(
     kbIsReady,
     userId,
     selectedTools,
+    kbSubagentConfig,
   });
 
   return {

@@ -31,8 +31,10 @@ import {
 } from "@/components/shared/sidebar-tabs";
 import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
 import { Button } from "@/components/ui/button";
+import type { RagMode } from "@/config/env";
 import { ROUTES } from "@/config/routes";
 import { useEntityOptions } from "@/hooks/use-entity-options";
+import { useRagConfig } from "@/hooks/use-rag-config";
 import { type UserModelOption, useUserModels } from "@/hooks/use-user-models";
 import { logger } from "@/lib/logger";
 import type { KbDocumentRow } from "@/types/knowledgebase/kb-document-row";
@@ -396,9 +398,11 @@ function useKnowledgebasePageState(kbId: string) {
     useRouterRefresh: true,
   });
 
+  const { ragMode, requiresEmbedding } = useRagConfig();
   const { models, isLoading: isModelsLoading } = useUserModels("embedding");
   const { models: chatModels } = useUserModels("chat");
-  const hasNoModels = !isModelsLoading && models.length === 0;
+  const hasNoModels =
+    requiresEmbedding && !isModelsLoading && models.length === 0;
 
   const hasAutoTriggeredReindexRef = useRef(false);
 
@@ -419,7 +423,8 @@ function useKnowledgebasePageState(kbId: string) {
     settings,
     deletion,
     chatModels,
-    isUploadDisabled: isModelsLoading || hasNoModels,
+    ragMode,
+    isUploadDisabled: requiresEmbedding && (isModelsLoading || hasNoModels),
     hasNoModels,
   };
 }
@@ -445,6 +450,7 @@ type KnowledgebasePageTabsProps = {
   globalKbModelLabel?: string;
   onDeleteClick: () => void;
   isDeleting: boolean;
+  ragMode: RagMode;
 };
 
 /**
@@ -471,6 +477,7 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
     globalKbModelLabel,
     onDeleteClick,
     isDeleting,
+    ragMode,
   } = props;
 
   return (
@@ -484,10 +491,12 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
           <Library className="mr-2 h-4 w-4" />
           <span>Documents</span>
         </SidebarTabsTrigger>
-        <SidebarTabsTrigger value="graph">
-          <Network className="mr-2 h-4 w-4" />
-          <span>Graph</span>
-        </SidebarTabsTrigger>
+        {ragMode !== "vector" && (
+          <SidebarTabsTrigger value="graph">
+            <Network className="mr-2 h-4 w-4" />
+            <span>Graph</span>
+          </SidebarTabsTrigger>
+        )}
         <SidebarTabsTrigger value="settings">
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
@@ -521,9 +530,11 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
         </div>
       </SidebarTabsContent>
 
-      <SidebarTabsContent value="graph" className="w-full min-w-0 flex-1">
-        <KbGraphTab kbId={kb.id} />
-      </SidebarTabsContent>
+      {ragMode !== "vector" && (
+        <SidebarTabsContent value="graph" className="w-full min-w-0 flex-1">
+          <KbGraphTab kbId={kb.id} />
+        </SidebarTabsContent>
+      )}
 
       <SidebarTabsContent value="settings">
         <KbSettingsTab
@@ -540,6 +551,7 @@ function KnowledgebasePageTabs(props: KnowledgebasePageTabsProps) {
           embeddingModelLabel={embeddingModelLabel}
           kb={kb}
           onReindex={onReindex}
+          ragMode={ragMode}
         />
       </SidebarTabsContent>
 
@@ -601,6 +613,16 @@ export default function KnowledgebasePage() {
   );
 
   const state = useKnowledgebasePageState(kbId);
+  const resolvedTab =
+    state.ragMode === "vector" && activeTab === "graph"
+      ? "documents"
+      : activeTab;
+
+  useEffect(() => {
+    if (state.ragMode === "vector" && activeTab === "graph") {
+      void setActiveTab("documents");
+    }
+  }, [state.ragMode, activeTab, setActiveTab]);
 
   if (state.isLoading) {
     return <EntityDetailSkeleton />;
@@ -612,7 +634,7 @@ export default function KnowledgebasePage() {
 
   return (
     <PageContainer
-      variant={activeTab === "graph" ? "wide" : "default"}
+      variant={resolvedTab === "graph" ? "wide" : "default"}
       className="space-y-6"
     >
       <KnowledgebaseHeader kb={state.kb} />
@@ -622,7 +644,7 @@ export default function KnowledgebasePage() {
       ) : null}
 
       <KnowledgebasePageTabs
-        activeTab={activeTab}
+        activeTab={resolvedTab}
         setActiveTab={setActiveTab}
         kb={state.kb}
         documents={state.docs.documents}
@@ -637,6 +659,7 @@ export default function KnowledgebasePage() {
         globalKbModelLabel={state.globalKbModelLabel}
         onDeleteClick={() => state.deletion.setShowDelete(true)}
         isDeleting={state.deletion.isDeleting}
+        ragMode={state.ragMode}
       />
 
       <UploadDocumentDialog

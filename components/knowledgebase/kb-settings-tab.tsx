@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { RagMode } from "@/config/env";
 import type { UserModelOption } from "@/hooks/use-user-models";
 import type { KnowledgebaseRow } from "@/types/knowledgebase/knowledgebase-row";
 
@@ -41,6 +42,7 @@ export interface KbSettingsTabProps {
   embeddingModelLabel: string;
   kb: KnowledgebaseRow;
   onReindex: () => Promise<void> | void;
+  ragMode?: RagMode;
 }
 
 /**
@@ -62,6 +64,7 @@ export function KbSettingsTab({
   embeddingModelLabel,
   kb,
   onReindex,
+  ragMode = "hybrid",
 }: KbSettingsTabProps) {
   const hasMatchingModel =
     Boolean(metadataModelId) &&
@@ -100,37 +103,39 @@ export function KbSettingsTab({
             rows={4}
           />
         </div>
-        <div className="space-y-2">
-          <label htmlFor="kb-metadata-model" className="text-sm font-medium">
-            Metadata &amp; Relations Model
-          </label>
-          <Select
-            value={selectedModelValue}
-            onValueChange={(value) =>
-              onMetadataModelChange?.(
-                value === GLOBAL_MODEL_SENTINEL ? null : value,
-              )
-            }
-          >
-            <SelectTrigger id="kb-metadata-model" className="w-full">
-              <SelectValue placeholder={globalOptionLabel} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={GLOBAL_MODEL_SENTINEL}>
-                {globalOptionLabel}
-              </SelectItem>
-              {chatModels.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  {model.label} ({model.providerName})
+        {ragMode !== "vector" && (
+          <div className="space-y-2">
+            <label htmlFor="kb-metadata-model" className="text-sm font-medium">
+              Metadata &amp; Relations Model
+            </label>
+            <Select
+              value={selectedModelValue}
+              onValueChange={(value) =>
+                onMetadataModelChange?.(
+                  value === GLOBAL_MODEL_SENTINEL ? null : value,
+                )
+              }
+            >
+              <SelectTrigger id="kb-metadata-model" className="w-full">
+                <SelectValue placeholder={globalOptionLabel} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={GLOBAL_MODEL_SENTINEL}>
+                  {globalOptionLabel}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-muted-foreground text-xs">
-            Used to extract document metadata and relations when ingesting
-            documents into this knowledge base.
-          </p>
-        </div>
+                {chatModels.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.label} ({model.providerName})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">
+              Used to extract document metadata and relations when ingesting
+              documents into this knowledge base.
+            </p>
+          </div>
+        )}
         <Button
           onClick={onSave}
           disabled={isSaving || !name.trim()}
@@ -162,7 +167,9 @@ export function KbSettingsTab({
             </div>
             <div className="flex items-center gap-2 text-sm font-medium">
               <Database className="text-primary h-4 w-4" />
-              {embeddingModelLabel}
+              {ragMode === "file_read"
+                ? "Not required (File Read mode)"
+                : embeddingModelLabel}
             </div>
           </div>
 

@@ -1,19 +1,22 @@
 // ── env must be mocked before any module that reads it ──────────────────────
+const mockEnv = vi.hoisted(() => ({
+  DATABASE_URL: "postgresql://test:test@localhost:5432/test",
+  BETTER_AUTH_SECRET: "test-secret",
+  BETTER_AUTH_URL: "http://localhost:3000",
+  NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+  S3_ENDPOINT: "http://localhost:9000",
+  S3_REGION: "us-east-1",
+  S3_ACCESS_KEY: "test",
+  S3_SECRET_KEY: "test",
+  S3_BUCKET: "test-bucket",
+  POSTMARK_SERVER_TOKEN: "test-token",
+  POSTMARK_FROM_EMAIL: "noreply@example.com",
+  NODE_ENV: "test",
+  RAG_MODE: "hybrid" as "hybrid" | "vector" | "file_read",
+}));
+
 vi.mock("@/config/env", () => ({
-  env: {
-    DATABASE_URL: "postgresql://test:test@localhost:5432/test",
-    BETTER_AUTH_SECRET: "test-secret",
-    BETTER_AUTH_URL: "http://localhost:3000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    S3_ENDPOINT: "http://localhost:9000",
-    S3_REGION: "us-east-1",
-    S3_ACCESS_KEY: "test",
-    S3_SECRET_KEY: "test",
-    S3_BUCKET: "test-bucket",
-    POSTMARK_SERVER_TOKEN: "test-token",
-    POSTMARK_FROM_EMAIL: "noreply@example.com",
-    NODE_ENV: "test",
-  },
+  env: mockEnv,
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -76,6 +79,7 @@ const DOC_ID = "33333333-3333-4333-8333-333333333333";
 describe("knowledgebase documents and CRUD actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnv.RAG_MODE = "hybrid";
     chainable.select.mockReturnValue(chainable);
     chainable.from.mockReturnValue(chainable);
     chainable.where.mockReturnValue(chainable);
@@ -200,6 +204,19 @@ describe("knowledgebase documents and CRUD actions", () => {
         name: "New KB",
       });
 
+      expect(result).toEqual({ ok: true, value: createdKb });
+    });
+
+    it("skips resolveEmbeddingProvider when RAG_MODE is file_read", async () => {
+      mockEnv.RAG_MODE = "file_read";
+      const createdKb = { id: KB_ID, name: "File Read KB", description: null };
+      chainable.returning.mockResolvedValueOnce([createdKb]);
+
+      const result = await createKnowledgebase({
+        name: "File Read KB",
+      });
+
+      expect(resolveEmbeddingMock).not.toHaveBeenCalled();
       expect(result).toEqual({ ok: true, value: createdKb });
     });
   });

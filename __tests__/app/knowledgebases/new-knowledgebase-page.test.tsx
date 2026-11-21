@@ -14,6 +14,11 @@ vi.mock("@/actions/knowledgebases/create-knowledgebase", () => ({
   createKnowledgebase: mockCreateKnowledgebase,
 }));
 
+const mockGetRagConfig = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/knowledgebases/get-rag-config", () => ({
+  getRagConfig: mockGetRagConfig,
+}));
+
 const mockToastSuccess = vi.hoisted(() => vi.fn());
 const mockToastError = vi.hoisted(() => vi.fn());
 vi.mock("sonner", () => ({
@@ -31,6 +36,10 @@ vi.mock("@/hooks/use-user-models", () => ({
 describe("NewKnowledgebasePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetRagConfig.mockResolvedValue({
+      ok: true,
+      value: { ragMode: "hybrid", requiresEmbedding: true },
+    });
     mockUseUserModels.mockReturnValue({
       models: [{ id: "emb-1", label: "text-embedding-3-small" }],
       isLoading: false,
@@ -141,5 +150,30 @@ describe("NewKnowledgebasePage", () => {
     expect(
       screen.getByRole("button", { name: /create knowledgebase/i }),
     ).toBeDisabled();
+  });
+
+  it("enables creation and hides banner when RAG_MODE is file_read even with no embedding models", async () => {
+    mockGetRagConfig.mockResolvedValueOnce({
+      ok: true,
+      value: { ragMode: "file_read", requiresEmbedding: false },
+    });
+    mockUseUserModels.mockReturnValue({
+      models: [],
+      isLoading: false,
+    });
+
+    render(<NewKnowledgebasePage />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /create knowledgebase/i }),
+      ).toBeEnabled();
+    });
+
+    expect(
+      screen.queryByText(
+        "No embedding models configured. Please set up a provider with embedding support to create knowledgebases.",
+      ),
+    ).not.toBeInTheDocument();
   });
 });

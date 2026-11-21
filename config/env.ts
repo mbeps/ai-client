@@ -18,12 +18,22 @@ export const clientEnvSchema = z.object({
 });
 
 /**
- * Zod validation schema for server environment variables.
+ * Supported Knowledge Base RAG retrieval and ingestion strategies.
+ */
+export const RAG_MODES = ["hybrid", "vector", "file_read"] as const;
+
+/**
+ * Union type of supported RAG modes.
+ */
+export type RagMode = (typeof RAG_MODES)[number];
+
+/**
+ * Base Zod validation schema for server environment variables.
  * Extends client schema with database URL, auth secrets, API keys, and storage configuration.
  *
  * @author Maruf Bepary
  */
-export const serverEnvSchema = clientEnvSchema.extend({
+const baseServerEnvSchema = clientEnvSchema.extend({
   // Database
   DATABASE_URL: z.string().url(),
 
@@ -126,9 +136,35 @@ export const serverEnvSchema = clientEnvSchema.extend({
   INNGEST_DEV: z.string().optional(),
   INNGEST_SERVE_ORIGIN: z.string().optional(),
 
-  // Qdrant
-  QDRANT_URL: z.string().url().default("http://localhost:6333"),
-  QDRANT_API_KEY: z.string().optional(),
+  // Qdrant & RAG
+  RAG_MODE: z.enum(RAG_MODES).default("hybrid"),
+  QDRANT_URL: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().url().optional(),
+  ),
+  QDRANT_API_KEY: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().optional(),
+  ),
+});
+
+/**
+ * Zod validation schema for server environment variables with conditional Qdrant checks.
+ * Requires QDRANT_URL when RAG_MODE is "hybrid" or "vector".
+ *
+ * @author Maruf Bepary
+ */
+export const serverEnvSchema = baseServerEnvSchema.superRefine((data, ctx) => {
+  if (
+    (data.RAG_MODE === "hybrid" || data.RAG_MODE === "vector") &&
+    !data.QDRANT_URL
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["QDRANT_URL"],
+      message: "QDRANT_URL is required when RAG_MODE is 'hybrid' or 'vector'",
+    });
+  }
 });
 
 /**
@@ -202,6 +238,7 @@ export function validateEnv(
         INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
         INNGEST_DEV: process.env.INNGEST_DEV,
         INNGEST_SERVE_ORIGIN: process.env.INNGEST_SERVE_ORIGIN,
+        RAG_MODE: process.env.RAG_MODE,
         QDRANT_URL: process.env.QDRANT_URL,
         QDRANT_API_KEY: process.env.QDRANT_API_KEY,
       }
