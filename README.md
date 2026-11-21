@@ -46,8 +46,9 @@ AI Client is a full-featured conversational workspace with branching message tre
 - **Contextual Memory Retrieval** — Combines semantic similarity search and keyword matching to inject only relevant memories into the system prompt on each turn.
 - **Autonomous & Manual Memory Control** — Models automatically save, update, or delete memories via built-in memory tools, complemented by a dedicated `/settings/memory` management interface and global opt-out toggle.
 
-## Knowledge Bases (Hybrid RAG)
+## Knowledge Bases (Configurable RAG)
 
+- **Configurable RAG Modes (`RAG_MODE`)** — Switch between `hybrid` (default: Qdrant vector + full-text + LLM metadata/TOC + relationship graph + KB reader subagent), `vector` (direct top-K Qdrant hybrid search without subagent or graph overhead), and `file_read` (vectorless S3/MinIO + PostgreSQL mode that operates without Qdrant or embedding models).
 - **Agentic RAG Retrieval** — Models autonomously invoke knowledgebase search tools when user queries require domain-specific document context.
 - **Hybrid Search with Reciprocal Rank Fusion (RRF)** — Fuses dense vector similarity search in Qdrant with PostgreSQL full-text search (`tsvector`) using RRF scoring.
 - **Multi-Format Document Ingestion** — Asynchronous Inngest pipeline extracts, recursively chunks, and embeds content from PDFs (`unpdf`), Excel spreadsheets (`xlsx`), and Markdown/Plain text files.
@@ -91,7 +92,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 - Node.js 24 or higher
 - pnpm 10 or higher
 - PostgreSQL 17
-- Qdrant
+- Qdrant (required for `hybrid` and `vector` RAG modes; optional when `RAG_MODE=file_read`)
 - MinIO or AWS S3
 - Inngest
 - OpenAI-compatible AI provider (such as OpenRouter, Ollama, Groq, Azure, or local models)
@@ -206,7 +207,8 @@ NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD=true
 # Encryption at Rest (generate with: openssl rand -base64 32)
 ENCRYPTION_KEY=your-base64-encoded-32-byte-key-here
 
-# Vector Database (Qdrant for RAG & Long-Term Memory)
+# Vector Database & RAG (Qdrant required for hybrid/vector; optional for file_read)
+RAG_MODE=hybrid
 QDRANT_URL=http://localhost:6333
 QDRANT_API_KEY=
 
@@ -254,9 +256,10 @@ LOG_LEVEL=info
 - `NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD` — Set to `false` to disable email and password authentication; defaults to `true`.
 - `ALLOW_PRIVATE_NETWORK_MCP` — Set to `true` to allow connecting to private network or `localhost` HTTP MCP servers during development (bypasses SSRF IP/DNS blocks).
 
-**Vector Database (Qdrant)**
+**Vector Database & RAG (Qdrant)**
 
-- `QDRANT_URL` — Qdrant HTTP endpoint URL for RAG document chunks and long-term user memories (default: `http://localhost:6333`).
+- `RAG_MODE` — Knowledge Base RAG strategy: `hybrid` (default), `vector`, or `file_read` (vectorless mode using S3/MinIO + PostgreSQL without Qdrant or embedding models).
+- `QDRANT_URL` — Qdrant HTTP endpoint URL for RAG document chunks (required when `RAG_MODE` is `hybrid` or `vector`; optional when `RAG_MODE=file_read`).
 - `QDRANT_API_KEY` (optional) — API key for authenticated Qdrant Cloud or secured instances (leave empty for local container).
 - `QDRANT_PORT` — Host port mapping for the local Qdrant Docker container (default: `6333`).
 
