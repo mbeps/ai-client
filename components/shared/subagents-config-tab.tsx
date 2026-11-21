@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import type { Agent } from "@/types/agent/agent";
 
 /**
- * Props for the AgentSubagentsTab component.
+ * Props for the SubagentsConfigTab component.
  */
-export interface AgentSubagentsTabProps {
+export interface SubagentsConfigTabProps {
+  title?: string;
+  description?: string;
   agentId?: string;
   agents: Agent[];
   selectedSubagentIds: string[];
@@ -22,10 +24,12 @@ export interface AgentSubagentsTabProps {
 }
 
 /**
- * Subagents linking tab for an Agent. Enforces Rule 2 visually by locking child subagent
- * selection when this agent is currently linked as a subagent in another Agent, Project, or Workflow.
+ * Shared subagents linking tab for an Agent or Project.
+ * Enforces the 2-layer delegation limit visually when `usedByCount > 0`.
  */
-export function AgentSubagentsTab({
+export function SubagentsConfigTab({
+  title = "Linked Subagents",
+  description = "Select Leaf Agents and Built-in Agents available for delegation via delegate_task.",
   agentId,
   agents,
   selectedSubagentIds,
@@ -35,19 +39,15 @@ export function AgentSubagentsTab({
   isSaving = false,
   saveLabel = "Save Subagents",
   disabled = false,
-}: AgentSubagentsTabProps) {
+}: SubagentsConfigTabProps) {
   const isLockedAsLeaf = usedByCount > 0;
   const isPickerDisabled = disabled || isLockedAsLeaf;
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold">Linked Subagents</h3>
-        <p className="text-muted-foreground text-sm">
-          Link Leaf Agents or Built-in Agents that this agent can delegate tasks
-          to via delegate_task. Linking subagents makes this an Orchestrator
-          Agent.
-        </p>
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <p className="text-muted-foreground text-sm">{description}</p>
       </div>
 
       {isLockedAsLeaf && (

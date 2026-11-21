@@ -1,19 +1,12 @@
 "use client";
 
-import { ExternalLink, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { deletePrompt } from "@/actions/prompts/delete-prompt";
-import { DeleteConfirmDialog } from "@/components/shared/delete-confirm-dialog";
+import { EntityCardActions } from "@/components/shared/entity-card-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { ROUTES } from "@/config/routes";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { Prompt } from "@/types/prompt/prompt";
@@ -38,7 +31,6 @@ export function PromptCard({ prompt }: PromptCardProps) {
   const projects = useAppStore((state) => state.projects);
   const agents = useAppStore((state) => state.agents);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const detailUrl = ROUTES.SETTINGS.PROMPTS.detail(prompt.id);
 
@@ -112,45 +104,14 @@ export function PromptCard({ prompt }: PromptCardProps) {
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground h-7 w-7"
-              >
-                <Link href={detailUrl} aria-label="Open prompt">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Open prompt</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-destructive h-7 w-7"
-                onClick={() => setShowDeleteDialog(true)}
-                aria-label="Delete prompt"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Delete prompt</TooltipContent>
-          </Tooltip>
-
-          <DeleteConfirmDialog
-            isOpen={showDeleteDialog}
-            onClose={() => setShowDeleteDialog(false)}
-            onConfirm={handleDelete}
-            title="Delete Prompt"
-            description={`Are you sure you want to delete "${prompt.title}"? This action cannot be undone.`}
-            loading={isDeleting}
+          <EntityCardActions
+            detailUrl={detailUrl}
+            openLabel="Open prompt"
+            deleteLabel="Delete prompt"
+            confirmTitle="Delete Prompt"
+            confirmDescription={`Are you sure you want to delete "${prompt.title}"? This action cannot be undone.`}
+            onConfirmDelete={handleDelete}
+            isDeleting={isDeleting}
           />
         </div>
       </div>

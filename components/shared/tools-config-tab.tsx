@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
 /**
- * Props for the AgentToolsTab component.
+ * Props for the ToolsConfigTab component.
  */
-export interface AgentToolsTabProps {
+export interface ToolsConfigTabProps {
   mcpServers: McpServer[];
   selectedTools: Set<string>;
   onToggleTool: (serverId: string, toolName: string) => void;
@@ -20,13 +20,14 @@ export interface AgentToolsTabProps {
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
   saveLabel?: string;
+  description?: string;
   disabled?: boolean;
 }
 
 /**
- * Default tools configuration tab for an Agent.
+ * Shared default tools configuration tab for an Agent or Project.
  */
-export function AgentToolsTab({
+export function ToolsConfigTab({
   mcpServers,
   selectedTools,
   onToggleTool,
@@ -34,16 +35,14 @@ export function AgentToolsTab({
   onSave,
   isSaving = false,
   saveLabel = "Save Tools",
+  description = "Select tools and resources enabled by default.",
   disabled = false,
-}: AgentToolsTabProps) {
+}: ToolsConfigTabProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h3 className="text-lg font-semibold">Default Tools</h3>
-        <p className="text-muted-foreground text-sm">
-          Select tools and resources enabled for direct chats and isolated
-          subagent runs with this agent.
-        </p>
+        <p className="text-muted-foreground text-sm">{description}</p>
       </div>
       <div className="space-y-4">
         <div

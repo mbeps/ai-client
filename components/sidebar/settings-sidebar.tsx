@@ -3,32 +3,66 @@
 import {
   Brain,
   BrainCircuit,
-  ChevronLeft,
   Command,
   Database,
-  LogOut,
   Plug,
   Settings,
   Wrench,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import type * as React from "react";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
-  SidebarSeparator,
-} from "@/components/ui/sidebar";
+  type NavSidebarItem,
+  NavSidebarShell,
+} from "@/components/sidebar/nav-sidebar-shell";
+import type { Sidebar } from "@/components/ui/sidebar";
 import { ROUTES } from "@/config/routes";
-import { authClient } from "@/lib/auth/auth-client";
-import { resetClientState } from "@/lib/store/reset-client-state";
+
+const SETTINGS_NAVIGATION: NavSidebarItem[] = [
+  {
+    name: "General",
+    href: ROUTES.SETTINGS.APP.path,
+    icon: Settings,
+  },
+  {
+    name: "Providers",
+    href: ROUTES.SETTINGS.PROVIDERS.path,
+    icon: Database,
+  },
+  {
+    name: "Prompts",
+    href: ROUTES.SETTINGS.PROMPTS.path,
+    icon: Command,
+  },
+  {
+    name: "Skills",
+    href: ROUTES.SETTINGS.SKILLS.path,
+    icon: BrainCircuit,
+  },
+  {
+    name: "Memory",
+    href: ROUTES.SETTINGS.MEMORY.path,
+    icon: Brain,
+  },
+  {
+    name: "Connectors",
+    href: ROUTES.SETTINGS.CONNECTORS.path,
+    icon: Plug,
+  },
+  {
+    name: "Tools",
+    href: ROUTES.SETTINGS.TOOLS.path,
+    icon: Wrench,
+  },
+];
+
+const SETTINGS_PREFIX_ROUTES: Record<string, string> = {
+  Connectors: ROUTES.SETTINGS.CONNECTORS.path,
+  Providers: ROUTES.SETTINGS.PROVIDERS.path,
+  Prompts: ROUTES.SETTINGS.PROMPTS.path,
+  Skills: ROUTES.SETTINGS.SKILLS.path,
+  Tools: ROUTES.SETTINGS.TOOLS.path,
+  Memory: ROUTES.SETTINGS.MEMORY.path,
+};
 
 /**
  * Sidebar for the /settings section.
@@ -40,124 +74,23 @@ import { resetClientState } from "@/lib/store/reset-client-state";
 export function SettingsSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const navigation = [
-    {
-      name: "General",
-      href: ROUTES.SETTINGS.APP.path,
-      icon: Settings,
-    },
-    {
-      name: "Providers",
-      href: ROUTES.SETTINGS.PROVIDERS.path,
-      icon: Database,
-    },
-    {
-      name: "Prompts",
-      href: ROUTES.SETTINGS.PROMPTS.path,
-      icon: Command,
-    },
-    {
-      name: "Skills",
-      href: ROUTES.SETTINGS.SKILLS.path,
-      icon: BrainCircuit,
-    },
-    {
-      name: "Memory",
-      href: ROUTES.SETTINGS.MEMORY.path,
-      icon: Brain,
-    },
-    {
-      name: "Connectors",
-      href: ROUTES.SETTINGS.CONNECTORS.path,
-      icon: Plug,
-    },
-    {
-      name: "Tools",
-      href: ROUTES.SETTINGS.TOOLS.path,
-      icon: Wrench,
-    },
-  ];
-
   return (
-    <Sidebar {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Back to Home">
-              <Link href={ROUTES.HOME.path} className="font-semibold">
-                <ChevronLeft className="size-4" />
-                <span>Back to Home</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarSeparator className="mx-0 my-2" />
-          <SidebarMenuItem>
-            <div className="px-3 py-2">
-              <h2 className="text-lg font-semibold tracking-tight">Settings</h2>
-              <p className="text-muted-foreground text-xs">
-                Manage your application preferences
-              </p>
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarMenu>
-            {navigation.map((item) => (
-              <SidebarMenuItem key={item.name}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={
-                    pathname === item.href ||
-                    (item.name === "Connectors" &&
-                      pathname.startsWith(ROUTES.SETTINGS.CONNECTORS.path)) ||
-                    (item.name === "Providers" &&
-                      pathname.startsWith(ROUTES.SETTINGS.PROVIDERS.path)) ||
-                    (item.name === "Prompts" &&
-                      pathname.startsWith(ROUTES.SETTINGS.PROMPTS.path)) ||
-                    (item.name === "Skills" &&
-                      pathname.startsWith(ROUTES.SETTINGS.SKILLS.path)) ||
-                    (item.name === "Tools" &&
-                      pathname.startsWith(ROUTES.SETTINGS.TOOLS.path)) ||
-                    (item.name === "Memory" &&
-                      pathname.startsWith(ROUTES.SETTINGS.MEMORY.path))
-                  }
-                  tooltip={item.name}
-                >
-                  <Link href={item.href}>
-                    <item.icon className="size-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={async () => {
-                await authClient.signOut();
-                resetClientState();
-                router.push(ROUTES.AUTH.LOGIN.path);
-              }}
-              className="text-destructive hover:text-destructive focus:text-destructive"
-            >
-              <LogOut className="size-4" />
-              <span>Log out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+    <NavSidebarShell
+      {...props}
+      navigation={SETTINGS_NAVIGATION}
+      isItemActive={(item, pathname) => {
+        if (pathname === item.href) return true;
+        const prefix = SETTINGS_PREFIX_ROUTES[item.name];
+        return prefix ? pathname.startsWith(prefix) : false;
+      }}
+      headerContent={
+        <div className="px-3 py-2">
+          <h2 className="text-lg font-semibold tracking-tight">Settings</h2>
+          <p className="text-muted-foreground text-xs">
+            Manage your application preferences
+          </p>
+        </div>
+      }
+    />
   );
 }
