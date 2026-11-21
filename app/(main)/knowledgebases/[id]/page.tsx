@@ -633,10 +633,7 @@ export default function KnowledgebasePage() {
   }
 
   return (
-    <PageContainer
-      variant={resolvedTab === "graph" ? "wide" : "default"}
-      className="space-y-6"
-    >
+    <PageContainer variant="default" className="space-y-6">
       <KnowledgebaseHeader kb={state.kb} />
 
       {state.hasNoModels ? (

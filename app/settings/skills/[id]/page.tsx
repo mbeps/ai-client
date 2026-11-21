@@ -452,7 +452,7 @@ function SkillDetailPageContent({
   } = useSkillEditorState(skillId, skill);
 
   return (
-    <PageContainer variant="full" className="space-y-6">
+    <PageContainer variant="default" className="space-y-6">
       <SidebarTabs value={tab} onValueChange={setTab} className="w-full">
         <SidebarTabsList>
           <SidebarTabsTrigger value="details">
