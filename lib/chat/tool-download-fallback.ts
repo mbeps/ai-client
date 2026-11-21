@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { getLogger } from "@/lib/logger";
+import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
 import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
 const log = getLogger(["app", "chat", "download-fallback"]);
@@ -41,7 +42,85 @@ const READ_ONLY_TOOL_PREFIXES = [
   "check_",
   "validate_",
   "download_",
+  "summarize_",
+  "summary_",
+  "analyze_",
+  "analyse_",
+  "extract_",
+  "parse_",
+  "view_",
+  "show_",
+  "count_",
+  "query_",
+  "fetch_",
+  "crawl_",
+  "scrape_",
+  "browse_",
+  "web_",
 ];
+
+const STAGING_TOOL_PATTERNS = new Set([
+  "upload_file",
+  "upload_workbook",
+  "load_file",
+  "load_workbook",
+  "open_file",
+  "open_workbook",
+  "import_file",
+  "stage_file",
+  "ingest_file",
+]);
+
+const INTERNAL_NON_PRODUCER_TOOLS = new Set([
+  "get_file_url",
+  "manage_artifact",
+  "search_knowledge_base",
+  "delegate_task",
+  "save_memory",
+  "manage_memory",
+  "load_skill",
+  "create_skill",
+  "update_skill",
+  "write_skill_file",
+  "read_skill_file",
+  "delete_skill_file",
+]);
+
+const PRODUCER_MUTATION_PREFIXES = [
+  "create_",
+  "write_",
+  "generate_",
+  "build_",
+  "export_",
+  "save_",
+  "convert_",
+  "render_",
+  "make_",
+  "add_",
+  "insert_",
+  "update_",
+  "modify_",
+  "edit_",
+  "delete_",
+  "remove_",
+  "clear_",
+  "format_",
+  "apply_",
+  "set_",
+  "append_",
+  "merge_",
+  "unmerge_",
+  "rename_",
+  "copy_",
+  "sort_",
+  "transform_",
+  "fill_",
+  "replace_",
+  "patch_",
+  "compile_",
+];
+
+const PRODUCER_MUTATION_SUBSTRINGS = ["mutat", "generat", "builder"];
 
 const SCHEMA_PATH_KEYS = [
   "file_path",
@@ -61,6 +140,76 @@ const SCHEMA_PATH_KEYS = [
 function isReadOnlyTool(toolName: string): boolean {
   const lower = toolName.toLowerCase();
   return READ_ONLY_TOOL_PREFIXES.some((prefix) => lower.startsWith(prefix));
+}
+
+/**
+ * Checks if a tool name indicates an input-staging operation (e.g. upload or load).
+ * Staging tools prepare existing user files on a remote server and must not trigger
+ * fallback downloads on their own.
+ *
+ * @param toolName - Target tool name
+ * @returns True if the tool is a staging tool
+ * @author Maruf Bepary
+ */
+export function isStagingTool(toolName: string): boolean {
+  const lower = toolName.toLowerCase();
+  return STAGING_TOOL_PATTERNS.has(lower) || lower.startsWith("upload_");
+}
+
+/**
+ * Checks if a tool name belongs to an internal non-producer tool.
+ *
+ * @param toolName - Target tool name
+ * @returns True if the tool is an internal non-producer tool
+ * @author Maruf Bepary
+ */
+function isInternalNonProducerTool(toolName: string): boolean {
+  const lower = toolName.toLowerCase();
+  return (
+    INTERNAL_NON_PRODUCER_TOOLS.has(lower) || lower.startsWith("scratchpad_")
+  );
+}
+
+/**
+ * Checks if a tool name represents a file-producing or file-mutating operation
+ * eligible for fallback download extraction.
+ *
+ * @param toolName - Target tool name
+ * @returns True if the tool produces or mutates a file
+ * @author Maruf Bepary
+ */
+export function isFileProducerOrMutationTool(toolName: string): boolean {
+  if (
+    isReadOnlyTool(toolName) ||
+    isStagingTool(toolName) ||
+    isInternalNonProducerTool(toolName)
+  ) {
+    return false;
+  }
+
+  const lower = toolName.toLowerCase();
+  if (isSpreadsheetMutationTool(lower)) {
+    return true;
+  }
+
+  if (PRODUCER_MUTATION_PREFIXES.some((prefix) => lower.startsWith(prefix))) {
+    return true;
+  }
+
+  return PRODUCER_MUTATION_SUBSTRINGS.some((sub) => lower.includes(sub));
+}
+
+/**
+ * Checks if a tool execution result represents an error payload.
+ *
+ * @param result - Tool execution result
+ * @returns True if the result indicates an error
+ * @author Maruf Bepary
+ */
+function isToolErrorResult(result: unknown): boolean {
+  if (!result || typeof result !== "object") return false;
+  const obj = result as Record<string, unknown>;
+  return Boolean(obj.error) || obj.isError === true;
 }
 
 /**
@@ -321,18 +470,34 @@ function collectCandidateFiles(
   toolSourceMap: Record<string, string>,
 ): Map<string, CandidateFile> {
   const candidateFiles = new Map<string, CandidateFile>();
+  const latestStagedByServer = new Map<string, string>();
 
   for (const tc of completedTools) {
-    if (isReadOnlyTool(tc.toolName)) continue;
+    if (isToolErrorResult(tc.result)) continue;
+
+    const serverName = toolSourceMap[tc.toolName] ?? "unknown";
+
+    if (isStagingTool(tc.toolName)) {
+      const stagedPath =
+        extractFilePathFromRecord(tc.result) ||
+        extractFilePathFromRecord(tc.args);
+      if (stagedPath) {
+        latestStagedByServer.set(serverName, stagedPath);
+      }
+      continue;
+    }
+
+    if (!isFileProducerOrMutationTool(tc.toolName)) continue;
 
     const pathInArgs = extractFilePathFromRecord(tc.args);
     const pathInResult = extractFilePathFromRecord(tc.result);
-    const targetPath = pathInResult || pathInArgs;
+    const targetPath =
+      pathInResult || pathInArgs || latestStagedByServer.get(serverName);
     if (!targetPath) continue;
 
     if (!isFileAlreadyDownloaded(targetPath, completedTools)) {
       candidateFiles.set(targetPath, {
-        serverName: toolSourceMap[tc.toolName] ?? "unknown",
+        serverName,
         argKey: findArgKeyForPath(tc.args, targetPath),
       });
     }

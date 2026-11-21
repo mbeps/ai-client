@@ -39,6 +39,10 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
     expect(result).toContain("report.csv");
     // No raw signed URLs should appear
     expect(result).not.toContain("https://example.com/signed");
+    // Clarifies reading/staging vs modifying
+    expect(result).toContain("upload_file");
+    expect(result).toContain("do NOT call `download_file`");
+    expect(result).toContain("read, analyze, or summarize");
   });
 
   it("does not include attachment section when attachmentNames is empty", () => {
@@ -103,6 +107,9 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
     });
     expect(result).toContain("Tool Usage & Generated Files");
     expect(result).toContain("download_file");
+    expect(result).toContain(
+      "Do NOT call `download_file` if you only read, inspected, or summarized a user-uploaded file without making any modifications to it.",
+    );
   });
 
   it("injects orchestrator directives when isSubagentDelegationEnabled is true", () => {
@@ -185,5 +192,39 @@ describe("buildSystemPrompt (T4A.5 — plain string)", () => {
     });
 
     expect(result).not.toContain("## Available Subagents");
+  });
+
+  it("injects user memories when userMemories are provided", () => {
+    const result = buildSystemPrompt(null, null, null, false, {
+      userMemories: ["Prefers concise answers", "Uses TypeScript"],
+    });
+
+    expect(result).toContain("## User Memory");
+    expect(result).toContain("- Prefers concise answers");
+    expect(result).toContain("- Uses TypeScript");
+  });
+
+  it("injects active canvas artifacts with explicit and fallback metadata", () => {
+    const result = buildSystemPrompt(null, null, null, false, {
+      canvasArtifacts: [
+        {
+          id: "art-1",
+          title: "Architecture",
+          type: "markdown",
+          content: "# Overview",
+        },
+        {
+          id: "",
+          title: "",
+          type: "" as any,
+          content: "plain text",
+        },
+      ],
+    });
+
+    expect(result).toContain("## Active Canvas");
+    expect(result).toContain('### "Architecture" [markdown] (id: "art-1")');
+    expect(result).toContain("# Overview");
+    expect(result).toContain('### "Untitled Artifact" [markdown]\n```markdown\nplain text\n```');
   });
 });

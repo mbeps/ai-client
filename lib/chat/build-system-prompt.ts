@@ -117,7 +117,7 @@ export function buildSystemPrompt(
   if (attachmentNames && attachmentNames.length > 0) {
     const fileList = attachmentNames.map((n) => `- ${n}`).join("\n");
     systemParts.push(
-      `The user has attached the following files to this conversation:\n${fileList}\n\nUse the get_file_url tool with the exact file name to obtain a download link when you need to access a file. If an MCP tool requires a local file path (e.g. Excel tools), first get the download URL using get_file_url, then pass that URL to the MCP file ingestion tool (such as upload_file with file_content=<URL> and filename=<name>) to stage the file, and use the returned local file path with other tools.`,
+      `The user has attached the following files to this conversation:\n${fileList}\n\nUse the get_file_url tool with the exact file name to obtain a download link when you need to access a file. If an MCP tool requires a local file path (e.g. Excel tools), first get the download URL using get_file_url, then pass that URL to the MCP file ingestion tool (such as upload_file with file_content=<URL> and filename=<name>) to stage the file, and use the returned local file path with other tools. Note that get_file_url and upload_file are for reading and staging the user's existing file; if the user only asked to read, analyze, or summarize the file without modifying it, do NOT call \`download_file\`.`,
     );
   }
 
@@ -135,7 +135,8 @@ export function buildSystemPrompt(
   if (supportsTools) {
     systemParts.push(
       "## Tool Usage & Generated Files\n" +
-        "When you create, generate, or modify files using tools (such as spreadsheets, workbooks, documents, or data exports) that the user should receive, you MUST call the corresponding download or export tool (such as `download_file` with the `file_path`) so the file content is retrieved and an interactive download button is presented to the user. Do not simply tell the user the file is ready without calling the tool to provide the download.",
+        "When you create, generate, or modify files using tools (such as creating a new spreadsheet, editing cells/formulas/sheets, or exporting a new document) that the user should receive, you MUST call the corresponding download or export tool (such as `download_file` with the `file_path`) so the file content is retrieved and an interactive download button is presented to the user. " +
+        "Do NOT call `download_file` if you only read, inspected, or summarized a user-uploaded file without making any modifications to it.",
     );
   }
 
