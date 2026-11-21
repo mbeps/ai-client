@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SidebarUserFooter } from "@/components/sidebar/sidebar-user-footer";
@@ -41,6 +41,15 @@ vi.mock("@/lib/store/hydrated-resources", () => ({
   hydratedResources: {
     clear: () => mockClearHydratedResources(),
   },
+}));
+
+const mockSetTheme = vi.fn();
+const mockUseTheme = vi.fn(() => ({
+  theme: "system",
+  setTheme: mockSetTheme,
+}));
+vi.mock("next-themes", () => ({
+  useTheme: () => mockUseTheme(),
 }));
 
 beforeAll(() => {
@@ -153,6 +162,47 @@ describe("SidebarUserFooter", () => {
     expect(settingsLink).toBeInTheDocument();
     expect(settingsLink).toHaveAttribute("href", ROUTES.SETTINGS.path);
 
+    const themeTrigger = await screen.findByRole("menuitem", { name: /theme/i });
+    expect(themeTrigger).toBeInTheDocument();
+
     await user.keyboard("{Escape}");
+  });
+
+  it("opens Theme submenu and switches between system, light, and dark", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SidebarProvider>
+        <SidebarUserFooter />
+      </SidebarProvider>,
+    );
+
+    const trigger = screen.getByRole("button");
+    await user.click(trigger);
+    await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"), { timeout: 300 });
+
+    const themeTrigger = await screen.findByRole("menuitem", { name: /theme/i });
+    await user.click(themeTrigger);
+
+    const systemOption = await screen.findByRole("menuitemradio", { name: /system/i });
+    const lightOption = await screen.findByRole("menuitemradio", { name: /light/i });
+    const darkOption = await screen.findByRole("menuitemradio", { name: /dark/i });
+
+    expect(systemOption).toHaveAttribute("aria-checked", "true");
+    expect(lightOption).toHaveAttribute("aria-checked", "false");
+    expect(darkOption).toHaveAttribute("aria-checked", "false");
+
+    fireEvent.click(darkOption);
+    await waitFor(() => expect(mockSetTheme).toHaveBeenCalledWith("dark"));
+
+    await user.click(trigger);
+    await user.click(await screen.findByRole("menuitem", { name: /theme/i }));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: /light/i }));
+    await waitFor(() => expect(mockSetTheme).toHaveBeenCalledWith("light"));
+
+    await user.click(trigger);
+    await user.click(await screen.findByRole("menuitem", { name: /theme/i }));
+    fireEvent.click(await screen.findByRole("menuitemradio", { name: /system/i }));
+    await waitFor(() => expect(mockSetTheme).toHaveBeenCalledWith("system"));
   });
 });

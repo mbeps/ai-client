@@ -2,6 +2,7 @@
 
 import "katex/dist/katex.min.css";
 import { Check, Copy } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
@@ -71,6 +72,7 @@ const sanitizeSchema = {
  * @returns Centered SVG container, loading skeleton, or fallback code block on error.
  */
 const MermaidBlock = ({ chart }: { chart: string }) => {
+  const { resolvedTheme } = useTheme();
   const [svg, setSvg] = useState<string>("");
   const [error, setError] = useState<string>("");
 
@@ -95,7 +97,7 @@ const MermaidBlock = ({ chart }: { chart: string }) => {
         const mermaid = (await import("mermaid")).default;
         mermaid.initialize({
           startOnLoad: false,
-          theme: "default",
+          theme: resolvedTheme === "dark" ? "dark" : "default",
           suppressErrorRendering: true,
         });
 
@@ -128,7 +130,7 @@ const MermaidBlock = ({ chart }: { chart: string }) => {
     return () => {
       isCancelled = true;
     };
-  }, [chart]);
+  }, [chart, resolvedTheme]);
 
   const cleanChart = chart
     .replace(/^```(?:mermaid)?\s*/i, "")

@@ -386,7 +386,7 @@ export function ChatInput(props: ChatInputProps) {
           props.textareaAriaLabel ??
           (props.submitLabel ? "Edit message" : "Chat message")
         }
-        className="max-h-30 resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+        className="max-h-30 resize-none overflow-y-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
         rows={2}
         disabled={services.hasNoModels}
       />

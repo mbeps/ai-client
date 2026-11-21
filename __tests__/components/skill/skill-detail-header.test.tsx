@@ -135,4 +135,17 @@ describe("SkillDetailHeader", () => {
     await user.click(deleteItem);
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
+
+  it("uses dark:bg-transparent on inline title and slug inputs", () => {
+    render(<SkillDetailHeader {...defaultProps} />);
+
+    expect(screen.getByLabelText("Skill name")).toHaveClass(
+      "bg-transparent",
+      "dark:bg-transparent",
+    );
+    expect(screen.getByLabelText("Skill slash command slug")).toHaveClass(
+      "bg-transparent",
+      "dark:bg-transparent",
+    );
+  });
 });

@@ -292,7 +292,7 @@ export function MarkdownTabEditor({
             placeholder={placeholder}
             disabled={disabled}
             className={cn(
-              "w-full resize-y overflow-y-auto rounded-none border-0 bg-transparent px-6 py-4 font-mono text-sm leading-relaxed shadow-none focus:ring-0 focus-visible:ring-0",
+              "w-full resize-y overflow-y-auto rounded-none border-0 bg-transparent px-6 py-4 font-mono text-sm leading-relaxed shadow-none focus:ring-0 focus-visible:ring-0 dark:bg-transparent",
               minHeight,
               maxHeight,
               textareaClassName,

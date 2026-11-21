@@ -179,4 +179,19 @@ describe("MarkdownTabEditor", () => {
       expect(mockReplaceBlocks).toHaveBeenCalled();
     });
   });
+
+  it("uses dark:bg-transparent on raw textarea to match editor card surface in dark mode", async () => {
+    const user = userEvent.setup();
+    render(
+      <MarkdownTabEditor
+        value="Raw text"
+        onChange={vi.fn()}
+        placeholder="Raw placeholder"
+      />,
+    );
+
+    await user.click(screen.getByRole("tab", { name: /raw text/i }));
+    const textarea = screen.getByPlaceholderText("Raw placeholder");
+    expect(textarea).toHaveClass("bg-transparent", "dark:bg-transparent");
+  });
 });

@@ -5,6 +5,16 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("katex/dist/katex.min.css", () => ({}));
 
 const mockDownloadFile = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const mockUseTheme = vi.hoisted(() =>
+  vi.fn(() => ({
+    resolvedTheme: "light",
+    setTheme: vi.fn(),
+    themes: ["light", "dark", "system"],
+  })),
+);
+vi.mock("next-themes", () => ({
+  useTheme: () => mockUseTheme(),
+}));
 vi.mock("@/lib/utils/download-file", () => ({
   downloadFile: mockDownloadFile,
   extractFilenameFromUrl: (url: string) => url.split("/").pop() || "download",
@@ -281,5 +291,34 @@ describe("MarkdownRenderer Mermaid diagrams", () => {
       "graph TD\nA-->B",
     );
     spy.mockRestore();
+  });
+
+  it("initializes mermaid with dark theme when resolvedTheme is dark", async () => {
+    mockUseTheme.mockReturnValueOnce({
+      resolvedTheme: "dark",
+      setTheme: vi.fn(),
+      themes: ["light", "dark", "system"],
+    });
+    const mermaidModule = await import("mermaid");
+    const initSpy = vi.spyOn(mermaidModule.default, "initialize");
+    const renderSpy = vi
+      .spyOn(mermaidModule.default, "render")
+      .mockResolvedValueOnce({
+        svg: '<svg data-testid="mermaid-dark-svg"></svg>',
+      } as any);
+
+    render(<MarkdownRenderer content={"```mermaid\ngraph TD\nA-->B\n```"} />);
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(initSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: "dark",
+      }),
+    );
+    renderSpy.mockRestore();
+    initSpy.mockRestore();
   });
 });

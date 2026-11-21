@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 };
 
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { ThemeProvider } from "@/components/theme-provider";
 import { PopoverProvider } from "@/components/ui/popover";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -45,14 +46,21 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <TooltipProvider>
-          <PopoverProvider>
-            <NuqsAdapter>
-              {children}
-              <Toaster position="bottom-right" />
-            </NuqsAdapter>
-          </PopoverProvider>
-        </TooltipProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>
+            <PopoverProvider>
+              <NuqsAdapter>
+                {children}
+                <Toaster position="bottom-right" />
+              </NuqsAdapter>
+            </PopoverProvider>
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

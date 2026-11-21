@@ -172,4 +172,15 @@ describe("ChatInput Reasoning Effort", () => {
     expect(handleSend).toHaveBeenCalledTimes(1);
     expect(handleSend.mock.calls[0][11]).toBe("high");
   });
+
+  it("overrides Textarea dark background so chat input surface remains uniform in dark mode", () => {
+    render(
+      <TooltipProvider>
+        <ChatInput onSend={vi.fn()} initialModelId="gpt-4o" />
+      </TooltipProvider>,
+    );
+
+    const textarea = screen.getByRole("textbox");
+    expect(textarea).toHaveClass("bg-transparent", "dark:bg-transparent");
+  });
 });

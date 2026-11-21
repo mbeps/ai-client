@@ -72,7 +72,7 @@ export function TranslationSourcePane(props: TranslationSourcePaneProps) {
           value={sourceText}
           onChange={(e) => onSourceTextChange(e.target.value)}
           placeholder={placeholder}
-          className="min-h-[140px] flex-1 resize-none scrollbar-thin border-0 p-4 text-sm leading-relaxed focus-visible:ring-0"
+          className="min-h-[140px] flex-1 resize-none scrollbar-thin border-0 bg-transparent p-4 text-sm leading-relaxed shadow-none focus-visible:ring-0 dark:bg-transparent"
           disabled={isExtracting}
         />
 
