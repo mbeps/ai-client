@@ -1,5 +1,7 @@
 import { tool } from "ai";
+import { env } from "@/config/env";
 import { PROMPTS } from "@/config/prompts";
+import { hybridSearch } from "@/lib/rag/hybrid-search";
 import { runKbSubagent } from "@/lib/rag/run-kb-subagent";
 import { searchKnowledgeBaseSchema } from "@/schemas/chat/chat";
 
@@ -63,6 +65,39 @@ export function registerKnowledgebaseTool(
             success: false,
             error:
               "Missing mandatory 'query' parameter. Search requires a specific keyword or phrase.",
+          };
+        }
+
+        if (env.RAG_MODE === "vector") {
+          const kbTarget =
+            targetKbIds.length === 1 ? targetKbIds[0] : targetKbIds;
+          const hits = await hybridSearch(
+            kbTarget,
+            normalizedQuery,
+            userId,
+            env.RAG_TOP_K,
+          );
+
+          if (hits.length === 0) {
+            return {
+              success: true,
+              results: [],
+              resultCount: 0,
+              message: `No results found for '${normalizedQuery}'. Try using different keywords or broader search terms.`,
+            };
+          }
+
+          return {
+            success: true,
+            results: hits.map((r) => ({
+              content: r.content,
+              relevanceScore: r.score,
+              documentId: r.documentId,
+              documentName: r.documentName,
+              ...(r.kbId ? { kbId: r.kbId } : {}),
+              ...(r.kbName ? { kbName: r.kbName } : {}),
+            })),
+            resultCount: hits.length,
           };
         }
 

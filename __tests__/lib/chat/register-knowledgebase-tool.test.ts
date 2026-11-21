@@ -2,8 +2,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 
 const mockRunKbSubagent = vi.hoisted(() => vi.fn());
+const mockHybridSearch = vi.hoisted(() => vi.fn());
+const mockEnv = vi.hoisted(() => ({
+  RAG_MODE: "hybrid" as "hybrid" | "vector" | "file_read",
+  RAG_TOP_K: 5,
+}));
+
+vi.mock("@/config/env", () => ({
+  env: mockEnv,
+}));
+
 vi.mock("@/lib/rag/run-kb-subagent", () => ({
   runKbSubagent: mockRunKbSubagent,
+}));
+
+vi.mock("@/lib/rag/hybrid-search", () => ({
+  hybridSearch: mockHybridSearch,
 }));
 
 import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
@@ -11,6 +25,8 @@ import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-too
 describe("registerKnowledgebaseTool", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnv.RAG_MODE = "hybrid";
+    mockEnv.RAG_TOP_K = 5;
   });
 
   it("registers tool when kb is ready and selectedTools is undefined", () => {
@@ -257,5 +273,90 @@ describe("registerKnowledgebaseTool", () => {
     expect(snippetsOut.type).toBe("text");
     expect(snippetsOut.value).toContain("[Source 1: A.md]\nSnippet A content");
     expect(snippetsOut.value).toContain("[Source 2: B.md]\nSnippet B content");
+  });
+
+  it("in vector mode calls hybridSearch directly without runKbSubagent and normalizes results", async () => {
+    mockEnv.RAG_MODE = "vector";
+    mockEnv.RAG_TOP_K = 7;
+    mockHybridSearch.mockResolvedValueOnce([
+      {
+        id: "pt-1",
+        content: "Direct vector chunk",
+        score: 0.89,
+        documentId: "doc-1",
+        documentName: "Vector.md",
+        s3Key: "uploads/vector.md",
+        chunkIndex: 0,
+        kbId: "kb-1",
+        kbName: "KB One",
+      },
+      {
+        id: "pt-2",
+        content: "Minimal vector chunk",
+        score: 0.72,
+        documentId: "doc-2",
+        documentName: "Minimal.md",
+        s3Key: "uploads/minimal.md",
+        chunkIndex: 1,
+      },
+    ]);
+
+    const tools = registerKnowledgebaseTool(["kb-1"], true, "user-1");
+    const result = await (tools.search_knowledge_base as any).execute({
+      query: "  vector search  ",
+    });
+
+    expect(mockRunKbSubagent).not.toHaveBeenCalled();
+    expect(mockHybridSearch).toHaveBeenCalledWith(
+      "kb-1",
+      "vector search",
+      "user-1",
+      7,
+    );
+    expect(result).toEqual({
+      success: true,
+      resultCount: 2,
+      results: [
+        {
+          content: "Direct vector chunk",
+          relevanceScore: 0.89,
+          documentId: "doc-1",
+          documentName: "Vector.md",
+          kbId: "kb-1",
+          kbName: "KB One",
+        },
+        {
+          content: "Minimal vector chunk",
+          relevanceScore: 0.72,
+          documentId: "doc-2",
+          documentName: "Minimal.md",
+        },
+      ],
+    });
+  });
+
+  it("in vector mode passes array for multiple KBs and handles empty results", async () => {
+    mockEnv.RAG_MODE = "vector";
+    mockHybridSearch.mockResolvedValueOnce([]);
+
+    const tools = registerKnowledgebaseTool(["kb-1", "kb-2"], true, "user-1");
+    const result = await (tools.search_knowledge_base as any).execute({
+      query: "nothing",
+    });
+
+    expect(mockRunKbSubagent).not.toHaveBeenCalled();
+    expect(mockHybridSearch).toHaveBeenCalledWith(
+      ["kb-1", "kb-2"],
+      "nothing",
+      "user-1",
+      5,
+    );
+    expect(result).toEqual({
+      success: true,
+      results: [],
+      resultCount: 0,
+      message:
+        "No results found for 'nothing'. Try using different keywords or broader search terms.",
+    });
   });
 });

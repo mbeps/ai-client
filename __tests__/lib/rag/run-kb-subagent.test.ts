@@ -4,8 +4,17 @@ const mockHybridSearch = vi.hoisted(() => vi.fn());
 const mockGetDocumentChunksByRange = vi.hoisted(() => vi.fn());
 const mockExploreKbGraph = vi.hoisted(() => vi.fn());
 const mockGenerateText = vi.hoisted(() => vi.fn());
+const mockReadS3DocumentChunksByRange = vi.hoisted(() => vi.fn());
+const mockBuildDeterministicToc = vi.hoisted(() => vi.fn());
+const mockEnv = vi.hoisted(() => ({
+  RAG_MODE: "hybrid" as "hybrid" | "vector" | "file_read",
+}));
 const mockDb = vi.hoisted(() => ({
   select: vi.fn(),
+}));
+
+vi.mock("@/config/env", () => ({
+  env: mockEnv,
 }));
 
 vi.mock("@/lib/rag/hybrid-search", () => ({
@@ -18,6 +27,14 @@ vi.mock("@/lib/rag/qdrant-client", () => ({
 
 vi.mock("@/lib/rag/explore-kb-graph", () => ({
   exploreKbGraph: mockExploreKbGraph,
+}));
+
+vi.mock("@/lib/rag/read-s3-document-chunks", () => ({
+  readS3DocumentChunksByRange: mockReadS3DocumentChunksByRange,
+}));
+
+vi.mock("@/lib/rag/extract-document-metadata", () => ({
+  buildDeterministicToc: mockBuildDeterministicToc,
 }));
 
 vi.mock("ai", async (importOriginal) => {
@@ -37,6 +54,7 @@ import { runKbSubagent } from "@/lib/rag/run-kb-subagent";
 describe("runKbSubagent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnv.RAG_MODE = "hybrid";
   });
 
   const sampleInitialHits = [
@@ -410,5 +428,477 @@ describe("runKbSubagent", () => {
 
     expect(result.answer).toBe("DB doc read.");
     expect(result.results.some((r) => r.content === "DB doc chunk content")).toBe(true);
+  });
+
+  it("falls back to readS3DocumentChunksByRange in hybrid mode when Qdrant returns empty chunks", async () => {
+    mockHybridSearch.mockResolvedValueOnce(sampleInitialHits);
+    mockExploreKbGraph.mockResolvedValueOnce(sampleCatalog);
+    mockGetDocumentChunksByRange.mockResolvedValueOnce([]);
+    mockDb.select.mockImplementationOnce(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([
+          {
+            id: "doc-1",
+            name: "DocOne.md",
+            mimeType: "text/markdown",
+            s3Key: "uploads/doc1.md",
+            kbId: "kb-1",
+          },
+        ]),
+      }),
+    }));
+    mockReadS3DocumentChunksByRange.mockResolvedValueOnce([
+      {
+        id: "doc-1:0",
+        content: "S3 fallback chunk content",
+        documentId: "doc-1",
+        documentName: "DocOne.md",
+        s3Key: "uploads/doc1.md",
+        chunkIndex: 0,
+        kbId: "kb-1",
+      },
+    ]);
+
+    mockGenerateText.mockImplementationOnce(async ({ tools }) => {
+      const readRes = await (tools.read_kb_document as any).execute({
+        documentId: "doc-1",
+        chunkStartIndex: 0,
+        chunkEndIndex: 0,
+      });
+      expect(readRes.safeToRead).toBe(true);
+      expect(readRes.chunks[0].content).toBe("S3 fallback chunk content");
+      return { text: "Read from S3 fallback." };
+    });
+
+    const result = await runKbSubagent({
+      query: "read fallback",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+    });
+
+    expect(mockReadS3DocumentChunksByRange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-1",
+        s3Key: "uploads/doc1.md",
+        mimeType: "text/markdown",
+        kbId: "kb-1",
+      }),
+    );
+    expect(result.answer).toBe("Read from S3 fallback.");
+  });
+
+  it("in file_read mode skips hybridSearch, omits search_kb_chunks, and reads via S3 with cache", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    mockExploreKbGraph
+      .mockResolvedValueOnce(sampleCatalog)
+      .mockResolvedValueOnce({
+        documents: [
+          sampleCatalog.documents[0],
+          {
+            id: "doc-query",
+            name: "QueryMatch.md",
+            documentType: "reference",
+            summary: "Matched by query",
+            keyEntities: [],
+            chunkCount: 2,
+            tokenCount: 400,
+            tableOfContents: [],
+          },
+        ],
+        relations: sampleCatalog.relations,
+      });
+
+    mockDb.select.mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([
+          {
+            id: "doc-1",
+            name: "DocOne.md",
+            mimeType: "text/markdown",
+            s3Key: "uploads/doc1.md",
+            kbId: "kb-1",
+          },
+        ]),
+      }),
+    }));
+
+    mockReadS3DocumentChunksByRange.mockResolvedValue([
+      {
+        id: "doc-1:0",
+        content: "File read S3 chunk",
+        documentId: "doc-1",
+        documentName: "DocOne.md",
+        s3Key: "uploads/doc1.md",
+        chunkIndex: 0,
+        kbId: "kb-1",
+      },
+    ]);
+
+    mockGenerateText.mockImplementationOnce(async ({ tools, prompt }) => {
+      expect(tools.search_kb_chunks).toBeUndefined();
+      expect(tools.explore_kb_graph).toBeDefined();
+      expect(tools.read_kb_document).toBeDefined();
+      expect(prompt).toContain("QueryMatch.md");
+
+      const readRes = await (tools.read_kb_document as any).execute({
+        documentId: "doc-1",
+        chunkStartIndex: 0,
+        chunkEndIndex: 0,
+      });
+      expect(readRes.safeToRead).toBe(true);
+      expect(readRes.chunks[0].content).toBe("File read S3 chunk");
+      return { text: "File read answer." };
+    });
+
+    const result = await runKbSubagent({
+      query: "architecture",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+    });
+
+    expect(mockHybridSearch).not.toHaveBeenCalled();
+    expect(mockGetDocumentChunksByRange).not.toHaveBeenCalled();
+    expect(mockReadS3DocumentChunksByRange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-1",
+        cache: expect.any(Map),
+      }),
+    );
+    expect(result.answer).toBe("File read answer.");
+  });
+
+  it("in file_read mode generates deterministic TOC fallback for oversized doc with empty tableOfContents", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    mockExploreKbGraph
+      .mockResolvedValueOnce({
+        documents: [
+          {
+            id: "doc-oversized",
+            name: "Oversized.pdf",
+            documentType: "manual",
+            summary: "Large doc without TOC",
+            keyEntities: [],
+            chunkCount: 10,
+            tokenCount: 50_000,
+            tableOfContents: [],
+          },
+        ],
+        relations: [],
+      })
+      .mockRejectedValueOnce(new Error("query explore failed"));
+
+    mockDb.select.mockImplementationOnce(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([
+          {
+            id: "doc-oversized",
+            name: "Oversized.pdf",
+            mimeType: "application/pdf",
+            s3Key: "uploads/oversized.pdf",
+            kbId: "kb-1",
+          },
+        ]),
+      }),
+    }));
+
+    mockReadS3DocumentChunksByRange.mockResolvedValueOnce([
+      {
+        id: "doc-oversized:0",
+        content: "# Section 1\nBody",
+        documentId: "doc-oversized",
+        documentName: "Oversized.pdf",
+        s3Key: "uploads/oversized.pdf",
+        chunkIndex: 0,
+        kbId: "kb-1",
+      },
+    ]);
+    mockBuildDeterministicToc.mockReturnValueOnce([
+      { title: "Section 1", chunkStartIndex: 0, chunkEndIndex: 9 },
+    ]);
+
+    mockGenerateText.mockImplementationOnce(async ({ tools }) => {
+      const readRes = await (tools.read_kb_document as any).execute({
+        documentId: "doc-oversized",
+      });
+      expect(readRes.safeToRead).toBe(false);
+      expect(readRes.outline).toEqual([
+        { title: "Section 1", chunkStartIndex: 0, chunkEndIndex: 9 },
+      ]);
+      return { text: "Used deterministic TOC." };
+    });
+
+    const result = await runKbSubagent({
+      query: "oversized",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+      contextWindow: 8_192,
+    });
+
+    expect(mockBuildDeterministicToc).toHaveBeenCalled();
+    expect(result.answer).toBe("Used deterministic TOC.");
+  });
+
+  it("in file_read mode returns Document not found when S3 metadata cannot be resolved", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    mockExploreKbGraph
+      .mockResolvedValueOnce(sampleCatalog)
+      .mockResolvedValueOnce({ documents: [], relations: [] });
+
+    mockDb.select.mockImplementationOnce(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    }));
+
+    mockGenerateText.mockImplementationOnce(async ({ tools }) => {
+      const readRes = await (tools.read_kb_document as any).execute({
+        documentId: "doc-1",
+      });
+      expect(readRes.safeToRead).toBe(false);
+      expect(readRes.error).toBe("Document not found.");
+      return { text: "Missing S3 metadata." };
+    });
+
+    const result = await runKbSubagent({
+      query: "missing s3",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+    });
+
+    expect(result.answer).toBe("Missing S3 metadata.");
+  });
+
+  it("in hybrid mode falls back to window TOC when oversized doc has empty tableOfContents", async () => {
+    mockHybridSearch.mockResolvedValueOnce(sampleInitialHits);
+    mockExploreKbGraph.mockResolvedValueOnce({
+      documents: [
+        {
+          id: "doc-vec-huge",
+          name: "VectorOnlyHuge.pdf",
+          documentType: "general",
+          summary: "",
+          keyEntities: [],
+          chunkCount: 7,
+          tokenCount: 50_000,
+          tableOfContents: [],
+        },
+      ],
+      relations: [],
+    });
+
+    mockGenerateText.mockImplementationOnce(async ({ tools }) => {
+      const readRes = await (tools.read_kb_document as any).execute({
+        documentId: "doc-vec-huge",
+      });
+      expect(readRes.safeToRead).toBe(false);
+      expect(readRes.outline).toEqual([
+        { title: "Section 1 (Chunks 0–4)", chunkStartIndex: 0, chunkEndIndex: 4 },
+        { title: "Section 2 (Chunks 5–6)", chunkStartIndex: 5, chunkEndIndex: 6 },
+      ]);
+      return { text: "Used window TOC fallback." };
+    });
+
+    const result = await runKbSubagent({
+      query: "read vector-only huge doc",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+      contextWindow: 8_192,
+    });
+
+    expect(result.answer).toBe("Used window TOC fallback.");
+  });
+
+  it("in file_read mode caches s3Meta from DB lookup and handles empty query and duplicate catalog docs", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    mockExploreKbGraph.mockResolvedValueOnce(sampleCatalog);
+
+    mockDb.select.mockImplementationOnce(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([
+          {
+            id: "doc-uncataloged",
+            name: "Uncataloged.md",
+            mimeType: "text/markdown",
+            s3Key: "uploads/uncataloged.md",
+            kbId: "kb-1",
+            tokenCount: 100,
+            chunkCount: 1,
+            documentType: "general",
+            summary: "Summary",
+            keyEntities: [],
+            tableOfContents: [],
+          },
+        ]),
+      }),
+    }));
+
+    mockReadS3DocumentChunksByRange.mockResolvedValue([
+      {
+        id: "doc-uncataloged:0",
+        content: "Uncataloged chunk",
+        documentId: "doc-uncataloged",
+        documentName: "Uncataloged.md",
+        s3Key: "uploads/uncataloged.md",
+        chunkIndex: 0,
+        kbId: "kb-1",
+      },
+    ]);
+
+    mockGenerateText.mockImplementationOnce(async ({ tools }) => {
+      const first = await (tools.read_kb_document as any).execute({
+        documentId: "doc-uncataloged",
+      });
+      expect(first.safeToRead).toBe(true);
+      const second = await (tools.read_kb_document as any).execute({
+        documentId: "doc-uncataloged",
+        chunkStartIndex: 0,
+        chunkEndIndex: 0,
+      });
+      expect(second.safeToRead).toBe(true);
+      return { text: "Read uncataloged twice." };
+    });
+
+    const result = await runKbSubagent({
+      query: "   ",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+    });
+
+    expect(mockDb.select).toHaveBeenCalledTimes(1);
+    expect(result.answer).toBe("Read uncataloged twice.");
+  });
+
+  it("handles missing s3Meta and empty S3 chunks in oversized TOC fallback and hybrid S3 fallback", async () => {
+    // 1. file_read mode: oversized doc with empty S3 chunks -> falls back to window TOC
+    mockEnv.RAG_MODE = "file_read";
+    mockExploreKbGraph
+      .mockResolvedValueOnce({
+        documents: [
+          {
+            id: "doc-empty-s3",
+            name: "EmptyS3.pdf",
+            documentType: "manual",
+            summary: "Empty S3 doc",
+            keyEntities: [],
+            chunkCount: 4,
+            tokenCount: 50_000,
+            tableOfContents: [],
+          },
+        ],
+        relations: [],
+      })
+      .mockResolvedValueOnce({ documents: [], relations: [] });
+
+    mockDb.select.mockImplementationOnce(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([
+          {
+            id: "doc-empty-s3",
+            name: "EmptyS3.pdf",
+            mimeType: "application/pdf",
+            s3Key: "uploads/empty.pdf",
+            kbId: "kb-1",
+          },
+        ]),
+      }),
+    }));
+    mockReadS3DocumentChunksByRange.mockResolvedValueOnce([]);
+
+    mockGenerateText.mockImplementationOnce(async ({ tools }) => {
+      const readRes = await (tools.read_kb_document as any).execute({
+        documentId: "doc-empty-s3",
+      });
+      expect(readRes.safeToRead).toBe(false);
+      expect(readRes.outline).toEqual([
+        { title: "Section 1 (Chunks 0–3)", chunkStartIndex: 0, chunkEndIndex: 3 },
+      ]);
+      return { text: "Window fallback from empty S3." };
+    });
+
+    await runKbSubagent({
+      query: "empty s3",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+      contextWindow: 8_192,
+    });
+
+    // 2. file_read mode: oversized doc with no S3 metadata -> falls back to window TOC
+    mockExploreKbGraph
+      .mockResolvedValueOnce({
+        documents: [
+          {
+            id: "doc-no-meta",
+            name: "NoMeta.pdf",
+            documentType: "manual",
+            summary: "No S3 meta",
+            keyEntities: [],
+            chunkCount: 3,
+            tokenCount: 50_000,
+            tableOfContents: [],
+          },
+        ],
+        relations: [],
+      })
+      .mockResolvedValueOnce({ documents: [], relations: [] });
+
+    mockDb.select.mockImplementationOnce(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    }));
+
+    mockGenerateText.mockImplementationOnce(async ({ tools }) => {
+      const readRes = await (tools.read_kb_document as any).execute({
+        documentId: "doc-no-meta",
+      });
+      expect(readRes.safeToRead).toBe(false);
+      expect(readRes.outline).toEqual([
+        { title: "Section 1 (Chunks 0–2)", chunkStartIndex: 0, chunkEndIndex: 2 },
+      ]);
+      return { text: "Window fallback from missing meta." };
+    });
+
+    await runKbSubagent({
+      query: "no meta",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+      contextWindow: 8_192,
+    });
+
+    // 3. hybrid mode: Qdrant returns [] and S3 meta is missing -> returns empty chunks cleanly
+    mockEnv.RAG_MODE = "hybrid";
+    mockHybridSearch.mockResolvedValueOnce(sampleInitialHits);
+    mockExploreKbGraph.mockResolvedValueOnce(sampleCatalog);
+    mockGetDocumentChunksByRange.mockResolvedValueOnce([]);
+    mockDb.select.mockImplementationOnce(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    }));
+
+    mockGenerateText.mockImplementationOnce(async ({ tools }) => {
+      const readRes = await (tools.read_kb_document as any).execute({
+        documentId: "doc-1",
+      });
+      expect(readRes.safeToRead).toBe(true);
+      expect(readRes.chunks).toEqual([]);
+      return { text: "Empty chunks handled." };
+    });
+
+    const hybridRes = await runKbSubagent({
+      query: "empty hybrid fallback",
+      targetKbIds: ["kb-1"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+    });
+    expect(hybridRes.answer).toBe("Empty chunks handled.");
   });
 });

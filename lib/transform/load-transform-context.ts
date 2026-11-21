@@ -13,6 +13,7 @@ import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-prov
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { getLogger } from "@/lib/logger";
 import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
+import { exploreKbGraph } from "@/lib/rag/explore-kb-graph";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
 import type { SkillMode } from "@/schemas/skill/skill-config";
@@ -123,6 +124,17 @@ export async function loadTransformContext({
   if (kbIds && kbIds.length > 0) {
     kbContextPromise = (async () => {
       try {
+        if (env.RAG_MODE === "file_read") {
+          const graph = await exploreKbGraph({ kbIds });
+          if (graph.documents.length > 0) {
+            const catalogLines = graph.documents.map(
+              (d) => `- "${d.name}" (${d.documentType}): ${d.summary}`,
+            );
+            return `\n\nKnowledge Base Document Catalog:\n${catalogLines.join("\n")}`;
+          }
+          return "";
+        }
+
         const query =
           agentRow.globalContext || agentRow.description || agentRow.name;
         const allChunks = await hybridSearch(
@@ -178,6 +190,14 @@ export async function loadTransformContext({
 
   /* 3. Register MCP tools (and KB search tool when knowledge bases are attached) */
   const hasKbIds = Boolean(kbIds && kbIds.length > 0);
+  const kbSubagentConfig =
+    typeof resolvedProvider?.sdkProvider?.chat === "function" &&
+    resolvedProvider?.modelId
+      ? {
+          model: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
+          contextWindow: resolvedProvider.modelRow?.contextWindow ?? undefined,
+        }
+      : undefined;
   const { mcpTools, toolSourceMap, mcpCleanup } = await registerMcpTools(
     allServers as any,
     undefined,
@@ -186,6 +206,7 @@ export async function loadTransformContext({
     hasKbIds,
     userId,
     hasKbIds ? kbIds : undefined,
+    ...(kbSubagentConfig ? [kbSubagentConfig] : []),
   );
 
   const linkedSubagents =

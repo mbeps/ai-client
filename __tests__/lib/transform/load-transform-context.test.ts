@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encrypt } from "@/lib/encryption/encrypt";
 import { loadTransformContext } from "@/lib/transform/load-transform-context";
 
@@ -27,7 +27,35 @@ vi.mock("@/lib/rag/hybrid-search", () => ({
   hybridSearch: hybridSearchMock,
 }));
 
+const exploreKbGraphMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/rag/explore-kb-graph", () => ({
+  exploreKbGraph: exploreKbGraphMock,
+}));
+
+const mockEnv = vi.hoisted(() => ({
+  RAG_MODE: "hybrid" as "hybrid" | "vector" | "file_read",
+  TRANSFORM_TOP_K: 5,
+}));
+vi.mock("@/config/env", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/config/env")>();
+  return {
+    ...actual,
+    env: new Proxy(actual.env, {
+      get(target, prop) {
+        if (prop in mockEnv) return mockEnv[prop as keyof typeof mockEnv];
+        return Reflect.get(target, prop);
+      },
+    }),
+  };
+});
+
 describe("loadTransformContext", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockEnv.RAG_MODE = "hybrid";
+    mockEnv.TRANSFORM_TOP_K = 5;
+  });
+
   const createMockQuery = (resolvedValue: any = []) => {
     const q: any = {
       from: vi.fn().mockImplementation(() => q),
@@ -302,5 +330,112 @@ describe("loadTransformContext", () => {
       },
     });
     expect(ctx.kbContext).toBe("");
+  });
+
+  it("in file_read mode uses exploreKbGraph instead of hybridSearch and forwards kbSubagentConfig", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    dbMock.select.mockImplementation(() => createMockQuery([]));
+
+    const mockChatModel = { id: "chat-model-instance" };
+    resolveProviderMock.mockResolvedValue({
+      modelId: "gpt-4o",
+      sdkProvider: { chat: vi.fn().mockReturnValue(mockChatModel) },
+      modelRow: { contextWindow: 128_000 },
+    });
+    exploreKbGraphMock.mockResolvedValueOnce({
+      documents: [
+        {
+          id: "doc-1",
+          name: "Spec.md",
+          documentType: "technical_spec",
+          summary: "System architecture spec",
+          keyEntities: [],
+          chunkCount: 4,
+          tokenCount: 1200,
+          tableOfContents: [],
+        },
+      ],
+      relations: [],
+    });
+    registerMcpToolsMock.mockResolvedValue({
+      mcpTools: {},
+      toolSourceMap: {},
+      mcpCleanup: vi.fn(),
+    });
+
+    const ctx = await loadTransformContext({
+      userId: "user-1",
+      agentRow: {
+        id: "agent-fr",
+        name: "FileRead Agent",
+        modelId: "openai/gpt-4o",
+        knowledgeBaseIds: ["kb-1"],
+        steps: "[]",
+      },
+    });
+
+    expect(hybridSearchMock).not.toHaveBeenCalled();
+    expect(exploreKbGraphMock).toHaveBeenCalledWith({ kbIds: ["kb-1"] });
+    expect(ctx.kbContext).toContain("Knowledge Base Document Catalog:");
+    expect(ctx.kbContext).toContain('"Spec.md" (technical_spec): System architecture spec');
+    expect(registerMcpToolsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      undefined,
+      false,
+      "kb-1",
+      true,
+      "user-1",
+      ["kb-1"],
+      {
+        model: mockChatModel,
+        contextWindow: 128_000,
+      },
+    );
+  });
+
+  it("in file_read mode returns empty kbContext when exploreKbGraph returns no documents", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    dbMock.select.mockImplementation(() => createMockQuery([]));
+
+    resolveProviderMock.mockResolvedValue({
+      modelId: "gpt-4o",
+      sdkProvider: { chat: vi.fn().mockReturnValue({}) },
+      modelRow: { contextWindow: null },
+    });
+    exploreKbGraphMock.mockResolvedValueOnce({
+      documents: [],
+      relations: [],
+    });
+    registerMcpToolsMock.mockResolvedValue({
+      mcpTools: {},
+      toolSourceMap: {},
+      mcpCleanup: vi.fn(),
+    });
+
+    const ctx = await loadTransformContext({
+      userId: "user-1",
+      agentRow: {
+        id: "agent-fr-empty",
+        name: "FileRead Empty",
+        modelId: "openai/gpt-4o",
+        knowledgeBaseIds: ["kb-1"],
+        steps: "[]",
+      },
+    });
+
+    expect(ctx.kbContext).toBe("");
+    expect(registerMcpToolsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      undefined,
+      false,
+      "kb-1",
+      true,
+      "user-1",
+      ["kb-1"],
+      {
+        model: {},
+        contextWindow: undefined,
+      },
+    );
   });
 });
