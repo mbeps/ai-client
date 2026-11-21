@@ -102,14 +102,14 @@ const baseSettings: UserSettingsRow = {
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 };
 
-async function openComboboxByLabel(cardTitle: string) {
-  const titleEl = screen.getByText(cardTitle);
-  const card = titleEl.closest("[data-slot='card']");
-  if (!card) throw new Error(`Card not found for ${cardTitle}`);
+async function openComboboxByLabel(rowTitle: string) {
+  const titleEl = screen.getByText(rowTitle);
+  const row = titleEl.closest("[data-slot='default-model-row']");
+  if (!row) throw new Error(`Row not found for ${rowTitle}`);
   const trigger =
-    card.querySelector<HTMLButtonElement>("button") ??
-    card.querySelector<HTMLInputElement>("input");
-  if (!trigger) throw new Error(`Trigger not found for ${cardTitle}`);
+    row.querySelector<HTMLButtonElement>("[data-slot='input-group-button']") ??
+    row.querySelector<HTMLInputElement>("input");
+  if (!trigger) throw new Error(`Trigger not found for ${rowTitle}`);
   fireEvent.click(trigger);
 }
 
