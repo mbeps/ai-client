@@ -37,10 +37,12 @@ vi.mock("@/lib/rag/apply-rrf", () => ({
 
 const searchSemanticVectorsMock = vi.hoisted(() => vi.fn());
 const searchKeywordChunksMock = vi.hoisted(() => vi.fn());
+const deletePointsByDocumentIdMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 vi.mock("@/lib/rag/qdrant-client", () => ({
   searchSemanticVectors: searchSemanticVectorsMock,
   searchKeywordChunks: searchKeywordChunksMock,
+  deletePointsByDocumentId: deletePointsByDocumentIdMock,
 }));
 
 describe("hybridSearch", () => {
@@ -301,5 +303,70 @@ describe("hybridSearch", () => {
       20,
       ["doc-abc", "doc-xyz"],
     );
+  });
+
+  it("excludes chunks for deleted documents and schedules Qdrant cleanup", async () => {
+    const kbSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([{ id: "kb-1", indexStatus: "ready" }]),
+    };
+    const docSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([{ id: "doc-live" }]),
+    };
+    dbMock.select
+      .mockReturnValueOnce(kbSelect)
+      .mockReturnValueOnce(docSelect);
+
+    embedQueryMock.mockResolvedValue([0.1, 0.2]);
+    searchSemanticVectorsMock.mockResolvedValueOnce([
+      { id: "c-live", documentId: "doc-live", content: "live" },
+      { id: "c-stale", documentId: "doc-deleted", content: "stale" },
+    ]);
+    searchKeywordChunksMock.mockResolvedValueOnce([
+      { id: "c-stale-2", documentId: "doc-deleted", content: "stale 2" },
+    ]);
+    applyRRFMock.mockReturnValue([
+      { id: "c-live", documentId: "doc-live", content: "live" },
+    ]);
+
+    const result = await hybridSearch("kb-1", "test query", "user-1", 5);
+
+    expect(result).toEqual([
+      { id: "c-live", documentId: "doc-live", content: "live" },
+    ]);
+    expect(applyRRFMock).toHaveBeenCalledWith(
+      [{ id: "c-live", documentId: "doc-live", content: "live" }],
+      [],
+      5,
+    );
+    expect(deletePointsByDocumentIdMock).toHaveBeenCalledWith("doc-deleted");
+  });
+
+  it("logs warning and still returns live chunks when stale Qdrant cleanup fails", async () => {
+    const kbSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([{ id: "kb-1", indexStatus: "ready" }]),
+    };
+    const docSelect = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockResolvedValue([]),
+    };
+    dbMock.select
+      .mockReturnValueOnce(kbSelect)
+      .mockReturnValueOnce(docSelect);
+
+    embedQueryMock.mockResolvedValue([0.1]);
+    searchSemanticVectorsMock.mockResolvedValueOnce([
+      { id: "c-stale", documentId: "doc-deleted", content: "stale" },
+    ]);
+    searchKeywordChunksMock.mockResolvedValueOnce([]);
+    deletePointsByDocumentIdMock.mockRejectedValueOnce(new Error("Qdrant down"));
+    applyRRFMock.mockReturnValue([]);
+
+    const result = await hybridSearch("kb-1", "test query", "user-1", 5);
+    expect(result).toEqual([]);
+    await Promise.resolve();
+    await Promise.resolve();
   });
 });

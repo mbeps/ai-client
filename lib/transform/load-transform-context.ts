@@ -11,6 +11,7 @@ import { resolveLinkedSubagents } from "@/lib/agents/resolve-linked-subagents";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
+import { filterOwnedKbIds } from "@/lib/knowledgebases/filter-owned-kb-ids";
 import { getLogger } from "@/lib/logger";
 import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
 import { exploreKbGraph } from "@/lib/rag/explore-kb-graph";
@@ -125,7 +126,11 @@ export async function loadTransformContext({
     kbContextPromise = (async () => {
       try {
         if (env.RAG_MODE === "file_read") {
-          const graph = await exploreKbGraph({ kbIds });
+          const ownedKbIds = await filterOwnedKbIds(userId, kbIds);
+          if (ownedKbIds.length === 0) {
+            return "";
+          }
+          const graph = await exploreKbGraph({ kbIds: ownedKbIds });
           if (graph.documents.length > 0) {
             const catalogLines = graph.documents.map(
               (d) => `- "${d.name}" (${d.documentType}): ${d.summary}`,

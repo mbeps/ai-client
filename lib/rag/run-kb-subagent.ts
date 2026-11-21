@@ -4,6 +4,7 @@ import { z } from "zod";
 import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
+import { filterOwnedKbIds } from "@/lib/knowledgebases/filter-owned-kb-ids";
 import { getLogger } from "@/lib/logger";
 import {
   type ExploreKbGraphResult,
@@ -234,12 +235,26 @@ export async function runKbSubagent(
     params;
 
   const isFileReadMode = env.RAG_MODE === "file_read";
-  const kbTarget = targetKbIds.length === 1 ? targetKbIds[0] : targetKbIds;
+  let effectiveKbIds = targetKbIds;
+
+  if (isFileReadMode) {
+    const ownedKbIds = await filterOwnedKbIds(userId, targetKbIds);
+    if (ownedKbIds.length === 0) {
+      return {
+        results: [],
+        relatedDocuments: [],
+      };
+    }
+    effectiveKbIds = ownedKbIds;
+  }
+
+  const kbTarget =
+    effectiveKbIds.length === 1 ? effectiveKbIds[0] : effectiveKbIds;
 
   const { initialHits, initialGraph } = await prefetchKbContext(
     isFileReadMode,
     kbTarget,
-    targetKbIds,
+    effectiveKbIds,
     query,
     userId,
   );
@@ -321,7 +336,7 @@ export async function runKbSubagent(
       .where(
         and(
           eq(kbDocument.id, documentId),
-          inArray(kbDocument.kbId, targetKbIds),
+          inArray(kbDocument.kbId, effectiveKbIds),
         ),
       );
     return foundDoc ?? null;
@@ -356,7 +371,7 @@ export async function runKbSubagent(
       }),
       execute: async (args) => {
         const graphResult = await exploreKbGraph({
-          kbIds: targetKbIds,
+          kbIds: effectiveKbIds,
           query: args.query,
           startDocId: args.startDocId,
           depth: args.depth,
@@ -470,7 +485,7 @@ export async function runKbSubagent(
         } else {
           chunks = await getDocumentChunksByRange(
             args.documentId,
-            targetKbIds,
+            effectiveKbIds,
             args.chunkStartIndex,
             args.chunkEndIndex,
           );

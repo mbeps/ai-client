@@ -32,6 +32,13 @@ vi.mock("@/lib/rag/explore-kb-graph", () => ({
   exploreKbGraph: exploreKbGraphMock,
 }));
 
+const filterOwnedKbIdsMock = vi.hoisted(() =>
+  vi.fn(async (_userId: string, kbIds: string[]) => kbIds),
+);
+vi.mock("@/lib/knowledgebases/filter-owned-kb-ids", () => ({
+  filterOwnedKbIds: filterOwnedKbIdsMock,
+}));
+
 const mockEnv = vi.hoisted(() => ({
   RAG_MODE: "hybrid" as "hybrid" | "vector" | "file_read",
   TRANSFORM_TOP_K: 5,
@@ -54,6 +61,9 @@ describe("loadTransformContext", () => {
     vi.clearAllMocks();
     mockEnv.RAG_MODE = "hybrid";
     mockEnv.TRANSFORM_TOP_K = 5;
+    filterOwnedKbIdsMock.mockImplementation(
+      async (_userId: string, kbIds: string[]) => kbIds,
+    );
   });
 
   const createMockQuery = (resolvedValue: any = []) => {
@@ -437,5 +447,37 @@ describe("loadTransformContext", () => {
         contextWindow: undefined,
       },
     );
+  });
+
+  it("in file_read mode filters out foreign knowledgeBaseIds before exploreKbGraph", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    filterOwnedKbIdsMock.mockResolvedValueOnce([]);
+    dbMock.select.mockImplementation(() => createMockQuery([]));
+
+    resolveProviderMock.mockResolvedValue({
+      modelId: "gpt-4o",
+      sdkProvider: { chat: vi.fn().mockReturnValue({}) },
+      modelRow: { contextWindow: null },
+    });
+    registerMcpToolsMock.mockResolvedValue({
+      mcpTools: {},
+      toolSourceMap: {},
+      mcpCleanup: vi.fn(),
+    });
+
+    const ctx = await loadTransformContext({
+      userId: "user-1",
+      agentRow: {
+        id: "agent-fr-foreign",
+        name: "FileRead Foreign",
+        modelId: "openai/gpt-4o",
+        knowledgeBaseIds: ["kb-foreign"],
+        steps: "[]",
+      },
+    });
+
+    expect(filterOwnedKbIdsMock).toHaveBeenCalledWith("user-1", ["kb-foreign"]);
+    expect(exploreKbGraphMock).not.toHaveBeenCalled();
+    expect(ctx.kbContext).toBe("");
   });
 });

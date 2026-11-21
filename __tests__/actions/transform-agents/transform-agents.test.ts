@@ -50,6 +50,13 @@ vi.mock("@/lib/db/get-owned-resource", () => ({
   getOwnedResource: getOwnedResourceMock,
 }));
 
+const filterOwnedKbIdsMock = vi.hoisted(() =>
+  vi.fn(async (_userId: string, kbIds: string[]) => kbIds),
+);
+vi.mock("@/lib/knowledgebases/filter-owned-kb-ids", () => ({
+  filterOwnedKbIds: filterOwnedKbIdsMock,
+}));
+
 import { createTransformAgent } from "@/actions/transform-agents/create-transform-agent";
 import { deleteTransformAgent } from "@/actions/transform-agents/delete-transform-agent";
 import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
@@ -84,6 +91,9 @@ describe("transform agents actions", () => {
     }
     chainable.returning.mockResolvedValue([]);
     chainable.execute.mockResolvedValue([]);
+    filterOwnedKbIdsMock.mockImplementation(
+      async (_userId: string, kbIds: string[]) => kbIds,
+    );
     chainable.transaction.mockImplementation(
       async (fn: (tx: typeof chainable) => Promise<unknown>) => fn(chainable),
     );
@@ -358,6 +368,41 @@ describe("transform agents actions", () => {
           message: "Not Found",
         }),
       });
+    });
+
+    it("rejects createTransformAgent and updateTransformAgent when knowledgeBaseIds includes an unowned KB", async () => {
+      filterOwnedKbIdsMock.mockResolvedValueOnce([]);
+      const createRes = await createTransformAgent({
+        name: "Agent Foreign KB",
+        knowledgeBaseIds: ["kb-foreign"],
+      });
+      expect(createRes).toEqual({
+        ok: false,
+        error: {
+          code: "FORBIDDEN",
+          message: "One or more knowledge bases are not accessible",
+        },
+      });
+      expect(chainable.insert).not.toHaveBeenCalled();
+
+      filterOwnedKbIdsMock.mockResolvedValueOnce([]);
+      const updateRes = await updateTransformAgent(agentId, {
+        knowledgeBaseIds: ["kb-foreign"],
+      });
+      expect(updateRes).toEqual({
+        ok: false,
+        error: {
+          code: "FORBIDDEN",
+          message: "One or more knowledge bases are not accessible",
+        },
+      });
+      expect(chainable.update).not.toHaveBeenCalled();
+
+      chainable.returning.mockResolvedValueOnce([{ id: agentId, knowledgeBaseIds: [] }]);
+      const emptyKbUpdateRes = await updateTransformAgent(agentId, {
+        knowledgeBaseIds: [],
+      });
+      expect(emptyKbUpdateRes.ok).toBe(true);
     });
 
     it("validates and persists subagentIds on create and update", async () => {

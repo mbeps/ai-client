@@ -49,12 +49,22 @@ vi.mock("@/drizzle/db", () => ({
   db: mockDb,
 }));
 
+const mockFilterOwnedKbIds = vi.hoisted(() =>
+  vi.fn(async (_userId: string, kbIds: string[]) => kbIds),
+);
+vi.mock("@/lib/knowledgebases/filter-owned-kb-ids", () => ({
+  filterOwnedKbIds: mockFilterOwnedKbIds,
+}));
+
 import { runKbSubagent } from "@/lib/rag/run-kb-subagent";
 
 describe("runKbSubagent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockEnv.RAG_MODE = "hybrid";
+    mockFilterOwnedKbIds.mockImplementation(
+      async (_userId: string, kbIds: string[]) => kbIds,
+    );
   });
 
   const sampleInitialHits = [
@@ -900,5 +910,22 @@ describe("runKbSubagent", () => {
       model: { modelId: "test-model" },
     });
     expect(hybridRes.answer).toBe("Empty chunks handled.");
+  });
+
+  it("in file_read mode returns empty results when no targetKbIds are owned by userId", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    mockFilterOwnedKbIds.mockResolvedValueOnce([]);
+
+    const result = await runKbSubagent({
+      query: "secret",
+      targetKbIds: ["kb-foreign"],
+      userId: "user-1",
+      model: { modelId: "test-model" },
+    });
+
+    expect(mockFilterOwnedKbIds).toHaveBeenCalledWith("user-1", ["kb-foreign"]);
+    expect(mockExploreKbGraph).not.toHaveBeenCalled();
+    expect(mockGenerateText).not.toHaveBeenCalled();
+    expect(result).toEqual({ results: [], relatedDocuments: [] });
   });
 });

@@ -613,6 +613,16 @@ export default function KnowledgebasePage() {
   );
 
   const state = useKnowledgebasePageState(kbId);
+  const resolvedTab =
+    state.ragMode === "vector" && activeTab === "graph"
+      ? "documents"
+      : activeTab;
+
+  useEffect(() => {
+    if (state.ragMode === "vector" && activeTab === "graph") {
+      void setActiveTab("documents");
+    }
+  }, [state.ragMode, activeTab, setActiveTab]);
 
   if (state.isLoading) {
     return <EntityDetailSkeleton />;
@@ -624,9 +634,7 @@ export default function KnowledgebasePage() {
 
   return (
     <PageContainer
-      variant={
-        activeTab === "graph" && state.ragMode !== "vector" ? "wide" : "default"
-      }
+      variant={resolvedTab === "graph" ? "wide" : "default"}
       className="space-y-6"
     >
       <KnowledgebaseHeader kb={state.kb} />
@@ -636,7 +644,7 @@ export default function KnowledgebasePage() {
       ) : null}
 
       <KnowledgebasePageTabs
-        activeTab={activeTab}
+        activeTab={resolvedTab}
         setActiveTab={setActiveTab}
         kb={state.kb}
         documents={state.docs.documents}
