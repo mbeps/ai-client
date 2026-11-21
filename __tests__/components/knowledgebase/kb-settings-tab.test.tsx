@@ -202,4 +202,47 @@ describe("KbSettingsTab", () => {
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  it("displays file_read embedding notice when ragMode is file_read", () => {
+    render(
+      <KbSettingsTab
+        name="Maruf Credentials"
+        onNameChange={onNameChange}
+        description="Credentials"
+        onDescriptionChange={onDescriptionChange}
+        onSave={onSave}
+        embeddingModelLabel="Not configured"
+        kb={baseKb}
+        onReindex={onReindex}
+        ragMode="file_read"
+      />,
+    );
+
+    expect(
+      screen.getByText("Not required (File Read mode)"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Not configured")).not.toBeInTheDocument();
+    expect(screen.getByText("Metadata & Relations Model")).toBeInTheDocument();
+  });
+
+  it("hides Metadata & Relations Model selector when ragMode is vector", () => {
+    render(
+      <KbSettingsTab
+        name="Maruf Credentials"
+        onNameChange={onNameChange}
+        description="Credentials"
+        onDescriptionChange={onDescriptionChange}
+        onSave={onSave}
+        embeddingModelLabel="Nemotron 3 Embed 1B"
+        kb={baseKb}
+        onReindex={onReindex}
+        ragMode="vector"
+      />,
+    );
+
+    expect(
+      screen.queryByText("Metadata & Relations Model"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Nemotron 3 Embed 1B")).toBeInTheDocument();
+  });
 });

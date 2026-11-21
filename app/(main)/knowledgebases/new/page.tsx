@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Textarea } from "@/components/ui/textarea";
 import { ROUTES } from "@/config/routes";
+import { useRagConfig } from "@/hooks/use-rag-config";
 import { useUserModels } from "@/hooks/use-user-models";
 import { createKnowledgebaseSchema } from "@/schemas/knowledgebase/knowledgebase";
 
@@ -46,8 +47,10 @@ export default function NewKnowledgebasePage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { requiresEmbedding } = useRagConfig();
   const { models, isLoading: isModelsLoading } = useUserModels("embedding");
-  const hasNoModels = !isModelsLoading && models.length === 0;
+  const hasNoModels =
+    requiresEmbedding && !isModelsLoading && models.length === 0;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createKnowledgebaseSchema),
@@ -146,7 +149,10 @@ export default function NewKnowledgebasePage() {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || isModelsLoading || hasNoModels}
+              disabled={
+                isSubmitting ||
+                (requiresEmbedding && (isModelsLoading || hasNoModels))
+              }
             >
               <LoadingSwap isLoading={isSubmitting}>
                 <div className="flex items-center">
