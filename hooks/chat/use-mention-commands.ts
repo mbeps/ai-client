@@ -29,11 +29,56 @@ import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
 
 /**
- * Trigger character currently active for mention popovers: '/' (prompts/skills), '@' (assistants), '#' (knowledgebases), '\' (all), or null.
+ * Trigger character currently active for mention popovers: '/' (unified command & mention menu), or null.
  *
  * @author Maruf Bepary
  */
-export type MentionTrigger = "/" | "@" | "#" | "\\" | null;
+export type MentionTrigger = "/" | null;
+
+/**
+ * Optional category filter parsed from a `/<type>` prefix in the command query.
+ *
+ * @author Maruf Bepary
+ */
+export type MentionTypeFilter = "skill" | "prompt" | "agent" | "knowledgebase";
+
+const TYPE_FILTER_ALIASES: Record<string, MentionTypeFilter> = {
+  skill: "skill",
+  skills: "skill",
+  prompt: "prompt",
+  prompts: "prompt",
+  agent: "agent",
+  agents: "agent",
+  assistant: "agent",
+  assistants: "agent",
+  knowledgebase: "knowledgebase",
+  knowledgebases: "knowledgebase",
+  kb: "knowledgebase",
+};
+
+/**
+ * Splits a slash command query into an optional type filter (e.g. `skill`, `prompt`,
+ * `agent`, `knowledgebase`) and the remaining search query.
+ *
+ * @param query - Raw query text after `/`
+ * @returns Parsed type filter and normalized search string
+ */
+function parseMentionQuery(query: string): {
+  typeFilter: MentionTypeFilter | null;
+  searchQuery: string;
+} {
+  const trimmed = query.trimStart().toLowerCase();
+  const match = trimmed.match(/^(\S+)(?:\s+(.*))?$/);
+  if (!match) {
+    return { typeFilter: null, searchQuery: trimmed };
+  }
+  const [, firstToken, rest = ""] = match;
+  const typeFilter = TYPE_FILTER_ALIASES[firstToken] ?? null;
+  if (typeFilter) {
+    return { typeFilter, searchQuery: rest.trim() };
+  }
+  return { typeFilter: null, searchQuery: trimmed };
+}
 
 /**
  * Prompt mention item, distinguishing between local database prompts and discovered MCP prompts.
@@ -93,8 +138,9 @@ export type MentionItem =
   | MentionKnowledgebaseItem;
 
 /**
- * Manages mention/slash-command UI state and filtering for chat input.
- * Supports four triggers: '/' for prompts and skills, '@' for assistants, '#' for knowledgebases, and '\' for all.
+ * Manages unified slash-command (`/`) UI state and filtering for chat input.
+ * Supports skills, prompts, assistants, and knowledgebases under `/`, with optional
+ * type-prefix filtering (e.g. `/skill`, `/prompt`, `/agent`, `/knowledgebase`).
  * Filters items by query, handles keyboard navigation (arrow keys, enter, escape).
  *
  * @param input - Current textarea string content
@@ -185,12 +231,18 @@ export function useMentionCommands(
     );
   }, [initialSelectedAssistantId, agents]);
 
+  const parsedQuery = useMemo(
+    () => parseMentionQuery(commandQuery),
+    [commandQuery],
+  );
+  const typeFilter = openTrigger === "/" ? parsedQuery.typeFilter : null;
+
   const filteredItems = useMemo(() => {
-    if (!openTrigger) return [];
-    const q = commandQuery.toLowerCase();
+    if (openTrigger !== "/") return [];
+    const { typeFilter: activeTypeFilter, searchQuery: q } = parsedQuery;
     const results: MentionItem[] = [];
 
-    if (openTrigger === "/" || openTrigger === "\\") {
+    if (!activeTypeFilter || activeTypeFilter === "skill") {
       const accessibleSkills = filterAccessibleSkills(
         skills,
         skillScopeContext ?? {},
@@ -205,6 +257,10 @@ export function useMentionCommands(
         )
         .map((s): MentionSkillItem => ({ ...s, isSkill: true, isMcp: false }));
 
+      results.push(...matchingSkills);
+    }
+
+    if (!activeTypeFilter || activeTypeFilter === "prompt") {
       const accessiblePrompts = filterAccessiblePrompts(
         prompts,
         promptScopeContext ?? {},
@@ -243,13 +299,16 @@ export function useMentionCommands(
           }),
         );
 
-      results.push(...matchingSkills, ...local, ...mcp);
+      results.push(...local, ...mcp);
     }
 
     const canSelectAssistant =
       !selectedAssistant && !activeChatAssistantId && canMentionAssistant;
 
-    if (openTrigger === "@" || (openTrigger === "\\" && canSelectAssistant)) {
+    if (
+      canSelectAssistant &&
+      (!activeTypeFilter || activeTypeFilter === "agent")
+    ) {
       results.push(
         ...agents
           .filter(
@@ -268,7 +327,7 @@ export function useMentionCommands(
       );
     }
 
-    if (openTrigger === "#" || openTrigger === "\\") {
+    if (!activeTypeFilter || activeTypeFilter === "knowledgebase") {
       results.push(
         ...kbs
           .filter(
@@ -288,7 +347,7 @@ export function useMentionCommands(
 
     return results;
   }, [
-    commandQuery,
+    parsedQuery,
     skills,
     prompts,
     mcpPrompts,
@@ -311,30 +370,7 @@ export function useMentionCommands(
       setCursorPosition(pos);
 
       const textBeforeCursor = value.slice(0, pos);
-
-      const candidates: Array<{
-        trigger: Exclude<MentionTrigger, null>;
-        index: number;
-      }> = [
-        { trigger: "/", index: textBeforeCursor.lastIndexOf("/") },
-        { trigger: "@", index: textBeforeCursor.lastIndexOf("@") },
-        { trigger: "#", index: textBeforeCursor.lastIndexOf("#") },
-        { trigger: "\\", index: textBeforeCursor.lastIndexOf("\\") },
-      ];
-
-      const latest = candidates.reduce((best, curr) =>
-        curr.index > best.index ? curr : best,
-      );
-
-      const isBlockedAssistantTrigger =
-        latest.trigger === "@" &&
-        (Boolean(selectedAssistant) ||
-          Boolean(activeChatAssistantId) ||
-          !canMentionAssistant);
-
-      const triggerIndex = isBlockedAssistantTrigger ? -1 : latest.index;
-      const activeTrigger: MentionTrigger =
-        triggerIndex !== -1 ? latest.trigger : null;
+      const triggerIndex = textBeforeCursor.lastIndexOf("/");
 
       if (triggerIndex !== -1) {
         const isStartOfLine = triggerIndex === 0;
@@ -346,7 +382,7 @@ export function useMentionCommands(
           .includes("\n");
 
         if ((isStartOfLine || isAfterSpace) && !hasNewlineAfterTrigger) {
-          setOpenTrigger(activeTrigger);
+          setOpenTrigger("/");
           setCommandQuery(value.slice(triggerIndex + 1, pos));
           setSelectedIndex(0);
         } else {
@@ -356,7 +392,7 @@ export function useMentionCommands(
         setOpenTrigger(null);
       }
     },
-    [setInput, selectedAssistant, activeChatAssistantId, canMentionAssistant],
+    [setInput],
   );
 
   const handleSelect = useCallback(
@@ -372,7 +408,7 @@ export function useMentionCommands(
 
         setInput(newInput);
 
-        if (openTrigger === "/" || openTrigger === "\\") {
+        if (openTrigger === "/") {
           if (isSkillItem(item)) {
             onSelectSkill?.(item);
           } else if (isPromptItem(item)) {
@@ -380,15 +416,9 @@ export function useMentionCommands(
               if (prev.some((p) => p.id === item.id)) return prev;
               return [...prev, item];
             });
-          }
-        }
-        if (openTrigger === "@" || openTrigger === "\\") {
-          if (isAssistantItem(item)) {
+          } else if (isAssistantItem(item)) {
             setSelectedAssistant(item);
-          }
-        }
-        if (openTrigger === "#" || openTrigger === "\\") {
-          if (isKnowledgebaseItem(item)) {
+          } else if (isKnowledgebaseItem(item)) {
             onSelectKnowledgebase?.(item);
           }
         }
@@ -420,14 +450,18 @@ export function useMentionCommands(
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((prev) => (prev + 1) % filteredItems.length);
+        if (filteredItems.length > 0) {
+          setSelectedIndex((prev) => (prev + 1) % filteredItems.length);
+        }
         return true;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIndex(
-          (prev) => (prev - 1 + filteredItems.length) % filteredItems.length,
-        );
+        if (filteredItems.length > 0) {
+          setSelectedIndex(
+            (prev) => (prev - 1 + filteredItems.length) % filteredItems.length,
+          );
+        }
         return true;
       }
       if (e.key === "Enter") {
@@ -451,6 +485,7 @@ export function useMentionCommands(
     openTrigger,
     setOpenTrigger,
     commandQuery,
+    typeFilter,
     filteredItems,
     selectedIndex,
     setSelectedIndex,

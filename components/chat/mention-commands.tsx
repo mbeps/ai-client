@@ -18,6 +18,7 @@ import {
 import type {
   MentionItem,
   MentionTrigger,
+  MentionTypeFilter,
 } from "@/hooks/chat/use-mention-commands";
 import { cn } from "@/lib/utils";
 import type { Agent } from "@/types/agent/agent";
@@ -30,6 +31,7 @@ import type { Agent } from "@/types/agent/agent";
 interface MentionCommandsProps {
   items: MentionItem[];
   trigger: MentionTrigger;
+  typeFilter?: MentionTypeFilter | null;
   selectedIndex: number;
   onSelect: (item: MentionItem) => void;
   onClose: () => void;
@@ -37,14 +39,15 @@ interface MentionCommandsProps {
 }
 
 /**
- * Dropdown menu for mention commands (prompts & skills via `/`, assistants via `@`, knowledgebases via `#`, all via `\`).
- * Separates Skills into their own distinct group from Prompts.
+ * Dropdown menu for unified slash commands (`/`) covering skills, prompts, assistants, and knowledgebases.
+ * Separates each category into its own distinct group.
  *
  * @author Maruf Bepary
  */
 export function MentionCommands({
   items,
   trigger,
+  typeFilter,
   selectedIndex,
   onSelect,
   className,
@@ -57,12 +60,14 @@ export function MentionCommands({
   const knowledgebaseItems = items.filter(isKnowledgebaseItem);
 
   const getEmptyMessage = () => {
-    switch (trigger) {
-      case "/":
-        return "skills or prompts";
-      case "@":
+    switch (typeFilter) {
+      case "skill":
+        return "skills";
+      case "prompt":
+        return "prompts";
+      case "agent":
         return "assistants";
-      case "#":
+      case "knowledgebase":
         return "knowledgebases";
       default:
         return "items";
@@ -84,7 +89,7 @@ export function MentionCommands({
         <CommandList className="max-h-[300px]">
           <CommandEmpty>No {getEmptyMessage()} found.</CommandEmpty>
 
-          {(trigger === "/" || trigger === "\\") && skillItems.length > 0 && (
+          {skillItems.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center gap-1.5">
@@ -120,7 +125,7 @@ export function MentionCommands({
             </CommandGroup>
           )}
 
-          {(trigger === "/" || trigger === "\\") && promptItems.length > 0 && (
+          {promptItems.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center gap-1.5">
@@ -170,86 +175,82 @@ export function MentionCommands({
             </CommandGroup>
           )}
 
-          {(trigger === "@" || trigger === "\\") &&
-            assistantItems.length > 0 && (
-              <CommandGroup
-                heading={
-                  <div className="flex items-center gap-1.5">
-                    <Bot className="h-3.5 w-3.5" />
-                    <span>Assistants</span>
-                  </div>
-                }
-              >
-                {assistantItems.map((item) => {
-                  const itemIndex = items.indexOf(item);
-                  return (
-                    <CommandItem
-                      key={item.id}
-                      value={item.id}
-                      onSelect={() => onSelect(item)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2",
-                        itemIndex === selectedIndex &&
-                          "bg-accent text-accent-foreground",
-                      )}
-                    >
-                      <div className="flex w-full flex-col overflow-hidden">
-                        <span className="truncate font-medium">
-                          {(item as Agent).name}
+          {assistantItems.length > 0 && (
+            <CommandGroup
+              heading={
+                <div className="flex items-center gap-1.5">
+                  <Bot className="h-3.5 w-3.5" />
+                  <span>Assistants</span>
+                </div>
+              }
+            >
+              {assistantItems.map((item) => {
+                const itemIndex = items.indexOf(item);
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.id}
+                    onSelect={() => onSelect(item)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2",
+                      itemIndex === selectedIndex &&
+                        "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    <div className="flex w-full flex-col overflow-hidden">
+                      <span className="truncate font-medium">
+                        {(item as Agent).name}
+                      </span>
+                      {(item as Agent).description && (
+                        <span className="text-muted-foreground truncate text-xs">
+                          {(item as Agent).description}
                         </span>
-                        {(item as Agent).description && (
-                          <span className="text-muted-foreground truncate text-xs">
-                            {(item as Agent).description}
-                          </span>
-                        )}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            )}
+                      )}
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
 
-          {(trigger === "#" || trigger === "\\") &&
-            knowledgebaseItems.length > 0 && (
-              <CommandGroup
-                heading={
-                  <div className="flex items-center gap-1.5">
-                    <Database className="h-3.5 w-3.5" />
-                    <span>Knowledgebases</span>
-                  </div>
-                }
-              >
-                {knowledgebaseItems.map((item) => {
-                  const itemIndex = items.indexOf(item);
-                  return (
-                    <CommandItem
-                      key={item.id}
-                      value={item.id}
-                      onSelect={() => onSelect(item)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2",
-                        itemIndex === selectedIndex &&
-                          "bg-accent text-accent-foreground",
+          {knowledgebaseItems.length > 0 && (
+            <CommandGroup
+              heading={
+                <div className="flex items-center gap-1.5">
+                  <Database className="h-3.5 w-3.5" />
+                  <span>Knowledgebases</span>
+                </div>
+              }
+            >
+              {knowledgebaseItems.map((item) => {
+                const itemIndex = items.indexOf(item);
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.id}
+                    onSelect={() => onSelect(item)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2",
+                      itemIndex === selectedIndex &&
+                        "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    <div className="flex w-full flex-col overflow-hidden">
+                      <span className="truncate font-medium">{item.name}</span>
+                      {item.description && (
+                        <span className="text-muted-foreground truncate text-xs">
+                          {item.description}
+                        </span>
                       )}
-                    >
-                      <div className="flex w-full flex-col overflow-hidden">
-                        <span className="truncate font-medium">
-                          {item.name}
-                        </span>
-                        {item.description && (
-                          <span className="text-muted-foreground truncate text-xs">
-                            {item.description}
-                          </span>
-                        )}
-                        <span className="text-muted-foreground text-xs">
-                          {item.documentCount} documents • {item.indexStatus}
-                        </span>
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            )}
+                      <span className="text-muted-foreground text-xs">
+                        {item.documentCount} documents • {item.indexStatus}
+                      </span>
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
         </CommandList>
       </Command>
     </div>

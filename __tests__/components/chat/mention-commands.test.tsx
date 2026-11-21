@@ -89,7 +89,7 @@ describe("MentionCommands", () => {
     const { container } = render(
       <MentionCommands
         items={items}
-        trigger="@"
+        trigger="/"
         selectedIndex={0}
         onSelect={onSelect}
         onClose={onClose}
@@ -120,7 +120,7 @@ describe("MentionCommands", () => {
     const { container } = render(
       <MentionCommands
         items={items}
-        trigger="#"
+        trigger="/"
         selectedIndex={0}
         onSelect={onSelect}
         onClose={onClose}
@@ -137,7 +137,7 @@ describe("MentionCommands", () => {
     expect(commandItem?.querySelector("svg")).toBeNull();
   });
 
-  it("renders all four groups when trigger is \\", () => {
+  it("renders all four groups when trigger is /", () => {
     const items: MentionItem[] = [
       {
         id: "skill-1",
@@ -176,7 +176,7 @@ describe("MentionCommands", () => {
     render(
       <MentionCommands
         items={items}
-        trigger={"\\"}
+        trigger="/"
         selectedIndex={0}
         onSelect={onSelect}
         onClose={onClose}
@@ -193,17 +193,24 @@ describe("MentionCommands", () => {
     expect(screen.getByText("Test KB")).toBeInTheDocument();
   });
 
-  it("renders empty state for \\ trigger when no items match", () => {
+  it.each([
+    [undefined, "No items found."],
+    ["skill" as const, "No skills found."],
+    ["prompt" as const, "No prompts found."],
+    ["agent" as const, "No assistants found."],
+    ["knowledgebase" as const, "No knowledgebases found."],
+  ])("renders empty state for typeFilter=%s when no items match", (typeFilter, expectedText) => {
     render(
       <MentionCommands
         items={[]}
-        trigger={"\\"}
+        trigger="/"
+        typeFilter={typeFilter}
         selectedIndex={0}
         onSelect={onSelect}
         onClose={onClose}
       />,
     );
 
-    expect(screen.getByText("No items found.")).toBeInTheDocument();
+    expect(screen.getByText(expectedText)).toBeInTheDocument();
   });
 });
