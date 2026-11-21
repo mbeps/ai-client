@@ -48,7 +48,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 
 ## Knowledge Bases (Configurable RAG)
 
-- **Configurable RAG Modes (`RAG_MODE`)** — Switch between `hybrid` (default: Qdrant vector + full-text + LLM metadata/TOC + relationship graph + KB reader subagent), `vector` (direct top-K Qdrant hybrid search without subagent or graph overhead), and `file_read` (vectorless S3/MinIO + PostgreSQL mode that operates without Qdrant or embedding models).
+- **Configurable RAG Modes (`RAG_MODE`)** — Switch between `hybrid` (default: Qdrant vector + full-text + LLM metadata/TOC + relationship graph + KB reader subagent), `vector` (direct top-K Qdrant hybrid search without subagent or graph overhead), and `file_read` (vectorless S3/RustFS + PostgreSQL mode that operates without Qdrant or embedding models).
 - **Agentic RAG Retrieval** — Models autonomously invoke knowledgebase search tools when user queries require domain-specific document context.
 - **Hybrid Search with Reciprocal Rank Fusion (RRF)** — Fuses dense vector similarity search in Qdrant with PostgreSQL full-text search (`tsvector`) using RRF scoring.
 - **Multi-Format Document Ingestion** — Asynchronous Inngest pipeline extracts, recursively chunks, and embeds content from PDFs (`unpdf`), Excel spreadsheets (`xlsx`), and Markdown/Plain text files.
@@ -70,7 +70,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 - **Human-in-the-Loop Review Gates** — Configurable approval checkpoints that pause background workflow runs until a user inspects the preview pane and approves continuation.
 - **Real-Time Translation Workflow** — Side-by-side translation workspace supporting language auto-detection, language pair swapping, and live token streaming.
 - **Background Jobs Monitor (`/jobs`)** — Unified dashboard for tracking active, completed, and failed Inngest runs across local dev and cloud environments with live polling, filtering, and one-click job cancellation.
-- **Presigned S3 File Routing** — Passes presigned S3/MinIO URLs directly to external tools and workflows to process large files without payload bottlenecks.
+- **Presigned S3 File Routing** — Passes presigned S3/RustFS URLs directly to external tools and workflows to process large files without payload bottlenecks.
 
 ## Collaboration & Workspace Organisation
 
@@ -93,7 +93,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 - pnpm 10 or higher
 - PostgreSQL 17
 - Qdrant (required for `hybrid` and `vector` RAG modes; optional when `RAG_MODE=file_read`)
-- MinIO or AWS S3
+- RustFS or AWS S3
 - Inngest
 - OpenAI-compatible AI provider (such as OpenRouter, Ollama, Groq, Azure, or local models)
 
@@ -118,7 +118,7 @@ AI Client is a full-featured conversational workspace with branching message tre
 - [Inngest](https://www.inngest.com/docs): Durable execution engine for background workflows and real-time streaming.
 - [Better Auth](https://better-auth.com/docs): Multi-method authentication supporting email, OAuth, passkeys, and two-factor authentication.
 - [Postmark](https://postmark.com): Transactional email delivery service.
-- [MinIO](https://docs.min.io): S3-compatible object storage service.
+- [RustFS](https://rustfs.com): S3-compatible object storage service.
 
 ## Database
 
@@ -168,7 +168,7 @@ cp .env.example .env.local
 
 ### Environment Variables for Docker Containers
 
-The `docker-compose.yml` file configures PostgreSQL, MinIO, Inngest, and Qdrant using the following variables (with built-in defaults for local development):
+The `docker-compose.yml` file configures PostgreSQL, RustFS, Inngest, and Qdrant using the following variables (with built-in defaults for local development):
 
 ```bash
 # PostgreSQL (docker-compose)
@@ -178,7 +178,7 @@ DB_USER=postgres
 DB_PASSWORD=password
 DB_NAME=better_auth_tutorial
 
-# MinIO (docker-compose)
+# RustFS (docker-compose)
 S3_ACCESS_KEY=minioadmin
 S3_SECRET_KEY=minioadmin
 
@@ -219,7 +219,7 @@ NEXT_PUBLIC_INNGEST_BASE_URL=http://localhost:8288
 INNGEST_EVENT_KEY=
 INNGEST_SIGNING_KEY=
 
-# Storage (MinIO / S3)
+# Storage (RustFS / S3)
 S3_ENDPOINT=http://localhost:9000
 S3_REGION=us-east-1
 S3_ACCESS_KEY=minioadmin
@@ -258,7 +258,7 @@ LOG_LEVEL=info
 
 **Vector Database & RAG (Qdrant)**
 
-- `RAG_MODE` — Knowledge Base RAG strategy: `hybrid` (default), `vector`, or `file_read` (vectorless mode using S3/MinIO + PostgreSQL without Qdrant or embedding models).
+- `RAG_MODE` — Knowledge Base RAG strategy: `hybrid` (default), `vector`, or `file_read` (vectorless mode using S3/RustFS + PostgreSQL without Qdrant or embedding models).
 - `QDRANT_URL` — Qdrant HTTP endpoint URL for RAG document chunks (required when `RAG_MODE` is `hybrid` or `vector`; optional when `RAG_MODE=file_read`).
 - `QDRANT_API_KEY` (optional) — API key for authenticated Qdrant Cloud or secured instances (leave empty for local container).
 - `QDRANT_PORT` — Host port mapping for the local Qdrant Docker container (default: `6333`).
@@ -273,12 +273,12 @@ LOG_LEVEL=info
 - `INNGEST_EVENT_KEY` — Inngest event key (optional in local dev, required in production).
 - `INNGEST_SIGNING_KEY` — Inngest webhook signing key (optional in local dev, required in production).
 
-**Storage (MinIO / S3)**
+**Storage (RustFS / S3)**
 
-- `S3_ENDPOINT` (required) — MinIO or S3-compatible endpoint URL (`http://localhost:9000` for local MinIO).
+- `S3_ENDPOINT` (required) — RustFS or S3-compatible endpoint URL (`http://localhost:9000` for local RustFS).
 - `S3_REGION` — Storage region (default: `us-east-1`).
-- `S3_ACCESS_KEY` (required) — MinIO root user or AWS access key ID.
-- `S3_SECRET_KEY` (required) — MinIO root password or AWS secret access key.
+- `S3_ACCESS_KEY` (required) — RustFS access key or AWS access key ID.
+- `S3_SECRET_KEY` (required) — RustFS secret key or AWS secret access key.
 - `S3_BUCKET` — Bucket name for file attachments and artefacts (default: `ai-client-uploads`). Automatically provisioned on first upload if it does not exist.
 
 **Email Service**
@@ -297,7 +297,7 @@ LOG_LEVEL=info
 
 ## 4. Start Infrastructure Containers
 
-Start PostgreSQL, MinIO, Inngest, and Qdrant using Docker Compose (or Podman):
+Start PostgreSQL, RustFS, Inngest, and Qdrant using Docker Compose (or Podman):
 
 ```bash
 docker compose up -d
@@ -311,9 +311,9 @@ docker ps
 
 ```
 
-You should see `postgres`, `minio`, `inngest`, and `qdrant` containers running:
+You should see `postgres`, `rustfs`, `inngest`, and `qdrant` containers running:
 
-- **MinIO Console**: `http://localhost:9001` (default login: `minioadmin` / `minioadmin`)
+- **RustFS Console**: `http://localhost:9001/rustfs/console/` (default login: `minioadmin` / `minioadmin`)
 - **Inngest Dev Dashboard**: `http://localhost:8288`
 - **Qdrant Dashboard**: `http://localhost:6333/dashboard`
 
@@ -385,7 +385,7 @@ The application should now be running at http://localhost:3000.
 - [React Hook Form](https://react-hook-form.com)
 - [Zod](https://zod.dev)
 - [Zustand](https://zustand.docs.pmnd.rs)
-- [MinIO](https://docs.min.io)
+- [RustFS](https://rustfs.com)
 - [AWS SDK v3](https://docs.aws.amazon.com/sdk-for-javascript/)
 - [xlsx](https://github.com/SheetJS/sheetjs)
 - [UUID](https://github.com/uuidjs/uuid)
