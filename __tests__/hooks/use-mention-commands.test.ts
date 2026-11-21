@@ -1453,6 +1453,191 @@ describe("useMentionCommands", () => {
       expect(result.current.filteredItems).toHaveLength(0);
     });
   });
+
+  describe("unified backslash command detection (\\)", () => {
+    it("opens command palette and lists skills, prompts, assistants, and knowledgebases", () => {
+      useAppStore.setState({
+        skills: [
+          {
+            id: "sk-1",
+            name: "python-helper",
+            displayName: "Python Helper",
+            description: "Assists with python code",
+            enabled: true,
+          },
+        ] as any,
+      });
+
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("\\", 1));
+      });
+
+      expect(result.current.openTrigger).toBe("\\");
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "sk-1",
+        "p1",
+        "p2",
+        "a1",
+        "a2",
+        "kb1",
+        "kb2",
+      ]);
+    });
+
+    it("filters across all item types by query when using \\", () => {
+      useAppStore.setState({
+        skills: [
+          {
+            id: "sk-1",
+            name: "translate-skill",
+            displayName: "Translate Skill",
+            description: "Skill for translation",
+            enabled: true,
+          },
+        ] as any,
+      });
+
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("\\trans", 6));
+      });
+
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "sk-1",
+        "p2",
+        "a2",
+      ]);
+    });
+
+    it("omits assistants from \\ results when activeChatAssistantId is set", () => {
+      const setInput = vi.fn();
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "",
+          setInput,
+          textareaRef,
+          "a1",
+          undefined,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          undefined,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("\\", 1));
+      });
+
+      expect(result.current.openTrigger).toBe("\\");
+      expect(result.current.filteredItems.map((i) => i.id)).toEqual([
+        "p1",
+        "p2",
+        "kb1",
+        "kb2",
+      ]);
+    });
+
+    it("selects prompt, skill, assistant, and knowledgebase items from \\ trigger", () => {
+      const onSelectSkill = vi.fn();
+      const onSelectKnowledgebase = vi.fn();
+      const setInput = vi.fn();
+      const sampleSkill: any = {
+        id: "sk-1",
+        name: "code-review",
+        displayName: "Code Review",
+        description: "Review code",
+        isEnabled: true,
+        isSkill: true,
+      };
+
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "\\",
+          setInput,
+          textareaRef,
+          null,
+          undefined,
+          undefined,
+          true,
+          undefined,
+          onSelectSkill,
+          onSelectKnowledgebase,
+          SAMPLE_KNOWLEDGEBASES,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("\\", 1));
+      });
+      act(() => {
+        result.current.handleSelect(sampleSkill);
+      });
+      expect(onSelectSkill).toHaveBeenCalledWith(sampleSkill);
+      expect(result.current.openTrigger).toBeNull();
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("\\", 1));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_PROMPTS[0]);
+      });
+      expect(result.current.selectedPrompts).toEqual([SAMPLE_PROMPTS[0]]);
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("\\", 1));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_KNOWLEDGEBASES[0]);
+      });
+      expect(onSelectKnowledgebase).toHaveBeenCalledWith(
+        SAMPLE_KNOWLEDGEBASES[0],
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("\\", 1));
+      });
+      act(() => {
+        result.current.handleSelect(SAMPLE_ASSISTANTS[0]);
+      });
+      expect(result.current.selectedAssistant).toEqual(SAMPLE_ASSISTANTS[0]);
+    });
+  });
 });
 
 

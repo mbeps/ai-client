@@ -37,7 +37,7 @@ interface MentionCommandsProps {
 }
 
 /**
- * Dropdown menu for mention commands (prompts & skills via `/`, assistants via `@`, knowledgebases via `#`).
+ * Dropdown menu for mention commands (prompts & skills via `/`, assistants via `@`, knowledgebases via `#`, all via `\`).
  * Separates Skills into their own distinct group from Prompts.
  *
  * @author Maruf Bepary
@@ -84,7 +84,7 @@ export function MentionCommands({
         <CommandList className="max-h-[300px]">
           <CommandEmpty>No {getEmptyMessage()} found.</CommandEmpty>
 
-          {trigger === "/" && skillItems.length > 0 && (
+          {(trigger === "/" || trigger === "\\") && skillItems.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center gap-1.5">
@@ -120,7 +120,7 @@ export function MentionCommands({
             </CommandGroup>
           )}
 
-          {trigger === "/" && promptItems.length > 0 && (
+          {(trigger === "/" || trigger === "\\") && promptItems.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center gap-1.5">
@@ -170,82 +170,86 @@ export function MentionCommands({
             </CommandGroup>
           )}
 
-          {trigger === "@" && assistantItems.length > 0 && (
-            <CommandGroup
-              heading={
-                <div className="flex items-center gap-1.5">
-                  <Bot className="h-3.5 w-3.5" />
-                  <span>Assistants</span>
-                </div>
-              }
-            >
-              {assistantItems.map((item) => {
-                const itemIndex = items.indexOf(item);
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={item.id}
-                    onSelect={() => onSelect(item)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2",
-                      itemIndex === selectedIndex &&
-                        "bg-accent text-accent-foreground",
-                    )}
-                  >
-                    <div className="flex w-full flex-col overflow-hidden">
-                      <span className="truncate font-medium">
-                        {(item as Agent).name}
-                      </span>
-                      {(item as Agent).description && (
-                        <span className="text-muted-foreground truncate text-xs">
-                          {(item as Agent).description}
-                        </span>
+          {(trigger === "@" || trigger === "\\") &&
+            assistantItems.length > 0 && (
+              <CommandGroup
+                heading={
+                  <div className="flex items-center gap-1.5">
+                    <Bot className="h-3.5 w-3.5" />
+                    <span>Assistants</span>
+                  </div>
+                }
+              >
+                {assistantItems.map((item) => {
+                  const itemIndex = items.indexOf(item);
+                  return (
+                    <CommandItem
+                      key={item.id}
+                      value={item.id}
+                      onSelect={() => onSelect(item)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2",
+                        itemIndex === selectedIndex &&
+                          "bg-accent text-accent-foreground",
                       )}
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          )}
+                    >
+                      <div className="flex w-full flex-col overflow-hidden">
+                        <span className="truncate font-medium">
+                          {(item as Agent).name}
+                        </span>
+                        {(item as Agent).description && (
+                          <span className="text-muted-foreground truncate text-xs">
+                            {(item as Agent).description}
+                          </span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
 
-          {trigger === "#" && knowledgebaseItems.length > 0 && (
-            <CommandGroup
-              heading={
-                <div className="flex items-center gap-1.5">
-                  <Database className="h-3.5 w-3.5" />
-                  <span>Knowledgebases</span>
-                </div>
-              }
-            >
-              {knowledgebaseItems.map((item) => {
-                const itemIndex = items.indexOf(item);
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={item.id}
-                    onSelect={() => onSelect(item)}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-2",
-                      itemIndex === selectedIndex &&
-                        "bg-accent text-accent-foreground",
-                    )}
-                  >
-                    <div className="flex w-full flex-col overflow-hidden">
-                      <span className="truncate font-medium">{item.name}</span>
-                      {item.description && (
-                        <span className="text-muted-foreground truncate text-xs">
-                          {item.description}
-                        </span>
+          {(trigger === "#" || trigger === "\\") &&
+            knowledgebaseItems.length > 0 && (
+              <CommandGroup
+                heading={
+                  <div className="flex items-center gap-1.5">
+                    <Database className="h-3.5 w-3.5" />
+                    <span>Knowledgebases</span>
+                  </div>
+                }
+              >
+                {knowledgebaseItems.map((item) => {
+                  const itemIndex = items.indexOf(item);
+                  return (
+                    <CommandItem
+                      key={item.id}
+                      value={item.id}
+                      onSelect={() => onSelect(item)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2",
+                        itemIndex === selectedIndex &&
+                          "bg-accent text-accent-foreground",
                       )}
-                      <span className="text-muted-foreground text-xs">
-                        {item.documentCount} documents • {item.indexStatus}
-                      </span>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          )}
+                    >
+                      <div className="flex w-full flex-col overflow-hidden">
+                        <span className="truncate font-medium">
+                          {item.name}
+                        </span>
+                        {item.description && (
+                          <span className="text-muted-foreground truncate text-xs">
+                            {item.description}
+                          </span>
+                        )}
+                        <span className="text-muted-foreground text-xs">
+                          {item.documentCount} documents • {item.indexStatus}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
         </CommandList>
       </Command>
     </div>

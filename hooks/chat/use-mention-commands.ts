@@ -29,11 +29,11 @@ import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
 
 /**
- * Trigger character currently active for mention popovers: '/' (prompts/skills), '@' (assistants), '#' (knowledgebases), or null.
+ * Trigger character currently active for mention popovers: '/' (prompts/skills), '@' (assistants), '#' (knowledgebases), '\' (all), or null.
  *
  * @author Maruf Bepary
  */
-export type MentionTrigger = "/" | "@" | "#" | null;
+export type MentionTrigger = "/" | "@" | "#" | "\\" | null;
 
 /**
  * Prompt mention item, distinguishing between local database prompts and discovered MCP prompts.
@@ -94,7 +94,7 @@ export type MentionItem =
 
 /**
  * Manages mention/slash-command UI state and filtering for chat input.
- * Supports two triggers: '/' for prompts and skills, and '@' for assistants.
+ * Supports four triggers: '/' for prompts and skills, '@' for assistants, '#' for knowledgebases, and '\' for all.
  * Filters items by query, handles keyboard navigation (arrow keys, enter, escape).
  *
  * @param input - Current textarea string content
@@ -188,8 +188,9 @@ export function useMentionCommands(
   const filteredItems = useMemo(() => {
     if (!openTrigger) return [];
     const q = commandQuery.toLowerCase();
+    const results: MentionItem[] = [];
 
-    if (openTrigger === "/") {
+    if (openTrigger === "/" || openTrigger === "\\") {
       const accessibleSkills = filterAccessibleSkills(
         skills,
         skillScopeContext ?? {},
@@ -242,39 +243,50 @@ export function useMentionCommands(
           }),
         );
 
-      return [...matchingSkills, ...local, ...mcp];
+      results.push(...matchingSkills, ...local, ...mcp);
     }
 
-    if (openTrigger === "@") {
-      return agents
-        .filter(
-          (a) =>
-            a.id !== "builtin:kb-reader" &&
-            (a.name.toLowerCase().includes(q) ||
-              a.description?.toLowerCase().includes(q)),
-        )
-        .map(
-          (a): MentionAssistantItem => ({ ...a, isMcp: false, isSkill: false }),
-        );
+    const canSelectAssistant =
+      !selectedAssistant && !activeChatAssistantId && canMentionAssistant;
+
+    if (openTrigger === "@" || (openTrigger === "\\" && canSelectAssistant)) {
+      results.push(
+        ...agents
+          .filter(
+            (a) =>
+              a.id !== "builtin:kb-reader" &&
+              (a.name.toLowerCase().includes(q) ||
+                a.description?.toLowerCase().includes(q)),
+          )
+          .map(
+            (a): MentionAssistantItem => ({
+              ...a,
+              isMcp: false,
+              isSkill: false,
+            }),
+          ),
+      );
     }
 
-    if (openTrigger === "#") {
-      return kbs
-        .filter(
-          (kb) =>
-            kb.name.toLowerCase().includes(q) ||
-            kb.description?.toLowerCase().includes(q),
-        )
-        .map(
-          (kb): MentionKnowledgebaseItem => ({
-            ...kb,
-            isMcp: false,
-            isSkill: false,
-          }),
-        );
+    if (openTrigger === "#" || openTrigger === "\\") {
+      results.push(
+        ...kbs
+          .filter(
+            (kb) =>
+              kb.name.toLowerCase().includes(q) ||
+              kb.description?.toLowerCase().includes(q),
+          )
+          .map(
+            (kb): MentionKnowledgebaseItem => ({
+              ...kb,
+              isMcp: false,
+              isSkill: false,
+            }),
+          ),
+      );
     }
 
-    return [];
+    return results;
   }, [
     commandQuery,
     skills,
@@ -286,6 +298,9 @@ export function useMentionCommands(
     selectedServerIds,
     promptScopeContext,
     skillScopeContext,
+    selectedAssistant,
+    activeChatAssistantId,
+    canMentionAssistant,
   ]);
 
   const handleInputChange = useCallback(
@@ -297,32 +312,29 @@ export function useMentionCommands(
 
       const textBeforeCursor = value.slice(0, pos);
 
-      const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
-      const lastAtIndex = textBeforeCursor.lastIndexOf("@");
-      const lastHashIndex = textBeforeCursor.lastIndexOf("#");
+      const candidates: Array<{
+        trigger: Exclude<MentionTrigger, null>;
+        index: number;
+      }> = [
+        { trigger: "/", index: textBeforeCursor.lastIndexOf("/") },
+        { trigger: "@", index: textBeforeCursor.lastIndexOf("@") },
+        { trigger: "#", index: textBeforeCursor.lastIndexOf("#") },
+        { trigger: "\\", index: textBeforeCursor.lastIndexOf("\\") },
+      ];
 
-      let triggerIndex = -1;
-      let activeTrigger: MentionTrigger = null;
+      const latest = candidates.reduce((best, curr) =>
+        curr.index > best.index ? curr : best,
+      );
 
-      if (lastSlashIndex > lastAtIndex && lastSlashIndex > lastHashIndex) {
-        triggerIndex = lastSlashIndex;
-        activeTrigger = "/";
-      } else if (
-        lastAtIndex > lastSlashIndex &&
-        lastAtIndex > lastHashIndex &&
-        !selectedAssistant &&
-        !activeChatAssistantId &&
-        canMentionAssistant
-      ) {
-        triggerIndex = lastAtIndex;
-        activeTrigger = "@";
-      } else if (
-        lastHashIndex > lastSlashIndex &&
-        lastHashIndex > lastAtIndex
-      ) {
-        triggerIndex = lastHashIndex;
-        activeTrigger = "#";
-      }
+      const isBlockedAssistantTrigger =
+        latest.trigger === "@" &&
+        (Boolean(selectedAssistant) ||
+          Boolean(activeChatAssistantId) ||
+          !canMentionAssistant);
+
+      const triggerIndex = isBlockedAssistantTrigger ? -1 : latest.index;
+      const activeTrigger: MentionTrigger =
+        triggerIndex !== -1 ? latest.trigger : null;
 
       if (triggerIndex !== -1) {
         const isStartOfLine = triggerIndex === 0;
@@ -360,7 +372,7 @@ export function useMentionCommands(
 
         setInput(newInput);
 
-        if (openTrigger === "/") {
+        if (openTrigger === "/" || openTrigger === "\\") {
           if (isSkillItem(item)) {
             onSelectSkill?.(item);
           } else if (isPromptItem(item)) {
@@ -369,11 +381,13 @@ export function useMentionCommands(
               return [...prev, item];
             });
           }
-        } else if (openTrigger === "@") {
+        }
+        if (openTrigger === "@" || openTrigger === "\\") {
           if (isAssistantItem(item)) {
             setSelectedAssistant(item);
           }
-        } else if (openTrigger === "#") {
+        }
+        if (openTrigger === "#" || openTrigger === "\\") {
           if (isKnowledgebaseItem(item)) {
             onSelectKnowledgebase?.(item);
           }

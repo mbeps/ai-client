@@ -136,4 +136,74 @@ describe("MentionCommands", () => {
     const commandItem = container.querySelector("[cmdk-item]");
     expect(commandItem?.querySelector("svg")).toBeNull();
   });
+
+  it("renders all four groups when trigger is \\", () => {
+    const items: MentionItem[] = [
+      {
+        id: "skill-1",
+        name: "test-skill",
+        displayName: "Test Skill",
+        description: "A test skill",
+        isSkill: true,
+      } as any,
+      {
+        id: "prompt-1",
+        title: "Test Prompt",
+        shortcut: "test",
+        content: "Prompt content",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "asst-1",
+        name: "Test Assistant",
+        description: "Helpful assistant",
+        avatar: null,
+        instructions: "Do stuff",
+        tools: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any,
+      {
+        id: "kb-1",
+        name: "Test KB",
+        description: "Test knowledgebase",
+        documentCount: 5,
+        indexStatus: "ready",
+      },
+    ];
+
+    render(
+      <MentionCommands
+        items={items}
+        trigger={"\\"}
+        selectedIndex={0}
+        onSelect={onSelect}
+        onClose={onClose}
+      />,
+    );
+
+    expect(screen.getByText("Skills")).toBeInTheDocument();
+    expect(screen.getByText("Prompts")).toBeInTheDocument();
+    expect(screen.getByText("Assistants")).toBeInTheDocument();
+    expect(screen.getByText("Knowledgebases")).toBeInTheDocument();
+    expect(screen.getByText("Test Skill")).toBeInTheDocument();
+    expect(screen.getByText("Test Prompt")).toBeInTheDocument();
+    expect(screen.getByText("Test Assistant")).toBeInTheDocument();
+    expect(screen.getByText("Test KB")).toBeInTheDocument();
+  });
+
+  it("renders empty state for \\ trigger when no items match", () => {
+    render(
+      <MentionCommands
+        items={[]}
+        trigger={"\\"}
+        selectedIndex={0}
+        onSelect={onSelect}
+        onClose={onClose}
+      />,
+    );
+
+    expect(screen.getByText("No items found.")).toBeInTheDocument();
+  });
 });
