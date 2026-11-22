@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ChevronsUpDown,
   LogOut,
   Monitor,
   Moon,
@@ -94,7 +93,7 @@ export function SidebarUserFooter(
                     {session?.user?.email}
                   </span>
                 </div>
-                <ChevronsUpDown className="ml-auto size-4" />
+                <Settings className="ml-auto size-4" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
