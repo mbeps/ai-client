@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import type * as React from "react";
+import { FaGithub } from "react-icons/fa6";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { env } from "@/config/env";
 import { ROUTES } from "@/config/routes";
 import { authClient } from "@/lib/auth/auth-client";
 import { resetClientState } from "@/lib/store/reset-client-state";
@@ -177,6 +179,17 @@ export function SidebarUserFooter(
                     </DropdownMenuRadioGroup>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                <DropdownMenuItem asChild>
+                  <a
+                    href={env.PROJECT_REPO}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full cursor-pointer"
+                  >
+                    <FaGithub className="mr-2 h-4 w-4" />
+                    <span>GitHub Repository</span>
+                  </a>
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem

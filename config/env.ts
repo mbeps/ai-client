@@ -11,6 +11,10 @@ export const clientEnvSchema = z.object({
     .string()
     .default("true")
     .transform((v) => v === "true"),
+  PROJECT_REPO: z
+    .string()
+    .url()
+    .default("https://github.com/mbeps/ai-client"),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -198,6 +202,7 @@ export function validateEnv(
     ? {
         NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:
           process.env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD,
+        PROJECT_REPO: process.env.PROJECT_REPO,
         DATABASE_URL: process.env.DATABASE_URL,
         BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
         BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
@@ -245,6 +250,7 @@ export function validateEnv(
     : {
         NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD:
           process.env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD,
+        PROJECT_REPO: process.env.PROJECT_REPO,
         NODE_ENV: process.env.NODE_ENV,
         VITEST: process.env.VITEST,
       };
