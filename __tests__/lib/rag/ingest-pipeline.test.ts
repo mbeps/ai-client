@@ -470,10 +470,6 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
     const finalUpdate = chainable.set.mock.calls.at(-1)![0];
     expect(finalUpdate).toMatchObject({
       status: "ready",
-      documentType: "general",
-      summary: "",
-      keyEntities: [],
-      tableOfContents: [],
       ingestSteps: {
         uploading: { status: "completed" },
         extracting: { status: "completed" },
@@ -588,5 +584,49 @@ describe("ingestDocumentPipeline (Qdrant)", () => {
       metadata: { status: "failed", error: "No chat model configured" },
       relations: { status: "failed", error: "Relation LLM timeout" },
     });
+  });
+
+  it("preserves existing document metadata when reindexing in vector mode", async () => {
+    mockEnv.RAG_MODE = "vector";
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("vector text");
+    vi.mocked(chunkText).mockReturnValue(["chunk-1"]);
+    vi.mocked(embedDocuments).mockResolvedValue([[0.1, 0.2]]);
+    chainable.where.mockResolvedValueOnce([{ id: "doc-1" }]);
+
+    await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
+
+    const finalUpdate = chainable.set.mock.calls.at(-1)![0];
+    expect(finalUpdate.status).toBe("ready");
+    expect(finalUpdate).not.toHaveProperty("documentType");
+    expect(finalUpdate).not.toHaveProperty("summary");
+    expect(finalUpdate).not.toHaveProperty("keyEntities");
+    expect(finalUpdate).not.toHaveProperty("tableOfContents");
+  });
+
+  it("persists extracted metadata before calling generateDocumentRelations in file_read mode", async () => {
+    mockEnv.RAG_MODE = "file_read";
+    vi.mocked(extractTextFromBuffer).mockResolvedValue("hello world");
+    vi.mocked(chunkText).mockReturnValue(["hello"]);
+    chainable.where.mockResolvedValueOnce([{ id: "doc-1" }]);
+
+    extractDocumentMetadataMock.mockResolvedValueOnce({
+      documentType: "policy",
+      summary: "Policy summary",
+      keyEntities: ["IAM"],
+      tableOfContents: [],
+    });
+
+    let metadataPersistedBeforeRelations = false;
+    generateDocumentRelationsMock.mockImplementationOnce(async () => {
+      metadataPersistedBeforeRelations = chainable.set.mock.calls.some(
+        ([arg]) =>
+          arg.documentType === "policy" && arg.summary === "Policy summary",
+      );
+      return 1;
+    });
+
+    await ingestDocumentPipeline(makeDoc(), Buffer.from("x"), "user-1");
+
+    expect(metadataPersistedBeforeRelations).toBe(true);
   });
 });
