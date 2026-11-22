@@ -346,6 +346,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
       oauthConnected: r.oauthConnected ?? false,
       enabled: r.enabled,
       isPublic: r.isPublic,
+      autoApprovedTools: r.autoApprovedTools ?? [],
       isInstalled: r.isInstalled,
       installId: r.installId,
       createdAt: new Date(r.createdAt),

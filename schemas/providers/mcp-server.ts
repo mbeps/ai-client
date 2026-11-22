@@ -92,6 +92,7 @@ export const mcpServerSchema = z.object({
   hasOAuthClientSecret: z.boolean().optional(),
   enabled: z.boolean(),
   isPublic: z.boolean(),
+  autoApprovedTools: z.array(z.string()).default([]),
   isInstalled: z.boolean().optional(),
   installId: z.string().optional(),
   createdAt: z.date(),

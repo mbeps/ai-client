@@ -26,8 +26,26 @@ describe("mcpServerRowToConfig", () => {
       oauthClientId: null,
       oauthClientSecret: null,
       oauthScope: null,
+      autoApprovedTools: [],
       userId: "user-1",
     });
+  });
+
+  it("forwards autoApprovedTools when present", () => {
+    const row = {
+      id: "uuid-approved",
+      userId: "user-1",
+      name: "Approved MCP",
+      url: "http://localhost:3000/sse",
+      headers: null,
+      autoApprovedTools: ["search", "fetch"],
+      enabled: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const config = mcpServerRowToConfig(row as any);
+    expect(config.autoApprovedTools).toEqual(["search", "fetch"]);
   });
 
   it("decrypts encrypted headers back to plaintext JSON", () => {

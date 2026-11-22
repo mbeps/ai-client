@@ -145,6 +145,7 @@ describe("loadChatContext KB ownership", () => {
         oauthClientId: null,
         oauthClientSecret: null,
         oauthScope: null,
+        autoApprovedTools: [],
         userId: "user-1",
       },
       {
@@ -156,6 +157,7 @@ describe("loadChatContext KB ownership", () => {
         oauthClientId: null,
         oauthClientSecret: null,
         oauthScope: null,
+        autoApprovedTools: [],
         userId: "user-1",
       },
     ]);

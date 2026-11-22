@@ -53,6 +53,7 @@ export function mcpServerRowToConfig(
     oauthClientId: row.oauthClientId ?? null,
     oauthClientSecret: decryptSecret(row.oauthClientSecret),
     oauthScope: row.oauthScope ?? null,
+    autoApprovedTools: row.autoApprovedTools ?? [],
     userId: userId ?? row.userId,
   };
 }

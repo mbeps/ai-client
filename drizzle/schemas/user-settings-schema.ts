@@ -31,6 +31,7 @@ export const userSettings = pgTable(
       onDelete: "set null",
     }),
     memoryEnabled: boolean("memory_enabled").notNull().default(true),
+    internalToolApprovals: text("internal_tool_approvals"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

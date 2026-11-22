@@ -10,6 +10,7 @@ import type {
   MessageUsage,
   ParsedMessageMetadata,
 } from "@/types/message/metadata";
+import type { ApprovalMode, PendingApproval } from "@/types/tool/approval";
 
 /**
  * Validates and parses reasoning effort from metadata payload.
@@ -184,6 +185,74 @@ function parseCompactionMetadata(val: unknown): CompactionMetadata | undefined {
 }
 
 /**
+ * Parses per-chat approval mode from metadata payload.
+ *
+ * @param val - Raw approvalMode value
+ * @returns Validated ApprovalMode or undefined
+ */
+function parseApprovalMode(val: unknown): ApprovalMode | undefined {
+  return val === "ask" || val === "auto" ? val : undefined;
+}
+
+/**
+ * Parses non-negative approval round counter from metadata payload.
+ *
+ * @param val - Raw approvalRound value
+ * @returns Non-negative integer round number defaulting to 0
+ */
+function parseApprovalRound(val: unknown): number {
+  return typeof val === "number" && Number.isFinite(val) && val >= 0
+    ? Math.floor(val)
+    : 0;
+}
+
+/**
+ * Parses pending tool approval requests from metadata payload, filtering out
+ * any malformed entries missing required identifiers or HMAC signature.
+ *
+ * @param val - Raw pendingApprovals array
+ * @returns Validated array of PendingApproval entries
+ */
+function parsePendingApprovals(val: unknown): PendingApproval[] {
+  if (!Array.isArray(val)) return [];
+
+  const approvals: PendingApproval[] = [];
+  for (const item of val) {
+    if (!item || typeof item !== "object") continue;
+    const raw = item as Record<string, unknown>;
+    if (
+      typeof raw.approvalId !== "string" ||
+      !raw.approvalId ||
+      typeof raw.toolCallId !== "string" ||
+      !raw.toolCallId ||
+      typeof raw.toolName !== "string" ||
+      !raw.toolName ||
+      typeof raw.signature !== "string"
+    ) {
+      continue;
+    }
+
+    approvals.push({
+      approvalId: raw.approvalId,
+      toolCallId: raw.toolCallId,
+      toolName: raw.toolName,
+      serverName:
+        typeof raw.serverName === "string" ? raw.serverName : undefined,
+      serverId: typeof raw.serverId === "string" ? raw.serverId : undefined,
+      subagentId:
+        typeof raw.subagentId === "string" ? raw.subagentId : undefined,
+      subagentName:
+        typeof raw.subagentName === "string" ? raw.subagentName : undefined,
+      args: raw.args,
+      reason: typeof raw.reason === "string" ? raw.reason : undefined,
+      signature: raw.signature,
+    });
+  }
+
+  return approvals;
+}
+
+/**
  * Parses message metadata JSON with sensible defaults for missing/malformed data.
  *
  * @param metadata - Raw JSON string from database or null
@@ -207,6 +276,10 @@ export function parseMessageMetadata(
     finishReason: null,
     durationMs: null,
     assistantId: undefined,
+    approvalMode: undefined,
+    pendingApprovals: [],
+    approvalRound: 0,
+    parentUserMessageId: null,
   };
 
   if (!metadata) return empty;
@@ -247,6 +320,13 @@ export function parseMessageMetadata(
       assistantId:
         typeof parsed.assistantId === "string" ? parsed.assistantId : undefined,
       compaction: parseCompactionMetadata(parsed.compaction),
+      approvalMode: parseApprovalMode(parsed.approvalMode),
+      pendingApprovals: parsePendingApprovals(parsed.pendingApprovals),
+      approvalRound: parseApprovalRound(parsed.approvalRound),
+      parentUserMessageId:
+        typeof parsed.parentUserMessageId === "string"
+          ? parsed.parentUserMessageId
+          : null,
     };
   } catch (e) {
     log.error("Failed to parse message metadata: {error}", {

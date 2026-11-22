@@ -33,4 +33,7 @@ export type McpServerConfig = {
 
   /** Optional OAuth scope. */
   oauthScope?: string | null;
+
+  /** Per-server allowlist of raw MCP tool names approved to run without prompting. */
+  autoApprovedTools?: string[];
 };

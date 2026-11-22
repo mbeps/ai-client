@@ -28,6 +28,10 @@ describe("parseMessageMetadata", () => {
       usage: null,
       finishReason: null,
       durationMs: null,
+      approvalMode: undefined,
+      pendingApprovals: [],
+      approvalRound: 0,
+      parentUserMessageId: null,
     });
   });
 
@@ -378,6 +382,10 @@ describe("parseMessageMetadata", () => {
       usage: null,
       finishReason: null,
       durationMs: null,
+      approvalMode: undefined,
+      pendingApprovals: [],
+      approvalRound: 0,
+      parentUserMessageId: null,
     });
 
     vi.restoreAllMocks();
@@ -445,5 +453,88 @@ describe("parseMessageMetadata", () => {
       JSON.stringify({ compaction: { compactedCount: "2" } }),
     );
     expect(nonNumeric.compaction).toBeUndefined();
+  });
+
+  it("parses valid pendingApprovals, approvalRound, parentUserMessageId, and approvalMode", () => {
+    const raw = JSON.stringify({
+      approvalMode: "auto",
+      approvalRound: 2.8,
+      parentUserMessageId: "user-msg-1",
+      pendingApprovals: [
+        {
+          approvalId: "app-1",
+          toolCallId: "tc-1",
+          toolName: "create_skill",
+          serverName: "Built-in",
+          serverId: "srv-1",
+          subagentId: "sub-1",
+          subagentName: "Researcher",
+          args: { name: "test" },
+          reason: "Needs permission",
+          signature: "sig-123",
+        },
+        // Invalid entries should be filtered out
+        null,
+        { approvalId: "", toolCallId: "tc-2", toolName: "x", signature: "s" },
+        { approvalId: "app-3", toolCallId: "", toolName: "x", signature: "s" },
+        { approvalId: "app-4", toolCallId: "tc-4", toolName: "", signature: "s" },
+        { approvalId: "app-5", toolCallId: "tc-5", toolName: "x", signature: 123 },
+      ],
+    });
+
+    const result = parseMessageMetadata(raw);
+
+    expect(result.approvalMode).toBe("auto");
+    expect(result.approvalRound).toBe(2);
+    expect(result.parentUserMessageId).toBe("user-msg-1");
+    expect(result.pendingApprovals).toEqual([
+      {
+        approvalId: "app-1",
+        toolCallId: "tc-1",
+        toolName: "create_skill",
+        serverName: "Built-in",
+        serverId: "srv-1",
+        subagentId: "sub-1",
+        subagentName: "Researcher",
+        args: { name: "test" },
+        reason: "Needs permission",
+        signature: "sig-123",
+      },
+    ]);
+  });
+
+  it("defaults invalid or missing approvalMode, approvalRound, parentUserMessageId, and pendingApprovals", () => {
+    const raw = JSON.stringify({
+      approvalMode: "invalid-mode",
+      approvalRound: -3,
+      parentUserMessageId: 42,
+      pendingApprovals: "not-an-array",
+    });
+
+    const result = parseMessageMetadata(raw);
+
+    expect(result.approvalMode).toBeUndefined();
+    expect(result.approvalRound).toBe(0);
+    expect(result.parentUserMessageId).toBeNull();
+    expect(result.pendingApprovals).toEqual([]);
+
+    const askResult = parseMessageMetadata(
+      JSON.stringify({ approvalMode: "ask", pendingApprovals: [{ approvalId: "a", toolCallId: "t", toolName: "n", signature: "s" }] }),
+    );
+    expect(askResult.approvalMode).toBe("ask");
+    expect(askResult.pendingApprovals).toEqual([
+      {
+        approvalId: "a",
+        toolCallId: "t",
+        toolName: "n",
+        serverName: undefined,
+        serverId: undefined,
+        subagentId: undefined,
+        subagentName: undefined,
+        args: undefined,
+        reason: undefined,
+        signature: "s",
+      },
+    ]);
   });
 });

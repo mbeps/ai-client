@@ -183,6 +183,7 @@ describe("loadTransformContext", () => {
         oauthClientId: null,
         oauthClientSecret: null,
         oauthScope: null,
+        autoApprovedTools: [],
         userId: "user-1",
       },
       {
@@ -194,6 +195,7 @@ describe("loadTransformContext", () => {
         oauthClientId: null,
         oauthClientSecret: null,
         oauthScope: null,
+        autoApprovedTools: [],
         userId: "user-1",
       },
     ]);

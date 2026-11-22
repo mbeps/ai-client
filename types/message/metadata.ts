@@ -1,6 +1,7 @@
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
+import type { ApprovalMode, PendingApproval } from "@/types/tool/approval";
 
 /**
  * Token usage data from the AI model response.
@@ -72,4 +73,8 @@ export type ParsedMessageMetadata = {
   subagentIds?: string[];
   assistantId?: string;
   compaction?: CompactionMetadata;
+  approvalMode?: ApprovalMode;
+  pendingApprovals: PendingApproval[];
+  approvalRound: number;
+  parentUserMessageId: string | null;
 };
