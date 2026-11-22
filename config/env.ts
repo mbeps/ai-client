@@ -11,10 +11,7 @@ export const clientEnvSchema = z.object({
     .string()
     .default("true")
     .transform((v) => v === "true"),
-  PROJECT_REPO: z
-    .string()
-    .url()
-    .default("https://github.com/mbeps/ai-client"),
+  PROJECT_REPO: z.string().url().default("https://github.com/mbeps/ai-client"),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
