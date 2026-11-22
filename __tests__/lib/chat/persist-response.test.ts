@@ -1,5 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { persistAssistantResponse } from "@/lib/chat/persist-response";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  persistAssistantResponse,
+  updateAssistantResponse,
+} from "@/lib/chat/persist-response";
 
 const chainable = vi.hoisted(() => {
   const c = {} as Record<string, ReturnType<typeof vi.fn>>;
@@ -289,6 +292,48 @@ describe("persistAssistantResponse", () => {
         metadata: null,
       }),
     ).rejects.toThrow("Connection terminated unexpectedly");
+  });
+});
+
+describe("updateAssistantResponse", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    chainable.update.mockImplementation(() => chainable);
+    chainable.set.mockImplementation(() => chainable);
+    chainable.where.mockImplementation(() => chainable);
+    chainable.returning.mockResolvedValue([{ id: "msg-1" }]);
+  });
+
+  it("updates content, metadata, and updatedAt and returns true when row exists", async () => {
+    const result = await updateAssistantResponse({
+      messageId: "msg-1",
+      chatId: "chat-1",
+      content: "Resumed content",
+      metadata: '{"pendingApprovals":[]}',
+    });
+
+    expect(result).toBe(true);
+    expect(chainable.update).toHaveBeenCalledOnce();
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Resumed content",
+        metadata: '{"pendingApprovals":[]}',
+        updatedAt: expect.any(Date),
+      }),
+    );
+  });
+
+  it("returns false when no matching assistant message row is found", async () => {
+    chainable.returning.mockResolvedValueOnce([]);
+
+    const result = await updateAssistantResponse({
+      messageId: "missing",
+      chatId: "chat-1",
+      content: "Resumed content",
+      metadata: null,
+    });
+
+    expect(result).toBe(false);
   });
 });
 

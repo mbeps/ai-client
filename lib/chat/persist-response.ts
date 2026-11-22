@@ -109,3 +109,45 @@ export async function persistAssistantResponse(
     throw error;
   }
 }
+
+/**
+ * Parameters for updating an existing assistant message row in PostgreSQL.
+ */
+type UpdateAssistantResponseParams = {
+  messageId: string;
+  chatId: string;
+  content: string;
+  metadata: string | null;
+};
+
+/**
+ * Updates `content`, `metadata`, and `updatedAt` on an existing assistant
+ * message row (e.g. when resuming a parked tool approval round or updating
+ * `pendingApprovals` during a subagent pause).
+ *
+ * @param params - Target message identifiers and updated payload.
+ * @returns `true` if the assistant message row was found and updated, `false` otherwise.
+ */
+export async function updateAssistantResponse(
+  params: UpdateAssistantResponseParams,
+): Promise<boolean> {
+  const { messageId, chatId, content, metadata } = params;
+
+  const [updated] = await db
+    .update(message)
+    .set({
+      content,
+      metadata,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(message.id, messageId),
+        eq(message.chatId, chatId),
+        eq(message.role, "assistant"),
+      ),
+    )
+    .returning({ id: message.id });
+
+  return Boolean(updated);
+}
