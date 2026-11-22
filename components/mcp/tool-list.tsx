@@ -1,9 +1,15 @@
 "use client";
 
-import { Wrench } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Wrench } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { updateMcpToolApprovals } from "@/actions/mcp-servers/update-mcp-tool-approvals";
 import type { DiscoveryResult } from "@/components/mcp/mcp-item-list";
 import { McpItemList } from "@/components/mcp/mcp-item-list";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
@@ -20,45 +26,18 @@ export interface ToolListProps {
   server: McpServer;
 }
 
-/**
- * Fetches tools from the discovery result of an MCP server.
- *
- * @param result - Discovery result containing tools and resources
- * @returns Array of discovered tools
- */
 function fetchTools(result: DiscoveryResult): DiscoveredTool[] {
   return result.tools;
 }
 
-/**
- * Generates a unique key for a discovered tool based on its name.
- *
- * @param tool - The discovered tool object
- * @returns Unique key string for the tool
- */
 function getToolKey(tool: DiscoveredTool): string {
   return tool.name;
 }
 
-/**
- * Generates a display label for a discovered tool based on its name.
- *
- * @param tool - The discovered tool object
- * @returns Display label string for the tool
- */
 function getToolLabel(tool: DiscoveredTool): string {
   return tool.name;
 }
 
-/**
- * Renders the detailed content for a discovered tool in the accordion view.
- * Displays the tool description and structured parameter schema with type information.
- * Shows required parameter indicators and supports optional descriptions per parameter.
- *
- * @param tool - The discovered tool to render content for
- * @returns JSX fragment with tool description and parameters display
- * @author Maruf Bepary
- */
 function renderToolContent(tool: DiscoveredTool) {
   return (
     <>
@@ -115,19 +94,75 @@ function renderToolContent(tool: DiscoveredTool) {
 }
 
 /**
- * Displays tools discovered from an MCP server in an expandable accordion.
- * Auto-fetches tools on mount; supports manual refresh. Shows description and parameters per tool.
- * Handles loading, error, and empty states with retry capability.
- * Displays parameter types and required indicators for each tool.
+ * Displays tools discovered from an MCP server in an expandable accordion,
+ * with per-tool and bulk execution approval controls backed by
+ * {@link updateMcpToolApprovals}.
  *
  * @param props - Component props
- * @param props.server - MCP server to discover tools from; discovery is keyed by server.id
- * @see {@link ResourceList} for displaying server resources
- * @see {@link ServerCard} for server overview
- * @see {@link McpItemList} for generic item list implementation
+ * @param props.server - MCP server to discover tools from
  * @author Maruf Bepary
  */
 export function ToolList({ server }: ToolListProps) {
+  const loadMcpServers = useAppStore((s) => s.loadMcpServers);
+  const [autoApprovedTools, setAutoApprovedTools] = useState<string[]>(
+    server.autoApprovedTools ?? [],
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setAutoApprovedTools(server.autoApprovedTools ?? []);
+  }, [server.autoApprovedTools]);
+
+  const persistApprovals = useCallback(
+    async (nextTools: string[], discoveredTools: DiscoveredTool[]) => {
+      const discoveredNames = new Set(discoveredTools.map((t) => t.name));
+      const pruned = nextTools.filter((name) => discoveredNames.has(name));
+      const previous = autoApprovedTools;
+
+      setAutoApprovedTools(pruned);
+      setIsSaving(true);
+      try {
+        const res = await updateMcpToolApprovals({
+          serverId: server.id,
+          autoApprovedTools: pruned,
+        });
+        if (!res.ok) {
+          setAutoApprovedTools(previous);
+          toast.error(res.error.message);
+          return;
+        }
+        setAutoApprovedTools(res.value.autoApprovedTools);
+        await loadMcpServers();
+        toast.success("Tool approval settings updated");
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [autoApprovedTools, loadMcpServers, server.id],
+  );
+
+  const handleToggleTool = useCallback(
+    (
+      toolName: string,
+      approved: boolean,
+      discoveredTools: DiscoveredTool[],
+    ) => {
+      const nextTools = approved
+        ? [...autoApprovedTools, toolName]
+        : autoApprovedTools.filter((name) => name !== toolName);
+      void persistApprovals(nextTools, discoveredTools);
+    },
+    [autoApprovedTools, persistApprovals],
+  );
+
+  const handleToggleAll = useCallback(
+    (approveAll: boolean, discoveredTools: DiscoveredTool[]) => {
+      const nextTools = approveAll ? discoveredTools.map((t) => t.name) : [];
+      void persistApprovals(nextTools, discoveredTools);
+    },
+    [persistApprovals],
+  );
+
   return (
     <McpItemList<DiscoveredTool>
       server={server}
@@ -138,6 +173,51 @@ export function ToolList({ server }: ToolListProps) {
       itemKind="tool"
       emptyMessage="No tools discovered from this server."
       renderContent={renderToolContent}
+      headerActions={(items) => {
+        const allApproved =
+          items.length > 0 &&
+          items.every((t) => autoApprovedTools.includes(t.name));
+        return (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isSaving}
+            onClick={() => handleToggleAll(!allApproved, items)}
+            className="h-8 text-xs"
+          >
+            {allApproved ? "Require approval for all" : "Auto-approve all"}
+          </Button>
+        );
+      }}
+      renderItemActions={(tool, items) => {
+        const isApproved = autoApprovedTools.includes(tool.name);
+        return (
+          <div className="flex items-center gap-2.5">
+            <span className="text-muted-foreground hidden items-center gap-1 text-xs sm:inline-flex">
+              {isApproved ? (
+                <>
+                  <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Auto-approved</span>
+                </>
+              ) : (
+                <>
+                  <ShieldAlert className="size-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>Requires approval</span>
+                </>
+              )}
+            </span>
+            <Switch
+              checked={isApproved}
+              disabled={isSaving}
+              aria-label={`Auto-approve ${tool.name}`}
+              onCheckedChange={(checked) =>
+                handleToggleTool(tool.name, checked, items)
+              }
+            />
+          </div>
+        );
+      }}
     />
   );
 }
