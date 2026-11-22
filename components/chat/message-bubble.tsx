@@ -5,6 +5,7 @@ import type { KnowledgebaseWithCount } from "@/actions/knowledgebases/list-knowl
 import { AssistantMessageBody } from "@/components/chat/message/assistant-message-body";
 import { AttachmentGallery } from "@/components/chat/message/attachment-gallery";
 import { CitationsList } from "@/components/chat/message/citations-list";
+import { CompactionDivider } from "@/components/chat/message/compaction-divider";
 import {
   MessageActionSection,
   MessageHeader,
@@ -17,6 +18,7 @@ import { SITE_CONFIG } from "@/config/site";
 import { authClient } from "@/lib/auth/auth-client";
 import { extractMessageArtifacts } from "@/lib/chat/extract-message-artifacts";
 import { extractMessageDownloads } from "@/lib/chat/extract-message-downloads";
+import { isCompactionMessage } from "@/lib/chat/is-compaction-message";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
@@ -233,6 +235,12 @@ export function MessageBubble(props: MessageBubbleProps) {
     },
     [message.id, onEdit, handleCancel],
   );
+
+  if (isCompactionMessage(props.message)) {
+    return (
+      <CompactionDivider message={props.message} onDelete={props.onDelete} />
+    );
+  }
 
   return (
     <div

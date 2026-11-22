@@ -12,6 +12,17 @@ export type MessageUsage = {
 };
 
 /**
+ * Metadata stored on a conversation compaction checkpoint message.
+ */
+export type CompactionMetadata = {
+  compactedCount: number;
+  originalTokens?: number;
+  compactedTokens?: number;
+  model?: string;
+  auto?: boolean;
+};
+
+/**
  * Comprehensive metadata parsed from a message's JSON metadata field.
  * Extracts prompt shortcuts, tool invocations, model information, and reasoning in a single pass.
  * Designed to support tree-based message storage with rich context for branching and reconstruction.
@@ -60,4 +71,5 @@ export type ParsedMessageMetadata = {
   subagentModelId?: string;
   subagentIds?: string[];
   assistantId?: string;
+  compaction?: CompactionMetadata;
 };

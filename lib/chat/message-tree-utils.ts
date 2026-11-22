@@ -90,7 +90,7 @@ export function buildChatFromRows(row: ChatWithMessages): Chat {
     messages[m.id] = mapMessageFromDb(
       {
         id: m.id,
-        role: m.role as "user" | "assistant",
+        role: m.role as Message["role"],
         content: m.content,
         parentId: m.parentId,
         metadata: serializeRowMetadata(m.metadata),

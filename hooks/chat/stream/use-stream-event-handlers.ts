@@ -252,6 +252,24 @@ export function useStreamEventHandlers(params: {
         streamRefs.rejoinedRef.current = true;
       }
 
+      if (event.type === "compacting") {
+        toast.loading("Compacting conversation...", {
+          id: `auto-compact-${chatId}`,
+        });
+        return;
+      }
+
+      if (event.type === "compacted") {
+        toast.success("Conversation compacted", {
+          id: `auto-compact-${chatId}`,
+        });
+        const res = await getChat(chatId);
+        if (res.ok && res.value) {
+          useAppStore.getState().upsertChat(buildChatFromRows(res.value));
+        }
+        return;
+      }
+
       if (event.type === "finish") {
         streamRefs.lastChunkTimeRef.current = 0;
         if (streamRefs.rejoinedRef.current) {

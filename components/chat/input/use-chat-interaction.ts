@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import { useChatAttachments } from "@/components/chat/input/use-chat-attachments";
 import { useChatInputSelections } from "@/components/chat/input/use-chat-input-selections";
 import type { useChatInputServices } from "@/components/chat/input/use-chat-input-services";
 import { useChatPromptSelection } from "@/components/chat/input/use-chat-prompt-selection";
 import { useChatSubmit } from "@/components/chat/input/use-chat-submit";
-import { useMentionCommands } from "@/hooks/chat/use-mention-commands";
+import {
+  type MentionActionItem,
+  useMentionCommands,
+} from "@/hooks/chat/use-mention-commands";
 import { estimateTokens } from "@/lib/chat/estimate-tokens";
+import { sliceThreadFromLatestCompaction } from "@/lib/chat/slice-thread-from-compaction";
 import { AttachmentVisionUnsupportedError } from "@/lib/error/attachment-vision-unsupported-error";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
@@ -19,6 +24,8 @@ import type { Skill } from "@/types/skill/skill";
  * @author Maruf Bepary
  */
 export interface ChatInteractionProps {
+  thread?: import("@/types/message/message").Message[];
+  onCompact?: (modelId?: string) => void | Promise<void>;
   chatId?: string;
   onSend: (
     content: string,
@@ -132,6 +139,8 @@ export interface UseChatInteractionOptions {
   setInput: (val: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   canMentionAssistant: boolean;
+  thread?: import("@/types/message/message").Message[];
+  onCompact?: (modelId?: string) => void | Promise<void>;
   reasoningEffort?: ReasoningEffort;
 }
 
@@ -185,6 +194,49 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     [props.projectId, props.assistantId, props.skillMode, props.skillIds],
   );
 
+  const canCompact = useMemo(
+    () =>
+      Boolean(props.onCompact) &&
+      !props.isLoading &&
+      sliceThreadFromLatestCompaction(props.thread ?? []).activeMessages
+        .length >= 2,
+    [props.onCompact, props.isLoading, props.thread],
+  );
+
+  const mentionActions = useMemo<MentionActionItem[]>(
+    () =>
+      props.onCompact
+        ? [
+            {
+              id: "action:compact",
+              name: "compact",
+              title: "Compact conversation",
+              description: "Summarize older turns to free context window",
+              isAction: true,
+              isMcp: false,
+            },
+          ]
+        : [],
+    [props.onCompact],
+  );
+
+  const handleSelectAction = useCallback(
+    (action: MentionActionItem) => {
+      if (action.name === "compact") {
+        if (!canCompact) {
+          toast.info(
+            props.isLoading
+              ? "Wait for the current response to finish before compacting"
+              : "Need at least 2 messages to compact",
+          );
+          return;
+        }
+        props.onCompact?.(services.modelId);
+      }
+    },
+    [canCompact, props.isLoading, props.onCompact, services.modelId],
+  );
+
   const mentions = useMentionCommands(
     input,
     setInput,
@@ -199,6 +251,8 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     services.knowledgebases,
     promptScopeContext,
     skillScopeContext,
+    mentionActions,
+    handleSelectAction,
   );
 
   const { setSubagentsEnabled, setSelectedSubagentIds } = selections;
@@ -304,5 +358,6 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     handleRemoveAssistant,
     handleOpenSubagents,
     handleCloseMentions,
+    canCompact,
   };
 }

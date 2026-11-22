@@ -2,6 +2,7 @@ import type { UserModelOption } from "@/hooks/use-user-models";
 import { estimateAttachmentTokens } from "@/lib/chat/estimate-attachment-tokens";
 import { estimateTokens } from "@/lib/chat/estimate-tokens";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import { sliceThreadFromLatestCompaction } from "@/lib/chat/slice-thread-from-compaction";
 import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
@@ -221,9 +222,15 @@ export function calculateContextUsage(
   const catalogTokens = availableSkillCount * 50;
   const skillsTokens = selectedSkillTokens + catalogTokens;
 
-  // 5. Thread Messages
-  const { messagesTokens, filesTokens, toolResultsTokens } =
-    estimateMessageThreadTokens(thread);
+  // 5. Thread Messages (sliced from latest compaction checkpoint)
+  const { compactionSummary, activeMessages } =
+    sliceThreadFromLatestCompaction(thread);
+  const threadTokens = estimateMessageThreadTokens(activeMessages);
+  const summaryTokens = compactionSummary
+    ? estimateTokens(compactionSummary)
+    : 0;
+  const messagesTokens = threadTokens.messagesTokens + summaryTokens;
+  const { filesTokens, toolResultsTokens } = threadTokens;
 
   // 6. Draft Input & Attachments
   let draftTokens = estimateTokens(input);

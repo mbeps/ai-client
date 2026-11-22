@@ -3,6 +3,7 @@ import { env } from "@/config/env";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { estimateTokens } from "@/lib/chat/estimate-tokens";
 import type { ThreadMessage } from "@/lib/chat/load-thread-from-db";
+import { sliceThreadFromLatestCompaction } from "@/lib/chat/slice-thread-from-compaction";
 import { getLogger } from "@/lib/logger";
 
 const log = getLogger(["app", "chat", "messages"]);
@@ -177,7 +178,8 @@ export function prepareChatMessages(
 ): ModelMessage[] {
   const { history, maxContextTokens } = options;
 
-  const processedMessages = assembleModelMessages(history);
+  const { activeMessages } = sliceThreadFromLatestCompaction(history);
+  const processedMessages = assembleModelMessages(activeMessages);
 
   const limit = Math.max(1, env.CHAT_MAX_HISTORY_TURNS);
   const isTruncated = processedMessages.length > limit;

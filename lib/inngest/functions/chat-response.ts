@@ -1,9 +1,15 @@
 import { streamText } from "ai";
+import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
+import { compactChatThread } from "@/lib/chat/compact-chat-thread";
 import { extractThreadCanvasArtifacts } from "@/lib/chat/extract-canvas-artifacts";
-import { prepareChatMessages } from "@/lib/chat/prepare-chat-messages";
+import {
+  estimateModelMessageTokens,
+  prepareChatMessages,
+} from "@/lib/chat/prepare-chat-messages";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
+import { sliceThreadFromLatestCompaction } from "@/lib/chat/slice-thread-from-compaction";
 import { chatChannel } from "@/lib/inngest/chat-channel";
 import {
   buildStreamExecutionConfig,
@@ -430,20 +436,56 @@ export const generateChatResponse = inngest.createFunction(
       );
       mcpCleanup = mcpState.mcpCleanup;
 
+      const sliced = sliceThreadFromLatestCompaction(thread);
+      let compactionSummary = sliced.compactionSummary;
+      const activeMessages = sliced.activeMessages;
+
       validateModelCapabilities({
         isToolCallingModel,
         hasExternalMcpTools: mcpState.hasExternalMcpTools,
         selectedTools,
-        thread: thread as any,
+        thread: activeMessages as any,
         capVision: resolved.modelRow.capVision,
       });
 
-      const fileAttachments = extractFileAttachments(thread);
+      const fileAttachments = extractFileAttachments(activeMessages);
       const maxContextTokens = resolved.modelRow?.contextWindow
         ? Math.floor(resolved.modelRow.contextWindow * 0.85)
         : undefined;
+
+      let effectiveHistory = activeMessages;
+      if (maxContextTokens !== undefined && activeMessages.length > 2) {
+        const estimatedHistoryTokens = assembleModelMessages(
+          activeMessages,
+        ).reduce((sum, m) => sum + estimateModelMessageTokens(m), 0);
+
+        if (estimatedHistoryTokens > maxContextTokens) {
+          try {
+            await emit({ type: "compacting" });
+            const compacted = await compactChatThread({
+              chatId,
+              userId,
+              thread,
+              resolved,
+              auto: true,
+              reparentUserMessageId: userMessageId,
+            });
+            compactionSummary = compacted.summary;
+            effectiveHistory = [thread[thread.length - 1]];
+            await emit({ type: "compacted" });
+          } catch (err) {
+            log.warn(
+              "Auto-compaction failed, falling back to truncation: {error}",
+              {
+                error: err instanceof Error ? err.message : String(err),
+              },
+            );
+          }
+        }
+      }
+
       const finalMessages = prepareChatMessages({
-        history: thread,
+        history: effectiveHistory,
         maxContextTokens,
       });
 
@@ -494,6 +536,7 @@ export const generateChatResponse = inngest.createFunction(
           isSubagentDelegationEnabled,
           availableSubagents: ctx.linkedSubagents,
           canvasArtifacts,
+          compactionSummary,
         },
       );
 

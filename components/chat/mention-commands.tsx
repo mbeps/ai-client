@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, BrainCircuit, Database, SquareTerminal } from "lucide-react";
+import { Bot, BrainCircuit, Database, SquareTerminal, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -10,6 +10,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import {
+  isActionItem,
   isAssistantItem,
   isKnowledgebaseItem,
   isPromptItem,
@@ -54,6 +55,7 @@ export function MentionCommands({
 }: MentionCommandsProps) {
   if (!trigger) return null;
 
+  const actionItems = items.filter(isActionItem);
   const skillItems = items.filter(isSkillItem);
   const promptItems = items.filter(isPromptItem);
   const assistantItems = items.filter(isAssistantItem);
@@ -61,6 +63,8 @@ export function MentionCommands({
 
   const getEmptyMessage = () => {
     switch (typeFilter) {
+      case "action":
+        return "actions";
       case "skill":
         return "skills";
       case "prompt":
@@ -246,6 +250,43 @@ export function MentionCommands({
                         {item.documentCount} documents • {item.indexStatus}
                       </span>
                     </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+          {actionItems.length > 0 && (
+            <CommandGroup
+              heading={
+                <span className="flex items-center gap-1.5">
+                  <Zap className="h-3 w-3" />
+                  Actions
+                </span>
+              }
+            >
+              {actionItems.map((item) => {
+                const index = items.indexOf(item);
+                const isSelected = index === selectedIndex;
+
+                return (
+                  <CommandItem
+                    key={item.id}
+                    value={item.name}
+                    onSelect={() => onSelect(item)}
+                    className={cn(
+                      "flex cursor-pointer items-center justify-between gap-2 px-2 py-1.5",
+                      isSelected && "bg-accent text-accent-foreground",
+                    )}
+                  >
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate font-medium">{item.title}</span>
+                      <span className="text-muted-foreground truncate text-xs">
+                        {item.description}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground bg-muted shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]">
+                      /{item.name}
+                    </span>
                   </CommandItem>
                 );
               })}
