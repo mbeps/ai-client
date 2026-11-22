@@ -304,6 +304,10 @@ export function useStreamEventHandlers(params: {
         return;
       }
 
+      if (event.type === "tool-approval-required") {
+        return;
+      }
+
       applyStreamDelta(
         event,
         {

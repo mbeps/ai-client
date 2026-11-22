@@ -2889,5 +2889,29 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       uWd();
       vi.useRealTimers();
     });
+
+    it("ignores tool-approval-required events cleanly in stream handler", async () => {
+      const { rerender, unmount } = renderHook(() =>
+        useStreamResponse("chat-approval-noop"),
+      );
+
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [
+            {
+              data: {
+                type: "tool-approval-required",
+                approvals: [],
+                round: 1,
+              },
+            },
+          ],
+        };
+        rerender();
+      });
+
+      unmount();
+    });
   });
 });

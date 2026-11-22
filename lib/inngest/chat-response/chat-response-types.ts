@@ -2,6 +2,7 @@ import type { ModelMessage } from "ai";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Agent } from "@/types/agent/agent";
+import type { PendingApproval } from "@/types/tool/approval";
 import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
 export type { CompletedToolRecord };
@@ -48,6 +49,10 @@ export interface BuildOrchestratorToolSetParams {
   resolved: any;
   resolvedModelId: string;
   workerResolved: any;
+  wrapSubagentTools?: (
+    workerTools: Record<string, any>,
+    targetAgent: Agent,
+  ) => Record<string, any>;
 }
 
 /**
@@ -95,4 +100,5 @@ export interface ConsumeModelStreamResult {
   accumulatedText: string;
   accumulatedReasoning: string;
   aborted: boolean;
+  pendingApprovals: PendingApproval[];
 }

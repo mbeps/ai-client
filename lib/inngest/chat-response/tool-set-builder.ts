@@ -16,6 +16,7 @@ import {
   filterToolsForAgent,
 } from "@/lib/subagents/create-subagent-dispatch-tool";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
+import type { Agent } from "@/types/agent/agent";
 
 /**
  * Determines active target knowledge base IDs from context.
@@ -123,6 +124,10 @@ function buildSubagentDispatchTools(params: {
   allowedSubagents?: BuildOrchestratorToolSetParams["ctx"]["linkedSubagents"];
   toolServerIdMap?: Record<string, string>;
   toolSourceMap?: Record<string, string>;
+  wrapSubagentTools?: (
+    workerTools: Record<string, any>,
+    targetAgent: Agent,
+  ) => Record<string, any>;
 }): Record<string, any> {
   if (!params.isSubagentDelegationEnabled) {
     return {};
@@ -172,6 +177,7 @@ function buildSubagentDispatchTools(params: {
           model: params.kbSubagentModel,
           contextWindow: params.kbSubagentContextWindow,
         }),
+      wrapSubagentTools: params.wrapSubagentTools,
     }),
   };
 }
@@ -316,6 +322,7 @@ export function buildOrchestratorToolSet(
     allowedSubagents: ctx.linkedSubagents,
     toolServerIdMap: params.toolServerIdMap,
     toolSourceMap: params.toolSourceMap,
+    wrapSubagentTools: params.wrapSubagentTools,
   });
 
   const allTools = Object.assign(

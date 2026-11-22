@@ -1,5 +1,8 @@
 import { hasExistingAssistantMessage } from "@/lib/chat/has-existing-assistant-message";
-import { persistAssistantResponse } from "@/lib/chat/persist-response";
+import {
+  persistAssistantResponse,
+  updateAssistantResponse,
+} from "@/lib/chat/persist-response";
 import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
 import { executeToolDownloadFallback } from "@/lib/chat/tool-download-fallback";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
@@ -28,6 +31,7 @@ export interface CompleteAssistantResponseParams {
   safeUsage: Promise<any>;
   abortSignal: AbortSignal;
   emit: (data: ChatStreamEvent) => Promise<void>;
+  isUpdate?: boolean;
 }
 
 /**
@@ -54,6 +58,7 @@ export async function completeAssistantResponse(
     safeUsage,
     abortSignal,
     emit,
+    isUpdate,
   } = params;
 
   if (allTools) {
@@ -95,13 +100,20 @@ export async function completeAssistantResponse(
   }
 
   // Persist completed assistant message to database
-  const persisted = await persistAssistantResponse({
-    chatId,
-    assistantMessageId,
-    content: accumulatedText,
-    parentId: userMessageId,
-    metadata,
-  });
+  const persisted = isUpdate
+    ? await updateAssistantResponse({
+        messageId: assistantMessageId,
+        chatId,
+        content: accumulatedText,
+        metadata,
+      })
+    : await persistAssistantResponse({
+        chatId,
+        assistantMessageId,
+        content: accumulatedText,
+        parentId: userMessageId,
+        metadata,
+      });
 
   if (!persisted) {
     const exists = await hasExistingAssistantMessage(

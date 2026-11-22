@@ -40,10 +40,12 @@ export function sanitiseToolNames<T>(
   tools: Record<string, T>;
   toolSourceMap: Record<string, string>;
   toolServerIdMap: Record<string, string>;
+  toolRawNameMap: Record<string, string>;
 } {
   const resultTools: Record<string, T> = {};
   const resultSourceMap: Record<string, string> = {};
   const resultServerIdMap: Record<string, string> = {};
+  const resultRawNameMap: Record<string, string> = {};
 
   const usedNames = new Set<string>();
 
@@ -61,6 +63,7 @@ export function sanitiseToolNames<T>(
 
     usedNames.add(finalName);
     resultTools[finalName] = tool;
+    resultRawNameMap[finalName] = originalName;
 
     if (toolSourceMap && originalName in toolSourceMap) {
       resultSourceMap[finalName] = toolSourceMap[originalName]!;
@@ -81,5 +84,6 @@ export function sanitiseToolNames<T>(
     tools: resultTools,
     toolSourceMap: resultSourceMap,
     toolServerIdMap: resultServerIdMap,
+    toolRawNameMap: resultRawNameMap,
   };
 }

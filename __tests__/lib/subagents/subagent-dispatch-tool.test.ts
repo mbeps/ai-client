@@ -1331,6 +1331,39 @@ describe("subagent-dispatch-tool", () => {
         expect(capturedConfig.tools).not.toHaveProperty("scratchpad_read");
         expect(capturedConfig.tools).not.toHaveProperty("scratchpad_list");
       });
+
+      it("applies wrapSubagentTools when provided", async () => {
+        let capturedTools: any;
+        (vi.mocked(aiModule.ToolLoopAgent) as any).mockImplementation(function (this: any, config: any) {
+          capturedTools = config.tools;
+          this.stream = vi.fn().mockResolvedValue({ stream: {} });
+        });
+        const mockStreamAsyncIterator = async function* () {
+          yield { id: "m-1", role: "assistant", parts: [] };
+        };
+        vi.mocked(aiModule.readUIMessageStream).mockReturnValue(mockStreamAsyncIterator() as any);
+
+        const wrapSubagentTools = vi.fn((tools) => ({
+          ...tools,
+          wrapped_marker: { description: "wrapped" },
+        }));
+
+        const dispatchTool = createSubagentDispatchTool({
+          defaultModel: mockDefaultModel,
+          availableTools: { safe_tool: { description: "parent-safe" } },
+          wrapSubagentTools,
+        });
+
+        for await (const _ of dispatchTool.execute(
+          { role: "researcher", taskBrief: "Check wrapper" },
+          { abortSignal: undefined } as any,
+        )) {
+          // exhaust
+        }
+
+        expect(wrapSubagentTools).toHaveBeenCalledTimes(1);
+        expect(capturedTools).toHaveProperty("wrapped_marker");
+      });
     });
   });
 });

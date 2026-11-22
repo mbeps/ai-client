@@ -1,16 +1,32 @@
 import { streamText } from "ai";
+import { and, eq } from "drizzle-orm";
+import { env } from "@/config/env";
+import {
+  buildToolApproval,
+  parseInternalToolApprovals,
+} from "@/config/tool-approval";
+import { db } from "@/drizzle/db";
+import { message } from "@/drizzle/schemas/chat-schema";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
+import { buildApprovalResumeMessages } from "@/lib/chat/build-approval-resume";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
+import { chatApprovalRegistry } from "@/lib/chat/chat-approval-registry";
 import { compactChatThread } from "@/lib/chat/compact-chat-thread";
 import { estimateTokens } from "@/lib/chat/estimate-tokens";
 import { extractThreadCanvasArtifacts } from "@/lib/chat/extract-canvas-artifacts";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
+import {
+  persistAssistantResponse,
+  updateAssistantResponse,
+} from "@/lib/chat/persist-response";
 import {
   estimateModelMessageTokens,
   prepareChatMessages,
 } from "@/lib/chat/prepare-chat-messages";
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { sliceThreadFromLatestCompaction } from "@/lib/chat/slice-thread-from-compaction";
+import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
 import { chatChannel } from "@/lib/inngest/chat-channel";
 import {
   buildStreamExecutionConfig,
@@ -38,8 +54,10 @@ import { buildOrchestratorToolSet } from "@/lib/inngest/chat-response/tool-set-b
 import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
+import { wrapSubagentToolsWithApproval } from "@/lib/subagents/wrap-subagent-tools-with-approval";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Agent } from "@/types/agent/agent";
+import type { ApprovalMode, PendingApproval } from "@/types/tool/approval";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -60,15 +78,18 @@ function mergeSubagentMcpTools(
   parentMcpTools: Record<string, any>,
   parentToolSourceMap: Record<string, string>,
   parentToolServerIdMap: Record<string, string>,
+  parentToolRawNameMap: Record<string, string>,
   subMcp: {
     mcpTools: Record<string, any>;
     toolSourceMap: Record<string, string>;
     toolServerIdMap?: Record<string, string>;
+    toolRawNameMap?: Record<string, string>;
   },
 ): {
   subagentMcpTools: Record<string, any>;
   mergedToolSourceMap: Record<string, string>;
   mergedToolServerIdMap: Record<string, string>;
+  mergedToolRawNameMap: Record<string, string>;
 } {
   const subagentMcpTools: Record<string, any> = { ...parentMcpTools };
   const mergedToolSourceMap: Record<string, string> = {
@@ -77,15 +98,20 @@ function mergeSubagentMcpTools(
   const mergedToolServerIdMap: Record<string, string> = {
     ...parentToolServerIdMap,
   };
+  const mergedToolRawNameMap: Record<string, string> = {
+    ...parentToolRawNameMap,
+  };
 
   for (const [name, toolDef] of Object.entries(subMcp.mcpTools)) {
     const incomingServerId = subMcp.toolServerIdMap?.[name];
     const incomingServerName = subMcp.toolSourceMap[name];
+    const incomingRawName = subMcp.toolRawNameMap?.[name] ?? name;
 
     if (!(name in subagentMcpTools)) {
       subagentMcpTools[name] = toolDef;
       if (incomingServerName) mergedToolSourceMap[name] = incomingServerName;
       if (incomingServerId) mergedToolServerIdMap[name] = incomingServerId;
+      mergedToolRawNameMap[name] = incomingRawName;
       continue;
     }
 
@@ -111,9 +137,15 @@ function mergeSubagentMcpTools(
     subagentMcpTools[finalName] = toolDef;
     if (incomingServerName) mergedToolSourceMap[finalName] = incomingServerName;
     if (incomingServerId) mergedToolServerIdMap[finalName] = incomingServerId;
+    mergedToolRawNameMap[finalName] = incomingRawName;
   }
 
-  return { subagentMcpTools, mergedToolSourceMap, mergedToolServerIdMap };
+  return {
+    subagentMcpTools,
+    mergedToolSourceMap,
+    mergedToolServerIdMap,
+    mergedToolRawNameMap,
+  };
 }
 
 async function setupChatMcpTools(
@@ -127,6 +159,7 @@ async function setupChatMcpTools(
   subagentMcpTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
   toolServerIdMap: Record<string, string>;
+  toolRawNameMap: Record<string, string>;
   mcpCleanup: () => Promise<void>;
   hasExternalMcpTools: boolean;
 }> {
@@ -138,6 +171,7 @@ async function setupChatMcpTools(
       subagentMcpTools: {},
       toolSourceMap: {},
       toolServerIdMap: {},
+      toolRawNameMap: {},
       mcpCleanup: async () => {},
       hasExternalMcpTools: hasExternalServers,
     };
@@ -147,6 +181,7 @@ async function setupChatMcpTools(
     mcpTools,
     toolSourceMap,
     toolServerIdMap = {},
+    toolRawNameMap = {},
     mcpCleanup,
   } = await registerMcpTools(servers as any, selectedTools);
 
@@ -163,13 +198,24 @@ async function setupChatMcpTools(
         subagentServers as any,
         subagentSelectedTools,
       );
-      const { subagentMcpTools, mergedToolSourceMap, mergedToolServerIdMap } =
-        mergeSubagentMcpTools(mcpTools, toolSourceMap, toolServerIdMap, subMcp);
+      const {
+        subagentMcpTools,
+        mergedToolSourceMap,
+        mergedToolServerIdMap,
+        mergedToolRawNameMap,
+      } = mergeSubagentMcpTools(
+        mcpTools,
+        toolSourceMap,
+        toolServerIdMap,
+        toolRawNameMap,
+        subMcp,
+      );
       return {
         mcpTools,
         subagentMcpTools,
         toolSourceMap: mergedToolSourceMap,
         toolServerIdMap: mergedToolServerIdMap,
+        toolRawNameMap: mergedToolRawNameMap,
         mcpCleanup: async () => {
           await Promise.allSettled([mcpCleanup(), subMcp.mcpCleanup()]);
         },
@@ -183,6 +229,7 @@ async function setupChatMcpTools(
     subagentMcpTools: mcpTools,
     toolSourceMap,
     toolServerIdMap,
+    toolRawNameMap,
     mcpCleanup,
     hasExternalMcpTools: Object.keys(mcpTools).length > 0,
   };
@@ -210,6 +257,7 @@ async function executeModelStreamPipeline(options: {
   abortController: AbortController;
   emit: ReturnType<typeof createStreamEmitter>;
   toolSourceMap: Record<string, string>;
+  toolServerIdMap: Record<string, string>;
   finalMessages: ReturnType<typeof prepareChatMessages>;
   hasArtifactTool: boolean;
   artifactTools: Record<string, any>;
@@ -221,6 +269,8 @@ async function executeModelStreamPipeline(options: {
   persistAbortedResponse: () => Promise<boolean>;
   reasoningEffort?: ReasoningEffort;
   linkedSubagents?: readonly Agent[];
+  isApprovalResume: boolean;
+  approvalRound: number;
 }): Promise<void> {
   const {
     chatId,
@@ -230,6 +280,7 @@ async function executeModelStreamPipeline(options: {
     abortController,
     emit,
     toolSourceMap,
+    toolServerIdMap,
     finalMessages,
     hasArtifactTool,
     artifactTools,
@@ -240,6 +291,8 @@ async function executeModelStreamPipeline(options: {
     accumulator,
     persistAbortedResponse,
     linkedSubagents,
+    isApprovalResume,
+    approvalRound,
   } = options;
 
   const safeFinishReason = Promise.resolve(result.finishReason).catch(
@@ -254,14 +307,48 @@ async function executeModelStreamPipeline(options: {
     toolSourceMap,
     accumulator.completedTools,
     linkedSubagents,
+    {
+      toolServerIdMap,
+      round: approvalRound + 1,
+      maxRounds: env.CHAT_MAX_APPROVAL_ROUNDS,
+    },
   );
 
-  accumulator.accumulatedText = streamState.accumulatedText;
-  accumulator.accumulatedReasoning = streamState.accumulatedReasoning;
+  accumulator.accumulatedText += streamState.accumulatedText;
+  accumulator.accumulatedReasoning += streamState.accumulatedReasoning;
 
   if (streamState.aborted) {
     log.info("Stream loop aborted by user (chatId: {chatId})", { chatId });
     await persistAbortedResponse();
+    return;
+  }
+
+  if (streamState.pendingApprovals.length > 0) {
+    const metadata = buildAssistantFinishMetadata({
+      model: resolvedModelId,
+      reasoning: accumulator.accumulatedReasoning,
+      completedTools: accumulator.completedTools,
+      pendingApprovals: streamState.pendingApprovals,
+      approvalRound: approvalRound + 1,
+      parentUserMessageId: userMessageId,
+    });
+
+    if (isApprovalResume) {
+      await updateAssistantResponse({
+        messageId: assistantMessageId,
+        chatId,
+        content: accumulator.accumulatedText,
+        metadata,
+      });
+    } else {
+      await persistAssistantResponse({
+        chatId,
+        assistantMessageId,
+        content: accumulator.accumulatedText,
+        parentId: userMessageId,
+        metadata,
+      });
+    }
     return;
   }
 
@@ -312,6 +399,7 @@ async function executeModelStreamPipeline(options: {
     safeUsage,
     abortSignal: abortController.signal,
     emit,
+    isUpdate: isApprovalResume,
   });
 }
 
@@ -337,6 +425,56 @@ async function handleChatExecutionError(
   await handleChatGenerationError(error, signal, chatId, emit);
 }
 
+async function readParkedApproval(assistantMessageId: string, chatId: string) {
+  const [row] = await db
+    .select({
+      content: message.content,
+      metadata: message.metadata,
+      parentId: message.parentId,
+    })
+    .from(message)
+    .where(
+      and(
+        eq(message.id, assistantMessageId),
+        eq(message.chatId, chatId),
+        eq(message.role, "assistant"),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return null;
+  return {
+    content: row.content ?? "",
+    parentId: row.parentId,
+    meta: parseMessageMetadata(row.metadata),
+  };
+}
+
+async function readUserSelection(userMessageId: string, chatId: string) {
+  const [row] = await db
+    .select({ metadata: message.metadata })
+    .from(message)
+    .where(and(eq(message.id, userMessageId), eq(message.chatId, chatId)))
+    .limit(1);
+
+  return parseMessageMetadata(row?.metadata);
+}
+
+function buildAutoApprovedMcpToolsMap(
+  servers: Array<{ id?: string; autoApprovedTools?: string[] }> | undefined,
+  subagentServers:
+    | Array<{ id?: string; autoApprovedTools?: string[] }>
+    | undefined,
+): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const server of [...(servers ?? []), ...(subagentServers ?? [])]) {
+    if (server.id && Array.isArray(server.autoApprovedTools)) {
+      map[server.id] = server.autoApprovedTools;
+    }
+  }
+  return map;
+}
+
 /**
  * Inngest durable function generating AI chat responses in the background.
  * Streams tokens, reasoning, and tool calls to Inngest Realtime channel,
@@ -353,7 +491,10 @@ export const generateChatResponse = inngest.createFunction(
       key: "event.data.chatId",
       limit: 1,
     },
-    triggers: [{ event: "chat/response.generate" }],
+    triggers: [
+      { event: "chat/response.generate" },
+      { event: "chat/approval.respond" },
+    ],
     cancelOn: [
       {
         event: "chat/response.cancel",
@@ -362,30 +503,34 @@ export const generateChatResponse = inngest.createFunction(
     ],
   },
   async ({ event }) => {
-    const {
-      chatId,
-      userId,
-      userName,
-      userEmail,
-      userMessageId,
-      model,
-      reasoningEffort,
-      selectedServerIds,
-      selectedTools,
-      selectedAgentId,
-      selectedAssistantId,
-      selectedSkillIds,
-      selectedKbIds,
-      subagentsEnabled,
-      subagentModelId,
-      subagentIds,
-    } = event.data;
+    const isApprovalResume = event.name === "chat/approval.respond";
+    const { chatId, userId, userName, userEmail } = event.data;
+
+    let userMessageId: string = event.data.userMessageId ?? "";
+    let model: string | undefined = event.data.model;
+    let reasoningEffort: ReasoningEffort | undefined =
+      event.data.reasoningEffort;
+    let selectedServerIds: string[] | undefined = event.data.selectedServerIds;
+    let selectedTools: string[] | undefined = event.data.selectedTools;
+    let selectedAgentId: string | undefined = event.data.selectedAgentId;
+    const selectedAssistantId: string | undefined =
+      event.data.selectedAssistantId;
+    let selectedSkillIds: string[] | undefined = event.data.selectedSkillIds;
+    let selectedKbIds: string[] | undefined = event.data.selectedKbIds;
+    let subagentsEnabled: boolean | undefined = event.data.subagentsEnabled;
+    let subagentModelId: string | undefined = event.data.subagentModelId;
+    let subagentIds: string[] | undefined = event.data.subagentIds;
+    let approvalMode: ApprovalMode = event.data.approvalMode ?? "ask";
+    const assistantMessageId: string = isApprovalResume
+      ? event.data.assistantMessageId
+      : crypto.randomUUID();
+    let approvalRound = 0;
+    let parkedApprovals: PendingApproval[] = [];
 
     const { controller: abortController, release: releaseAbortController } =
       chatAbortRegistry.register(chatId);
 
     const ch = chatChannel({ chatId });
-    const assistantMessageId = crypto.randomUUID();
     const emit = createStreamEmitter(abortController.signal, ch.stream);
 
     let mcpCleanup: () => Promise<void> = async () => {};
@@ -408,6 +553,52 @@ export const generateChatResponse = inngest.createFunction(
       });
 
     try {
+      if (isApprovalResume) {
+        const parked = await readParkedApproval(assistantMessageId, chatId);
+        if (!parked || parked.meta.pendingApprovals.length === 0) {
+          return;
+        }
+        userMessageId =
+          event.data.userMessageId ??
+          parked.meta.parentUserMessageId ??
+          parked.parentId ??
+          "";
+        if (!userMessageId) {
+          return;
+        }
+
+        const userMeta = await readUserSelection(userMessageId, chatId);
+        model = userMeta.modelId ?? parked.meta.modelId ?? undefined;
+        resolvedModelId = model ?? "";
+        reasoningEffort = userMeta.reasoningEffort;
+        selectedServerIds = userMeta.selectedServerIds ?? undefined;
+        selectedTools = userMeta.selectedTools ?? undefined;
+        selectedAgentId = userMeta.assistantId;
+        selectedSkillIds = userMeta.selectedSkillIds ?? undefined;
+        selectedKbIds = userMeta.selectedKbIds ?? undefined;
+        subagentsEnabled = userMeta.subagentsEnabled;
+        subagentModelId = userMeta.subagentModelId;
+        subagentIds = userMeta.subagentIds;
+        approvalMode =
+          userMeta.approvalMode ?? parked.meta.approvalMode ?? "ask";
+
+        accumulator.accumulatedText = parked.content;
+        accumulator.accumulatedReasoning = parked.meta.reasoning ?? "";
+        accumulator.completedTools = (
+          parked.meta.toolData?.toolCalls ?? []
+        ).map((tc) => ({
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          args: tc.args,
+          serverName: tc.serverName,
+          result: parked.meta.toolData?.toolResults.find(
+            (tr) => tr.toolCallId === tc.toolCallId,
+          )?.result,
+        }));
+        approvalRound = parked.meta.approvalRound;
+        parkedApprovals = parked.meta.pendingApprovals;
+      }
+
       await emit({ type: "start", messageId: assistantMessageId });
 
       const { userSettings, resolved, workerResolved, ctx, thread } =
@@ -497,10 +688,28 @@ export const generateChatResponse = inngest.createFunction(
           ? Math.max(1, maxContextTokens - finalSummaryTokens)
           : undefined;
 
-      const finalMessages = prepareChatMessages({
+      const preparedMessages = prepareChatMessages({
         history: effectiveHistory,
         maxContextTokens: historyTokenBudget,
       });
+      const finalMessages =
+        isApprovalResume && parkedApprovals.length > 0
+          ? [
+              ...preparedMessages,
+              ...buildApprovalResumeMessages(
+                parkedApprovals,
+                event.data.decisions,
+              ),
+            ]
+          : preparedMessages;
+
+      const internalToolOverrides = parseInternalToolApprovals(
+        userSettings?.internalToolApprovals,
+      );
+      const autoApprovedMcpToolsByServer = buildAutoApprovedMcpToolsMap(
+        ctx.servers,
+        ctx.subagentServers,
+      );
 
       const {
         allTools,
@@ -526,7 +735,67 @@ export const generateChatResponse = inngest.createFunction(
         resolved,
         resolvedModelId,
         workerResolved,
+        wrapSubagentTools: (workerTools, targetAgent) => {
+          const subagentApprovalMap = buildToolApproval(
+            Object.keys(workerTools),
+            approvalMode,
+            {
+              internalToolOverrides,
+              autoApprovedMcpToolsByServer,
+              toolServerIdMap: mcpState.toolServerIdMap,
+              toolRawNameMap: mcpState.toolRawNameMap,
+            },
+          );
+          return wrapSubagentToolsWithApproval({
+            workerTools,
+            toolApprovalMap: subagentApprovalMap,
+            subagentId: targetAgent.id,
+            subagentName: targetAgent.name,
+            toolSourceMap: mcpState.toolSourceMap,
+            toolServerIdMap: mcpState.toolServerIdMap,
+            assistantMessageId,
+            chatId,
+            abortSignal: abortController.signal,
+            emit,
+            persistPendingApprovals: async (approvals, round) => {
+              const metadata = buildAssistantFinishMetadata({
+                model: resolvedModelId,
+                reasoning: accumulator.accumulatedReasoning,
+                completedTools: accumulator.completedTools,
+                pendingApprovals: approvals,
+                approvalRound: round,
+                parentUserMessageId: userMessageId,
+              });
+              const updated = await updateAssistantResponse({
+                messageId: assistantMessageId,
+                chatId,
+                content: accumulator.accumulatedText,
+                metadata,
+              });
+              if (!updated) {
+                await persistAssistantResponse({
+                  chatId,
+                  assistantMessageId,
+                  content: accumulator.accumulatedText,
+                  parentId: userMessageId,
+                  metadata,
+                });
+              }
+            },
+            getNextRound: () => ++approvalRound,
+            maxRounds: env.CHAT_MAX_APPROVAL_ROUNDS,
+          });
+        },
       });
+
+      const toolApproval = allTools
+        ? buildToolApproval(Object.keys(allTools), approvalMode, {
+            internalToolOverrides,
+            autoApprovedMcpToolsByServer,
+            toolServerIdMap: mcpState.toolServerIdMap,
+            toolRawNameMap: mcpState.toolRawNameMap,
+          })
+        : undefined;
 
       const orchestratorMaxSteps = resolveOrchestratorMaxSteps(
         isSubagentDelegationEnabled,
@@ -534,7 +803,7 @@ export const generateChatResponse = inngest.createFunction(
 
       const canvasArtifacts = extractThreadCanvasArtifacts(thread);
 
-      const systemPrompt = buildSystemPrompt(
+      const baseSystemPrompt = buildSystemPrompt(
         userSettings?.globalSystemPrompt,
         ctx.projectRow?.globalPrompt,
         ctx.agentRow?.prompt,
@@ -553,6 +822,14 @@ export const generateChatResponse = inngest.createFunction(
         },
       );
 
+      const hasDeniedDecision =
+        isApprovalResume &&
+        Array.isArray(event.data.decisions) &&
+        event.data.decisions.some((d: { approved: boolean }) => !d.approved);
+      const systemPrompt = hasDeniedDecision
+        ? `${baseSystemPrompt}\n\n---\n\n## Tool Approval Policy\nIf the user denied a tool call, do NOT retry that exact tool call. Acknowledge the denial and proceed with alternative approaches or ask the user how they would like to proceed.`
+        : baseSystemPrompt;
+
       const result = streamText(
         buildStreamExecutionConfig({
           resolved,
@@ -564,6 +841,10 @@ export const generateChatResponse = inngest.createFunction(
           hasAnyTools,
           maxSteps: orchestratorMaxSteps,
           reasoningEffort,
+          toolApproval,
+          experimental_toolApprovalSecret: toolApproval
+            ? (env.TOOL_APPROVAL_SECRET ?? env.ENCRYPTION_SECRET)
+            : undefined,
         }),
       );
 
@@ -575,6 +856,7 @@ export const generateChatResponse = inngest.createFunction(
         abortController,
         emit,
         toolSourceMap: mcpState.toolSourceMap,
+        toolServerIdMap: mcpState.toolServerIdMap,
         finalMessages,
         hasArtifactTool,
         artifactTools,
@@ -586,6 +868,8 @@ export const generateChatResponse = inngest.createFunction(
         persistAbortedResponse,
         reasoningEffort,
         linkedSubagents: ctx.linkedSubagents,
+        isApprovalResume,
+        approvalRound,
       });
     } catch (error: unknown) {
       await handleChatExecutionError(
@@ -597,6 +881,7 @@ export const generateChatResponse = inngest.createFunction(
         emit,
       );
     } finally {
+      chatApprovalRegistry.cancel(assistantMessageId);
       releaseAbortController();
       await mcpCleanup();
     }
