@@ -158,6 +158,12 @@ describe("SidebarUserFooter", () => {
     expect(profileLink).toBeInTheDocument();
     expect(profileLink).toHaveAttribute("href", ROUTES.PROFILE.path);
 
+    const githubLink = await screen.findByRole("menuitem", { name: /github/i });
+    expect(githubLink).toBeInTheDocument();
+    expect(githubLink).toHaveAttribute("href", "https://github.com/mbeps/ai-client");
+    expect(githubLink).toHaveAttribute("target", "_blank");
+    expect(githubLink).toHaveAttribute("rel", "noopener noreferrer");
+
     const settingsLink = await screen.findByRole("menuitem", { name: /settings/i });
     expect(settingsLink).toBeInTheDocument();
     expect(settingsLink).toHaveAttribute("href", ROUTES.SETTINGS.path);
