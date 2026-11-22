@@ -1,3 +1,4 @@
+import { inspect } from "node:util";
 import { NoObjectGeneratedError } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -1046,6 +1047,7 @@ describe("scoreCandidate, tokenize, and candidate tie-breaking", () => {
         keyEntities: ["OAuth 2.0"],
       },
     ]);
+    dbMock.mockInsertReturning.mockResolvedValueOnce([{ id: "rel-1" }]);
     generateTextMock.mockRejectedValueOnce(new Error("Rate limit exceeded"));
     const onError = vi.fn();
 
@@ -1059,5 +1061,42 @@ describe("scoreCandidate, tokenize, and candidate tie-breaking", () => {
     expect(onError).toHaveBeenCalledWith("Rate limit exceeded");
     expect(dbMock.transaction).not.toHaveBeenCalled();
     expect(dbMock.delete).not.toHaveBeenCalled();
+  });
+
+  it("scopes relation deletion to createdAt < startedAt to preserve concurrent peer inserts", async () => {
+    dbMock.mockSelectWhere.mockResolvedValueOnce([
+      {
+        id: "doc-peer-1",
+        name: "Peer 1",
+        documentType: "report",
+        summary: "Summary",
+        keyEntities: ["OAuth 2.0"],
+      },
+    ]);
+    dbMock.mockInsertReturning.mockResolvedValueOnce([{ id: "rel-1" }]);
+    generateTextMock.mockResolvedValueOnce({
+      output: {
+        relations: [
+          {
+            sourceDocId: "doc-target",
+            targetDocId: "doc-peer-1",
+            relationType: "references",
+            reason: "Target references Peer 1",
+          },
+        ],
+      },
+    });
+
+    const count = await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+    });
+
+    expect(count).toBe(1);
+    expect(dbMock.mockDeleteWhere).toHaveBeenCalledTimes(1);
+    const whereArg = dbMock.mockDeleteWhere.mock.calls[0][0];
+    const inspected = inspect(whereArg, { depth: 8 });
+    expect(inspected).toContain("created_at");
+    expect(inspected).toContain("<");
   });
 });

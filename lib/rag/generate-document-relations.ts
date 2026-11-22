@@ -1,4 +1,4 @@
-import { and, eq, ne, or } from "drizzle-orm";
+import { and, eq, lt, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/drizzle/db";
 import {
@@ -231,6 +231,7 @@ export async function generateDocumentRelations({
   onError,
 }: GenerateDocumentRelationsParams): Promise<number> {
   try {
+    const startedAt = new Date();
     const existingDocs = await db
       .select({
         id: kbDocument.id,
@@ -305,6 +306,7 @@ export async function generateDocumentRelations({
               eq(kbDocumentRelation.sourceDocId, doc.id),
               eq(kbDocumentRelation.targetDocId, doc.id),
             ),
+            lt(kbDocumentRelation.createdAt, startedAt),
           ),
         );
 
