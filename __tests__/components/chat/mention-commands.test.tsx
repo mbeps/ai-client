@@ -213,4 +213,32 @@ describe("MentionCommands", () => {
 
     expect(screen.getByText(expectedText)).toBeInTheDocument();
   });
+
+  it("uses item.id as CommandItem value for action items so cmdk selection matches", () => {
+    const items: MentionItem[] = [
+      {
+        id: "action:compact",
+        name: "compact",
+        title: "Compact Conversation",
+        description: "Summarize older turns",
+        isAction: true,
+      },
+    ];
+
+    const { container } = render(
+      <MentionCommands
+        items={items}
+        trigger="/"
+        selectedIndex={0}
+        onSelect={onSelect}
+        onClose={onClose}
+      />,
+    );
+
+    expect(screen.getByText("Actions")).toBeInTheDocument();
+    expect(screen.getByText("Compact Conversation")).toBeInTheDocument();
+    const commandItem = container.querySelector("[cmdk-item]");
+    expect(commandItem).toHaveAttribute("data-value", "action:compact");
+    expect(commandItem).toHaveAttribute("aria-selected", "true");
+  });
 });

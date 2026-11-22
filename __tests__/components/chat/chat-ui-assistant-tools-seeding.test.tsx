@@ -11,6 +11,18 @@ vi.mock("katex/dist/katex.min.css", () => ({}));
 vi.mock("@blocknote/mantine/style.css", () => ({}));
 vi.mock("@blocknote/core/fonts/inter.css", () => ({}));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  unstable_rethrow: vi.fn(),
+}));
+
 vi.mock("@/components/chat/artifact-panel", () => ({
   ArtifactPanel: () => null,
 }));

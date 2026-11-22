@@ -1,6 +1,8 @@
 "use client";
 
+import { Loader2, Shrink } from "lucide-react";
 import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { ResponsiveDetails } from "@/components/ui/responsive-details";
 import {
   type CalculateContextParams,
@@ -16,6 +18,9 @@ import { cn } from "@/lib/utils";
  */
 interface ContextUsagePillProps extends CalculateContextParams {
   className?: string;
+  onCompact?: () => void;
+  isCompacting?: boolean;
+  canCompact?: boolean;
 }
 
 /**
@@ -119,6 +124,9 @@ export function ContextUsagePill({
   selectedSkillTokens,
   availableSkillCount,
   className,
+  onCompact,
+  isCompacting = false,
+  canCompact = false,
 }: ContextUsagePillProps) {
   const usage = useMemo(
     () =>
@@ -215,6 +223,29 @@ export function ContextUsagePill({
               style={{ width: `${Math.max(2, Math.min(100, percentage))}%` }}
             />
           </div>
+
+          {onCompact && (
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-muted-foreground text-[11px]">
+                Summarize older turns to free context
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 px-2.5 text-xs"
+                onClick={onCompact}
+                disabled={isCompacting || !canCompact}
+              >
+                {isCompacting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Shrink className="h-3.5 w-3.5" />
+                )}
+                {isCompacting ? "Compacting..." : "Compact"}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Breakdown by Category */}

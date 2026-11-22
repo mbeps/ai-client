@@ -6,6 +6,7 @@ import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { ToolCall } from "@/types/chat/tool-call";
 import type { ToolResult } from "@/types/chat/tool-result";
 import type {
+  CompactionMetadata,
   MessageUsage,
   ParsedMessageMetadata,
 } from "@/types/message/metadata";
@@ -159,6 +160,30 @@ function parseUsage(usageRaw: unknown): MessageUsage | null {
 }
 
 /**
+ * Parses compaction checkpoint metadata if present and valid.
+ *
+ * @param val - Raw compaction metadata object
+ * @returns Validated CompactionMetadata or undefined
+ * @author Maruf Bepary
+ */
+function parseCompactionMetadata(val: unknown): CompactionMetadata | undefined {
+  if (!val || typeof val !== "object") return undefined;
+  const raw = val as Record<string, unknown>;
+  if (typeof raw.compactedCount !== "number" || raw.compactedCount < 0) {
+    return undefined;
+  }
+  return {
+    compactedCount: Math.floor(raw.compactedCount),
+    originalTokens:
+      typeof raw.originalTokens === "number" ? raw.originalTokens : undefined,
+    compactedTokens:
+      typeof raw.compactedTokens === "number" ? raw.compactedTokens : undefined,
+    model: typeof raw.model === "string" ? raw.model : undefined,
+    auto: typeof raw.auto === "boolean" ? raw.auto : undefined,
+  };
+}
+
+/**
  * Parses message metadata JSON with sensible defaults for missing/malformed data.
  *
  * @param metadata - Raw JSON string from database or null
@@ -221,6 +246,7 @@ export function parseMessageMetadata(
       subagentIds: parseStringArray(parsed.subagentIds) ?? undefined,
       assistantId:
         typeof parsed.assistantId === "string" ? parsed.assistantId : undefined,
+      compaction: parseCompactionMetadata(parsed.compaction),
     };
   } catch (e) {
     log.error("Failed to parse message metadata: {error}", {

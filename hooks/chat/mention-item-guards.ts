@@ -1,10 +1,22 @@
 import type {
+  MentionActionItem,
   MentionAssistantItem,
   MentionItem,
   MentionKnowledgebaseItem,
   MentionPromptItem,
   MentionSkillItem,
 } from "@/hooks/chat/use-mention-commands";
+
+/**
+ * Type guard for MentionActionItem.
+ *
+ * @param item - Candidate mention item to test
+ * @returns True if item conforms to MentionActionItem
+ * @author Maruf Bepary
+ */
+export function isActionItem(item: MentionItem): item is MentionActionItem {
+  return "isAction" in item && (item as any).isAction === true;
+}
 
 /**
  * Type guard for MentionPromptItem.
@@ -41,7 +53,8 @@ export function isAssistantItem(
   return (
     !("shortcut" in item) &&
     !("documentCount" in item) &&
-    !(item as any).isSkill
+    !(item as any).isSkill &&
+    !(item as any).isAction
   );
 }
 

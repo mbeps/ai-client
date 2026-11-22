@@ -12,6 +12,7 @@ import {
   type PromptScopeContext,
 } from "@/components/chat/prompt-picker/prompt-picker-utils";
 import {
+  isActionItem,
   isAssistantItem,
   isKnowledgebaseItem,
   isPromptItem,
@@ -40,7 +41,12 @@ export type MentionTrigger = "/" | null;
  *
  * @author Maruf Bepary
  */
-export type MentionTypeFilter = "skill" | "prompt" | "agent" | "knowledgebase";
+export type MentionTypeFilter =
+  | "skill"
+  | "prompt"
+  | "agent"
+  | "knowledgebase"
+  | "action";
 
 const TYPE_FILTER_ALIASES: Record<string, MentionTypeFilter> = {
   skill: "skill",
@@ -54,6 +60,8 @@ const TYPE_FILTER_ALIASES: Record<string, MentionTypeFilter> = {
   knowledgebase: "knowledgebase",
   knowledgebases: "knowledgebase",
   kb: "knowledgebase",
+  action: "action",
+  actions: "action",
 };
 
 /**
@@ -127,11 +135,27 @@ export type MentionKnowledgebaseItem = Knowledgebase & {
 };
 
 /**
+ * Slash command action item (e.g. /compact).
+ *
+ * @author Maruf Bepary
+ */
+export interface MentionActionItem {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  isAction: true;
+  isMcp: false;
+  isSkill?: false;
+}
+
+/**
  * Discriminated union of all supported mention candidates in the chat composer.
  *
  * @author Maruf Bepary
  */
 export type MentionItem =
+  | MentionActionItem
   | MentionPromptItem
   | MentionAssistantItem
   | MentionSkillItem
@@ -171,6 +195,8 @@ export function useMentionCommands(
   knowledgebases?: Knowledgebase[],
   promptScopeContext?: PromptScopeContext,
   skillScopeContext?: SkillScopeContext,
+  actions?: MentionActionItem[],
+  onSelectAction?: (action: MentionActionItem) => void,
 ) {
   const prompts = useAppStore((state) => state.prompts);
   const agents = useAppStore((state) => state.agents);
@@ -345,6 +371,18 @@ export function useMentionCommands(
       );
     }
 
+    if (!activeTypeFilter || activeTypeFilter === "action") {
+      const actionList = actions ?? [];
+      results.push(
+        ...actionList.filter(
+          (act) =>
+            act.name.toLowerCase().includes(q) ||
+            act.title.toLowerCase().includes(q) ||
+            act.description.toLowerCase().includes(q),
+        ),
+      );
+    }
+
     return results;
   }, [
     parsedQuery,
@@ -353,6 +391,7 @@ export function useMentionCommands(
     mcpPrompts,
     agents,
     kbs,
+    actions,
     openTrigger,
     selectedServerIds,
     promptScopeContext,
@@ -409,7 +448,9 @@ export function useMentionCommands(
         setInput(newInput);
 
         if (openTrigger === "/") {
-          if (isSkillItem(item)) {
+          if (isActionItem(item)) {
+            onSelectAction?.(item);
+          } else if (isSkillItem(item)) {
             onSelectSkill?.(item);
           } else if (isPromptItem(item)) {
             setSelectedPrompts((prev) => {
@@ -441,6 +482,7 @@ export function useMentionCommands(
       openTrigger,
       onSelectSkill,
       onSelectKnowledgebase,
+      onSelectAction,
     ],
   );
 

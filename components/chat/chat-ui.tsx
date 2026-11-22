@@ -1,5 +1,7 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+
 import { useCallback, useMemo } from "react";
 import { AgentBar } from "@/components/chat/agent-bar";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
@@ -29,6 +31,7 @@ import {
 } from "@/components/chat/use-chat-message-actions";
 import { useChatStore } from "@/components/chat/use-chat-ui-store";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCompactChat } from "@/hooks/chat/use-compact-chat";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
 import { hydratedResources } from "@/lib/store/hydrated-resources";
@@ -180,6 +183,7 @@ export function ChatUI({
   });
 
   const scrollRef = useChatScrollToBottom();
+  const { isCompacting, handleCompact } = useCompactChat(chatId);
 
   const chatAgentId = chat?.agentId ?? chat?.assistantId;
   const isAgentsReady =
@@ -271,10 +275,20 @@ export function ChatUI({
 
         <div className="bg-background/80 shrink-0 px-4 pb-2 backdrop-blur-sm md:px-8 md:pb-4">
           <div className="mx-auto max-w-4xl">
+            {isCompacting && (
+              <div className="mb-2 flex items-center justify-center">
+                <div className="bg-muted/70 text-muted-foreground border-border/60 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Compacting conversation...</span>
+                </div>
+              </div>
+            )}
             <ChatInput
               key={chatId}
               chatId={chatId}
               onSend={handleSend}
+              onCompact={handleCompact}
+              isCompacting={isCompacting}
               isLoading={isLoading}
               onStop={stopStream}
               servers={allEnabledServers}

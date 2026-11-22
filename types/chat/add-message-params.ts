@@ -7,7 +7,7 @@ import type { Attachment } from "@/types/attachment/attachment";
  * @author Maruf Bepary
  */
 export interface AddMessageParams {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
   parentId: string | null;
   id?: string;

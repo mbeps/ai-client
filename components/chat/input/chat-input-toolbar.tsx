@@ -232,6 +232,9 @@ interface ChatInputActionButtonsProps {
   selectedServerCount: number;
   selectedSkillTokens: number;
   availableSkillCount: number;
+  onCompact?: () => void;
+  isCompacting?: boolean;
+  canCompact?: boolean;
   onCancel?: () => void;
   hasNoModels: boolean;
   isLoading?: boolean;
@@ -264,6 +267,9 @@ function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
         mcpServerCount={props.selectedServerCount}
         selectedSkillTokens={props.selectedSkillTokens}
         availableSkillCount={props.availableSkillCount}
+        onCompact={props.onCompact}
+        isCompacting={props.isCompacting}
+        canCompact={props.canCompact}
       />
       {props.onCancel && <CancelButton onCancel={props.onCancel} />}
       <VoiceInputButton disabled={props.hasNoModels} />
@@ -322,6 +328,9 @@ export interface ChatInputToolbarProps {
   systemPrompt?: string;
   selectedSkillTokens: number;
   availableSkillCount: number;
+  onCompact?: () => void;
+  isCompacting?: boolean;
+  canCompact?: boolean;
   onCancel?: () => void;
   isLoading?: boolean;
   onStop?: () => void;
@@ -408,6 +417,9 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
         selectedServerCount={selectedServerCount}
         selectedSkillTokens={props.selectedSkillTokens}
         availableSkillCount={props.availableSkillCount}
+        onCompact={props.onCompact}
+        isCompacting={props.isCompacting}
+        canCompact={props.canCompact}
         onCancel={props.onCancel}
         hasNoModels={props.hasNoModels}
         isLoading={props.isLoading}

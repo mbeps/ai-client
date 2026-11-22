@@ -502,5 +502,26 @@ describe("calculate-context-tokens utility", () => {
         withObjectResult.breakdown.toolResults - withStringResult.breakdown.toolResults;
       expect(objectOnly).toBeGreaterThan(0);
     });
+
+    it("includes compaction summary tokens when thread has a compaction checkpoint", () => {
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        thread: [
+          {
+            id: "cmp-1",
+            role: "system",
+            content: "Summary of earlier conversation turns",
+            metadata: JSON.stringify({ compaction: { compactedCount: 2 } }),
+          },
+          {
+            id: "u-1",
+            role: "user",
+            content: "Next question",
+          },
+        ] as any,
+      });
+
+      expect(result.breakdown.messages).toBeGreaterThan(0);
+    });
   });
 });

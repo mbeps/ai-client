@@ -20,6 +20,7 @@ export interface SystemPromptOptions {
   isSubagentDelegationEnabled?: boolean;
   availableSubagents?: readonly Agent[];
   canvasArtifacts?: ArtifactData[];
+  compactionSummary?: string;
 }
 
 /**
@@ -104,6 +105,14 @@ export function buildSystemPrompt(
 
   if (assistantPrompt?.trim()) {
     systemParts.push(assistantPrompt.trim());
+  }
+
+  if (options.compactionSummary?.trim()) {
+    systemParts.push(
+      PROMPTS.SYSTEM.COMPACTION_SUMMARY_CONTEXT(
+        options.compactionSummary.trim(),
+      ),
+    );
   }
 
   if (options.canvasArtifacts && options.canvasArtifacts.length > 0) {

@@ -24,6 +24,8 @@ export type ChatStreamEvent =
       serverName?: string;
       preliminary?: boolean;
     }
+  | { type: "compacting" }
+  | { type: "compacted" }
   | { type: "finish"; finishReason?: string; usage?: unknown }
   | { type: "error"; message: string; code?: string };
 

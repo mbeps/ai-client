@@ -16,6 +16,26 @@ export const PROMPTS = {
       "- **Final Response & Synthesis**: Worker subagents run in isolated sandboxes and CANNOT talk directly to the user or produce user-facing artifacts. You are strictly responsible for reviewing their outputs and synthesizing a complete, high-quality, comprehensive final answer for the user.\n" +
       "- **Artifacts & Canvas**: If the user requested a document, report, table, code, or canvas artifact, you MUST call `manage_artifact` yourself to generate it. Subagents do not have access to `manage_artifact`.\n" +
       "- **Step Budgeting**: Budget your execution turns. Do not chain endless subagent calls without reserving turns to create requested artifacts and write your final response.",
+    COMPACTION_SUMMARY_CONTEXT: (summary: string): string =>
+      `## Earlier Conversation Summary\nThe earlier turns of this conversation have been compacted into the summary below. Treat this as authoritative context for prior decisions, files, and state:\n\n${summary}`,
+  },
+  COMPACTION: {
+    SYSTEM:
+      "You are a conversation compaction assistant. Produce a concise, high-signal handoff summary of the conversation so a future turn can continue seamlessly without losing critical context.\n\n" +
+      "Include:\n" +
+      "1. **User Goals & Intent**: What the user is trying to accomplish.\n" +
+      "2. **Key Decisions & Constraints**: Choices made, requirements, preferences, and rejected approaches.\n" +
+      "3. **Files, Artifacts & Tools**: Specific file paths, symbol names, artifacts, or tool outputs referenced.\n" +
+      "4. **Open Issues & Current State**: Unresolved questions, pending tasks, and exact next steps.\n\n" +
+      "Rules:\n" +
+      "- Be factual and dense; do not invent details or add conversational filler.\n" +
+      "- Use clean markdown bullet points.",
+    PROMPT: (transcript: string, previousSummary?: string): string => {
+      const prior = previousSummary?.trim()
+        ? `## Previous Summary\n${previousSummary.trim()}\n\n`
+        : "";
+      return `${prior}## Conversation Turns to Compact\n${transcript}\n\nProduce an updated, unified handoff summary.`;
+    },
   },
   TOOLS: {
     MANAGE_ARTIFACT: {

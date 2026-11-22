@@ -32,6 +32,8 @@ import type { Message } from "@/types/message/message";
 export interface ChatInputProps {
   /** Optional chat session identifier for persisting user tool choices. */
   chatId?: string;
+  onCompact?: (modelId?: string) => void | Promise<void>;
+  isCompacting?: boolean;
 
   /**
    * Callback invoked when user submits a message with content, attachments,
@@ -200,9 +202,13 @@ function resolveContainerClassName(
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function resolveInputPlaceholder(hasNoModels: boolean): string {
-  return hasNoModels
-    ? "Set up a provider to start chatting..."
+function resolveInputPlaceholder(
+  hasNoModels: boolean,
+  hasActions?: boolean,
+): string {
+  if (hasNoModels) return "Set up a provider to start chatting...";
+  return hasActions
+    ? "Ask anything... Use / for skills, prompts, agents, knowledgebases, and actions"
     : "Ask anything... Use / for skills, prompts, agents, and knowledgebases";
 }
 
@@ -330,7 +336,8 @@ export function ChatInput(props: ChatInputProps) {
     props.className,
   );
   const inputPlaceholder =
-    props.placeholder ?? resolveInputPlaceholder(services.hasNoModels);
+    props.placeholder ??
+    resolveInputPlaceholder(services.hasNoModels, Boolean(props.onCompact));
 
   return (
     <div
@@ -428,6 +435,13 @@ export function ChatInput(props: ChatInputProps) {
         systemPrompt={props.systemPrompt}
         selectedSkillTokens={interaction.selectedSkillTokens}
         availableSkillCount={interaction.availableSkillCount}
+        onCompact={
+          props.onCompact
+            ? () => props.onCompact?.(services.modelId)
+            : undefined
+        }
+        isCompacting={props.isCompacting}
+        canCompact={interaction.canCompact}
         onCancel={props.onCancel}
         isLoading={props.isLoading}
         onStop={props.onStop}

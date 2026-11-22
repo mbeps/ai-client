@@ -134,7 +134,28 @@ export const messageMetadataSchema = z.object({
   reasoning: z.string().optional(),
   reasoningEffort: reasoningEffortSchema.optional(),
   model: z.string().optional(),
+  compaction: z
+    .object({
+      compactedCount: z.number().int().nonnegative(),
+      originalTokens: z.number().int().nonnegative().optional(),
+      compactedTokens: z.number().int().nonnegative().optional(),
+      model: z.string().optional(),
+      auto: z.boolean().optional(),
+    })
+    .optional(),
 });
+
+/**
+ * Validates the payload for manually compacting a chat conversation.
+ *
+ * @author Maruf Bepary
+ */
+export const compactChatSchema = z
+  .object({
+    chatId: idField,
+    modelId: z.string().max(100).optional(),
+  })
+  .strict();
 
 /**
  * Validates the POST request body for the chat API endpoint.
