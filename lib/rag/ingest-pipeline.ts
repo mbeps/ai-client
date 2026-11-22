@@ -228,7 +228,17 @@ export async function ingestDocumentPipeline(
       metadata: metadataEntry,
       relations: { status: "loading" },
     };
-    await persistIngestSteps(doc.id, steps);
+    await db
+      .update(kbDocument)
+      .set({
+        documentType: metadata.documentType,
+        summary: metadata.summary,
+        keyEntities: metadata.keyEntities,
+        tableOfContents: metadata.tableOfContents,
+        ingestSteps: steps,
+        updatedAt: new Date(),
+      })
+      .where(eq(kbDocument.id, doc.id));
 
     let relationsError: string | undefined;
     await generateDocumentRelations({
@@ -266,10 +276,14 @@ export async function ingestDocumentPipeline(
       chunkCount: chunks.length,
       tokenCount,
       truncated,
-      documentType: metadata.documentType,
-      summary: metadata.summary,
-      keyEntities: metadata.keyEntities,
-      tableOfContents: metadata.tableOfContents,
+      ...(ragMode !== "vector"
+        ? {
+            documentType: metadata.documentType,
+            summary: metadata.summary,
+            keyEntities: metadata.keyEntities,
+            tableOfContents: metadata.tableOfContents,
+          }
+        : {}),
       ingestSteps: steps,
       updatedAt: new Date(),
     })

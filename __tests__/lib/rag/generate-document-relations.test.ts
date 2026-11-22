@@ -19,6 +19,18 @@ const dbMock = vi.hoisted(() => {
     delete: vi.fn(() => ({ where: mockDeleteWhere })),
     select: vi.fn(() => ({ from: mockSelectFrom })),
     insert: vi.fn(() => ({ values: mockInsertValues })),
+    transaction: vi.fn(
+      async (
+        fn: (tx: {
+          delete: ReturnType<typeof vi.fn>;
+          insert: ReturnType<typeof vi.fn>;
+        }) => Promise<unknown>,
+      ) =>
+        fn({
+          delete: vi.fn(() => ({ where: mockDeleteWhere })),
+          insert: vi.fn(() => ({ values: mockInsertValues })),
+        }),
+    ),
   };
 });
 
@@ -30,6 +42,7 @@ vi.mock("@/drizzle/db", () => ({
     delete: dbMock.delete,
     select: dbMock.select,
     insert: dbMock.insert,
+    transaction: dbMock.transaction,
   },
 }));
 
@@ -65,6 +78,7 @@ describe("generateDocumentRelations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    dbMock.mockDeleteWhere.mockReset();
     dbMock.mockDeleteWhere.mockResolvedValue([]);
     dbMock.mockSelectFrom.mockReturnValue({
       where: dbMock.mockSelectWhere,
@@ -75,6 +89,14 @@ describe("generateDocumentRelations", () => {
     dbMock.mockInsertValues.mockReturnValue({
       onConflictDoNothing: dbMock.mockInsertConflict,
     });
+    dbMock.transaction.mockImplementation(
+      async (
+        fn: (tx: {
+          delete: typeof dbMock.delete;
+          insert: typeof dbMock.insert;
+        }) => Promise<unknown>,
+      ) => fn({ delete: dbMock.delete, insert: dbMock.insert }),
+    );
 
     resolveKbModelProviderMock.mockResolvedValue({
       sdkProvider: {
@@ -84,7 +106,7 @@ describe("generateDocumentRelations", () => {
     });
   });
 
-  it("deletes stale edges and early returns 0 without calling LLM when no other ready documents exist", async () => {
+  it("preserves existing edges and early returns 0 without calling LLM when no other ready documents exist", async () => {
     dbMock.mockSelectWhere.mockResolvedValueOnce([]);
 
     const count = await generateDocumentRelations({
@@ -93,8 +115,8 @@ describe("generateDocumentRelations", () => {
     });
 
     expect(count).toBe(0);
-    expect(dbMock.delete).toHaveBeenCalledTimes(1);
-    expect(dbMock.mockDeleteWhere).toHaveBeenCalledTimes(1);
+    expect(dbMock.delete).not.toHaveBeenCalled();
+    expect(dbMock.transaction).not.toHaveBeenCalled();
     expect(dbMock.select).toHaveBeenCalledTimes(1);
     expect(resolveKbModelProviderMock).not.toHaveBeenCalled();
     expect(generateTextMock).not.toHaveBeenCalled();
@@ -740,7 +762,7 @@ describe("scoreCandidate, tokenize, and candidate tie-breaking", () => {
 
   it("invokes onError when relation generation fails", async () => {
     const onError = vi.fn();
-    dbMock.mockDeleteWhere.mockRejectedValueOnce(new Error("DB offline"));
+    dbMock.mockSelectWhere.mockRejectedValueOnce(new Error("DB offline"));
 
     const count = await generateDocumentRelations({
       doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
@@ -1012,5 +1034,30 @@ describe("scoreCandidate, tokenize, and candidate tie-breaking", () => {
     expect(onError).toHaveBeenCalledWith(
       "No object generated: response did not match schema.",
     );
+  });
+
+  it("preserves existing relations when LLM generation throws an error", async () => {
+    dbMock.mockSelectWhere.mockResolvedValueOnce([
+      {
+        id: "doc-peer-1",
+        name: "Peer 1",
+        documentType: "report",
+        summary: "Summary",
+        keyEntities: ["OAuth 2.0"],
+      },
+    ]);
+    generateTextMock.mockRejectedValueOnce(new Error("Rate limit exceeded"));
+    const onError = vi.fn();
+
+    const count = await generateDocumentRelations({
+      doc: { id: "doc-target", kbId: "kb-1", name: "Target" },
+      userId: "user-1",
+      onError,
+    });
+
+    expect(count).toBe(0);
+    expect(onError).toHaveBeenCalledWith("Rate limit exceeded");
+    expect(dbMock.transaction).not.toHaveBeenCalled();
+    expect(dbMock.delete).not.toHaveBeenCalled();
   });
 });

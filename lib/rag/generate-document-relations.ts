@@ -231,18 +231,6 @@ export async function generateDocumentRelations({
   onError,
 }: GenerateDocumentRelationsParams): Promise<number> {
   try {
-    await db
-      .delete(kbDocumentRelation)
-      .where(
-        and(
-          eq(kbDocumentRelation.kbId, doc.kbId),
-          or(
-            eq(kbDocumentRelation.sourceDocId, doc.id),
-            eq(kbDocumentRelation.targetDocId, doc.id),
-          ),
-        ),
-      );
-
     const existingDocs = await db
       .select({
         id: kbDocument.id,
@@ -255,8 +243,9 @@ export async function generateDocumentRelations({
       .where(
         and(
           eq(kbDocument.kbId, doc.kbId),
-          eq(kbDocument.status, "ready"),
           ne(kbDocument.id, doc.id),
+          ne(kbDocument.status, "failed"),
+          or(eq(kbDocument.status, "ready"), ne(kbDocument.summary, "")),
         ),
       );
 
@@ -305,23 +294,38 @@ export async function generateDocumentRelations({
       doc.id,
       candidateIds,
     );
-    if (validEdges.length === 0) return 0;
 
-    const inserted = await db
-      .insert(kbDocumentRelation)
-      .values(
-        validEdges.map((e) => ({
-          kbId: doc.kbId,
-          sourceDocId: e.sourceDocId,
-          targetDocId: e.targetDocId,
-          relationType: e.relationType,
-          reason: e.reason,
-        })),
-      )
-      .onConflictDoNothing()
-      .returning({ id: kbDocumentRelation.id });
+    return await db.transaction(async (tx) => {
+      await tx
+        .delete(kbDocumentRelation)
+        .where(
+          and(
+            eq(kbDocumentRelation.kbId, doc.kbId),
+            or(
+              eq(kbDocumentRelation.sourceDocId, doc.id),
+              eq(kbDocumentRelation.targetDocId, doc.id),
+            ),
+          ),
+        );
 
-    return inserted.length;
+      if (validEdges.length === 0) return 0;
+
+      const inserted = await tx
+        .insert(kbDocumentRelation)
+        .values(
+          validEdges.map((e) => ({
+            kbId: doc.kbId,
+            sourceDocId: e.sourceDocId,
+            targetDocId: e.targetDocId,
+            relationType: e.relationType,
+            reason: e.reason,
+          })),
+        )
+        .onConflictDoNothing()
+        .returning({ id: kbDocumentRelation.id });
+
+      return inserted.length;
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log.warn("Error generating document relations via LLM: {error}", {
