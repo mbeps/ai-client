@@ -7,6 +7,7 @@ import type { Agent } from "@/types/agent/agent";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
 import type { Project } from "@/types/project/project";
+import type { ApprovalMode } from "@/types/tool/approval";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 /**
@@ -201,6 +202,20 @@ export function resolveInitialReasoningEffort(
 }
 
 /**
+ * Resolves initial approval mode from the thread's last user message or defaults to "ask".
+ */
+export function resolveInitialApprovalMode(thread: Message[]): ApprovalMode {
+  for (let i = thread.length - 1; i >= 0; i--) {
+    const msg = thread[i];
+    if (msg.role === "user" && msg.metadata) {
+      const { approvalMode } = parseMessageMetadata(msg.metadata);
+      if (approvalMode) return approvalMode;
+    }
+  }
+  return "ask";
+}
+
+/**
  * Represents initial chat config.
  *
  * @author Maruf Bepary
@@ -215,6 +230,7 @@ export interface InitialChatConfig {
   initialSelectedTools: string[];
   initialKbIds: string[];
   initialSkillIds: string[];
+  initialApprovalMode: ApprovalMode;
 }
 
 /**
@@ -260,6 +276,7 @@ export function resolveInitialChatConfig(
     initialSelectedTools,
     initialKbIds: resolveInitialKbIds(chat, currentProject, currentAssistant),
     initialSkillIds: resolveInitialSkillIds(currentAssistant, currentProject),
+    initialApprovalMode: resolveInitialApprovalMode(thread),
   };
 }
 

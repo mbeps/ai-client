@@ -17,6 +17,7 @@ import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Skill } from "@/types/skill/skill";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Represents chat interaction props.
@@ -41,6 +42,7 @@ export interface ChatInteractionProps {
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
     subagentIds?: string[],
+    approvalMode?: ApprovalMode,
   ) => void;
   isLoading?: boolean;
   servers?: (McpServer | PublicMcpServer)[];
@@ -57,6 +59,7 @@ export interface ChatInteractionProps {
   initialSubagentsEnabled?: boolean;
   initialSubagentModelId?: string;
   initialSubagentIds?: readonly string[] | string[];
+  initialApprovalMode?: ApprovalMode;
   projectId?: string | null;
   assistantId?: string | null;
   promptMode?: "all" | "none" | "specific";
@@ -329,6 +332,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
     subagentModelId: selections.subagentModelId,
     selectedSubagentIds: selections.selectedSubagentIds,
     reasoningEffort: options.reasoningEffort,
+    approvalMode: selections.approvalMode,
     handleCommandKeyDown: mentions.handleKeyDown,
   });
 

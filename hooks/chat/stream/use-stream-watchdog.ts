@@ -115,6 +115,14 @@ function createWatchdogTickStatus(
   realtimeError: unknown,
   attempts: number,
 ) {
+  if (refs.awaitingApprovalRef?.current) {
+    return {
+      isConnectionError: false,
+      hasActiveCallingTools: true,
+      shouldSync: false,
+    };
+  }
+
   const timeSinceLastChunk = Date.now() - refs.lastChunkTimeRef.current;
   const timeSinceStart = Date.now() - refs.pendingRef.current.startTime;
   const hasActiveCallingTools = refs.activeToolCallsRef.current.some(

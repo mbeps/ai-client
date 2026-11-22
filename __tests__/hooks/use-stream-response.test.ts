@@ -61,6 +61,13 @@ vi.mock("@/actions/chats/is-chat-generating", () => ({
   isChatGenerating: mockIsChatGenerating,
 }));
 
+const mockRespondToToolApproval = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ ok: true, value: { success: true } }),
+);
+vi.mock("@/actions/chats/respond-to-tool-approval", () => ({
+  respondToToolApproval: mockRespondToToolApproval,
+}));
+
 const mockGetChatRealtimeToken = vi.hoisted(() =>
   vi.fn().mockResolvedValue({ ok: true, value: "mock-token" }),
 );
@@ -2890,10 +2897,27 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
       vi.useRealTimers();
     });
 
-    it("ignores tool-approval-required events cleanly in stream handler", async () => {
-      const { rerender, unmount } = renderHook(() =>
-        useStreamResponse("chat-approval-noop"),
+    it("updates pendingApprovals on tool-approval-required and submits via respondToToolApproval", async () => {
+      mockRespondToToolApproval.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "INVALID_INPUT", message: "Bad decision" },
+      });
+      mockRespondToToolApproval.mockResolvedValueOnce({
+        ok: true,
+        value: { success: true },
+      });
+
+      const { result, rerender, unmount } = renderHook(() =>
+        useStreamResponse("chat-approval-live"),
       );
+
+      const approval = {
+        approvalId: "app-1",
+        toolCallId: "call-1",
+        toolName: "create_skill",
+        args: { name: "test" },
+        signature: "sig-1",
+      };
 
       await act(async () => {
         realtimeState.messages = {
@@ -2902,7 +2926,7 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
             {
               data: {
                 type: "tool-approval-required",
-                approvals: [],
+                approvals: [approval],
                 round: 1,
               },
             },
@@ -2910,6 +2934,75 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         };
         rerender();
       });
+
+      expect(result.current.pendingApprovals).toEqual([approval]);
+      expect(result.current.approvalsDisabled).toBe(false);
+
+      // Failure path re-enables approvalsDisabled
+      let ok = true;
+      await act(async () => {
+        ok = await result.current.submitToolApprovals("msg-ast-1", [
+          { approvalId: "app-1", approved: true },
+        ]);
+      });
+      expect(ok).toBe(false);
+      expect(result.current.approvalsDisabled).toBe(false);
+      expect(result.current.pendingApprovals).toEqual([approval]);
+
+      // Success path clears pendingApprovals
+      await act(async () => {
+        ok = await result.current.submitToolApprovals("msg-ast-1", [
+          { approvalId: "app-1", approved: true },
+        ]);
+      });
+      expect(ok).toBe(true);
+      expect(result.current.pendingApprovals).toEqual([]);
+      expect(mockRespondToToolApproval).toHaveBeenCalledWith({
+        assistantMessageId: "msg-ast-1",
+        decisions: [{ approvalId: "app-1", approved: true }],
+      });
+
+      unmount();
+    });
+
+    it("forwards approvalMode in streamResponse metadata and /api/chat payload", async () => {
+      const { result, unmount } = renderHook(() =>
+        useStreamResponse("chat-approval-mode"),
+      );
+
+      await act(async () => {
+        await result.current.streamResponse(
+          "u-1",
+          "Run tool",
+          null,
+          [],
+          "gpt-4o",
+          [],
+          [],
+          undefined,
+          undefined,
+          [],
+          [],
+          false,
+          undefined,
+          undefined,
+          undefined,
+          "auto",
+        );
+      });
+
+      expect(mockPersist).toHaveBeenCalledWith(
+        "chat-approval-mode",
+        expect.objectContaining({
+          metadata: expect.stringContaining('"approvalMode":"auto"'),
+        }),
+      );
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/chat",
+        expect.objectContaining({
+          body: expect.stringContaining('"approvalMode":"auto"'),
+        }),
+      );
 
       unmount();
     });

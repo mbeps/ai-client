@@ -24,6 +24,7 @@ import type { Attachment } from "@/types/attachment/attachment";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Message } from "@/types/message/message";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Props for the ChatInput component.
@@ -53,6 +54,7 @@ export interface ChatInputProps {
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
     subagentIds?: string[],
+    approvalMode?: ApprovalMode,
   ) => void;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
@@ -147,6 +149,9 @@ export interface ChatInputProps {
 
   /** Initial reasoning effort level for reasoning-capable models. */
   initialReasoningEffort?: ReasoningEffort;
+
+  /** Initial per-chat tool execution approval mode. */
+  initialApprovalMode?: ApprovalMode;
 
   /** Optional custom class name applied to container. */
   className?: string;
@@ -450,6 +455,8 @@ export function ChatInput(props: ChatInputProps) {
         isSendDisabled={interaction.isSendDisabled}
         reasoningEffort={reasoningEffort}
         onReasoningEffortChange={setReasoningEffort}
+        approvalMode={interaction.selections.approvalMode}
+        onToggleApprovalMode={interaction.selections.toggleApprovalMode}
       />
 
       <SubagentConfigDialog

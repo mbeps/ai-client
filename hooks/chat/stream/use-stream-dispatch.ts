@@ -268,6 +268,7 @@ export async function executeStreamResponse(
       subagentModelId: params.subagentModelId,
       subagentIds: params.subagentIds,
       reasoningEffort: params.reasoningEffort,
+      approvalMode: params.approvalMode,
     },
     params.handleApiError,
   );

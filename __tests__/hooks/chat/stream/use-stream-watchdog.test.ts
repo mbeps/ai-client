@@ -35,6 +35,7 @@ describe("useStreamWatchdog", () => {
       pendingRef: { current: { startTime: Date.now() - 10000 } },
       activeToolCallsRef: { current: [] as any[] },
       rejoinedRef: { current: false },
+      awaitingApprovalRef: { current: false },
       ...overrides,
     };
   }
@@ -210,6 +211,35 @@ describe("useStreamWatchdog", () => {
       await vi.advanceTimersByTimeAsync(2000);
     }
 
+    expect(setIsStreaming).not.toHaveBeenCalledWith(false);
+  });
+
+  it("pauses stall sync and abort while awaitingApprovalRef is true", async () => {
+    const syncFromDb = vi.fn().mockResolvedValue(false);
+    const setIsStreaming = vi.fn();
+    const refs = createRefs({
+      awaitingApprovalRef: { current: true },
+      lastChunkTimeRef: { current: Date.now() - 10000 },
+    });
+
+    renderHook(() =>
+      useStreamWatchdog(
+        "chat-awaiting-approval",
+        true,
+        false,
+        "connected",
+        null,
+        syncFromDb,
+        setIsStreaming,
+        refs as any,
+      ),
+    );
+
+    for (let i = 0; i < 35; i++) {
+      await vi.advanceTimersByTimeAsync(2000);
+    }
+
+    expect(syncFromDb).not.toHaveBeenCalled();
     expect(setIsStreaming).not.toHaveBeenCalledWith(false);
   });
 });

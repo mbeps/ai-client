@@ -12,6 +12,7 @@ import type {
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { Chat } from "@/types/chat/chat";
 import type { Message } from "@/types/message/message";
+import type { PendingApproval } from "@/types/tool/approval";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
@@ -49,6 +50,10 @@ export function useStreamState() {
     null,
   );
   const [chatNotFound, setChatNotFound] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
+    [],
+  );
+  const [approvalsDisabled, setApprovalsDisabled] = useState(false);
 
   const resetStreamingState = useCallback(() => {
     setIsStreaming(false);
@@ -56,6 +61,8 @@ export function useStreamState() {
     setStreamingReasoning(null);
     setActiveToolCalls([]);
     setAssistantMessageId(null);
+    setPendingApprovals([]);
+    setApprovalsDisabled(false);
   }, []);
 
   return {
@@ -71,6 +78,10 @@ export function useStreamState() {
     setAssistantMessageId,
     chatNotFound,
     setChatNotFound,
+    pendingApprovals,
+    setPendingApprovals,
+    approvalsDisabled,
+    setApprovalsDisabled,
     resetStreamingState,
   };
 }
@@ -94,6 +105,7 @@ export function useStreamRefs(): StreamRefsObject {
   const stoppedRef = useRef(false);
   const rejoinedRef = useRef(false);
   const checkedChatIdRef = useRef<string | null>(null);
+  const awaitingApprovalRef = useRef(false);
 
   return useMemo(
     () => ({
@@ -106,6 +118,7 @@ export function useStreamRefs(): StreamRefsObject {
       stoppedRef,
       rejoinedRef,
       checkedChatIdRef,
+      awaitingApprovalRef,
     }),
     [],
   );

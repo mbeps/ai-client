@@ -3,6 +3,7 @@ import { resolvePromptPayload } from "@/components/chat/input/resolve-prompt-pay
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Represents use chat submit options.
@@ -24,6 +25,7 @@ export interface UseChatSubmitOptions {
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
     subagentIds?: string[],
+    approvalMode?: ApprovalMode,
   ) => void;
   isLoading?: boolean;
   isSendDisabled: boolean;
@@ -46,6 +48,7 @@ export interface UseChatSubmitOptions {
   subagentModelId?: string;
   selectedSubagentIds: string[];
   reasoningEffort?: ReasoningEffort;
+  approvalMode?: ApprovalMode;
   handleCommandKeyDown: (e: React.KeyboardEvent) => boolean;
 }
 
@@ -80,6 +83,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     subagentModelId,
     selectedSubagentIds,
     reasoningEffort,
+    approvalMode,
     handleCommandKeyDown,
   } = options;
 
@@ -106,6 +110,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
       subagentModelId,
       reasoningEffort,
       selectedSubagentIds,
+      approvalMode,
     );
     setInput("");
     clearAttachments();
@@ -130,6 +135,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     subagentModelId,
     selectedSubagentIds,
     reasoningEffort,
+    approvalMode,
     setInput,
     clearAttachments,
     handleClearPrompts,
