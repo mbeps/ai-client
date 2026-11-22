@@ -271,7 +271,7 @@ export function MentionCommands({
                 return (
                   <CommandItem
                     key={item.id}
-                    value={item.name}
+                    value={item.id}
                     onSelect={() => onSelect(item)}
                     className={cn(
                       "flex cursor-pointer items-center justify-between gap-2 px-2 py-1.5",

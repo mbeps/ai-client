@@ -8,6 +8,7 @@ import { compactChatThread } from "@/lib/chat/compact-chat-thread";
 import { loadThreadFromDb } from "@/lib/chat/load-thread-from-db";
 import { mapMessageFromDb } from "@/lib/chat/map-message-from-db";
 import { resolveDefaultChatProvider } from "@/lib/chat/resolve-default-chat-provider";
+import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { AppException } from "@/lib/error/app-exception";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
@@ -31,7 +32,7 @@ export const compactChat = defineAction(async (rawInput: unknown) => {
     });
   }
 
-  const { chatId } = parsed.data;
+  const { chatId, modelId } = parsed.data;
 
   const [chatRow] = await db
     .select({
@@ -43,7 +44,7 @@ export const compactChat = defineAction(async (rawInput: unknown) => {
     .limit(1);
 
   if (!chatRow) {
-    throw new AppException({
+    return fail({
       code: ERROR_CODE.NOT_FOUND,
       message: "Chat not found",
     });
@@ -62,15 +63,26 @@ export const compactChat = defineAction(async (rawInput: unknown) => {
     session.user.id,
   );
 
-  const resolved = await resolveDefaultChatProvider(session.user.id);
+  const resolved = modelId
+    ? await resolveProvider(session.user.id, modelId)
+    : await resolveDefaultChatProvider(session.user.id);
 
-  const result = await compactChatThread({
-    chatId,
-    userId: session.user.id,
-    thread,
-    resolved,
-    auto: false,
-  });
+  let result: Awaited<ReturnType<typeof compactChatThread>>;
+  try {
+    result = await compactChatThread({
+      chatId,
+      userId: session.user.id,
+      thread,
+      resolved,
+      auto: false,
+      expectedLeafId: chatRow.currentLeafId,
+    });
+  } catch (err) {
+    if (err instanceof AppException) {
+      return fail(err.error);
+    }
+    throw err;
+  }
 
   return ok({
     message: mapMessageFromDb(result.message, []),

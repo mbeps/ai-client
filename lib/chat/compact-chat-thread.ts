@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { PROMPTS } from "@/config/prompts";
 import { db } from "@/drizzle/db";
 import { chat, message } from "@/drizzle/schemas/chat-schema";
@@ -59,32 +59,40 @@ function formatMessageForTranscript(msg: ThreadMessage): string {
 }
 
 /**
- * Builds a transcript from messages, bounding total tokens within the model's
- * summarization budget by dropping oldest turns if needed.
+ * Splits formatted messages into chronological transcript chunks bounded by
+ * the model's summarization token budget so every turn is summarized.
  *
  * @param messages - Messages to compact
- * @param maxTokens - Maximum token budget for the transcript
- * @returns Bounded transcript string
+ * @param maxTokens - Maximum token budget per transcript chunk
+ * @returns Non-empty array of bounded transcript strings
  * @author Maruf Bepary
  */
-function buildBoundedTranscript(
+function buildTranscriptChunks(
   messages: ThreadMessage[],
   maxTokens: number,
-): string {
+): string[] {
   const formatted = messages.map(formatMessageForTranscript);
-  let totalTokens = 0;
-  const kept: string[] = [];
+  const chunks: string[] = [];
+  let currentChunk: string[] = [];
+  let currentTokens = 0;
 
-  for (let i = formatted.length - 1; i >= 0; i--) {
-    const tokens = estimateTokens(formatted[i]);
-    if (kept.length > 0 && totalTokens + tokens > maxTokens) {
-      break;
+  for (const entry of formatted) {
+    const tokens = estimateTokens(entry);
+    if (currentChunk.length > 0 && currentTokens + tokens > maxTokens) {
+      chunks.push(currentChunk.join("\n\n---\n\n"));
+      currentChunk = [entry];
+      currentTokens = tokens;
+    } else {
+      currentChunk.push(entry);
+      currentTokens += tokens;
     }
-    kept.unshift(formatted[i]);
-    totalTokens += tokens;
   }
 
-  return kept.join("\n\n---\n\n");
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk.join("\n\n---\n\n"));
+  }
+
+  return chunks;
 }
 
 /**
@@ -102,6 +110,7 @@ export async function compactChatThread(params: {
   resolved: ResolvedProvider;
   auto?: boolean;
   reparentUserMessageId?: string;
+  expectedLeafId?: string;
   minMessagesToCompact?: number;
 }) {
   const {
@@ -110,6 +119,7 @@ export async function compactChatThread(params: {
     resolved,
     auto = false,
     reparentUserMessageId,
+    expectedLeafId,
     minMessagesToCompact = 2,
   } = params;
 
@@ -140,26 +150,29 @@ export async function compactChatThread(params: {
   const maxTranscriptTokens = Math.floor(
     contextWindow * TRANSCRIPT_CONTEXT_RATIO,
   );
-  const transcript = buildBoundedTranscript(
-    messagesToCompact,
-    maxTranscriptTokens,
-  );
+  const chunks = buildTranscriptChunks(messagesToCompact, maxTranscriptTokens);
   const originalTokens =
-    estimateTokens(transcript) +
+    chunks.reduce((sum, chunk) => sum + estimateTokens(chunk), 0) +
     (previousSummary ? estimateTokens(previousSummary) : 0);
 
-  const { text } = await generateText({
-    model: resolved.sdkProvider.chat(resolved.modelId),
-    system: PROMPTS.COMPACTION.SYSTEM,
-    prompt: PROMPTS.COMPACTION.PROMPT(transcript, previousSummary),
-  });
-
-  const summary = text.trim();
-  if (!summary) {
-    throw new AppException({
-      code: ERROR_CODE.UPSTREAM_HTTP,
-      message: "Failed to generate compaction summary",
+  let summary = "";
+  let runningSummary = previousSummary;
+  for (const chunkTranscript of chunks) {
+    const { text } = await generateText({
+      model: resolved.sdkProvider.chat(resolved.modelId),
+      system: PROMPTS.COMPACTION.SYSTEM,
+      prompt: PROMPTS.COMPACTION.PROMPT(chunkTranscript, runningSummary),
     });
+
+    const trimmed = text.trim();
+    if (!trimmed) {
+      throw new AppException({
+        code: ERROR_CODE.UPSTREAM_HTTP,
+        message: "Failed to generate compaction summary",
+      });
+    }
+    summary = trimmed;
+    runningSummary = trimmed;
   }
 
   const compactedTokens = estimateTokens(summary);
@@ -193,10 +206,21 @@ export async function compactChatThread(params: {
         .set({ parentId: checkpointId })
         .where(eq(message.id, reparentUserMessageId));
     } else {
-      await tx
+      const leafWhere = expectedLeafId
+        ? and(eq(chat.id, chatId), eq(chat.currentLeafId, expectedLeafId))
+        : eq(chat.id, chatId);
+      const updated = await tx
         .update(chat)
         .set({ currentLeafId: checkpointId, updatedAt: new Date() })
-        .where(eq(chat.id, chatId));
+        .where(leafWhere)
+        .returning({ id: chat.id });
+
+      if (updated.length === 0) {
+        throw new AppException({
+          code: ERROR_CODE.CONFLICT,
+          message: "Chat thread changed during compaction. Please retry.",
+        });
+      }
     }
 
     return row;

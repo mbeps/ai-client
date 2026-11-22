@@ -19,6 +19,12 @@ vi.mock("@/lib/chat/build-system-prompt", async (importOriginal) => {
   return { buildSystemPrompt: vi.fn(actual.buildSystemPrompt) };
 });
 
+vi.mock("@/lib/chat/compact-chat-thread", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/chat/compact-chat-thread")>();
+  return { compactChatThread: vi.fn(actual.compactChatThread) };
+});
+
 vi.mock("@/lib/chat/resolve-provider", () => ({
   resolveProvider: mockResolveProvider,
 }));
@@ -103,6 +109,7 @@ vi.mock("@/lib/logger", () => ({
 
 import { generateChatResponse } from "@/lib/inngest/functions/chat-response";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
+import { compactChatThread } from "@/lib/chat/compact-chat-thread";
 import { ChatNotFoundError } from "@/lib/chat/load-chat-context";
 import { AppException } from "@/lib/error/app-exception";
 import { ERROR_CODE } from "@/lib/error/error-code";
@@ -2251,6 +2258,386 @@ describe("generateChatResponse Inngest Function", () => {
       expect(streamTools.search).toBe(parentSearchTool);
       expect(streamTools.delegate_task).toBeDefined();
       expect(subCleanup).toHaveBeenCalled();
+    });
+  });
+
+  describe("compaction attachment & context budget handling", () => {
+    it("retains pre-compaction file attachments for get_file_url while keeping vision validation scoped to activeMessages", async () => {
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "text-only-model",
+        modelRow: {
+          capTools: true,
+          capVision: false,
+          contextWindow: 128_000,
+        },
+        sdkProvider: { chat: vi.fn(() => "model") },
+      });
+
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        subagentServers: [],
+        linkedSubagents: [],
+        activeKbIds: [],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: null,
+        userMemories: [],
+      });
+
+      mockLoadThread.mockResolvedValueOnce([
+        {
+          id: "u-old",
+          role: "user",
+          content: "See attachment",
+          attachments: [
+            {
+              name: "old-doc.pdf",
+              key: "files/old-doc.pdf",
+              type: "file",
+            },
+            {
+              name: "old-img.png",
+              key: "files/old-img.png",
+              type: "image",
+            },
+          ],
+          metadata: null,
+        },
+        {
+          id: "cp-1",
+          role: "system",
+          content: "Summary mentioning old-doc.pdf",
+          attachments: [],
+          metadata: JSON.stringify({ compaction: { compactedCount: 1 } }),
+        },
+        {
+          id: "u-new",
+          role: "user",
+          content: "Open old-doc.pdf again",
+          attachments: [],
+          metadata: null,
+        },
+      ]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Done" };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-compact-att",
+            userId: "user-1",
+            userMessageId: "u-new",
+            model: "text-only-model",
+          },
+        },
+      });
+
+      const streamTools = mockStreamText.mock.calls[0][0].tools;
+      expect(streamTools.get_file_url).toBeDefined();
+      expect(buildSystemPrompt).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+        false,
+        expect.objectContaining({
+          attachmentNames: expect.arrayContaining(["old-doc.pdf", "old-img.png"]),
+        }),
+      );
+    });
+
+    it("counts compactionSummary tokens against context budget for auto-compaction trigger", async () => {
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "small-window-model",
+        modelRow: {
+          capTools: true,
+          capVision: false,
+          // 0.85 * 100 = 85 tokens budget
+          contextWindow: 100,
+        },
+        sdkProvider: { chat: vi.fn(() => "model") },
+      });
+
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        subagentServers: [],
+        linkedSubagents: [],
+        activeKbIds: [],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: null,
+        userMemories: [],
+      });
+
+      // Summary is ~60 tokens (240 chars), activeMessages is ~40 tokens (160 chars).
+      // Active alone (40 <= 85) wouldn't compact, but combined (40 + 60 = 100 > 85) triggers compaction!
+      mockLoadThread.mockResolvedValueOnce([
+        {
+          id: "cp-1",
+          role: "system",
+          content: "S".repeat(240),
+          attachments: [],
+          metadata: JSON.stringify({ compaction: { compactedCount: 1 } }),
+        },
+        {
+          id: "u-1",
+          role: "user",
+          content: "A".repeat(60),
+          attachments: [],
+          metadata: null,
+        },
+        {
+          id: "a-1",
+          role: "assistant",
+          content: "B".repeat(60),
+          attachments: [],
+          metadata: null,
+        },
+        {
+          id: "u-2",
+          role: "user",
+          content: "C".repeat(40),
+          attachments: [],
+          metadata: null,
+        },
+      ]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Ok" };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-compact-budget",
+            userId: "user-1",
+            userMessageId: "u-2",
+            model: "small-window-model",
+          },
+        },
+      });
+
+      // Auto-compaction was attempted (and in this unit test without mocked db/generateText,
+      // fell back gracefully to truncation with warning log)
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Auto-compaction failed, falling back to truncation: {error}",
+        expect.any(Object),
+      );
+      // And prepareChatMessages trimmed history within (maxContextTokens - summaryTokens)
+      const passedMessages = mockStreamText.mock.calls[0][0].messages;
+      expect(passedMessages).toHaveLength(1);
+      expect(passedMessages[0].content).toBe("C".repeat(40));
+    });
+
+    it("updates compactionSummary and emits compacted when auto-compaction succeeds", async () => {
+      vi.mocked(compactChatThread).mockResolvedValueOnce({
+        message: { id: "cp-new" } as any,
+        compactedCount: 3,
+        originalTokens: 100,
+        compactedTokens: 10,
+        summary: "Fresh compacted summary",
+      });
+
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "small-window-model",
+        modelRow: {
+          capTools: true,
+          capVision: false,
+          contextWindow: 100,
+        },
+        sdkProvider: { chat: vi.fn(() => "model") },
+      });
+
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        subagentServers: [],
+        linkedSubagents: [],
+        activeKbIds: [],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: null,
+        userMemories: [],
+      });
+
+      mockLoadThread.mockResolvedValueOnce([
+        {
+          id: "u-1",
+          role: "user",
+          content: "A".repeat(200),
+          attachments: [],
+          metadata: null,
+        },
+        {
+          id: "a-1",
+          role: "assistant",
+          content: "B".repeat(200),
+          attachments: [],
+          metadata: null,
+        },
+        {
+          id: "u-2",
+          role: "user",
+          content: "Latest",
+          attachments: [],
+          metadata: null,
+        },
+      ]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Ok" };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-compact-ok",
+            userId: "user-1",
+            userMessageId: "u-2",
+            model: "small-window-model",
+          },
+        },
+      });
+
+      expect(buildSystemPrompt).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+        false,
+        expect.objectContaining({
+          compactionSummary: "Fresh compacted summary",
+        }),
+      );
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        { type: "compacted" },
+      );
+    });
+
+    it("logs stringified error when auto-compaction throws a non-Error value", async () => {
+      vi.mocked(compactChatThread).mockRejectedValueOnce("string-compaction-err");
+
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "small-window-model",
+        modelRow: { capTools: true, capVision: false, contextWindow: 100 },
+        sdkProvider: { chat: vi.fn(() => "model") },
+      });
+
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        subagentServers: [],
+        linkedSubagents: [],
+        activeKbIds: [],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: null,
+        userMemories: [],
+      });
+
+      mockLoadThread.mockResolvedValueOnce([
+        { id: "u-1", role: "user", content: "A".repeat(200), attachments: [], metadata: null },
+        { id: "a-1", role: "assistant", content: "B".repeat(200), attachments: [], metadata: null },
+        { id: "u-2", role: "user", content: "Latest", attachments: [], metadata: null },
+      ]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Ok" };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-compact-non-err",
+            userId: "user-1",
+            userMessageId: "u-2",
+            model: "small-window-model",
+          },
+        },
+      });
+
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        "Auto-compaction failed, falling back to truncation: {error}",
+        { error: "string-compaction-err" },
+      );
+    });
+
+    it("skips auto-compaction when activeMessages.length > 2 but combined tokens fit within budget", async () => {
+      vi.mocked(compactChatThread).mockClear();
+
+      mockResolveProvider.mockResolvedValueOnce({
+        modelId: "large-window-model",
+        modelRow: { capTools: true, capVision: false, contextWindow: 128_000 },
+        sdkProvider: { chat: vi.fn(() => "model") },
+      });
+
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [],
+        subagentServers: [],
+        linkedSubagents: [],
+        activeKbIds: [],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: null,
+        userMemories: [],
+      });
+
+      mockLoadThread.mockResolvedValueOnce([
+        { id: "u-1", role: "user", content: "Hi", attachments: [], metadata: null },
+        { id: "a-1", role: "assistant", content: "Hello", attachments: [], metadata: null },
+        { id: "u-2", role: "user", content: "How are you?", attachments: [], metadata: null },
+      ]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Good" };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-within-budget",
+            userId: "user-1",
+            userMessageId: "u-2",
+            model: "large-window-model",
+          },
+        },
+      });
+
+      expect(compactChatThread).not.toHaveBeenCalled();
     });
   });
 });

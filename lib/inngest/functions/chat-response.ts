@@ -3,6 +3,7 @@ import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
 import { buildSystemPrompt } from "@/lib/chat/build-system-prompt";
 import { chatAbortRegistry } from "@/lib/chat/chat-abort-registry";
 import { compactChatThread } from "@/lib/chat/compact-chat-thread";
+import { estimateTokens } from "@/lib/chat/estimate-tokens";
 import { extractThreadCanvasArtifacts } from "@/lib/chat/extract-canvas-artifacts";
 import {
   estimateModelMessageTokens,
@@ -448,10 +449,14 @@ export const generateChatResponse = inngest.createFunction(
         capVision: resolved.modelRow.capVision,
       });
 
-      const fileAttachments = extractFileAttachments(activeMessages);
+      const fileAttachments = extractFileAttachments(thread);
       const maxContextTokens = resolved.modelRow?.contextWindow
         ? Math.floor(resolved.modelRow.contextWindow * 0.85)
         : undefined;
+
+      const summaryTokens = compactionSummary
+        ? estimateTokens(compactionSummary)
+        : 0;
 
       let effectiveHistory = activeMessages;
       if (maxContextTokens !== undefined && activeMessages.length > 2) {
@@ -459,7 +464,7 @@ export const generateChatResponse = inngest.createFunction(
           activeMessages,
         ).reduce((sum, m) => sum + estimateModelMessageTokens(m), 0);
 
-        if (estimatedHistoryTokens > maxContextTokens) {
+        if (estimatedHistoryTokens + summaryTokens > maxContextTokens) {
           try {
             await emit({ type: "compacting" });
             const compacted = await compactChatThread({
@@ -484,9 +489,17 @@ export const generateChatResponse = inngest.createFunction(
         }
       }
 
+      const finalSummaryTokens = compactionSummary
+        ? estimateTokens(compactionSummary)
+        : 0;
+      const historyTokenBudget =
+        maxContextTokens !== undefined
+          ? Math.max(1, maxContextTokens - finalSummaryTokens)
+          : undefined;
+
       const finalMessages = prepareChatMessages({
         history: effectiveHistory,
-        maxContextTokens,
+        maxContextTokens: historyTokenBudget,
       });
 
       const {

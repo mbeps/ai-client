@@ -1687,6 +1687,46 @@ describe("useMentionCommands", () => {
       });
       expect(result.current.selectedAssistant).toEqual(SAMPLE_ASSISTANTS[0]);
     });
+
+    it("filters actions by name, title, or description and invokes onSelectAction", () => {
+      const onSelectAction = vi.fn();
+      const sampleAction = {
+        id: "action-compact",
+        name: "compact",
+        title: "Compact Thread",
+        description: "Summarize older messages",
+        isAction: true as const,
+      };
+      const { result } = renderHook(() =>
+        useMentionCommands(
+          "/summarize",
+          vi.fn(),
+          { current: null },
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          [sampleAction as any],
+          onSelectAction,
+        ),
+      );
+
+      act(() => {
+        result.current.handleInputChange(makeInputEvent("/summarize", 10));
+      });
+      expect(result.current.filteredItems).toContainEqual(sampleAction);
+
+      act(() => {
+        result.current.handleSelect(sampleAction as any);
+      });
+      expect(onSelectAction).toHaveBeenCalledWith(sampleAction);
+    });
   });
 });
 

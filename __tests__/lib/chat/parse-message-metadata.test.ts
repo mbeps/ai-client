@@ -392,4 +392,58 @@ describe("parseMessageMetadata", () => {
     );
     expect(result.modelId).toBeNull();
   });
+
+  it("parses valid compaction metadata with optional fields omitted or invalid", () => {
+    const result = parseMessageMetadata(
+      JSON.stringify({
+        compaction: {
+          compactedCount: 3.9,
+          originalTokens: "bad",
+          compactedTokens: null,
+          model: 123,
+          auto: "yes",
+        },
+      }),
+    );
+
+    expect(result.compaction).toEqual({
+      compactedCount: 3,
+      originalTokens: undefined,
+      compactedTokens: undefined,
+      model: undefined,
+      auto: undefined,
+    });
+
+    const full = parseMessageMetadata(
+      JSON.stringify({
+        compaction: {
+          compactedCount: 4,
+          originalTokens: 12000,
+          compactedTokens: 1500,
+          model: "gpt-4o",
+          auto: true,
+        },
+      }),
+    );
+
+    expect(full.compaction).toEqual({
+      compactedCount: 4,
+      originalTokens: 12000,
+      compactedTokens: 1500,
+      model: "gpt-4o",
+      auto: true,
+    });
+  });
+
+  it("returns undefined compaction when compactedCount is negative or non-numeric", () => {
+    const negative = parseMessageMetadata(
+      JSON.stringify({ compaction: { compactedCount: -1 } }),
+    );
+    expect(negative.compaction).toBeUndefined();
+
+    const nonNumeric = parseMessageMetadata(
+      JSON.stringify({ compaction: { compactedCount: "2" } }),
+    );
+    expect(nonNumeric.compaction).toBeUndefined();
+  });
 });

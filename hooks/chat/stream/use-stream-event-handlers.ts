@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { getChat } from "@/actions/chats/get-chat";
 import {
@@ -218,6 +218,8 @@ export function useStreamEventHandlers(params: {
     streamSetters,
   } = params;
 
+  const isCompactingRef = useRef(false);
+
   const handleRejoinFinish = useCallback(async () => {
     await executeRejoinFinish(
       chatId,
@@ -253,6 +255,7 @@ export function useStreamEventHandlers(params: {
       }
 
       if (event.type === "compacting") {
+        isCompactingRef.current = true;
         toast.loading("Compacting conversation...", {
           id: `auto-compact-${chatId}`,
         });
@@ -260,6 +263,7 @@ export function useStreamEventHandlers(params: {
       }
 
       if (event.type === "compacted") {
+        isCompactingRef.current = false;
         toast.success("Conversation compacted", {
           id: `auto-compact-${chatId}`,
         });
@@ -271,6 +275,10 @@ export function useStreamEventHandlers(params: {
       }
 
       if (event.type === "finish") {
+        if (isCompactingRef.current) {
+          isCompactingRef.current = false;
+          toast.dismiss(`auto-compact-${chatId}`);
+        }
         streamRefs.lastChunkTimeRef.current = 0;
         if (streamRefs.rejoinedRef.current) {
           await handleRejoinFinish();
@@ -283,6 +291,10 @@ export function useStreamEventHandlers(params: {
       }
 
       if (event.type === "error") {
+        if (isCompactingRef.current) {
+          isCompactingRef.current = false;
+          toast.dismiss(`auto-compact-${chatId}`);
+        }
         streamRefs.lastChunkTimeRef.current = 0;
         clearInflightState(chatId);
         if (!handleApiError(event)) {
