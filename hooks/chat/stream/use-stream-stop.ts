@@ -97,6 +97,7 @@ export async function executeStopStream(
   refs: StreamRefsObject,
 ) {
   refs.stoppedRef.current = true;
+  refs.awaitingApprovalRef.current = false;
   clearInflightState(chatId);
 
   const partialText = refs.accumulatedTextRef.current;

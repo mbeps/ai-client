@@ -65,16 +65,18 @@ export function isAccessOrNotFoundError(err: unknown): boolean {
  * @returns Matched message row or undefined
  * @author Maruf Bepary
  */
-export function findMatchingAssistantMessage(
-  messages: Array<{
+export function findMatchingAssistantMessage<
+  T extends {
     id: string;
     role: string;
     parentId?: string | null;
     content: string;
-  }>,
+  },
+>(
+  messages: T[],
   assistantId: string | null,
   targetParentId?: string | null,
-) {
+): T | undefined {
   return messages.find((m) => {
     if (m.role !== "assistant") return false;
     if (assistantId) return m.id === assistantId;

@@ -78,6 +78,7 @@ export async function POST(req: Request) {
       subagentsEnabled,
       subagentIds,
       subagentModelId,
+      approvalMode,
     } = parsed.data;
 
     // Ensure model is undefined if empty or whitespace-only
@@ -136,6 +137,7 @@ export async function POST(req: Request) {
         subagentsEnabled: subagentsEnabled ?? false,
         subagentIds,
         subagentModelId,
+        approvalMode,
       },
     });
 

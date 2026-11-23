@@ -60,6 +60,7 @@ function createParams() {
     streamRefs: {
       stoppedRef: { current: false },
       rejoinedRef: { current: false },
+      awaitingApprovalRef: { current: false },
       lastChunkTimeRef: { current: 0 },
       assistantMessageIdRef: { current: null },
       accumulatedTextRef: { current: "" },

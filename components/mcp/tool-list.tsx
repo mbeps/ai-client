@@ -1,11 +1,32 @@
 "use client";
 
-import { Wrench } from "lucide-react";
+import {
+  Ban,
+  Check,
+  ChevronDown,
+  CircleCheck,
+  Hand,
+  MoreHorizontal,
+  Wrench,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { updateMcpToolApprovals } from "@/actions/mcp-servers/update-mcp-tool-approvals";
 import type { DiscoveryResult } from "@/components/mcp/mcp-item-list";
 import { McpItemList } from "@/components/mcp/mcp-item-list";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAppStore } from "@/lib/store/use-app-store";
+import { cn } from "@/lib/utils";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import type { McpServer } from "@/types/mcp/mcp-server";
+import type { ToolPermissionMode } from "@/types/tool/approval";
 
 /**
  * Props for ToolList component.
@@ -20,45 +41,18 @@ export interface ToolListProps {
   server: McpServer;
 }
 
-/**
- * Fetches tools from the discovery result of an MCP server.
- *
- * @param result - Discovery result containing tools and resources
- * @returns Array of discovered tools
- */
 function fetchTools(result: DiscoveryResult): DiscoveredTool[] {
   return result.tools;
 }
 
-/**
- * Generates a unique key for a discovered tool based on its name.
- *
- * @param tool - The discovered tool object
- * @returns Unique key string for the tool
- */
 function getToolKey(tool: DiscoveredTool): string {
   return tool.name;
 }
 
-/**
- * Generates a display label for a discovered tool based on its name.
- *
- * @param tool - The discovered tool object
- * @returns Display label string for the tool
- */
 function getToolLabel(tool: DiscoveredTool): string {
   return tool.name;
 }
 
-/**
- * Renders the detailed content for a discovered tool in the accordion view.
- * Displays the tool description and structured parameter schema with type information.
- * Shows required parameter indicators and supports optional descriptions per parameter.
- *
- * @param tool - The discovered tool to render content for
- * @returns JSX fragment with tool description and parameters display
- * @author Maruf Bepary
- */
 function renderToolContent(tool: DiscoveredTool) {
   return (
     <>
@@ -115,19 +109,106 @@ function renderToolContent(tool: DiscoveredTool) {
 }
 
 /**
- * Displays tools discovered from an MCP server in an expandable accordion.
- * Auto-fetches tools on mount; supports manual refresh. Shows description and parameters per tool.
- * Handles loading, error, and empty states with retry capability.
- * Displays parameter types and required indicators for each tool.
+ * Displays tools discovered from an MCP server in an expandable accordion,
+ * with per-tool and bulk execution approval controls backed by
+ * {@link updateMcpToolApprovals}.
  *
  * @param props - Component props
- * @param props.server - MCP server to discover tools from; discovery is keyed by server.id
- * @see {@link ResourceList} for displaying server resources
- * @see {@link ServerCard} for server overview
- * @see {@link McpItemList} for generic item list implementation
+ * @param props.server - MCP server to discover tools from
  * @author Maruf Bepary
  */
 export function ToolList({ server }: ToolListProps) {
+  const loadMcpServers = useAppStore((s) => s.loadMcpServers);
+  const [autoApprovedTools, setAutoApprovedTools] = useState<string[]>(
+    server.autoApprovedTools ?? [],
+  );
+  const [blockedTools, setBlockedTools] = useState<string[]>(
+    server.blockedTools ?? [],
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setAutoApprovedTools(server.autoApprovedTools ?? []);
+    setBlockedTools(server.blockedTools ?? []);
+  }, [server.autoApprovedTools, server.blockedTools]);
+
+  const persistApprovals = useCallback(
+    async (
+      nextAutoApproved: string[],
+      nextBlocked: string[],
+      discoveredTools: DiscoveredTool[],
+    ) => {
+      const discoveredNames = new Set(discoveredTools.map((t) => t.name));
+      const preservedBlocked = [...new Set(nextBlocked)];
+      const blockedSet = new Set(preservedBlocked);
+      const prunedAutoApproved = nextAutoApproved.filter(
+        (name) => discoveredNames.has(name) && !blockedSet.has(name),
+      );
+      const previousAutoApproved = autoApprovedTools;
+      const previousBlocked = blockedTools;
+
+      setAutoApprovedTools(prunedAutoApproved);
+      setBlockedTools(preservedBlocked);
+      setIsSaving(true);
+      try {
+        const res = await updateMcpToolApprovals({
+          serverId: server.id,
+          autoApprovedTools: prunedAutoApproved,
+          blockedTools: preservedBlocked,
+        });
+        if (!res.ok) {
+          setAutoApprovedTools(previousAutoApproved);
+          setBlockedTools(previousBlocked);
+          toast.error(res.error.message);
+          return;
+        }
+        setAutoApprovedTools(res.value.autoApprovedTools);
+        setBlockedTools(res.value.blockedTools ?? []);
+        await loadMcpServers();
+        toast.success("Tool approval settings updated");
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [autoApprovedTools, blockedTools, loadMcpServers, server.id],
+  );
+
+  const handleSetToolPermission = useCallback(
+    (
+      toolName: string,
+      mode: ToolPermissionMode,
+      discoveredTools: DiscoveredTool[],
+    ) => {
+      const nextAutoApproved =
+        mode === "auto"
+          ? [...autoApprovedTools, toolName]
+          : autoApprovedTools.filter((name) => name !== toolName);
+      const nextBlocked =
+        mode === "block"
+          ? [...blockedTools, toolName]
+          : blockedTools.filter((name) => name !== toolName);
+      void persistApprovals(nextAutoApproved, nextBlocked, discoveredTools);
+    },
+    [autoApprovedTools, blockedTools, persistApprovals],
+  );
+
+  const handleSetAll = useCallback(
+    (mode: ToolPermissionMode, discoveredTools: DiscoveredTool[]) => {
+      const allNames = discoveredTools.map((t) => t.name);
+      const discoveredSet = new Set(allNames);
+      const undiscoveredBlocked = blockedTools.filter(
+        (name) => !discoveredSet.has(name),
+      );
+      const nextAutoApproved = mode === "auto" ? allNames : [];
+      const nextBlocked =
+        mode === "block"
+          ? [...undiscoveredBlocked, ...allNames]
+          : undiscoveredBlocked;
+      void persistApprovals(nextAutoApproved, nextBlocked, discoveredTools);
+    },
+    [blockedTools, persistApprovals],
+  );
+
   return (
     <McpItemList<DiscoveredTool>
       server={server}
@@ -138,6 +219,202 @@ export function ToolList({ server }: ToolListProps) {
       itemKind="tool"
       emptyMessage="No tools discovered from this server."
       renderContent={renderToolContent}
+      headerActions={(items) => {
+        const allApproved =
+          items.length > 0 &&
+          items.every(
+            (t) =>
+              autoApprovedTools.includes(t.name) &&
+              !blockedTools.includes(t.name),
+          );
+        const allBlocked =
+          items.length > 0 && items.every((t) => blockedTools.includes(t.name));
+        const noneApprovedOrBlocked =
+          items.length === 0 ||
+          items.every(
+            (t) =>
+              !autoApprovedTools.includes(t.name) &&
+              !blockedTools.includes(t.name),
+          );
+        const batchState = allApproved
+          ? "always_allow"
+          : allBlocked
+            ? "blocked"
+            : noneApprovedOrBlocked
+              ? "needs_approval"
+              : "custom";
+
+        const triggerConfig = {
+          always_allow: {
+            icon: CircleCheck,
+            label: "Always allow",
+          },
+          needs_approval: {
+            icon: Hand,
+            label: "Needs approval",
+          },
+          blocked: {
+            icon: Ban,
+            label: "Blocked",
+          },
+          custom: {
+            icon: MoreHorizontal,
+            label: "Custom",
+          },
+        }[batchState];
+
+        const TriggerIcon = triggerConfig.icon;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isSaving || items.length === 0}
+                className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium"
+              >
+                <TriggerIcon className="size-3.5" />
+                <span>{triggerConfig.label}</span>
+                <ChevronDown className="text-muted-foreground size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={() => {
+                  if (!noneApprovedOrBlocked) handleSetAll("ask", items);
+                }}
+                className="justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Hand className="size-4" />
+                  <span>Needs approval</span>
+                </span>
+                {batchState === "needs_approval" && (
+                  <Check className="text-primary size-4" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (!allApproved) handleSetAll("auto", items);
+                }}
+                className="justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <CircleCheck className="size-4" />
+                  <span>Always allow</span>
+                </span>
+                {batchState === "always_allow" && (
+                  <Check className="text-primary size-4" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (!allBlocked) handleSetAll("block", items);
+                }}
+                className="justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Ban className="size-4" />
+                  <span>Blocked</span>
+                </span>
+                {batchState === "blocked" && (
+                  <Check className="text-primary size-4" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled
+                className="justify-between opacity-100"
+              >
+                <span className="flex items-center gap-2">
+                  <MoreHorizontal className="size-4" />
+                  <span>Custom</span>
+                </span>
+                {batchState === "custom" && (
+                  <Check className="text-primary size-4" />
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      }}
+      renderItemActions={(tool, items) => {
+        const isBlocked = blockedTools.includes(tool.name);
+        const isApproved = !isBlocked && autoApprovedTools.includes(tool.name);
+        const isNeedsApproval = !isBlocked && !isApproved;
+        return (
+          <div
+            role="radiogroup"
+            aria-label={`Approval setting for ${tool.name}`}
+            className="bg-muted inline-flex items-center gap-0.5 rounded-lg p-0.5"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isApproved}
+              aria-label={`Always allow ${tool.name}`}
+              disabled={isSaving}
+              onClick={() => {
+                if (!isApproved) {
+                  handleSetToolPermission(tool.name, "auto", items);
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
+                isApproved
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <CircleCheck className="size-3.5 shrink-0" />
+              {isApproved && <span>Always allow</span>}
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isNeedsApproval}
+              aria-label={`Needs approval ${tool.name}`}
+              disabled={isSaving}
+              onClick={() => {
+                if (!isNeedsApproval) {
+                  handleSetToolPermission(tool.name, "ask", items);
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
+                isNeedsApproval
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Hand className="size-3.5 shrink-0" />
+              {isNeedsApproval && <span>Needs approval</span>}
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isBlocked}
+              aria-label={`Blocked ${tool.name}`}
+              disabled={isSaving}
+              onClick={() => {
+                if (!isBlocked) {
+                  handleSetToolPermission(tool.name, "block", items);
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
+                isBlocked
+                  ? "bg-background text-destructive shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Ban className="size-3.5 shrink-0" />
+              {isBlocked && <span>Blocked</span>}
+            </button>
+          </div>
+        );
+      }}
     />
   );
 }

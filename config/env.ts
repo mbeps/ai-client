@@ -88,6 +88,12 @@ const baseServerEnvSchema = clientEnvSchema.extend({
     .string()
     .default("10")
     .transform((v) => parseInt(v, 10)),
+  CHAT_MAX_APPROVAL_ROUNDS: z
+    .string()
+    .default("10")
+    .transform((v) => parseInt(v, 10))
+    .transform((v) => Math.max(1, v)),
+  TOOL_APPROVAL_SECRET: z.string().min(1).optional(),
   RATE_LIMIT_CHAT_RPM: z
     .string()
     .default("20")
@@ -218,6 +224,8 @@ export function validateEnv(
         DEFAULT_CHUNK_SIZE: process.env.DEFAULT_CHUNK_SIZE,
         DEFAULT_CHUNK_OVERLAP: process.env.DEFAULT_CHUNK_OVERLAP,
         CHAT_MAX_STEPS: process.env.CHAT_MAX_STEPS,
+        CHAT_MAX_APPROVAL_ROUNDS: process.env.CHAT_MAX_APPROVAL_ROUNDS,
+        TOOL_APPROVAL_SECRET: process.env.TOOL_APPROVAL_SECRET,
         RATE_LIMIT_CHAT_RPM: process.env.RATE_LIMIT_CHAT_RPM,
         RATE_LIMIT_UPLOAD_RPM: process.env.RATE_LIMIT_UPLOAD_RPM,
         POSTMARK_SERVER_TOKEN: process.env.POSTMARK_SERVER_TOKEN,

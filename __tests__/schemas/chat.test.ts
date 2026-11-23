@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  approvalDecisionSchema,
+  approvalModeSchema,
   chatRequestSchema,
   createChatSchema,
   manageArtifactSchema,
@@ -420,5 +422,78 @@ describe("searchKnowledgeBaseSchema", () => {
   it("rejects non-object parsed JSON string", () => {
     const res = searchKnowledgeBaseSchema.safeParse(JSON.stringify("plain string"));
     expect(res.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// approvalModeSchema & approvalDecisionSchema
+// ---------------------------------------------------------------------------
+describe("approvalModeSchema", () => {
+  it("accepts 'ask' and 'auto'", () => {
+    expect(approvalModeSchema.safeParse("ask").success).toBe(true);
+    expect(approvalModeSchema.safeParse("auto").success).toBe(true);
+  });
+
+  it("rejects invalid modes", () => {
+    expect(approvalModeSchema.safeParse("always").success).toBe(false);
+    expect(approvalModeSchema.safeParse("").success).toBe(false);
+  });
+});
+
+describe("approvalDecisionSchema", () => {
+  it("accepts valid decision", () => {
+    const res = approvalDecisionSchema.safeParse({
+      approvalId: "app-1",
+      approved: true,
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it("rejects empty or oversized approvalId and extra fields", () => {
+    expect(
+      approvalDecisionSchema.safeParse({ approvalId: "", approved: true }).success,
+    ).toBe(false);
+    expect(
+      approvalDecisionSchema.safeParse({
+        approvalId: "a".repeat(101),
+        approved: false,
+      }).success,
+    ).toBe(false);
+    expect(
+      approvalDecisionSchema.safeParse({
+        approvalId: "app-1",
+        approved: true,
+        extra: "nope",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("approvalMode in chatRequestSchema and messageMetadataSchema", () => {
+  it("accepts optional approvalMode in chatRequestSchema", () => {
+    const res = chatRequestSchema.safeParse({
+      chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
+      approvalMode: "auto",
+    });
+    expect(res.success).toBe(true);
+  });
+
+  it("rejects invalid approvalMode in chatRequestSchema", () => {
+    const res = chatRequestSchema.safeParse({
+      chatId: VALID_UUID,
+      userMessageId: VALID_UUID,
+      approvalMode: "deny",
+    });
+    expect(res.success).toBe(false);
+  });
+
+  it("accepts optional approvalMode in messageMetadataSchema", () => {
+    expect(
+      messageMetadataSchema.safeParse({ approvalMode: "ask" }).success,
+    ).toBe(true);
+    expect(
+      messageMetadataSchema.safeParse({ approvalMode: "invalid" }).success,
+    ).toBe(false);
   });
 });

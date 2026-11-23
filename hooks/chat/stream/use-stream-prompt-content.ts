@@ -46,6 +46,9 @@ export function buildMetadata(
   if (options.reasoningEffort !== undefined) {
     metadataObj.reasoningEffort = options.reasoningEffort;
   }
+  if (options.approvalMode !== undefined) {
+    metadataObj.approvalMode = options.approvalMode;
+  }
   return metadataObj;
 }
 

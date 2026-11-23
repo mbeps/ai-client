@@ -261,6 +261,7 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       undefined,
       undefined,
       ["sub-1"],
+      undefined,
     );
   });
 });

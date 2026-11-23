@@ -97,6 +97,39 @@ describe("useChatToolsStore", () => {
     resetClientState();
     expect(useChatToolsStore.getState().toolsByChat).toEqual({});
   });
+
+  it("persists, transfers, and clears approvalModeByChat", () => {
+    expect(
+      useChatToolsStore.getState().approvalModeByChat["chat-1"],
+    ).toBeUndefined();
+
+    useChatToolsStore.getState().setChatApprovalMode("chat-1", "auto");
+    expect(useChatToolsStore.getState().approvalModeByChat["chat-1"]).toBe(
+      "auto",
+    );
+
+    useChatToolsStore
+      .getState()
+      .setChatApprovalMode(NEW_CHAT_TOOLS_KEY, "auto");
+    useChatToolsStore
+      .getState()
+      .transferChatTools(NEW_CHAT_TOOLS_KEY, "chat-new-1");
+
+    expect(
+      useChatToolsStore.getState().approvalModeByChat[NEW_CHAT_TOOLS_KEY],
+    ).toBeUndefined();
+    expect(useChatToolsStore.getState().approvalModeByChat["chat-new-1"]).toBe(
+      "auto",
+    );
+
+    useChatToolsStore.getState().clearChatTools("chat-1");
+    expect(
+      useChatToolsStore.getState().approvalModeByChat["chat-1"],
+    ).toBeUndefined();
+
+    useChatToolsStore.getState().clearAll();
+    expect(useChatToolsStore.getState().approvalModeByChat).toEqual({});
+  });
 });
 
 describe("useChatToolsStore SSR fallback", () => {

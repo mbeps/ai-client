@@ -56,6 +56,10 @@ export interface CreateSubagentDispatchToolParams {
   buildKnowledgebaseTools?: (
     kbIds: string[],
   ) => Promise<Record<string, any>> | Record<string, any>;
+  wrapSubagentTools?: (
+    workerTools: Record<string, any>,
+    targetAgent: Agent,
+  ) => Record<string, any>;
 }
 
 /**
@@ -380,7 +384,7 @@ export function createSubagentDispatchTool(
         ? targetAgent.id.replace("builtin:", "")
         : targetAgent.name;
 
-      const workerTools = scratchpadContext
+      const baseFinalWorkerTools = scratchpadContext
         ? {
             ...baseWorkerTools,
             ...registerScratchpadTools({
@@ -391,6 +395,10 @@ export function createSubagentDispatchTool(
             }),
           }
         : baseWorkerTools;
+
+      const workerTools = params.wrapSubagentTools
+        ? params.wrapSubagentTools(baseFinalWorkerTools, targetAgent)
+        : baseFinalWorkerTools;
 
       const parentInvocationId = crypto.randomUUID();
 

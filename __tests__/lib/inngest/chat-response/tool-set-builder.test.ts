@@ -20,6 +20,7 @@ const mockFilterToolsForAgent = vi.hoisted(() =>
 const mockResolveProvider = vi.hoisted(() => vi.fn());
 const mockRegisterMemoryTool = vi.hoisted(() => vi.fn(() => ({})));
 const mockRegisterSkillTool = vi.hoisted(() => vi.fn(() => ({})));
+const mockRegisterSkillAuthoringTools = vi.hoisted(() => vi.fn(() => ({})));
 
 vi.mock("@/lib/chat/resolve-provider", () => ({
   resolveProvider: mockResolveProvider,
@@ -34,7 +35,7 @@ vi.mock("@/lib/chat/register-skill-tool", () => ({
 }));
 
 vi.mock("@/lib/chat/register-skill-authoring-tools", () => ({
-  registerSkillAuthoringTools: vi.fn(() => ({})),
+  registerSkillAuthoringTools: mockRegisterSkillAuthoringTools,
 }));
 
 vi.mock("@/lib/subagents/create-subagent-dispatch-tool", () => ({
@@ -262,5 +263,87 @@ describe("buildOrchestratorToolSet", () => {
       },
     });
     expect(projRes.isSubagentDelegationEnabled).toBe(true);
+  });
+
+  it("excludes blocked internal tools from orchestrator and subagents", () => {
+    mockRegisterMemoryTool.mockReturnValue({ save_memory: { description: "mem" } });
+    mockRegisterSkillTool.mockReturnValue({ load_skill: { description: "skill" } });
+    mockRegisterKnowledgebaseTool.mockReturnValue({
+      search_knowledge_base: { description: "kb" },
+    });
+
+    const res = buildOrchestratorToolSet({
+      ...baseParams,
+      isMemoryEnabled: true,
+      subagentsEnabled: true,
+      internalToolOverrides: {
+        search_knowledge_base: "block",
+        save_memory: "block",
+        manage_artifact: "block",
+        load_skill: "block",
+        delegate_task: "block",
+        get_file_url: "block",
+      },
+      fileAttachments: [{ name: "a.txt", key: "k1" }],
+      ctx: {
+        activeKbIds: ["kb-1"],
+        kbIsReady: true,
+        availableSkills: [{ name: "skill-1" }],
+      },
+    });
+
+    expect(res.hasKbTool).toBe(false);
+    expect(res.hasArtifactTool).toBe(false);
+    expect(res.isSubagentDelegationEnabled).toBe(false);
+    expect(res.orchestratorActiveTools).not.toHaveProperty("search_knowledge_base");
+    expect(res.orchestratorActiveTools).not.toHaveProperty("save_memory");
+    expect(res.orchestratorActiveTools).not.toHaveProperty("manage_artifact");
+    expect(res.orchestratorActiveTools).not.toHaveProperty("load_skill");
+    expect(res.orchestratorActiveTools).not.toHaveProperty("get_file_url");
+    expect(res.subagentDispatchTools).not.toHaveProperty("delegate_task");
+  });
+
+  it("filters blocked individual skill authoring tools and blocks subagent KB/skill tools", () => {
+    mockRegisterMemoryTool.mockReturnValue({ save_memory: { description: "mem" } });
+    mockRegisterSkillTool.mockReturnValue({ load_skill: { description: "skill" } });
+    mockRegisterSkillAuthoringTools.mockReturnValue({
+      create_skill: { description: "create" },
+      delete_skill_file: { description: "delete" },
+    });
+    mockRegisterKnowledgebaseTool.mockReturnValue({
+      search_knowledge_base: { description: "kb" },
+    });
+
+    const res = buildOrchestratorToolSet({
+      ...baseParams,
+      subagentsEnabled: true,
+      internalToolOverrides: {
+        search_knowledge_base: "block",
+        load_skill: "block",
+        delete_skill_file: "block",
+      },
+      ctx: {
+        activeKbIds: [],
+        kbIsReady: true,
+        availableSkills: [{ name: "skill-1" }],
+        linkedSubagents: [{ id: "sub-1", name: "Sub 1" } as any],
+      },
+    });
+
+    expect(res.orchestratorActiveTools).toHaveProperty("create_skill");
+    expect(res.orchestratorActiveTools).not.toHaveProperty("delete_skill_file");
+
+    const dispatchConfig = mockCreateSubagentDispatchTool.mock.calls[0][0];
+    const isolated = dispatchConfig.buildIsolatedTools({
+      id: "sub-1",
+      tools: [],
+      knowledgebaseIds: ["kb-sub"],
+      skillMode: "dynamic",
+      skillIds: ["sk-1"],
+    });
+    expect(isolated).not.toHaveProperty("load_skill");
+
+    const kbTools = dispatchConfig.buildKnowledgebaseTools(["kb-sub"]);
+    expect(kbTools).toEqual({});
   });
 });

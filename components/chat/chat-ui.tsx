@@ -18,6 +18,7 @@ import {
 } from "@/components/chat/chat-ui-helpers";
 import { MessageThread } from "@/components/chat/message-thread";
 import { StreamingSection } from "@/components/chat/streaming-section";
+import { ToolApprovalDialog } from "@/components/chat/tool-approval-dialog";
 import { useChatArtifactPanel } from "@/components/chat/use-chat-artifact-panel";
 import {
   findAssistant,
@@ -34,8 +35,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCompactChat } from "@/hooks/chat/use-compact-chat";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { hydratedResources } from "@/lib/store/hydrated-resources";
 import type { Chat } from "@/types/chat/chat";
+import type { ApprovalDecision } from "@/types/tool/approval";
 
 export { resolveActiveChat } from "@/components/chat/use-chat-initial-state";
 
@@ -113,6 +116,7 @@ export function ChatUI({
     initialSelectedTools,
     initialKbIds,
     initialSkillIds,
+    initialApprovalMode,
   } = useChatInitialSelections(
     thread,
     currentProject,
@@ -133,6 +137,9 @@ export function ChatUI({
     isStreamingReasoning,
     activeToolCalls,
     assistantMessageId,
+    pendingApprovals,
+    approvalsDisabled,
+    submitToolApprovals,
     streamResponse,
     stopStream,
   } = useStreamResponse(chatId);
@@ -213,6 +220,39 @@ export function ChatUI({
     isInitialContextReady,
   );
 
+  const parkedPending = useMemo(() => {
+    for (let i = thread.length - 1; i >= 0; i--) {
+      const msg = thread[i];
+      if (msg.role !== "assistant") continue;
+      const meta = parseMessageMetadata(msg.metadata);
+      if (meta.pendingApprovals.length > 0) {
+        return {
+          messageId: msg.id,
+          approvals: meta.pendingApprovals,
+        };
+      }
+      break;
+    }
+    return null;
+  }, [thread]);
+
+  const effectivePendingApprovals =
+    pendingApprovals && pendingApprovals.length > 0
+      ? pendingApprovals
+      : (parkedPending?.approvals ?? []);
+  const effectiveApprovalMessageId =
+    pendingApprovals && pendingApprovals.length > 0
+      ? (assistantMessageId ?? parkedPending?.messageId ?? null)
+      : (parkedPending?.messageId ?? null);
+
+  const handleSubmitApprovals = useCallback(
+    async (decisions: ApprovalDecision[]): Promise<boolean> => {
+      if (!effectiveApprovalMessageId || !submitToolApprovals) return false;
+      return submitToolApprovals(effectiveApprovalMessageId, decisions);
+    },
+    [effectiveApprovalMessageId, submitToolApprovals],
+  );
+
   if (!chat) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -283,6 +323,11 @@ export function ChatUI({
                 </div>
               </div>
             )}
+            <ToolApprovalDialog
+              pendingApprovals={effectivePendingApprovals}
+              onSubmit={handleSubmitApprovals}
+              disabled={Boolean(approvalsDisabled)}
+            />
             <ChatInput
               key={chatId}
               chatId={chatId}
@@ -304,6 +349,7 @@ export function ChatUI({
               initialSubagentModelId={initialSubagentModelId}
               initialSubagentIds={initialSubagentIds}
               initialReasoningEffort={initialReasoningEffort}
+              initialApprovalMode={initialApprovalMode}
               onKnowledgebaseChange={handleKbChange}
               thread={thread}
               projectId={chat?.projectId}

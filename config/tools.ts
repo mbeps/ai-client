@@ -53,6 +53,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "manage_artifact",
     displayName: "Artifact",
     category: "Artifacts",
+    defaultApproval: "auto",
     description:
       "Displays an interactive artifact in a side panel: a markdown document, a multi-sheet spreadsheet, an HTML interface, or a Mermaid diagram. Use this when you want to render structured visual content, code side-by-side with the chat, or write large text. You have 4 modes: 'markdown', 'spreadsheet', 'html', and 'mermaid'.",
     availability: "Registered when the tool is selected for the chat.",
@@ -62,6 +63,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "save_memory",
     displayName: "Save Memory",
     category: "Memory",
+    defaultApproval: "auto",
     description:
       "Saves a user preference, background detail, or enduring convention to long-term memory. Use this to remember important details across chat sessions.",
     availability: "Registered when the tool is selected for the chat.",
@@ -71,6 +73,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "delegate_task",
     displayName: "Delegate Task",
     category: "Agents",
+    defaultApproval: "auto",
     description:
       "Delegates context-heavy research, planning, or exploration tasks to an isolated worker subagent. Operates with fresh context and shared scratchpad memory.",
     availability:
@@ -81,6 +84,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "search_knowledge_base",
     displayName: "Search Knowledge Base",
     category: "Knowledge",
+    defaultApproval: "auto",
     description:
       "Searches the knowledge bases attached to the chat using hybrid semantic and keyword search, and returns the most relevant passages. Use this to retrieve grounded context and factual excerpts from attached documents.",
     availability:
@@ -91,6 +95,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "load_skill",
     displayName: "Load Skill",
     category: "Skills",
+    defaultApproval: "auto",
     description:
       "Loads the full instructions and bundled reference files for one skill from the catalogue. Use this when you need detailed guidelines or reference materials to perform a specific task correctly.",
     availability: "Registered when the chat has at least one skill available.",
@@ -100,6 +105,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "create_skill",
     displayName: "Create Skill",
     category: "Skills",
+    defaultApproval: "ask",
     description:
       "Creates a new skill owned by the user, with its name, description, and SKILL.md instruction body. Use this to define and persist a new reusable capability or workflow.",
     availability: "Always registered for tool-calling models.",
@@ -109,6 +115,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "update_skill",
     displayName: "Update Skill",
     category: "Skills",
+    defaultApproval: "ask",
     description:
       "Updates a skill's display name, description, or enabled flag. Use this when you need to modify skill metadata or toggle its active state.",
     availability: "Always registered for tool-calling models.",
@@ -118,6 +125,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "write_skill_file",
     displayName: "Write Skill File",
     category: "Skills",
+    defaultApproval: "ask",
     description:
       "Writes one file inside an existing skill, creating it or replacing its content. Use this to add or update reference files and instruction bodies within a skill.",
     availability: "Always registered for tool-calling models.",
@@ -127,6 +135,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "read_skill_file",
     displayName: "Read Skill File",
     category: "Skills",
+    defaultApproval: "auto",
     description:
       "Lists every file in a skill, or reads the full content of one file. Use this to inspect skill contents before modifying or referencing them.",
     availability: "Always registered for tool-calling models.",
@@ -136,6 +145,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "delete_skill_file",
     displayName: "Delete Skill File",
     category: "Skills",
+    defaultApproval: "ask",
     description:
       "Removes a bundled reference file from a skill. Use this to clean up outdated or unused files within a skill package.",
     availability: "Always registered for tool-calling models.",
@@ -145,6 +155,7 @@ export const INTERNAL_TOOL_CATALOGUE = [
     name: "get_file_url",
     displayName: "Get File URL",
     category: "Files",
+    defaultApproval: "auto",
     description:
       "Returns a temporary download URL for a file the user uploaded to the chat. Use this when you need to provide an accessible file URL to another tool or API.",
     availability: "Registered when the chat has at least one file attachment.",

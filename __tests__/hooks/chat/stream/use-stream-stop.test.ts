@@ -51,6 +51,7 @@ describe("executeStopStream", () => {
   function createRefs(overrides?: Partial<any>) {
     return {
       stoppedRef: { current: false },
+      awaitingApprovalRef: { current: false },
       accumulatedTextRef: { current: "" },
       accumulatedReasoningRef: { current: "" },
       activeToolCallsRef: { current: [] as any[] },

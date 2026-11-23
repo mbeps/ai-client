@@ -1,4 +1,14 @@
-import { ArrowRight, Bot, Mic, Plus, Save, Square, X } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  Mic,
+  Plus,
+  Save,
+  ShieldCheck,
+  ShieldOff,
+  Square,
+  X,
+} from "lucide-react";
 import { AttachmentsMenu } from "@/components/chat/attachments-menu";
 import { ContextUsagePill } from "@/components/chat/context-usage-pill";
 import { ReasoningEffortSelector } from "@/components/chat/input/reasoning-effort-selector";
@@ -25,6 +35,7 @@ import type { PublicMcpServer } from "@/types/mcp/public-mcp-server";
 import type { Message } from "@/types/message/message";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Represents chat input attachments trigger props.
@@ -142,6 +153,8 @@ function SendStopButton({
   onSend: () => void;
   submitLabel?: string;
   isSendDisabled: boolean;
+  approvalMode?: ApprovalMode;
+  onToggleApprovalMode?: () => void;
 }) {
   if (isLoading) {
     return (
@@ -216,6 +229,52 @@ function VoiceInputButton({ disabled }: { disabled: boolean }) {
 }
 
 /**
+ * Per-chat tool approval mode toggle button (`"ask"` vs `"auto"`).
+ */
+function ApprovalModeToggleButton({
+  mode,
+  onToggle,
+  disabled,
+}: {
+  mode: ApprovalMode;
+  onToggle: () => void;
+  disabled: boolean;
+}) {
+  const isAuto = mode === "auto";
+  const tooltipText = isAuto
+    ? "Auto-approving all tool calls (click to require approval)"
+    : "Require approval for tool calls (click to allow all)";
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onToggle}
+          disabled={disabled}
+          aria-label={`Tool approval mode: ${mode}`}
+          aria-pressed={isAuto}
+          className={
+            isAuto
+              ? "h-7 w-7 rounded-full border border-amber-500/40 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-300"
+              : "text-muted-foreground hover:text-foreground h-7 w-7 rounded-full"
+          }
+        >
+          {isAuto ? (
+            <ShieldOff className="h-3.5 w-3.5" />
+          ) : (
+            <ShieldCheck className="h-3.5 w-3.5" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{tooltipText}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
  * Represents chat input action buttons props.
  *
  * @author Maruf Bepary
@@ -242,6 +301,8 @@ interface ChatInputActionButtonsProps {
   onSend: () => void;
   submitLabel?: string;
   isSendDisabled: boolean;
+  approvalMode?: ApprovalMode;
+  onToggleApprovalMode?: () => void;
 }
 
 /**
@@ -273,12 +334,21 @@ function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
       />
       {props.onCancel && <CancelButton onCancel={props.onCancel} />}
       <VoiceInputButton disabled={props.hasNoModels} />
+      {props.onToggleApprovalMode && (
+        <ApprovalModeToggleButton
+          mode={props.approvalMode ?? "ask"}
+          onToggle={props.onToggleApprovalMode}
+          disabled={props.hasNoModels}
+        />
+      )}
       <SendStopButton
         isLoading={props.isLoading}
         onStop={props.onStop}
         onSend={props.onSend}
         submitLabel={props.submitLabel}
         isSendDisabled={props.isSendDisabled}
+        approvalMode={props.approvalMode}
+        onToggleApprovalMode={props.onToggleApprovalMode}
       />
     </div>
   );
@@ -339,6 +409,8 @@ export interface ChatInputToolbarProps {
   isSendDisabled: boolean;
   reasoningEffort?: ReasoningEffort;
   onReasoningEffortChange?: (effort: ReasoningEffort) => void;
+  approvalMode?: ApprovalMode;
+  onToggleApprovalMode?: () => void;
 }
 
 /**
@@ -427,6 +499,8 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
         onSend={props.onSend}
         submitLabel={props.submitLabel}
         isSendDisabled={props.isSendDisabled}
+        approvalMode={props.approvalMode}
+        onToggleApprovalMode={props.onToggleApprovalMode}
       />
     </div>
   );

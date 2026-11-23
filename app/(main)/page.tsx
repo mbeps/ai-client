@@ -30,10 +30,17 @@ export default function HomePage() {
   const { data: session } = authClient.useSession();
   const createChatDb = useAppStore((state) => state.createChatDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
+  const userSettings = useAppStore((state) => state.userSettings);
   const { models: chatModels, isLoading: isModelsLoading } =
     useUserModels("chat");
 
-  useResourceHydration(["mcpServers", "agents", "prompts", "skills"]);
+  useResourceHydration([
+    "mcpServers",
+    "agents",
+    "prompts",
+    "skills",
+    "userSettings",
+  ]);
 
   const enabledServers = useMemo(() => {
     return mcpServers.filter((s) => s.enabled);
@@ -135,6 +142,9 @@ export default function HomePage() {
             chatId={NEW_CHAT_TOOLS_KEY}
             onSend={handleStart}
             servers={enabledServers}
+            initialApprovalMode={
+              userSettings?.defaultAutoApprove ? "auto" : "ask"
+            }
           />
         </div>
       </div>

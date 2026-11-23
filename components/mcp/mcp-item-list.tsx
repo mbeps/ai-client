@@ -42,6 +42,8 @@ export interface McpItemListProps<T> {
   itemKind: string;
   emptyMessage: string;
   renderContent: (item: T) => React.ReactNode;
+  headerActions?: (items: T[]) => React.ReactNode;
+  renderItemActions?: (item: T, items: T[]) => React.ReactNode;
 }
 
 /**
@@ -72,6 +74,8 @@ export function McpItemList<T>({
   itemKind,
   emptyMessage,
   renderContent,
+  headerActions,
+  renderItemActions,
 }: McpItemListProps<T>) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,10 +144,13 @@ export function McpItemList<T>({
             {items.length !== 1 && "s"} available
           </span>
         </div>
-        <Button variant="ghost" size="sm" onClick={discover} className="h-8">
-          <RefreshCw className="mr-2 h-3.5 w-3.5" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {headerActions?.(items)}
+          <Button variant="ghost" size="sm" onClick={discover} className="h-8">
+            <RefreshCw className="mr-2 h-3.5 w-3.5" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Card className="bg-background/50 overflow-hidden border-none shadow-none">
@@ -154,18 +161,27 @@ export function McpItemList<T>({
               value={getItemKey(item)}
               className="border-border/50 hover:bg-muted/30 border-b px-4 transition-colors last:border-0"
             >
-              <AccordionTrigger className="py-4 hover:no-underline">
-                <div className="flex items-center gap-3 text-left">
-                  <div className="bg-primary/10 text-primary rounded-md p-2">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-mono text-sm font-semibold">
-                      {getItemLabel(item)}
-                    </p>
-                  </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <AccordionTrigger className="py-4 hover:no-underline">
+                    <div className="flex items-center gap-3 text-left">
+                      <div className="bg-primary/10 text-primary rounded-md p-2">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-mono text-sm font-semibold">
+                          {getItemLabel(item)}
+                        </p>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
                 </div>
-              </AccordionTrigger>
+                {renderItemActions && (
+                  <div className="shrink-0">
+                    {renderItemActions(item, items)}
+                  </div>
+                )}
+              </div>
               <AccordionContent className="pt-1 pb-4">
                 <div className="space-y-4 pl-11">{renderContent(item)}</div>
               </AccordionContent>

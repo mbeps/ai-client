@@ -26,6 +26,7 @@ const newVars = [
   "DEFAULT_CHUNK_SIZE",
   "DEFAULT_CHUNK_OVERLAP",
   "CHAT_MAX_STEPS",
+  "CHAT_MAX_APPROVAL_ROUNDS",
   "S3_FORCE_PATH_STYLE",
   "RATE_LIMIT_CHAT_RPM",
   "RATE_LIMIT_UPLOAD_RPM",
@@ -41,6 +42,7 @@ const expectedDefaults: Record<(typeof newVars)[number], number | boolean> = {
   DEFAULT_CHUNK_SIZE: 1000,
   DEFAULT_CHUNK_OVERLAP: 200,
   CHAT_MAX_STEPS: 10,
+  CHAT_MAX_APPROVAL_ROUNDS: 10,
   S3_FORCE_PATH_STYLE: true,
   RATE_LIMIT_CHAT_RPM: 20,
   RATE_LIMIT_UPLOAD_RPM: 30,
@@ -64,10 +66,37 @@ describe("env configuration and validation", () => {
         {
           ...baseRequiredServerEnv,
           EMBEDDING_DIMENSIONS: "1536",
+          CHAT_MAX_APPROVAL_ROUNDS: "5",
         },
         true,
       );
       expect(parsed.EMBEDDING_DIMENSIONS).toBe(1536);
+      expect(parsed.CHAT_MAX_APPROVAL_ROUNDS).toBe(5);
+    });
+
+    it("clamps CHAT_MAX_APPROVAL_ROUNDS to at least 1", () => {
+      const parsed = validateEnv(
+        {
+          ...baseRequiredServerEnv,
+          CHAT_MAX_APPROVAL_ROUNDS: "0",
+        },
+        true,
+      );
+      expect(parsed.CHAT_MAX_APPROVAL_ROUNDS).toBe(1);
+    });
+
+    it("preserves TOOL_APPROVAL_SECRET when provided and leaves it undefined when omitted", () => {
+      const withoutSecret = validateEnv(baseRequiredServerEnv, true);
+      expect(withoutSecret.TOOL_APPROVAL_SECRET).toBeUndefined();
+
+      const withSecret = validateEnv(
+        {
+          ...baseRequiredServerEnv,
+          TOOL_APPROVAL_SECRET: "approval-secret-key",
+        },
+        true,
+      );
+      expect(withSecret.TOOL_APPROVAL_SECRET).toBe("approval-secret-key");
     });
 
     it("parses S3_FORCE_PATH_STYLE=false to boolean false", () => {

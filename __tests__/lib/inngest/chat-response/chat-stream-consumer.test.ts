@@ -126,6 +126,7 @@ describe("chat-stream-consumer", () => {
         accumulatedText: "Hello world!",
         accumulatedReasoning: "",
         aborted: false,
+        pendingApprovals: [],
       });
 
       // Rapid consecutive chunks without time passage should coalesce
@@ -195,6 +196,7 @@ describe("chat-stream-consumer", () => {
         accumulatedText: "Final answer.",
         accumulatedReasoning: "Thinking step 1. Thinking step 2.",
         aborted: false,
+        pendingApprovals: [],
       });
 
       // Reasoning should be emitted before text
@@ -449,6 +451,7 @@ describe("chat-stream-consumer", () => {
         accumulatedText: "",
         accumulatedReasoning: "",
         aborted: false,
+        pendingApprovals: [],
       });
       expect(emitted).toEqual([]);
     });
@@ -502,6 +505,7 @@ describe("chat-stream-consumer", () => {
         accumulatedText: "",
         accumulatedReasoning: "",
         aborted: false,
+        pendingApprovals: [],
       });
       expect(emitted).toEqual([]);
     });
@@ -851,6 +855,7 @@ describe("chat-stream-consumer", () => {
         accumulatedText: "buffered text",
         accumulatedReasoning: "buffered reasoning",
         aborted: false,
+        pendingApprovals: [],
       });
       expect(emitted).toEqual([
         { type: "text-delta", text: "buffered text" },
@@ -1036,6 +1041,320 @@ describe("chat-stream-consumer", () => {
         expect(result.aborted).toBe(true);
         expect(result.accumulatedText).toBe("In-flight text <th");
       }
+    });
+
+    it("handles tool-approval-request (ignoring isAutomatic), tool-output-denied, and early tool-result before tool-call", async () => {
+      const abortController = new AbortController();
+      const emitted: ChatStreamEvent[] = [];
+      const emit = async (event: ChatStreamEvent) => {
+        emitted.push(event);
+      };
+      const completedTools: any[] = [];
+
+      async function* approvalStream() {
+        // Early tool-result before tool-call (resume round)
+        yield {
+          type: "tool-result",
+          toolCallId: "tc-resumed",
+          toolName: "resumed_tool",
+          output: { done: true },
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "tc-resumed",
+          toolName: "resumed_tool",
+          input: { id: 1 },
+        };
+        // Tool output denied
+        yield {
+          type: "tool-call",
+          toolCallId: "tc-denied",
+          toolName: "denied_tool",
+          input: {},
+        };
+        yield {
+          type: "tool-output-denied",
+          toolCallId: "tc-denied",
+          toolName: "denied_tool",
+        };
+        // Automatic approval request (must be ignored)
+        yield {
+          type: "tool-approval-request",
+          approvalId: "app-auto",
+          isAutomatic: true,
+          toolCall: {
+            toolCallId: "tc-auto",
+            toolName: "auto_tool",
+            input: {},
+          },
+          signature: "sig-auto",
+        };
+        // User approval request
+        yield {
+          type: "tool-call",
+          toolCallId: "tc-gated",
+          toolName: "create_skill",
+          input: { name: "x" },
+        };
+        yield {
+          type: "tool-approval-request",
+          approvalId: "app-1",
+          toolCall: {
+            toolCallId: "tc-gated",
+            toolName: "create_skill",
+            input: { name: "x" },
+          },
+          reason: "Requires confirmation",
+          signature: "sig-1",
+        };
+      }
+
+      const result = await consumeModelStream(
+        approvalStream(),
+        abortController.signal,
+        emit,
+        { create_skill: "Internal" },
+        completedTools,
+        undefined,
+        { toolServerIdMap: {}, round: 1, maxRounds: 10 },
+      );
+
+      expect(result.pendingApprovals).toEqual([
+        {
+          approvalId: "app-1",
+          toolCallId: "tc-gated",
+          toolName: "create_skill",
+          serverName: "Internal",
+          serverId: undefined,
+          args: { name: "x" },
+          reason: "Requires confirmation",
+          signature: "sig-1",
+        },
+      ]);
+      // Blocked call tc-gated must be excluded from completedTools
+      expect(completedTools).toEqual([
+        {
+          toolCallId: "tc-resumed",
+          toolName: "resumed_tool",
+          args: { id: 1 },
+          serverName: undefined,
+          result: { done: true },
+        },
+        {
+          toolCallId: "tc-denied",
+          toolName: "denied_tool",
+          args: {},
+          serverName: undefined,
+          result: { error: "Denied by user" },
+        },
+      ]);
+      expect(emitted).not.toContainEqual(
+        expect.objectContaining({ type: "tool-approval-required" }),
+      );
+    });
+
+    it("updates pre-restored approved tool records on tool-result without a new tool-call and avoids duplicating on matching tool-call", async () => {
+      const emitted: ChatStreamEvent[] = [];
+      const emit = async (event: ChatStreamEvent) => {
+        emitted.push(event);
+      };
+
+      // Case 1: Pre-restored approved tool receives tool-result without any tool-call
+      const completedTools1: any[] = [
+        {
+          toolCallId: "tc-approved-1",
+          toolName: "create_skill",
+          args: { name: "my-skill" },
+          serverName: "Internal",
+        },
+      ];
+      async function* resumedNoCallStream() {
+        yield {
+          type: "tool-result",
+          toolCallId: "tc-approved-1",
+          toolName: "create_skill",
+          output: { skillId: "sk-1" },
+        };
+        yield { type: "text-delta", text: "Skill created." };
+      }
+
+      const res1 = await consumeModelStream(
+        resumedNoCallStream(),
+        new AbortController().signal,
+        emit,
+        { create_skill: "Internal" },
+        completedTools1,
+      );
+      expect(res1.accumulatedText).toBe("Skill created.");
+      expect(completedTools1).toEqual([
+        {
+          toolCallId: "tc-approved-1",
+          toolName: "create_skill",
+          args: { name: "my-skill" },
+          serverName: "Internal",
+          result: { skillId: "sk-1" },
+        },
+      ]);
+
+      // Case 2: Pre-restored record updated by matching tool-call (with and without serverName)
+      const completedTools2: any[] = [
+        {
+          toolCallId: "tc-pre",
+          toolName: "search",
+          args: { q: "old" },
+          serverName: undefined,
+        },
+        {
+          toolCallId: "tc-pre-nosrv",
+          toolName: "unmapped_tool",
+          args: { x: 1 },
+          serverName: undefined,
+        },
+      ];
+      async function* preSeededCallStream() {
+        yield {
+          type: "tool-call",
+          toolCallId: "tc-pre",
+          toolName: "search",
+          input: { q: "new" },
+        };
+        yield {
+          type: "tool-call",
+          toolCallId: "tc-pre-nosrv",
+          toolName: "unmapped_tool",
+          input: { x: 2 },
+        };
+      }
+
+      await consumeModelStream(
+        preSeededCallStream(),
+        new AbortController().signal,
+        emit,
+        { search: "SearchServer" },
+        completedTools2,
+      );
+      expect(completedTools2).toEqual([
+        {
+          toolCallId: "tc-pre",
+          toolName: "search",
+          args: { q: "new" },
+          serverName: "SearchServer",
+        },
+        {
+          toolCallId: "tc-pre-nosrv",
+          toolName: "unmapped_tool",
+          args: { x: 2 },
+          serverName: undefined,
+        },
+      ]);
+    });
+
+    it("caps pendingApprovals when round exceeds maxRounds", async () => {
+      const abortController = new AbortController();
+      const emitted: ChatStreamEvent[] = [];
+      const emit = async (event: ChatStreamEvent) => {
+        emitted.push(event);
+      };
+      const completedTools: any[] = [];
+
+      async function* cappedStream() {
+        yield {
+          type: "tool-approval-request",
+          approvalId: "app-cap",
+          toolCall: {
+            toolCallId: "tc-cap",
+            toolName: "create_skill",
+            input: {},
+          },
+          signature: "sig-cap",
+        };
+      }
+
+      const result = await consumeModelStream(
+        cappedStream(),
+        abortController.signal,
+        emit,
+        {},
+        completedTools,
+        undefined,
+        { round: 11, maxRounds: 10 },
+      );
+
+      expect(result.pendingApprovals).toEqual([]);
+      expect(emitted).not.toContainEqual(
+        expect.objectContaining({ type: "tool-approval-required" }),
+      );
+    });
+
+    it("handles flat tool-approval-request without signature or approvalContext and tool-output-denied fallbacks", async () => {
+      const abortController = new AbortController();
+      const emitted: ChatStreamEvent[] = [];
+      const emit = async (event: ChatStreamEvent) => {
+        emitted.push(event);
+      };
+      const completedTools: any[] = [];
+
+      async function* fallbackStream() {
+        yield {
+          type: "tool-call",
+          toolCallId: "tc-known",
+          toolName: "known_tool",
+          input: {},
+        };
+        // tool-output-denied without chunk.toolName when tc exists
+        yield {
+          type: "tool-output-denied",
+          toolCallId: "tc-known",
+        };
+        // tool-output-denied without chunk.toolName and without matching tc
+        yield {
+          type: "tool-output-denied",
+          toolCallId: "tc-unknown-denied",
+        };
+        // flat tool-approval-request without signature and without approvalContext
+        yield {
+          type: "tool-approval-request",
+          approvalId: "app-flat",
+          toolCallId: "tc-flat",
+          toolName: "flat_tool",
+          args: { a: 1 },
+        };
+      }
+
+      const result = await consumeModelStream(
+        fallbackStream(),
+        abortController.signal,
+        emit,
+        {},
+        completedTools,
+      );
+
+      expect(result.pendingApprovals).toEqual([
+        {
+          approvalId: "app-flat",
+          toolCallId: "tc-flat",
+          toolName: "flat_tool",
+          serverName: undefined,
+          serverId: undefined,
+          args: { a: 1 },
+          reason: undefined,
+          signature: "",
+        },
+      ]);
+      expect(emitted).toContainEqual({
+        type: "tool-result",
+        toolCallId: "tc-known",
+        toolName: "known_tool",
+        result: { error: "Denied by user" },
+        serverName: undefined,
+      });
+      expect(emitted).toContainEqual({
+        type: "tool-result",
+        toolCallId: "tc-unknown-denied",
+        toolName: "tool",
+        result: { error: "Denied by user" },
+        serverName: undefined,
+      });
     });
   });
 });

@@ -5,6 +5,7 @@ import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-to
 import { useChatToolsStore } from "@/lib/store/use-chat-tools-store";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Represents chat input selections options.
@@ -21,6 +22,7 @@ export interface ChatInputSelectionsOptions {
   initialSubagentsEnabled?: boolean;
   initialSubagentModelId?: string;
   initialSubagentIds?: readonly string[] | string[];
+  initialApprovalMode?: ApprovalMode;
 }
 
 const EMPTY_STRING_ARRAY: string[] = [];
@@ -342,6 +344,42 @@ function useSubagentSelections(
 }
 
 /**
+ * Manages per-chat tool execution approval mode (`"ask"` vs `"auto"`),
+ * persisted in `useChatToolsStore` across refreshes and new chat creation.
+ */
+function useApprovalModeSelection(
+  chatId?: string,
+  initialApprovalMode?: ApprovalMode,
+) {
+  const persistedMode = useChatToolsStore((s) =>
+    chatId ? s.approvalModeByChat[chatId] : undefined,
+  );
+  const [approvalMode, setApprovalMode] = useState<ApprovalMode>(
+    () => persistedMode ?? initialApprovalMode ?? "ask",
+  );
+
+  const seedKey = `${persistedMode ?? ""}:${initialApprovalMode ?? ""}`;
+  const lastSeedKey = useRef(seedKey);
+  useEffect(() => {
+    if (lastSeedKey.current === seedKey) return;
+    lastSeedKey.current = seedKey;
+    setApprovalMode(persistedMode ?? initialApprovalMode ?? "ask");
+  }, [seedKey, persistedMode, initialApprovalMode]);
+
+  const toggleApprovalMode = useCallback(() => {
+    setApprovalMode((prev) => {
+      const next: ApprovalMode = prev === "ask" ? "auto" : "ask";
+      if (chatId) {
+        useChatToolsStore.getState().setChatApprovalMode(chatId, next);
+      }
+      return next;
+    });
+  }, [chatId]);
+
+  return { approvalMode, toggleApprovalMode };
+}
+
+/**
  * Manages selections of MCP servers, MCP tools, knowledge bases, agent skills,
  * and subagents configuration for the chat input bar.
  */
@@ -361,11 +399,16 @@ export function useChatInputSelections(props: ChatInputSelectionsOptions) {
     props.initialSubagentModelId,
     props.initialSubagentIds,
   );
+  const approval = useApprovalModeSelection(
+    props.chatId,
+    props.initialApprovalMode,
+  );
 
   return {
     ...tools,
     ...kbs,
     ...skills,
     ...subagents,
+    ...approval,
   };
 }

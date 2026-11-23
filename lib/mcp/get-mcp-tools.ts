@@ -68,6 +68,7 @@ function collectConnectedServers(
 function mergeConnectionTools(
   connections: McpConnection[],
   selectedTools?: string[],
+  blockedByServerId?: Map<string, Set<string>>,
 ): {
   tools: Record<string, any>;
   toolSourceMap: Record<string, string>;
@@ -78,7 +79,11 @@ function mergeConnectionTools(
   const toolServerIdMap: Record<string, string> = {};
 
   for (const conn of connections) {
+    const blockedTools = blockedByServerId?.get(conn.serverId);
     for (const [name, tool] of Object.entries(conn.tools)) {
+      if (blockedTools?.has(name)) {
+        continue;
+      }
       if (
         !isToolSelectedForConnection(
           name,
@@ -131,10 +136,18 @@ export async function getMcpTools(
     servers.map((server) => connectServer(server)),
   );
 
+  const blockedByServerId = new Map<string, Set<string>>();
+  for (const server of servers) {
+    if (server.blockedTools?.length) {
+      blockedByServerId.set(server.id, new Set(server.blockedTools));
+    }
+  }
+
   const connections = collectConnectedServers(servers, results);
   const { tools, toolSourceMap, toolServerIdMap } = mergeConnectionTools(
     connections,
     selectedTools,
+    blockedByServerId,
   );
 
   const cleanup = async () => {

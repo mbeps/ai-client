@@ -6,6 +6,7 @@ import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Performs scroll element to bottom.
@@ -107,6 +108,7 @@ export function useChatMessageActions({
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
       subagentIds?: string[],
+      approvalMode?: ApprovalMode,
     ) => {
       await streamResponse(
         crypto.randomUUID(),
@@ -124,6 +126,7 @@ export function useChatMessageActions({
         subagentModelId,
         reasoningEffort,
         subagentIds,
+        approvalMode,
       );
     },
     [chat?.currentLeafId, streamResponse],
@@ -145,6 +148,7 @@ export function useChatMessageActions({
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
       subagentIds?: string[],
+      approvalMode?: ApprovalMode,
     ) => {
       const msg = chat?.messages[id];
       if (!msg) return;
@@ -164,6 +168,7 @@ export function useChatMessageActions({
         subagentModelId,
         reasoningEffort,
         subagentIds,
+        approvalMode,
       );
     },
     [chat, streamResponse],

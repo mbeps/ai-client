@@ -279,6 +279,7 @@ export function useStreamEventHandlers(params: {
           isCompactingRef.current = false;
           toast.dismiss(`auto-compact-${chatId}`);
         }
+        streamRefs.awaitingApprovalRef.current = false;
         streamRefs.lastChunkTimeRef.current = 0;
         if (streamRefs.rejoinedRef.current) {
           await handleRejoinFinish();
@@ -295,6 +296,7 @@ export function useStreamEventHandlers(params: {
           isCompactingRef.current = false;
           toast.dismiss(`auto-compact-${chatId}`);
         }
+        streamRefs.awaitingApprovalRef.current = false;
         streamRefs.lastChunkTimeRef.current = 0;
         clearInflightState(chatId);
         if (!handleApiError(event)) {
@@ -303,6 +305,16 @@ export function useStreamEventHandlers(params: {
         resetStreamingState();
         return;
       }
+
+      if (event.type === "tool-approval-required") {
+        streamRefs.awaitingApprovalRef.current = true;
+        streamRefs.lastChunkTimeRef.current = Date.now();
+        streamSetters.setPendingApprovals?.(event.approvals);
+        streamSetters.setApprovalsDisabled?.(false);
+        return;
+      }
+
+      streamRefs.awaitingApprovalRef.current = false;
 
       applyStreamDelta(
         event,

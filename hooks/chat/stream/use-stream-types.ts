@@ -1,5 +1,6 @@
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { ApprovalMode, PendingApproval } from "@/types/tool/approval";
 import type { ToolCallState } from "@/types/tool/tool-call";
 
 /**
@@ -29,6 +30,7 @@ export interface BuildMetadataOptions {
   subagentModelId?: string;
   subagentIds?: string[];
   reasoningEffort?: ReasoningEffort;
+  approvalMode?: ApprovalMode;
 }
 
 /**
@@ -73,6 +75,7 @@ export interface StreamRequestOptions {
   subagentModelId?: string;
   subagentIds?: string[];
   reasoningEffort?: ReasoningEffort;
+  approvalMode?: ApprovalMode;
 }
 
 /**
@@ -99,6 +102,8 @@ export interface StreamDeltaSetters {
   setStreamingReasoning: (reasoning: string | null) => void;
   setActiveToolCalls: (calls: ToolCallState[]) => void;
   setIsStreaming: (is: boolean) => void;
+  setPendingApprovals?: (approvals: PendingApproval[]) => void;
+  setApprovalsDisabled?: (disabled: boolean) => void;
 }
 
 /**
@@ -127,6 +132,7 @@ export interface StreamRefsObject {
   stoppedRef: { current: boolean };
   rejoinedRef: { current: boolean };
   checkedChatIdRef: { current: string | null };
+  awaitingApprovalRef: { current: boolean };
 }
 
 /**
@@ -151,6 +157,7 @@ export interface StreamResponseExecutionParams {
   subagentModelId?: string;
   subagentIds?: string[];
   reasoningEffort?: ReasoningEffort;
+  approvalMode?: ApprovalMode;
   addMessage: (chatId: string, message: any) => void;
   updateMessageAttachments: (
     chatId: string,

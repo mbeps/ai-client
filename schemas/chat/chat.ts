@@ -8,6 +8,21 @@ import { reasoningEffortSchema } from "@/schemas/providers/provider-registry";
 import { dateField, idField } from "@/schemas/shared-fields";
 
 /**
+ * Validates per-chat or per-tool execution approval mode.
+ */
+export const approvalModeSchema = z.enum(["ask", "auto"]);
+
+/**
+ * Validates a single user decision for a pending tool approval request.
+ */
+export const approvalDecisionSchema = z
+  .object({
+    approvalId: z.string().min(1).max(100),
+    approved: z.boolean(),
+  })
+  .strict();
+
+/**
  * Validates a message object for persistence to the database.
  * Enforces UUID format for id and parentId, ensures content is non-empty.
  * Role enumeration constrains to valid message types (user, assistant, system).
@@ -133,6 +148,7 @@ export const messageMetadataSchema = z.object({
     .optional(),
   reasoning: z.string().optional(),
   reasoningEffort: reasoningEffortSchema.optional(),
+  approvalMode: approvalModeSchema.optional(),
   model: z.string().optional(),
   compaction: z
     .object({
@@ -179,6 +195,7 @@ export const chatRequestSchema = z
     subagentIds: z.array(subagentTargetIdField).max(20).optional(),
     subagentModelId: z.string().max(100).optional(),
     reasoningEffort: reasoningEffortSchema.optional(),
+    approvalMode: approvalModeSchema.optional(),
   })
   .strict();
 

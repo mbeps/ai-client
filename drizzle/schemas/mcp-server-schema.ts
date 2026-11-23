@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -32,6 +33,14 @@ export const mcpServer = pgTable(
     oauthScope: text("oauth_scope"),
     enabled: boolean("enabled").notNull().default(true),
     isPublic: boolean("is_public").notNull().default(false),
+    autoApprovedTools: text("auto_approved_tools")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    blockedTools: text("blocked_tools")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     ...timestampColumns(),
   },
   (table) => [index("mcp_server_user_id_idx").on(table.userId)],
@@ -55,6 +64,14 @@ export const userMcpServerInstall = pgTable(
     oauthClientId: text("oauth_client_id"),
     oauthClientSecret: text("oauth_client_secret"),
     enabled: boolean("enabled").notNull().default(true),
+    autoApprovedTools: text("auto_approved_tools")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    blockedTools: text("blocked_tools")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     ...timestampColumns(),
   },
   (table) => [

@@ -17,6 +17,7 @@ import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import { getLogger } from "@/lib/logger";
 import { getUserSettingsByUserId } from "@/lib/user/get-user-settings-by-id";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { ToolApprovalMap } from "@/types/tool/approval";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -227,6 +228,8 @@ export function buildStreamExecutionConfig(params: {
   hasAnyTools: boolean;
   maxSteps: number;
   reasoningEffort?: ReasoningEffort;
+  toolApproval?: ToolApprovalMap;
+  experimental_toolApprovalSecret?: string | Uint8Array;
 }) {
   return {
     model: params.resolved.sdkProvider.chat(params.resolvedModelId),
@@ -238,6 +241,13 @@ export function buildStreamExecutionConfig(params: {
     messages: params.finalMessages,
     tools: params.allTools,
     stopWhen: params.hasAnyTools ? isStepCount(params.maxSteps) : undefined,
+    ...(params.toolApproval ? { toolApproval: params.toolApproval } : {}),
+    ...(params.experimental_toolApprovalSecret
+      ? {
+          experimental_toolApprovalSecret:
+            params.experimental_toolApprovalSecret,
+        }
+      : {}),
   };
 }
 

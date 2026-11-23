@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockPublish = vi.hoisted(() => vi.fn());
 const mockPersistResponse = vi.hoisted(() => vi.fn());
+const mockUpdateResponse = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+const mockDbSelectLimit = vi.hoisted(() => vi.fn().mockResolvedValue([]));
 const mockResolveProvider = vi.hoisted(() => vi.fn());
 const mockLoadChatContext = vi.hoisted(() => vi.fn());
 const mockLoadThread = vi.hoisted(() => vi.fn());
@@ -17,6 +19,16 @@ vi.mock("@/lib/chat/build-system-prompt", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/lib/chat/build-system-prompt")>();
   return { buildSystemPrompt: vi.fn(actual.buildSystemPrompt) };
+});
+
+vi.mock("@/lib/inngest/chat-response/tool-set-builder", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/lib/inngest/chat-response/tool-set-builder")
+    >();
+  return {
+    buildOrchestratorToolSet: vi.fn(actual.buildOrchestratorToolSet),
+  };
 });
 
 vi.mock("@/lib/chat/compact-chat-thread", async (importOriginal) => {
@@ -46,8 +58,21 @@ vi.mock("@/lib/chat/load-thread-from-db", () => ({
   loadThreadFromDb: mockLoadThread,
 }));
 
+vi.mock("@/drizzle/db", () => ({
+  db: {
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: mockDbSelectLimit,
+        })),
+      })),
+    })),
+  },
+}));
+
 vi.mock("@/lib/chat/persist-response", () => ({
   persistAssistantResponse: mockPersistResponse,
+  updateAssistantResponse: mockUpdateResponse,
 }));
 
 vi.mock("@/lib/chat/has-existing-assistant-message", () => ({
@@ -2638,6 +2663,796 @@ describe("generateChatResponse Inngest Function", () => {
       });
 
       expect(compactChatThread).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("tool approval gate and resume loop", () => {
+    it("parks pendingApprovals, skips synthesis fallback and finish on tool-approval-request", async () => {
+      mockPersistResponse.mockClear();
+      mockPublish.mockClear();
+      mockStreamText.mockReset();
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Let me create that skill. " };
+          yield {
+            type: "tool-call",
+            toolCallId: "tc-1",
+            toolName: "create_skill",
+            input: { name: "my-skill" },
+          };
+          yield {
+            type: "tool-approval-request",
+            approvalId: "app-1",
+            toolCall: {
+              toolCallId: "tc-1",
+              toolName: "create_skill",
+              input: { name: "my-skill" },
+            },
+            signature: "sig-1",
+          };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+        finishReason: Promise.resolve("tool-calls"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/response.generate",
+          data: {
+            chatId: "chat-park",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+            approvalMode: "ask",
+          },
+        },
+      });
+
+      // streamText should be called only once (no synthesis fallback pass)
+      expect(mockStreamText).toHaveBeenCalledTimes(1);
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolApproval: expect.objectContaining({
+            create_skill: "user-approval",
+          }),
+          experimental_toolApprovalSecret: expect.any(String),
+        }),
+      );
+
+      // Should persist assistant message BEFORE emitting tool-approval-required, and NOT emit finish
+      expect(mockPersistResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatId: "chat-park",
+          content: "Let me create that skill. ",
+        }),
+      );
+      const approvalEmitOrder = vi
+        .mocked(inngest.realtime.publish)
+        .mock.invocationCallOrder.find((_, idx) => {
+          const call = vi.mocked(inngest.realtime.publish).mock.calls[idx];
+          return (call?.[1] as any)?.type === "tool-approval-required";
+        });
+      expect(approvalEmitOrder).toBeDefined();
+      expect(mockPersistResponse.mock.invocationCallOrder[0]).toBeLessThan(
+        approvalEmitOrder!,
+      );
+      const persistedMeta = JSON.parse(
+        mockPersistResponse.mock.calls[0][0].metadata,
+      );
+      expect(persistedMeta.approvalRound).toBe(1);
+      expect(persistedMeta.parentUserMessageId).toBe("msg-1");
+      expect(persistedMeta.pendingApprovals).toHaveLength(1);
+      expect(persistedMeta.pendingApprovals[0].approvalId).toBe("app-1");
+    });
+
+    it("does not emit tool-approval-required when parking pendingApprovals fails to persist", async () => {
+      mockPersistResponse.mockResolvedValueOnce(false);
+      mockPublish.mockClear();
+      mockStreamText.mockReset();
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield {
+            type: "tool-approval-request",
+            approvalId: "app-unpersisted",
+            toolCall: {
+              toolCallId: "tc-unpersisted",
+              toolName: "create_skill",
+              input: {},
+            },
+            signature: "sig-1",
+          };
+        })(),
+        usage: Promise.resolve({}),
+        finishReason: Promise.resolve("tool-calls"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/response.generate",
+          data: {
+            chatId: "chat-park-fail",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+            approvalMode: "ask",
+          },
+        },
+      });
+
+      expect(inngest.realtime.publish).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "tool-approval-required" }),
+      );
+    });
+
+    it("falls back to userSettings.defaultAutoApprove when approvalMode is omitted", async () => {
+      mockGetUserSettings.mockResolvedValueOnce({
+        defaultAutoApprove: true,
+        memoryEnabled: true,
+      });
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Done." };
+        })(),
+        text: Promise.resolve("Done."),
+        usage: Promise.resolve({ inputTokens: 5, outputTokens: 2 }),
+        finishReason: Promise.resolve("stop"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/response.generate",
+          data: {
+            chatId: "chat-auto-default",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolApproval: expect.objectContaining({
+            create_skill: "not-applicable",
+          }),
+        }),
+      );
+    });
+
+    it("resumes on chat/approval.respond, preserves Round 1 state, injects denial policy note, and updates DB", async () => {
+      mockUpdateResponse.mockClear();
+      mockPublish.mockClear();
+      mockStreamText.mockReset();
+
+      mockDbSelectLimit
+        .mockResolvedValueOnce([
+          {
+            content: "Round 1 text. ",
+            parentId: "u-1",
+            metadata: JSON.stringify({
+              model: "gpt-4o",
+              reasoning: "Round 1 reasoning. ",
+              toolCalls: [
+                {
+                  toolCallId: "tc-auto",
+                  toolName: "save_memory",
+                  args: { content: "x" },
+                },
+              ],
+              toolResults: [
+                {
+                  toolCallId: "tc-auto",
+                  toolName: "save_memory",
+                  result: { saved: true },
+                },
+              ],
+              approvalRound: 1,
+              parentUserMessageId: "u-1",
+              pendingApprovals: [
+                {
+                  approvalId: "app-deny",
+                  toolCallId: "tc-skill",
+                  toolName: "create_skill",
+                  args: { name: "bad" },
+                  signature: "sig-deny",
+                },
+              ],
+            }),
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            metadata: JSON.stringify({
+              model: "gpt-4o",
+              approvalMode: "ask",
+            }),
+          },
+        ]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "tool-output-denied", toolCallId: "tc-skill", toolName: "create_skill" };
+          yield { type: "text-delta", text: "Understood, skipping." };
+        })(),
+        usage: Promise.resolve({ inputTokens: 20, outputTokens: 10 }),
+        finishReason: Promise.resolve("stop"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-resume",
+            userId: "user-1",
+            assistantMessageId: "asst-parked",
+            decisions: [{ approvalId: "app-deny", approved: false }],
+          },
+        },
+      });
+
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          instructions: expect.stringContaining("## Tool Approval Policy"),
+        }),
+      );
+      expect(mockUpdateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageId: "asst-parked",
+          chatId: "chat-resume",
+          content: "Round 1 text. Understood, skipping.",
+        }),
+      );
+      const updatedMeta = JSON.parse(
+        mockUpdateResponse.mock.calls[0][0].metadata,
+      );
+      expect(updatedMeta.reasoning).toBe("Round 1 reasoning. ");
+      expect(updatedMeta.toolCalls).toHaveLength(1);
+      expect(updatedMeta.pendingApprovals).toBeUndefined();
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "finish" }),
+      );
+    });
+
+    it("returns early on chat/approval.respond when parked message is missing or has no pendingApprovals", async () => {
+      mockStreamText.mockReset();
+      mockDbSelectLimit.mockResolvedValueOnce([]);
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-missing",
+            userId: "user-1",
+            assistantMessageId: "asst-none",
+            decisions: [],
+          },
+        },
+      });
+
+      expect(mockStreamText).not.toHaveBeenCalled();
+    });
+
+    it("updates existing assistant message when a resumed turn pauses for another approval round", async () => {
+      mockUpdateResponse.mockClear();
+      mockStreamText.mockReset();
+
+      mockDbSelectLimit
+        .mockResolvedValueOnce([
+          {
+            content: "Round 1 ",
+            parentId: "u-1",
+            metadata: JSON.stringify({
+              model: "gpt-4o",
+              approvalRound: 1,
+              parentUserMessageId: "u-1",
+              pendingApprovals: [
+                {
+                  approvalId: "app-1",
+                  toolCallId: "tc-1",
+                  toolName: "create_skill",
+                  args: {},
+                  signature: "sig-1",
+                },
+              ],
+            }),
+          },
+        ])
+        .mockResolvedValueOnce([{ metadata: JSON.stringify({ model: "gpt-4o" }) }]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield {
+            type: "tool-approval-request",
+            approvalId: "app-2",
+            toolCall: {
+              toolCallId: "tc-2",
+              toolName: "write_skill_file",
+              input: {},
+            },
+            signature: "sig-2",
+          };
+        })(),
+        usage: Promise.resolve({}),
+        finishReason: Promise.resolve("tool-calls"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-round-2",
+            userId: "user-1",
+            assistantMessageId: "asst-2",
+            decisions: [{ approvalId: "app-1", approved: true }],
+          },
+        },
+      });
+
+      expect(mockUpdateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageId: "asst-2",
+          chatId: "chat-round-2",
+        }),
+      );
+      const meta = JSON.parse(mockUpdateResponse.mock.calls[0][0].metadata);
+      expect(meta.approvalRound).toBe(2);
+      expect(meta.pendingApprovals[0].approvalId).toBe("app-2");
+    });
+
+    it("covers parked null content, missing userMessageId, missing model fallback, server autoApprovedTools, and wrapSubagentTools persistence", async () => {
+      mockStreamText.mockReset();
+      mockUpdateResponse.mockClear();
+      mockPersistResponse.mockClear();
+
+      // 1. Missing userMessageId everywhere -> early return
+      mockDbSelectLimit.mockResolvedValueOnce([
+        {
+          content: null,
+          parentId: null,
+          metadata: JSON.stringify({
+            pendingApprovals: [
+              {
+                approvalId: "app-x",
+                toolCallId: "tc-x",
+                toolName: "create_skill",
+                args: {},
+                signature: "sig-x",
+              },
+            ],
+          }),
+        },
+      ]);
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-no-user-msg",
+            userId: "user-1",
+            assistantMessageId: "asst-no-user-msg",
+            decisions: [{ approvalId: "app-x", approved: true }],
+          },
+        },
+      });
+      expect(mockStreamText).not.toHaveBeenCalled();
+
+      // 2. Parked null content, parentId fallback, userMeta/parked model both null, and subagent server autoApprovedTools + wrapSubagentTools
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: [
+          {
+            id: "srv-1",
+            name: "GitHub",
+            url: "https://example.com/mcp",
+            autoApprovedTools: ["list_repos"],
+          },
+        ],
+        subagentServers: undefined as any,
+        linkedSubagents: [],
+        activeKbIds: [],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: null,
+        userMemories: [],
+      });
+
+      mockDbSelectLimit
+        .mockResolvedValueOnce([
+          {
+            content: null,
+            parentId: "u-fallback",
+            metadata: JSON.stringify({
+              approvalRound: 1,
+              pendingApprovals: [
+                {
+                  approvalId: "app-fb",
+                  toolCallId: "tc-fb",
+                  toolName: "create_skill",
+                  args: {},
+                  signature: "sig-fb",
+                },
+              ],
+            }),
+          },
+        ])
+        .mockResolvedValueOnce([
+          { metadata: JSON.stringify({ subagentsEnabled: true }) },
+        ]);
+
+      let capturedTools: Record<string, any> | undefined;
+      mockStreamText.mockImplementationOnce((cfg: any) => {
+        capturedTools = cfg.tools;
+        return {
+          fullStream: (async function* () {
+            yield { type: "text-delta", text: "ok" };
+          })(),
+          usage: Promise.resolve({}),
+          finishReason: Promise.resolve("stop"),
+        };
+      });
+
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-fb",
+            userId: "user-1",
+            assistantMessageId: "asst-fb",
+            subagentsEnabled: true,
+            decisions: [{ approvalId: "app-fb", approved: true }],
+          },
+        },
+      });
+
+      expect(capturedTools?.delegate_task).toBeDefined();
+
+      // 3. Exercise wrapSubagentTools callback (both update=false -> persist, and update=true)
+      const { buildOrchestratorToolSet } = await import(
+        "@/lib/inngest/chat-response/tool-set-builder"
+      );
+      const { chatApprovalRegistry } = await import(
+        "@/lib/chat/chat-approval-registry"
+      );
+      const lastCallArgs =
+        vi.mocked(buildOrchestratorToolSet).mock.calls.at(-1)?.[0];
+      expect(lastCallArgs?.wrapSubagentTools).toBeDefined();
+
+      mockUpdateResponse.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+      const subExec = vi.fn().mockResolvedValue("sub-ok");
+      const wrapped = lastCallArgs!.wrapSubagentTools!(
+        { create_skill: { execute: subExec } },
+        { id: "sub-1", name: "Researcher" } as any,
+      );
+
+      // Trigger first subagent approval batch (updateAssistantResponse returns false -> persistAssistantResponse)
+      mockPersistResponse.mockClear();
+      vi.mocked(inngest.realtime.publish).mockClear();
+      const p1 = wrapped.create_skill.execute({}, { toolCallId: "tc-sub-1" });
+      await vi.waitFor(() => {
+        expect(inngest.realtime.publish).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ type: "tool-approval-required" }),
+        );
+      });
+      const firstEmitCall = vi
+        .mocked(inngest.realtime.publish)
+        .mock.calls.filter((c) => (c[1] as any)?.type === "tool-approval-required")
+        .at(-1);
+      const appId1 = (firstEmitCall?.[1] as any).approvals[0].approvalId;
+      expect(
+        chatApprovalRegistry.resolve("asst-fb", [
+          { approvalId: appId1, approved: true },
+        ]),
+      ).toBe(true);
+      await expect(p1).resolves.toBe("sub-ok");
+      expect(mockPersistResponse).toHaveBeenCalledTimes(1);
+
+      // Trigger second subagent approval batch (updateAssistantResponse returns true -> skips persistAssistantResponse)
+      mockPersistResponse.mockClear();
+      vi.mocked(inngest.realtime.publish).mockClear();
+      const p2 = wrapped.create_skill.execute({}, { toolCallId: "tc-sub-2" });
+      await vi.waitFor(() => {
+        expect(inngest.realtime.publish).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ type: "tool-approval-required" }),
+        );
+      });
+      const secondEmitCall = vi
+        .mocked(inngest.realtime.publish)
+        .mock.calls.filter((c) => (c[1] as any)?.type === "tool-approval-required")
+        .at(-1);
+      const appId2 = (secondEmitCall?.[1] as any).approvals[0].approvalId;
+      expect(
+        chatApprovalRegistry.resolve("asst-fb", [
+          { approvalId: appId2, approved: true },
+        ]),
+      ).toBe(true);
+      await expect(p2).resolves.toBe("sub-ok");
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+
+      // 4. Cover undefined ctx.servers in buildAutoApprovedMcpToolsMap
+      mockLoadChatContext.mockResolvedValueOnce({
+        servers: undefined as any,
+        subagentServers: [
+          { id: "srv-sub", autoApprovedTools: ["t1"], blockedTools: ["t2"] },
+        ] as any,
+        linkedSubagents: [],
+        activeKbIds: [],
+        activeKbId: null,
+        kbIsReady: false,
+        availableSkills: [],
+        selectedSkills: [],
+        projectRow: null,
+        agentRow: null,
+        userMemories: [],
+      });
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "ok" };
+        })(),
+        usage: Promise.resolve({}),
+        finishReason: Promise.resolve("stop"),
+      });
+      await fn({
+        event: {
+          name: "chat/response.generate",
+          data: {
+            chatId: "chat-undef-servers",
+            userId: "user-1",
+            userMessageId: "u-undef",
+            model: "gpt-4o",
+          },
+        },
+      });
+    });
+
+    it("persists approved tool outcome when resumed stream emits tool-result without a new tool-call", async () => {
+      mockUpdateResponse.mockClear();
+      mockStreamText.mockReset();
+
+      mockDbSelectLimit
+        .mockResolvedValueOnce([
+          {
+            content: "",
+            parentId: "u-res-1",
+            metadata: JSON.stringify({
+              model: "gpt-4o",
+              approvalRound: 1,
+              parentUserMessageId: "u-res-1",
+              toolCalls: [
+                {
+                  toolCallId: "tc-round1-auto",
+                  toolName: "save_memory",
+                  args: { content: "m" },
+                },
+              ],
+              toolResults: [
+                {
+                  toolCallId: "tc-round1-auto",
+                  toolName: "save_memory",
+                  result: { saved: true },
+                },
+              ],
+              pendingApprovals: [
+                {
+                  approvalId: "app-res-1",
+                  toolCallId: "tc-res-1",
+                  toolName: "create_skill",
+                  serverName: "Internal",
+                  args: { name: "new-skill" },
+                  signature: "sig-res-1",
+                },
+              ],
+            }),
+          },
+        ])
+        .mockResolvedValueOnce([{ metadata: JSON.stringify({ model: "gpt-4o" }) }]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield {
+            type: "tool-result",
+            toolCallId: "tc-res-1",
+            toolName: "create_skill",
+            output: { success: true, skillId: "skill-99" },
+          };
+          yield { type: "text-delta", text: "All done!" };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+        finishReason: Promise.resolve("stop"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-res-no-call",
+            userId: "user-1",
+            assistantMessageId: "asst-res-no-call",
+            decisions: [{ approvalId: "app-res-1", approved: true }],
+          },
+        },
+      });
+
+      expect(mockUpdateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageId: "asst-res-no-call",
+          content: "All done!",
+        }),
+      );
+      const savedMeta = JSON.parse(mockUpdateResponse.mock.calls[0][0].metadata);
+      expect(savedMeta.toolCalls).toEqual([
+        {
+          toolCallId: "tc-round1-auto",
+          toolName: "save_memory",
+          args: { content: "m" },
+        },
+        {
+          toolCallId: "tc-res-1",
+          toolName: "create_skill",
+          args: { name: "new-skill" },
+          serverName: "Internal",
+        },
+      ]);
+      expect(savedMeta.toolResults).toEqual([
+        {
+          toolCallId: "tc-round1-auto",
+          toolName: "save_memory",
+          result: { saved: true },
+        },
+        {
+          toolCallId: "tc-res-1",
+          toolName: "create_skill",
+          result: { success: true, skillId: "skill-99" },
+          serverName: "Internal",
+        },
+      ]);
+    });
+
+    it("updates existing assistant row on completion when subagent persistPendingApprovals created it on a first turn", async () => {
+      mockUpdateResponse.mockReset();
+      mockPersistResponse.mockReset();
+      mockPublish.mockClear();
+      mockStreamText.mockReset();
+
+      const { buildOrchestratorToolSet } = await import(
+        "@/lib/inngest/chat-response/tool-set-builder"
+      );
+      const { chatApprovalRegistry } = await import(
+        "@/lib/chat/chat-approval-registry"
+      );
+
+      mockStreamText.mockImplementationOnce(() => ({
+        fullStream: (async function* () {
+          const lastArgs =
+            vi.mocked(buildOrchestratorToolSet).mock.calls.at(-1)?.[0];
+          const wrapped = lastArgs!.wrapSubagentTools!(
+            {
+              create_skill: {
+                execute: vi.fn().mockResolvedValue({ created: true }),
+              },
+            },
+            { id: "sub-1", name: "Worker" } as any,
+          );
+
+          // First updateAssistantResponse returns false -> persistAssistantResponse inserts row & returns true
+          // Second subagent pause: updateAssistantResponse returns false & persistAssistantResponse returns false (concurrent deletion)
+          mockUpdateResponse.mockResolvedValueOnce(false);
+          mockPersistResponse.mockResolvedValueOnce(true);
+          // Completion updateAssistantResponse returns true
+          mockUpdateResponse.mockResolvedValueOnce(true);
+
+          const toolPromise = wrapped.create_skill.execute(
+            { name: "s" },
+            { toolCallId: "tc-sub-first" },
+          );
+
+          await vi.waitFor(() => {
+            expect(inngest.realtime.publish).toHaveBeenCalledWith(
+              expect.anything(),
+              expect.objectContaining({ type: "tool-approval-required" }),
+            );
+          });
+          const approvalCall = vi
+            .mocked(inngest.realtime.publish)
+            .mock.calls.find(
+              (c) => (c[1] as any)?.type === "tool-approval-required",
+            );
+          const startCall = vi
+            .mocked(inngest.realtime.publish)
+            .mock.calls.find((c) => (c[1] as any)?.type === "start");
+          const asstId = (startCall?.[1] as any).messageId;
+          const appId = (approvalCall?.[1] as any).approvals[0].approvalId;
+          chatApprovalRegistry.resolve(asstId, [
+            { approvalId: appId, approved: true },
+          ]);
+
+          await toolPromise;
+          yield { type: "text-delta", text: "Subagent finished turn 1." };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+        finishReason: Promise.resolve("stop"),
+      }));
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/response.generate",
+          data: {
+            chatId: "chat-sub-first-turn",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+            subagentsEnabled: true,
+          },
+        },
+      });
+
+      // persistAssistantResponse was called once (during subagent pause), NOT at completion
+      expect(mockPersistResponse).toHaveBeenCalledTimes(1);
+      // updateAssistantResponse was called at completion with final text and finish emitted
+      expect(mockUpdateResponse).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          chatId: "chat-sub-first-turn",
+          content: "Subagent finished turn 1.",
+        }),
+      );
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "finish", finishReason: "stop" }),
+      );
+
+      // Cover persistPendingApprovals when both updateAssistantResponse and persistAssistantResponse return false
+      mockUpdateResponse.mockResolvedValueOnce(false);
+      mockPersistResponse.mockResolvedValueOnce(false);
+      const lastArgs =
+        vi.mocked(buildOrchestratorToolSet).mock.calls.at(-1)?.[0];
+      const wrappedNoPersist = lastArgs!.wrapSubagentTools!(
+        {
+          create_skill: {
+            execute: vi.fn().mockResolvedValue({ ok: true }),
+          },
+        },
+        { id: "sub-2", name: "Worker" } as any,
+      );
+      const pNoPersist = wrappedNoPersist.create_skill.execute(
+        {},
+        { toolCallId: "tc-nopersist" },
+      );
+      await vi.waitFor(() => {
+        expect(mockPersistResponse).toHaveBeenCalledTimes(2);
+      });
+      const latestApprovalCall = vi
+        .mocked(inngest.realtime.publish)
+        .mock.calls.filter(
+          (c) => (c[1] as any)?.type === "tool-approval-required",
+        )
+        .at(-1);
+      const latestStartCall = vi
+        .mocked(inngest.realtime.publish)
+        .mock.calls.filter((c) => (c[1] as any)?.type === "start")
+        .at(-1);
+      chatApprovalRegistry.resolve((latestStartCall?.[1] as any).messageId, [
+        {
+          approvalId: (latestApprovalCall?.[1] as any).approvals[0].approvalId,
+          approved: true,
+        },
+      ]);
+      await pNoPersist;
     });
   });
 });

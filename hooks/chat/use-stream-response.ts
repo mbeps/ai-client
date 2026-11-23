@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { getChat } from "@/actions/chats/get-chat";
+import { respondToToolApproval } from "@/actions/chats/respond-to-tool-approval";
 import {
   applySyncedAssistantMessage,
   findMatchingAssistantMessage,
@@ -22,8 +23,10 @@ import {
 import { executeStopStream } from "@/hooks/chat/stream/use-stream-stop";
 import { useStreamWatchdog } from "@/hooks/chat/stream/use-stream-watchdog";
 import { useApiError } from "@/hooks/use-api-error";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
+import type { ApprovalDecision, ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Orchestrates AI response generation using Inngest background jobs and Inngest Realtime.
@@ -63,6 +66,10 @@ export function useStreamResponse(
     setAssistantMessageId,
     chatNotFound,
     setChatNotFound,
+    pendingApprovals,
+    setPendingApprovals,
+    approvalsDisabled,
+    setApprovalsDisabled,
     resetStreamingState,
   } = streamState;
 
@@ -96,6 +103,32 @@ export function useStreamResponse(
       );
 
       if (assistantMsg) {
+        if (streamRefs.awaitingApprovalRef.current) {
+          const meta = parseMessageMetadata(assistantMsg.metadata);
+          if (meta.pendingApprovals.length > 0 && meta.finishReason === null) {
+            const currentIds = pendingApprovals
+              .map((a) => a.approvalId)
+              .join(" ");
+            const dbIds = meta.pendingApprovals
+              .map((a) => a.approvalId)
+              .join(" ");
+            if (dbIds !== currentIds) {
+              streamRefs.lastChunkTimeRef.current = Date.now();
+              setPendingApprovals(meta.pendingApprovals);
+              setApprovalsDisabled(false);
+            }
+            return false;
+          }
+
+          if (meta.finishReason === null) {
+            streamRefs.awaitingApprovalRef.current = false;
+            streamRefs.lastChunkTimeRef.current = Date.now();
+            setPendingApprovals([]);
+            setApprovalsDisabled(false);
+            return false;
+          }
+        }
+
         applySyncedAssistantMessage(
           chatId,
           data,
@@ -115,7 +148,10 @@ export function useStreamResponse(
     upsertChat,
     options,
     activeLeaf,
+    pendingApprovals,
     resetStreamingState,
+    setApprovalsDisabled,
+    setPendingApprovals,
     streamRefs,
     setChatNotFound,
   ]);
@@ -150,6 +186,8 @@ export function useStreamResponse(
       setStreamingReasoning,
       setActiveToolCalls,
       setIsStreaming,
+      setPendingApprovals,
+      setApprovalsDisabled,
     },
   });
 
@@ -200,6 +238,53 @@ export function useStreamResponse(
     );
   }, [chatId, addMessage, resetStreamingState, streamRefs]);
 
+  const submitToolApprovals = useCallback(
+    async (
+      targetAssistantMessageId: string,
+      decisions: ApprovalDecision[],
+    ): Promise<boolean> => {
+      setApprovalsDisabled(true);
+      let res: Awaited<ReturnType<typeof respondToToolApproval>>;
+      try {
+        res = await respondToToolApproval({
+          assistantMessageId: targetAssistantMessageId,
+          decisions,
+        });
+      } catch (error) {
+        setApprovalsDisabled(false);
+        handleApiError(
+          error,
+          error instanceof Error
+            ? error.message
+            : "Failed to submit tool approval",
+        );
+        return false;
+      }
+
+      if (!res.ok) {
+        setApprovalsDisabled(false);
+        handleApiError(
+          res.error,
+          res.error.message || "Failed to submit tool approval",
+        );
+        return false;
+      }
+
+      streamRefs.awaitingApprovalRef.current = false;
+      streamRefs.lastChunkTimeRef.current = Date.now();
+      setPendingApprovals([]);
+      setIsStreaming(true);
+      return true;
+    },
+    [
+      handleApiError,
+      setApprovalsDisabled,
+      setIsStreaming,
+      setPendingApprovals,
+      streamRefs,
+    ],
+  );
+
   const streamResponse = useCallback(
     async (
       userMsgId: string,
@@ -217,6 +302,7 @@ export function useStreamResponse(
       subagentModelId?: string,
       reasoningEffort?: ReasoningEffort,
       subagentIds?: string[],
+      approvalMode?: ApprovalMode,
     ): Promise<string> => {
       const promptIds = Array.isArray(selectedPromptId)
         ? selectedPromptId
@@ -241,6 +327,7 @@ export function useStreamResponse(
         subagentModelId,
         subagentIds,
         reasoningEffort,
+        approvalMode,
         addMessage,
         updateMessageAttachments,
         handleApiError,
@@ -269,6 +356,9 @@ export function useStreamResponse(
     isStreamingReasoning,
     activeToolCalls,
     assistantMessageId,
+    pendingApprovals,
+    approvalsDisabled,
+    submitToolApprovals,
     streamResponse,
     stopStream,
   };

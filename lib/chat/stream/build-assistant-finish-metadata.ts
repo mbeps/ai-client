@@ -1,3 +1,5 @@
+import type { PendingApproval } from "@/types/tool/approval";
+
 export interface AssistantToolRecord {
   toolCallId: string;
   toolName: string;
@@ -7,7 +9,7 @@ export interface AssistantToolRecord {
 }
 
 /**
- * Constructs the metadata JSON string for a finished assistant message.
+ * Constructs the metadata JSON string for a finished or parked assistant message.
  * Derives both toolCalls and toolResults directly from completedTools in a single pass.
  *
  * @param params - Generation metadata including model, reasoning, tools, usage, and timing
@@ -22,6 +24,9 @@ export function buildAssistantFinishMetadata({
   finishReason,
   durationMs,
   stopped,
+  pendingApprovals,
+  approvalRound,
+  parentUserMessageId,
 }: {
   model: string;
   reasoning: string;
@@ -30,6 +35,9 @@ export function buildAssistantFinishMetadata({
   finishReason?: string;
   durationMs?: number;
   stopped?: boolean;
+  pendingApprovals?: PendingApproval[];
+  approvalRound?: number;
+  parentUserMessageId?: string;
 }): string {
   return JSON.stringify({
     model,
@@ -53,5 +61,8 @@ export function buildAssistantFinishMetadata({
     finishReason,
     ...(durationMs !== undefined ? { durationMs } : {}),
     ...(stopped !== undefined ? { stopped } : {}),
+    ...(pendingApprovals !== undefined ? { pendingApprovals } : {}),
+    ...(approvalRound !== undefined ? { approvalRound } : {}),
+    ...(parentUserMessageId !== undefined ? { parentUserMessageId } : {}),
   });
 }

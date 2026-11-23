@@ -14,6 +14,7 @@ import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { resolveTargetAgent } from "@/lib/subagents/create-subagent-dispatch-tool";
 import type { Agent } from "@/types/agent/agent";
+import type { PendingApproval } from "@/types/tool/approval";
 
 const log = getLogger(["inngest", "chat", "response"]);
 
@@ -72,12 +73,25 @@ export function createStreamEmitter(
  * @returns The resolved result
  * @author Maruf Bepary
  */
+interface ParkedToolOutcome {
+  toolName: string;
+  result: unknown;
+  serverName?: string;
+}
+
+export interface StreamApprovalContext {
+  toolServerIdMap?: Record<string, string>;
+  round: number;
+  maxRounds?: number;
+}
+
 async function handleToolCallChunk(
   chunk: any,
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
   emit: (data: ChatStreamEvent) => Promise<void>,
   linkedSubagents?: readonly Agent[],
+  parkedResults?: Map<string, ParkedToolOutcome>,
 ): Promise<void> {
   const serverName = toolSourceMap[chunk.toolName];
   let args = chunk.input;
@@ -99,12 +113,25 @@ async function handleToolCallChunk(
       };
     }
   }
-  completedTools.push({
-    toolCallId: chunk.toolCallId,
-    toolName: chunk.toolName,
-    args,
-    serverName,
-  });
+  const parked = parkedResults?.get(chunk.toolCallId);
+  if (parked) {
+    parkedResults?.delete(chunk.toolCallId);
+  }
+  const existing = completedTools.find(
+    (t) => t.toolCallId === chunk.toolCallId,
+  );
+  if (existing) {
+    existing.args = args;
+    if (serverName) existing.serverName = serverName;
+  } else {
+    completedTools.push({
+      toolCallId: chunk.toolCallId,
+      toolName: chunk.toolName,
+      args,
+      serverName,
+      ...(parked !== undefined ? { result: parked.result } : {}),
+    });
+  }
   await emit({
     type: "tool-call",
     toolCallId: chunk.toolCallId,
@@ -184,6 +211,7 @@ async function handleToolResultChunk(
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
   emit: (data: ChatStreamEvent) => Promise<void>,
+  parkedResults?: Map<string, ParkedToolOutcome>,
 ): Promise<void> {
   const isPreliminary = Boolean(chunk.preliminary);
   const rawResult = chunk.output;
@@ -195,10 +223,18 @@ async function handleToolResultChunk(
     ? boundSubagentResultForPersistence(rawResult)
     : rawResult;
 
-  if (tc && !isPreliminary) {
-    tc.result = finalResult;
-  }
   const serverName = tc?.serverName ?? toolSourceMap[chunk.toolName];
+  if (!isPreliminary) {
+    if (tc) {
+      tc.result = finalResult;
+    } else {
+      parkedResults?.set(chunk.toolCallId, {
+        toolName: chunk.toolName,
+        result: finalResult,
+        serverName,
+      });
+    }
+  }
   await emit({
     type: "tool-result",
     toolCallId: chunk.toolCallId,
@@ -254,12 +290,84 @@ export const DELTA_COALESCE_INTERVAL_MS = 40;
  * @param emit - Target emit
  * @author Maruf Bepary
  */
+async function handleToolOutputDeniedChunk(
+  chunk: any,
+  completedTools: CompletedToolRecord[],
+  toolSourceMap: Record<string, string>,
+  emit: (data: ChatStreamEvent) => Promise<void>,
+  parkedResults: Map<string, ParkedToolOutcome>,
+): Promise<void> {
+  const deniedResult = { error: "Denied by user" };
+  const tc = completedTools.find((t) => t.toolCallId === chunk.toolCallId);
+  const toolName = chunk.toolName ?? tc?.toolName ?? "tool";
+  const serverName = tc?.serverName ?? toolSourceMap[toolName];
+
+  if (tc) {
+    tc.result = deniedResult;
+  } else {
+    parkedResults.set(chunk.toolCallId, {
+      toolName,
+      result: deniedResult,
+      serverName,
+    });
+  }
+
+  await emit({
+    type: "tool-result",
+    toolCallId: chunk.toolCallId,
+    toolName,
+    result: deniedResult,
+    serverName,
+  });
+}
+
+function handleToolApprovalRequestChunk(
+  chunk: any,
+  toolSourceMap: Record<string, string>,
+  blockedCallIds: Set<string>,
+  pendingApprovals: PendingApproval[],
+  approvalContext?: StreamApprovalContext,
+): void {
+  if (chunk.isAutomatic === true) {
+    return;
+  }
+
+  const toolCallId: string = chunk.toolCall?.toolCallId ?? chunk.toolCallId;
+  const toolName: string = chunk.toolCall?.toolName ?? chunk.toolName;
+  const args = chunk.toolCall?.input ?? chunk.args;
+
+  blockedCallIds.add(toolCallId);
+
+  const round = approvalContext?.round ?? 1;
+  const maxRounds = approvalContext?.maxRounds ?? 10;
+  if (round > maxRounds) {
+    return;
+  }
+
+  const approval: PendingApproval = {
+    approvalId: chunk.approvalId,
+    toolCallId,
+    toolName,
+    serverName: toolSourceMap[toolName],
+    serverId: approvalContext?.toolServerIdMap?.[toolName],
+    args,
+    reason: typeof chunk.reason === "string" ? chunk.reason : undefined,
+    signature: typeof chunk.signature === "string" ? chunk.signature : "",
+  };
+
+  pendingApprovals.push(approval);
+}
+
 async function handleNonDeltaChunk(
   chunk: any,
   completedTools: CompletedToolRecord[],
   toolSourceMap: Record<string, string>,
   emit: (data: ChatStreamEvent) => Promise<void>,
-  linkedSubagents?: readonly Agent[],
+  linkedSubagents: readonly Agent[] | undefined,
+  parkedResults: Map<string, ParkedToolOutcome>,
+  blockedCallIds: Set<string>,
+  pendingApprovals: PendingApproval[],
+  approvalContext?: StreamApprovalContext,
 ): Promise<void> {
   if (chunk.type === "tool-call") {
     await handleToolCallChunk(
@@ -268,11 +376,34 @@ async function handleNonDeltaChunk(
       toolSourceMap,
       emit,
       linkedSubagents,
+      parkedResults,
     );
   } else if (chunk.type === "tool-result") {
-    await handleToolResultChunk(chunk, completedTools, toolSourceMap, emit);
+    await handleToolResultChunk(
+      chunk,
+      completedTools,
+      toolSourceMap,
+      emit,
+      parkedResults,
+    );
   } else if (chunk.type === "tool-error") {
     await handleToolErrorChunk(chunk, completedTools, toolSourceMap, emit);
+  } else if (chunk.type === "tool-output-denied") {
+    await handleToolOutputDeniedChunk(
+      chunk,
+      completedTools,
+      toolSourceMap,
+      emit,
+      parkedResults,
+    );
+  } else if (chunk.type === "tool-approval-request") {
+    handleToolApprovalRequestChunk(
+      chunk,
+      toolSourceMap,
+      blockedCallIds,
+      pendingApprovals,
+      approvalContext,
+    );
   } else if (chunk.type === "error") {
     const appErr = toAppError(chunk.error);
     await emit({ type: "error", message: appErr.message, code: appErr.code });
@@ -347,6 +478,17 @@ async function handleStreamReasoningDelta(
   }
 }
 
+function finalizeCompletedToolApprovals(
+  completedTools: CompletedToolRecord[],
+  blockedCallIds: Set<string>,
+): void {
+  for (let i = completedTools.length - 1; i >= 0; i--) {
+    if (blockedCallIds.has(completedTools[i]!.toolCallId)) {
+      completedTools.splice(i, 1);
+    }
+  }
+}
+
 export async function consumeModelStream(
   fullStream: AsyncIterable<any>,
   abortSignal: AbortSignal,
@@ -354,6 +496,7 @@ export async function consumeModelStream(
   toolSourceMap: Record<string, string>,
   completedTools: CompletedToolRecord[],
   linkedSubagents?: readonly Agent[],
+  approvalContext?: StreamApprovalContext,
 ): Promise<ConsumeModelStreamResult> {
   const flushReasoning = async (): Promise<void> => {
     if (ctx.bufferedReasoning.length === 0) return;
@@ -389,6 +532,9 @@ export async function consumeModelStream(
   };
 
   const inlineParser = createInlineReasoningParser();
+  const parkedResults = new Map<string, ParkedToolOutcome>();
+  const blockedCallIds = new Set<string>();
+  const pendingApprovals: PendingApproval[] = [];
 
   for await (const chunk of fullStream) {
     if (abortSignal.aborted) {
@@ -401,10 +547,12 @@ export async function consumeModelStream(
         }
       }
       await ctx.flushDeltas();
+      finalizeCompletedToolApprovals(completedTools, blockedCallIds);
       return {
         accumulatedText: ctx.accumulatedText,
         accumulatedReasoning: ctx.accumulatedReasoning,
         aborted: true,
+        pendingApprovals,
       };
     }
 
@@ -431,6 +579,10 @@ export async function consumeModelStream(
           toolSourceMap,
           emit,
           linkedSubagents,
+          parkedResults,
+          blockedCallIds,
+          pendingApprovals,
+          approvalContext,
         );
       }
     }
@@ -446,10 +598,12 @@ export async function consumeModelStream(
   }
 
   await ctx.flushDeltas();
+  finalizeCompletedToolApprovals(completedTools, blockedCallIds);
 
   return {
     accumulatedText: ctx.accumulatedText,
     accumulatedReasoning: ctx.accumulatedReasoning,
     aborted: false,
+    pendingApprovals,
   };
 }

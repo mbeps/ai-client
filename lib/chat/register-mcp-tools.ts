@@ -99,6 +99,7 @@ async function loadScopedMcpTools(
   tools: Record<string, any>;
   toolSourceMap: Record<string, string>;
   toolServerIdMap: Record<string, string>;
+  toolRawNameMap: Record<string, string>;
   cleanup: () => Promise<void>;
 }> {
   if (scopedServers.length === 0) {
@@ -106,6 +107,7 @@ async function loadScopedMcpTools(
       tools: {},
       toolSourceMap: {},
       toolServerIdMap: {},
+      toolRawNameMap: {},
       cleanup: async () => {},
     };
   }
@@ -122,6 +124,7 @@ async function loadScopedMcpTools(
       tools: sanitised.tools,
       toolSourceMap: sanitised.toolSourceMap,
       toolServerIdMap: sanitised.toolServerIdMap,
+      toolRawNameMap: sanitised.toolRawNameMap,
       cleanup: result.cleanup,
     };
   } catch (error) {
@@ -132,6 +135,7 @@ async function loadScopedMcpTools(
       tools: {},
       toolSourceMap: {},
       toolServerIdMap: {},
+      toolRawNameMap: {},
       cleanup: async () => {},
     };
   }
@@ -213,9 +217,10 @@ export async function registerMcpTools(
   mcpTools: Record<string, any>;
   toolSourceMap: Record<string, string>;
   toolServerIdMap: Record<string, string>;
+  toolRawNameMap: Record<string, string>;
   mcpCleanup: () => Promise<void>;
 }> {
-  const { tools, toolSourceMap, toolServerIdMap, cleanup } =
+  const { tools, toolSourceMap, toolServerIdMap, toolRawNameMap, cleanup } =
     await loadScopedMcpTools(scopedServers, selectedTools);
 
   registerLegacyInternalTools(tools, toolSourceMap, {
@@ -232,6 +237,7 @@ export async function registerMcpTools(
     mcpTools: tools,
     toolSourceMap,
     toolServerIdMap,
+    toolRawNameMap,
     mcpCleanup: cleanup,
   };
 }

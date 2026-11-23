@@ -5,8 +5,10 @@ import {
 } from "@/lib/inngest/chat-response/complete-assistant-response";
 
 const mockPersistResponse = vi.hoisted(() => vi.fn());
+const mockUpdateResponse = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/chat/persist-response", () => ({
   persistAssistantResponse: mockPersistResponse,
+  updateAssistantResponse: mockUpdateResponse,
 }));
 
 const mockHasExistingAssistantMessage = vi.hoisted(() => vi.fn());
@@ -39,6 +41,7 @@ describe("complete-assistant-response", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPersistResponse.mockResolvedValue(true);
+    mockUpdateResponse.mockResolvedValue(true);
     mockHasExistingAssistantMessage.mockResolvedValue(false);
     mockExecuteDownloadFallback.mockResolvedValue([]);
     mockDeleteScratchpadFiles.mockResolvedValue(undefined);
@@ -92,6 +95,41 @@ describe("complete-assistant-response", () => {
         expect.anything(),
       );
       expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
+    });
+
+    it("updates existing assistant message when isUpdate is true", async () => {
+      const emit = vi.fn().mockResolvedValue(undefined);
+      const controller = new AbortController();
+
+      await completeAssistantResponse({
+        chatId: "chat-1",
+        assistantMessageId: "asst-1",
+        userMessageId: "user-1",
+        accumulatedText: "Resumed answer",
+        accumulatedReasoning: "",
+        resolvedModelId: "gpt-4o",
+        completedTools: [],
+        toolSourceMap: {},
+        safeFinishReason: Promise.resolve("stop"),
+        safeUsage: Promise.resolve({ totalTokens: 50 }),
+        abortSignal: controller.signal,
+        emit,
+        isUpdate: true,
+      });
+
+      expect(mockUpdateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageId: "asst-1",
+          chatId: "chat-1",
+          content: "Resumed answer",
+        }),
+      );
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(emit).toHaveBeenCalledWith({
+        type: "finish",
+        finishReason: "stop",
+        usage: { totalTokens: 50 },
+      });
     });
 
     it("persists aborted response and retains scratchpad files when abortSignal is aborted before persistence with partial content", async () => {
@@ -275,6 +313,41 @@ describe("complete-assistant-response", () => {
       expect(mockDeleteScratchpadFiles).not.toHaveBeenCalled();
     });
 
+    it("updates existing assistant message when isUpdate is true", async () => {
+      const emit = vi.fn().mockResolvedValue(undefined);
+      const controller = new AbortController();
+
+      await completeAssistantResponse({
+        chatId: "chat-1",
+        assistantMessageId: "asst-1",
+        userMessageId: "user-1",
+        accumulatedText: "Resumed answer",
+        accumulatedReasoning: "",
+        resolvedModelId: "gpt-4o",
+        completedTools: [],
+        toolSourceMap: {},
+        safeFinishReason: Promise.resolve("stop"),
+        safeUsage: Promise.resolve({ totalTokens: 50 }),
+        abortSignal: controller.signal,
+        emit,
+        isUpdate: true,
+      });
+
+      expect(mockUpdateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageId: "asst-1",
+          chatId: "chat-1",
+          content: "Resumed answer",
+        }),
+      );
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+      expect(emit).toHaveBeenCalledWith({
+        type: "finish",
+        finishReason: "stop",
+        usage: { totalTokens: 50 },
+      });
+    });
+
     it("deletes scratchpad files when persistAssistantResponse returns false and message does not exist", async () => {
       mockPersistResponse.mockResolvedValueOnce(false);
       mockHasExistingAssistantMessage.mockResolvedValueOnce(false);
@@ -291,6 +364,31 @@ describe("complete-assistant-response", () => {
 
       expect(result).toBe(false);
       expect(mockDeleteScratchpadFiles).toHaveBeenCalledWith("asst-stopped-deleted");
+    });
+
+    it("updates existing assistant message when persistAbortedAssistantResponse is called with isUpdate: true", async () => {
+      mockUpdateResponse.mockResolvedValueOnce(true);
+
+      const result = await persistAbortedAssistantResponse({
+        chatId: "chat-sub-abort",
+        assistantMessageId: "asst-sub-abort",
+        userMessageId: "user-sub-abort",
+        resolvedModelId: "gpt-4o",
+        accumulatedText: "Partial after subagent",
+        accumulatedReasoning: "",
+        completedTools: [],
+        isUpdate: true,
+      });
+
+      expect(result).toBe(true);
+      expect(mockUpdateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageId: "asst-sub-abort",
+          chatId: "chat-sub-abort",
+          content: "Partial after subagent",
+        }),
+      );
+      expect(mockPersistResponse).not.toHaveBeenCalled();
     });
   });
 });
