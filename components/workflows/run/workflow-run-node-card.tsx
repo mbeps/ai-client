@@ -1,9 +1,15 @@
 "use client";
 
+import type React from "react";
+import { useMemo } from "react";
+import { AssistantMessageBody } from "@/components/chat/message/assistant-message-body";
+import { ResponseTimeline } from "@/components/chat/message/response-timeline";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { NodeStatusIndicator } from "@/components/workflows/canvas/node-status-indicator";
+import { createInlineReasoningParser } from "@/lib/chat/stream/reasoning-stream-parser";
 import { cn } from "@/lib/utils";
+import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type {
   WorkflowNode,
   WorkflowNodeRunState,
@@ -18,7 +24,33 @@ export interface WorkflowRunNodeCardProps {
 }
 
 /**
- * Execution timeline card summarizing per-node status, branches, HTTP responses, and tool calls.
+ * Separates inline reasoning tags (e.g. `<think>...</think>`) from markdown reply content.
+ */
+function extractStepReasoningAndContent(summary?: string): {
+  reasoning: string;
+  content: string;
+} {
+  if (!summary) return { reasoning: "", content: "" };
+  const parser = createInlineReasoningParser();
+  const parts = [...parser.push(summary), ...parser.flush()];
+  const reasoningParts: string[] = [];
+  const contentParts: string[] = [];
+  for (const part of parts) {
+    if (part.type === "reasoning") {
+      reasoningParts.push(part.text);
+    } else {
+      contentParts.push(part.text);
+    }
+  }
+  return {
+    reasoning: reasoningParts.join("\n\n").trim(),
+    content: contentParts.join("").trim(),
+  };
+}
+
+/**
+ * Execution timeline card summarizing per-node status, branches, HTTP responses,
+ * and chat-style reasoning/tool traces and markdown outputs.
  */
 export function WorkflowRunNodeCard({
   node,
@@ -27,6 +59,25 @@ export function WorkflowRunNodeCard({
   onClick,
 }: WorkflowRunNodeCardProps) {
   const status = state?.status ?? "pending";
+  const { reasoning, content } = useMemo(
+    () => extractStepReasoningAndContent(state?.summary),
+    [state?.summary],
+  );
+  const messageArtifacts = useMemo<ArtifactData[]>(
+    () =>
+      state?.artifact
+        ? [{ ...state.artifact, messageId: `node-${node.id}` }]
+        : [],
+    [state?.artifact, node.id],
+  );
+  const hasTimeline = Boolean(reasoning || state?.toolCalls?.length);
+  const hasBody = Boolean(content || messageArtifacts.length > 0);
+
+  const handleOutputClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, a")) {
+      e.stopPropagation();
+    }
+  };
 
   return (
     <Card
@@ -38,7 +89,7 @@ export function WorkflowRunNodeCard({
           : "hover:border-primary/40",
       )}
     >
-      <CardContent className="space-y-2 p-4">
+      <CardContent className="space-y-3 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <NodeStatusIndicator status={status}>
@@ -80,23 +131,28 @@ export function WorkflowRunNodeCard({
           </p>
         )}
 
-        {state?.summary && (
-          <p className="text-muted-foreground line-clamp-2 text-xs">
-            {state.summary}
-          </p>
-        )}
-
-        {state?.toolCalls && state.toolCalls.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {state.toolCalls.map((call) => (
-              <Badge
-                key={call.toolCallId}
-                variant="outline"
-                className="font-mono text-[10px]"
-              >
-                {call.toolName}
-              </Badge>
-            ))}
+        {(hasTimeline || hasBody) && (
+          <div
+            onClick={handleOutputClick}
+            className="bg-muted/30 rounded-lg p-3 text-sm"
+          >
+            {hasTimeline && (
+              <ResponseTimeline
+                reasoning={reasoning || undefined}
+                activeToolCalls={state?.toolCalls}
+              />
+            )}
+            {hasBody && (
+              <AssistantMessageBody
+                messageArtifacts={messageArtifacts}
+                messageDownloads={[]}
+                content={content}
+                isCanvasOpen={isSelected}
+                activeArtifactId={isSelected ? state?.artifact?.id : null}
+                onToggleArtifact={onClick}
+                createdAt={state?.completedAt}
+              />
+            )}
           </div>
         )}
 

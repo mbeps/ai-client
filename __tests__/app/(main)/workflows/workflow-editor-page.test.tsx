@@ -81,7 +81,6 @@ const mockEditorState = {
   handleAddNode: vi.fn(),
   handleUpdateNode: vi.fn(),
   handleDeleteNode: vi.fn(),
-  handleToggleNodeReview: vi.fn(),
   handleAutoLayout: vi.fn(),
   handleRegenerateWebhookSecret: vi.fn(),
   handleSave: vi.fn(),

@@ -58,52 +58,29 @@ export function AiStepConfig({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label>Tool Approval Mode</Label>
-          <Select
-            value={data.toolApprovalMode ?? "inherit"}
-            onValueChange={(value) =>
-              onChange({
-                toolApprovalMode: value as AiStepNodeData["toolApprovalMode"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="inherit">Inherit workflow default</SelectItem>
-              <SelectItem value="auto">Auto-run tools</SelectItem>
-              <SelectItem value="ask">Ask before running</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Canvas Output Mode</Label>
-          <Select
-            value={data.canvasMode ?? "inherit"}
-            onValueChange={(value) =>
-              onChange({
-                canvasMode: value as AiStepNodeData["canvasMode"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="inherit">Inherit workflow default</SelectItem>
-              <SelectItem value="disabled">Disabled</SelectItem>
-              <SelectItem value="any">Any allowed format</SelectItem>
-              <SelectItem value="markdown">Markdown</SelectItem>
-              <SelectItem value="spreadsheet">Spreadsheet</SelectItem>
-              <SelectItem value="html">HTML</SelectItem>
-              <SelectItem value="mermaid">Mermaid</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-1.5">
+        <Label>Canvas Output Mode</Label>
+        <Select
+          value={data.canvasMode ?? "inherit"}
+          onValueChange={(value) =>
+            onChange({
+              canvasMode: value as AiStepNodeData["canvasMode"],
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="inherit">Inherit workflow default</SelectItem>
+            <SelectItem value="disabled">Disabled</SelectItem>
+            <SelectItem value="any">Any allowed format</SelectItem>
+            <SelectItem value="markdown">Markdown</SelectItem>
+            <SelectItem value="spreadsheet">Spreadsheet</SelectItem>
+            <SelectItem value="html">HTML</SelectItem>
+            <SelectItem value="mermaid">Mermaid</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-3 rounded-lg border p-3">

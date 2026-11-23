@@ -82,6 +82,7 @@ function WorkflowCanvasInner({
   const { selectedNodeId, setSelectedNodeId, setEditorInstance } =
     useWorkflowEditorStore();
   const [pendingNode, setPendingNode] = useState<WorkflowNode | null>(null);
+  const [inspectorNodeId, setInspectorNodeId] = useState<string | null>(null);
   const measuredRef = useRef<Map<string, { width?: number; height?: number }>>(
     new Map(),
   );
@@ -110,7 +111,12 @@ function WorkflowCanvasInner({
             nodeData: node.data,
             status: mapRunStatus(nodeStates?.[node.id]),
             readOnly,
-            onConfigure: readOnly ? undefined : (id) => setSelectedNodeId(id),
+            onConfigure: readOnly
+              ? undefined
+              : (id) => {
+                  setSelectedNodeId(id);
+                  setInspectorNodeId(id);
+                },
             onDelete: readOnly
               ? undefined
               : (id) => onDeleteNodeRef.current?.(id),
@@ -195,11 +201,11 @@ function WorkflowCanvasInner({
     onEdgesChange(mapped);
   };
 
-  const selectedNode = useMemo(
-    () => nodes.find((n) => n.id === selectedNodeId) ?? null,
-    [nodes, selectedNodeId],
+  const inspectedNode = useMemo(
+    () => nodes.find((n) => n.id === inspectorNodeId) ?? null,
+    [nodes, inspectorNodeId],
   );
-  const activeInspectorNode = pendingNode ?? selectedNode;
+  const activeInspectorNode = pendingNode ?? inspectedNode;
   const hasManualTrigger = nodes.some((n) => n.type === "manual_trigger");
 
   const handleOpenPendingNode = (
@@ -207,6 +213,7 @@ function WorkflowCanvasInner({
     position: { x: number; y: number },
   ) => {
     setSelectedNodeId(null);
+    setInspectorNodeId(null);
     setPendingNode(createDefaultWorkflowNode(type, position, nodes));
   };
 
@@ -219,8 +226,17 @@ function WorkflowCanvasInner({
         onNodesChange={handleRfNodesChange}
         onEdgesChange={handleRfEdgesChange}
         onConnect={handleConnect}
+        onNodeClick={(_, rfNode) => {
+          setSelectedNodeId(rfNode.id);
+        }}
         onNodeDoubleClick={(_, rfNode) => {
-          if (!readOnly) setSelectedNodeId(rfNode.id);
+          if (!readOnly) {
+            setSelectedNodeId(rfNode.id);
+            setInspectorNodeId(rfNode.id);
+          }
+        }}
+        onPaneClick={() => {
+          setSelectedNodeId(null);
         }}
         nodesDraggable={!readOnly}
         nodesConnectable={!readOnly}
@@ -267,7 +283,7 @@ function WorkflowCanvasInner({
           onOpenChange={(open) => {
             if (!open) {
               setPendingNode(null);
-              setSelectedNodeId(null);
+              setInspectorNodeId(null);
             }
           }}
           node={activeInspectorNode}

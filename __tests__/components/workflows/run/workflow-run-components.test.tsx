@@ -165,4 +165,62 @@ describe("Workflow Run Workbench Components", () => {
       "Invoice Report",
     );
   });
+
+  it("renders WorkflowRunNodeCard with thinking tab, markdown body, tool traces, and canvas card", () => {
+    const onCardClick = vi.fn();
+    render(
+      <TooltipProvider>
+        <WorkflowRunNodeCard
+          node={sampleNodes[1]}
+          state={{
+            status: "completed",
+            summary:
+              "<think>Checking car specs</think>\n\n**Added BMW 320d** to workbook.",
+            toolCalls: [
+              {
+                toolCallId: "tc-1",
+                toolName: "create_workbook",
+                args: { name: "cars.xlsx" },
+                result: { ok: true },
+                status: "complete",
+              },
+            ],
+            artifact: {
+              id: "art-step-1",
+              type: "spreadsheet",
+              title: "Cars Workbook",
+              content: "Brand,Model\nBMW,320d",
+            },
+            completedAt: "2026-11-23T18:00:00.000Z",
+          }}
+          isSelected={true}
+          onClick={onCardClick}
+        />
+      </TooltipProvider>,
+    );
+
+    // Raw <think> tags should not appear in visible output; Thought process tab should
+    expect(screen.queryByText(/<think>/)).not.toBeInTheDocument();
+    const thoughtTrigger = screen.getByRole("button", {
+      name: /Thought process/i,
+    });
+    expect(thoughtTrigger).toBeInTheDocument();
+
+    // Toggling the thought process tab should reveal reasoning without triggering card onClick
+    fireEvent.click(thoughtTrigger);
+    expect(screen.getByText("Checking car specs")).toBeInTheDocument();
+    expect(onCardClick).not.toHaveBeenCalled();
+
+    // Markdown should render bold text cleanly
+    const boldEl = screen.getByText("Added BMW 320d");
+    expect(boldEl.tagName).toBe("STRONG");
+
+    // Tool call should render via ToolTraceStep (not plain badge)
+    expect(screen.getByText("create_workbook")).toBeInTheDocument();
+
+    // Artifact should render via CanvasCard and clicking its toggle selects the node
+    const toggleCanvasBtn = screen.getByRole("button", { name: /Close/i });
+    fireEvent.click(toggleCanvasBtn);
+    expect(onCardClick).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,10 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { WorkflowApprovalsTab } from "@/components/workflows/editor/workflow-approvals-tab";
 import { WorkflowCanvasConfigTab } from "@/components/workflows/editor/workflow-canvas-config-tab";
 import { WorkflowEditorTabs } from "@/components/workflows/editor/workflow-editor-tabs";
 import {
-  DEFAULT_WORKFLOW_APPROVAL_CONFIG,
   DEFAULT_WORKFLOW_CANVAS_CONFIG,
   type WorkflowNode,
 } from "@/types/workflows/workflow";
@@ -56,31 +54,7 @@ const sampleNodes: WorkflowNode[] = [
   },
 ];
 
-describe("Workflow Editor Tabs, Approvals & Canvas Config", () => {
-  it("renders WorkflowApprovalsTab and toggles tool approval mode and node review gate", () => {
-    const onApprovalConfigChange = vi.fn();
-    const onToggleNodeReview = vi.fn();
-
-    render(
-      <WorkflowApprovalsTab
-        approvalConfig={DEFAULT_WORKFLOW_APPROVAL_CONFIG}
-        onApprovalConfigChange={onApprovalConfigChange}
-        nodes={sampleNodes}
-        onToggleNodeReview={onToggleNodeReview}
-        availableTools={["search_web", "manage_artifact", "delete_row"]}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /Ask Before Running/i }));
-    expect(onApprovalConfigChange).toHaveBeenCalledWith(
-      expect.objectContaining({ toolApprovalMode: "ask" }),
-    );
-
-    const reviewSwitches = screen.getAllByRole("switch");
-    fireEvent.click(reviewSwitches[0]);
-    expect(onToggleNodeReview).toHaveBeenCalledWith("n1", true);
-  });
-
+describe("Workflow Editor Tabs & Canvas Config", () => {
   it("renders WorkflowCanvasConfigTab, toggles format selection, and previews latest artifact", () => {
     const onCanvasConfigChange = vi.fn();
 
@@ -116,7 +90,7 @@ describe("Workflow Editor Tabs, Approvals & Canvas Config", () => {
     );
   });
 
-  it("renders all 11 sidebar tabs in WorkflowEditorTabs", () => {
+  it("renders all 10 sidebar tabs in WorkflowEditorTabs without Approvals", () => {
     render(
       <WorkflowEditorTabs
         activeTab="canvas"
@@ -141,9 +115,6 @@ describe("Workflow Editor Tabs, Approvals & Canvas Config", () => {
         tools={new Set()}
         onToggleTool={vi.fn()}
         onBulkSelectTools={vi.fn()}
-        approvalConfig={DEFAULT_WORKFLOW_APPROVAL_CONFIG}
-        onApprovalConfigChange={vi.fn()}
-        onToggleNodeReview={vi.fn()}
         canvasConfig={DEFAULT_WORKFLOW_CANVAS_CONFIG}
         onCanvasConfigChange={vi.fn()}
         skillMode="dynamic"
@@ -169,7 +140,7 @@ describe("Workflow Editor Tabs, Approvals & Canvas Config", () => {
     );
 
     expect(screen.getByText("Workflow Canvas")).toBeInTheDocument();
-    expect(screen.getByText("Approvals")).toBeInTheDocument();
+    expect(screen.queryByText("Approvals")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /^Canvas$/i })).toBeInTheDocument();
     expect(screen.getByText("Danger Zone")).toBeInTheDocument();
     expect(screen.getByTestId("mock-workflow-canvas")).toBeInTheDocument();

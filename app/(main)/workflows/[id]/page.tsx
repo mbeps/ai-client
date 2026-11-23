@@ -91,9 +91,6 @@ export default function WorkflowEditorPage() {
         tools={editor.tools}
         onToggleTool={editor.handleToggleTool}
         onBulkSelectTools={editor.handleBulkSelectTools}
-        approvalConfig={editor.approvalConfig}
-        onApprovalConfigChange={editor.setApprovalConfig}
-        onToggleNodeReview={editor.handleToggleNodeReview}
         canvasConfig={editor.canvasConfig}
         onCanvasConfigChange={editor.setCanvasConfig}
         skillMode={editor.skillMode}

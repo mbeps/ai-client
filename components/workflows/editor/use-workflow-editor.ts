@@ -119,18 +119,6 @@ export function useWorkflowEditor({
     );
   };
 
-  const handleToggleNodeReview = (nodeId: string, requiresReview: boolean) => {
-    form.setNodes(
-      form.nodes.map((node) => {
-        if (node.id !== nodeId) return node;
-        if (node.data.kind === "ai_step" || node.data.kind === "http_request") {
-          return { ...node, data: { ...node.data, requiresReview } };
-        }
-        return node;
-      }),
-    );
-  };
-
   const handleAutoLayout = () => {
     form.setNodes(autoLayoutWorkflowNodes(form.nodes, form.edges));
   };
@@ -235,7 +223,6 @@ export function useWorkflowEditor({
     handleAddNode,
     handleUpdateNode,
     handleDeleteNode,
-    handleToggleNodeReview,
     handleAutoLayout,
     handleRegenerateWebhookSecret,
     handleSave,

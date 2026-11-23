@@ -13,7 +13,6 @@ import { SkillsConfigTab } from "@/components/shared/skills-config-tab";
 import { SubagentPicker } from "@/components/shared/subagent-picker";
 import { Button } from "@/components/ui/button";
 import { WorkflowCanvas } from "@/components/workflows/canvas/workflow-canvas";
-import { WorkflowApprovalsTab } from "@/components/workflows/editor/workflow-approvals-tab";
 import { WorkflowCanvasConfigTab } from "@/components/workflows/editor/workflow-canvas-config-tab";
 import { WorkflowConfigTab } from "@/components/workflows/editor/workflow-config-tab";
 import { WorkflowContextTab } from "@/components/workflows/editor/workflow-context-tab";
@@ -28,7 +27,7 @@ import { toggleSetItem } from "@/lib/toggle-set-item";
 export type { WorkflowEditorTabsProps };
 
 /**
- * Eleven-tab visual DAG workflow studio shell.
+ * Ten-tab visual DAG workflow studio shell.
  */
 export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
   const {
@@ -56,9 +55,6 @@ export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
     tools,
     onToggleTool,
     onBulkSelectTools,
-    approvalConfig,
-    onApprovalConfigChange,
-    onToggleNodeReview,
     canvasConfig,
     onCanvasConfigChange,
     latestArtifact,
@@ -177,19 +173,6 @@ export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
             onBulkSelect={onBulkSelectTools}
           />
         </div>
-      </SidebarTabsContent>
-
-      <SidebarTabsContent
-        value="approvals"
-        className="flex-1 overflow-y-auto p-6"
-      >
-        <WorkflowApprovalsTab
-          approvalConfig={approvalConfig}
-          onApprovalConfigChange={onApprovalConfigChange}
-          nodes={nodes}
-          onToggleNodeReview={onToggleNodeReview}
-          availableTools={Array.from(tools)}
-        />
       </SidebarTabsContent>
 
       <SidebarTabsContent

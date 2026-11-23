@@ -9,7 +9,6 @@ import {
   Network,
   Settings,
   Shield,
-  ShieldCheck,
   Workflow,
   Wrench,
 } from "lucide-react";
@@ -25,7 +24,6 @@ import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { Skill } from "@/types/skill/skill";
 import type {
-  WorkflowApprovalConfig,
   WorkflowCanvasConfig,
   WorkflowEdge,
   WorkflowNode,
@@ -67,9 +65,6 @@ export interface WorkflowEditorTabsProps {
     toolNames: string[],
     enabled: boolean,
   ) => void;
-  approvalConfig: WorkflowApprovalConfig;
-  onApprovalConfigChange: (config: WorkflowApprovalConfig) => void;
-  onToggleNodeReview: (nodeId: string, requiresReview: boolean) => void;
   canvasConfig: WorkflowCanvasConfig;
   onCanvasConfigChange: (config: WorkflowCanvasConfig) => void;
   latestArtifact?: ArtifactData | null;
@@ -105,7 +100,7 @@ export interface WorkflowEditorTabsListProps {
 }
 
 /**
- * Vertical sidebar tab trigger rail for the eleven-tab DAG workflow studio.
+ * Vertical sidebar tab trigger rail for the ten-tab DAG workflow studio.
  */
 export function WorkflowEditorTabsList({
   isNew,
@@ -137,10 +132,6 @@ export function WorkflowEditorTabsList({
       <SidebarTabsTrigger value="tools">
         <Wrench className="mr-2 h-4 w-4" />
         <span>Tools</span>
-      </SidebarTabsTrigger>
-      <SidebarTabsTrigger value="approvals">
-        <ShieldCheck className="mr-2 h-4 w-4" />
-        <span>Approvals</span>
       </SidebarTabsTrigger>
       <SidebarTabsTrigger value="canvas-config">
         <LayoutPanelLeft className="mr-2 h-4 w-4" />
