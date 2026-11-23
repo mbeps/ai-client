@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { ModelReasoningEffortCard } from "@/components/chat/input/reasoning-effort-selector";
 import { KnowledgebasePicker } from "@/components/chat/knowledgebase-picker";
 import { SkillsPicker } from "@/components/chat/skills-picker";
 import { ToolPickerList } from "@/components/chat/tool-picker-list";
@@ -300,10 +301,20 @@ export function AiStepConfig({
         </p>
         <ModelSelector
           value={data.modelId ?? ""}
-          onValueChange={(value) => onChange({ modelId: value || undefined })}
+          onValueChange={(value) =>
+            onChange({
+              modelId: value || undefined,
+              ...(value ? {} : { reasoningEffort: undefined }),
+            })
+          }
           allowClear
           placeholder="Inherit workflow default"
           className="bg-card h-9 w-full border px-3"
+        />
+        <ModelReasoningEffortCard
+          modelId={data.modelId}
+          value={data.reasoningEffort}
+          onChange={(reasoningEffort) => onChange({ reasoningEffort })}
         />
       </div>
 

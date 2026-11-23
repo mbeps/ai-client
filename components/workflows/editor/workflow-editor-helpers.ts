@@ -4,6 +4,7 @@ import {
 } from "@/actions/workflow-runs/upload-workflow-run-input";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { Result } from "@/types/result";
 import {
@@ -23,6 +24,7 @@ export interface WorkflowFormSetters {
   setDescription: (desc: string) => void;
   setGlobalContext: (ctx: string) => void;
   setModelId: (id: string) => void;
+  setReasoningEffort?: (effort: ReasoningEffort | null) => void;
   setTools: (tools: Set<string>) => void;
   setSkillMode: (mode: SkillMode) => void;
   setSkillIds: (ids: Set<string>) => void;
@@ -42,6 +44,7 @@ export interface WorkflowPayloadInput {
   description: string;
   globalContext: string;
   modelId: string;
+  reasoningEffort: ReasoningEffort | null;
   tools: Set<string>;
   skillMode: SkillMode;
   skillIds: Set<string>;
@@ -224,6 +227,7 @@ export function hydrateWorkflowFormState(
   setters.setDescription(workflow.description ?? "");
   setters.setGlobalContext(workflow.globalContext ?? "");
   setters.setModelId(workflow.modelId ?? "");
+  setters.setReasoningEffort?.(workflow.reasoningEffort ?? null);
   setters.setTools(new Set(workflow.tools ?? []));
   setters.setSkillMode(workflow.skillMode ?? "dynamic");
   setters.setSkillIds(new Set(workflow.skillIds ?? []));
@@ -250,6 +254,7 @@ export function buildWorkflowPayload(state: WorkflowPayloadInput) {
     description: state.description.trim() || undefined,
     globalContext: state.globalContext.trim() || undefined,
     modelId: state.modelId.trim() || undefined,
+    reasoningEffort: state.modelId.trim() ? state.reasoningEffort : null,
     tools: Array.from(state.tools),
     skillMode: state.skillMode,
     skillIds: Array.from(state.skillIds),

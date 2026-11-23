@@ -396,6 +396,15 @@ describe("subagent-dispatch-tool", () => {
       });
       expect(capturedConfig.instructions).toContain("You analyze data.");
       expect(capturedConfig.instructions).toContain("Keep answers tabular.");
+
+      customAgent.reasoningEffort = "high";
+      for await (const _ of dispatchTool.execute(
+        { agent: "Data Analyst", taskBrief: "Analyze again" },
+        { abortSignal: undefined } as any,
+      )) {
+        // exhaust
+      }
+      expect(resolveModelById).toHaveBeenCalledWith("custom-model-id", "high");
     });
 
     it("filters availableTools by targetAgent.tools when isolateTools is true and buildIsolatedTools is omitted", async () => {

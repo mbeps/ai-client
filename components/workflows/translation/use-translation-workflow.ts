@@ -103,6 +103,11 @@ export function useTranslationWorkflow() {
       return;
     }
 
+    const selected = chatModels.find((model) => model.modelId === form.modelId);
+    const supportsReasoningEffort =
+      Boolean(selected?.reasoningEffortFormat) &&
+      selected?.reasoningEffortFormat !== "none";
+
     setIsLoading(true);
     form.setTranslatedText("");
     await executeTranslationRequest({
@@ -110,16 +115,21 @@ export function useTranslationWorkflow() {
       sourceLangLabel: form.sourceLang.label,
       targetLangLabel: form.targetLang.label,
       modelId: form.modelId,
+      reasoningEffort: supportsReasoningEffort
+        ? form.reasoningEffort
+        : undefined,
       attachment: form.attachment,
       handleApiError,
       onSuccess: setActiveTranslationId,
       onError: () => setIsLoading(false),
     });
   }, [
+    chatModels,
     form.sourceText,
     form.sourceLang,
     form.targetLang,
     form.modelId,
+    form.reasoningEffort,
     form.attachment,
     form.setTranslatedText,
     handleApiError,
@@ -164,10 +174,14 @@ export function useTranslationWorkflow() {
     }
   };
 
-  const isVisionModel = useMemo(() => {
-    const selected = chatModels.find((model) => model.modelId === form.modelId);
-    return selected?.capVision ?? false;
-  }, [chatModels, form.modelId]);
+  const selectedModel = useMemo(
+    () => chatModels.find((model) => model.modelId === form.modelId),
+    [chatModels, form.modelId],
+  );
+  const isVisionModel = selectedModel?.capVision ?? false;
+  const supportsReasoningEffort =
+    Boolean(selectedModel?.reasoningEffortFormat) &&
+    selectedModel?.reasoningEffortFormat !== "none";
 
   const canTranslate = !isTranslateActionDisabled({
     isLoading,
@@ -189,6 +203,9 @@ export function useTranslationWorkflow() {
     setTargetLangValue: form.setTargetLangValue,
     modelId: form.modelId,
     setModelId: form.setModelId,
+    reasoningEffort: form.reasoningEffort,
+    setReasoningEffort: form.setReasoningEffort,
+    supportsReasoningEffort,
     isLoading,
     isCopied: form.isCopied,
     attachment: form.attachment,

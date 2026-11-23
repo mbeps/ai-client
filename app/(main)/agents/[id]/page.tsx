@@ -250,6 +250,10 @@ export default function AgentDetailPage() {
             }
             modelId={form.modelId}
             onModelIdChange={(modelId) => setForm((p) => ({ ...p, modelId }))}
+            reasoningEffort={form.reasoningEffort}
+            onReasoningEffortChange={(reasoningEffort) =>
+              setForm((p) => ({ ...p, reasoningEffort }))
+            }
             onSave={handleSaveDetails}
             isSaving={saving}
             disabled={isBuiltIn}

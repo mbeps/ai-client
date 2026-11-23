@@ -17,6 +17,7 @@ import { mcpServerRowToConfig } from "@/lib/mcp/mcp-server-row-to-config";
 import { exploreKbGraph } from "@/lib/rag/explore-kb-graph";
 import { hybridSearch } from "@/lib/rag/hybrid-search";
 import { resolveContextSkills } from "@/lib/skills/resolve-context-skills";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { McpServerRow } from "@/types/mcp/mcp-server-row";
 import type { SkillRow } from "@/types/skill/skill-row";
@@ -28,6 +29,7 @@ import type {
 const log = getLogger(["app", "workflows", "context"]);
 
 interface NodeContextOverride {
+  reasoningEffort?: ReasoningEffort;
   knowledgeBaseIds?: string[];
   skillMode?: "inherit" | SkillMode;
   skillIds?: string[];
@@ -41,6 +43,7 @@ interface LoadWorkflowContextArgs {
     name: string;
     description?: string | null;
     modelId?: string | null;
+    reasoningEffort?: ReasoningEffort | null;
     knowledgeBaseIds?: string[];
     globalContext?: string | null;
     tools?: string[];
@@ -107,8 +110,12 @@ export async function loadWorkflowContext({
   );
 
   const model = modelOverride ?? workflowRow.modelId ?? null;
+  const reasoningEffort =
+    (modelOverride
+      ? nodeOverride?.reasoningEffort
+      : workflowRow.reasoningEffort) ?? undefined;
   const providerPromise = model
-    ? resolveProvider(userId, model)
+    ? resolveProvider(userId, model, reasoningEffort)
     : resolveDefaultChatProvider(userId);
 
   const skillMode: SkillMode =

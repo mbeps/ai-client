@@ -1,5 +1,6 @@
 import { fetchProviderWithModel } from "@/lib/chat/fetch-provider-with-model";
 import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 
 /**
@@ -17,6 +18,7 @@ import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 export async function resolveProvider(
   userId: string,
   modelIdentifier: string,
+  reasoningEffort?: ReasoningEffort,
 ): Promise<ResolvedProvider> {
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -25,9 +27,14 @@ export async function resolveProvider(
 
   if (isUuid) {
     try {
-      return await fetchProviderWithModel(userId, {
-        recordId: modelIdentifier,
-      });
+      return await (reasoningEffort
+        ? fetchProviderWithModel(
+            userId,
+            { recordId: modelIdentifier },
+            [],
+            reasoningEffort,
+          )
+        : fetchProviderWithModel(userId, { recordId: modelIdentifier }));
     } catch (err) {
       // If it looks like a UUID but isn't in our DB as an ID,
       // maybe it's actually a model slug that happens to look like a UUID
@@ -38,5 +45,12 @@ export async function resolveProvider(
     }
   }
 
-  return fetchProviderWithModel(userId, { modelId: modelIdentifier });
+  return reasoningEffort
+    ? fetchProviderWithModel(
+        userId,
+        { modelId: modelIdentifier },
+        [],
+        reasoningEffort,
+      )
+    : fetchProviderWithModel(userId, { modelId: modelIdentifier });
 }

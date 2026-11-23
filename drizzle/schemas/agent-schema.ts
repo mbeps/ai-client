@@ -5,6 +5,7 @@ import {
   timestampColumns,
   userForeignKeyColumn,
 } from "@/drizzle/schemas/schema-helpers";
+import { REASONING_EFFORTS } from "@/schemas/providers/provider-registry";
 
 /**
  * Controls how a delegated Layer-2 subagent can interact with the shared scratchpad.
@@ -44,6 +45,7 @@ export const agent = pgTable(
     prompt: text("prompt"),
     subagentPrompt: text("subagent_prompt"),
     modelId: text("model_id"),
+    reasoningEffort: text("reasoning_effort", { enum: REASONING_EFFORTS }),
     knowledgebaseIds: text("knowledgebase_ids")
       .array()
       .notNull()

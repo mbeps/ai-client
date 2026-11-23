@@ -2,7 +2,10 @@ import { buildSdkProvider } from "@/lib/chat/build-sdk-provider";
 import { decryptProviderField } from "@/lib/chat/decrypt-provider-field";
 import { getLogger } from "@/lib/logger";
 import { parseProviderHeaders } from "@/lib/providers/parse-provider-headers";
-import type { ReasoningEffortFormat } from "@/schemas/providers/provider-registry";
+import type {
+  ReasoningEffort,
+  ReasoningEffortFormat,
+} from "@/schemas/providers/provider-registry";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
@@ -23,6 +26,7 @@ const log = getLogger(["app", "chat", "provider"]);
 export function buildResolvedProvider(
   row: { provider: AiProviderRow; model: AiModelRow },
   userId: string,
+  reasoningEffort?: ReasoningEffort,
 ): ResolvedProvider {
   const decryptedApiKey = decryptProviderField(
     row.provider.apiKey,
@@ -73,6 +77,7 @@ export function buildResolvedProvider(
       headers,
       reasoningEffortFormat:
         (row.model.reasoningEffortFormat as ReasoningEffortFormat) ?? "none",
+      reasoningEffort,
       modelOptions: parsedModelOptions,
     }),
     modelId: row.model.modelId,

@@ -3,7 +3,7 @@
 import { Check, ExternalLink, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { ReasoningEffortSlider } from "@/components/chat/input/reasoning-effort-selector";
+import { ModelReasoningEffortCard } from "@/components/chat/input/reasoning-effort-selector";
 import { SubagentModelSelect } from "@/components/chat/subagent-model-select";
 import { SubagentPicker } from "@/components/shared/subagent-picker";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,6 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { BUILT_IN_AGENTS } from "@/config/built-in-agents";
 import { ROUTES } from "@/config/routes";
-import { useUserModels } from "@/hooks/use-user-models";
 import { useAppStore } from "@/lib/store/use-app-store";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Agent } from "@/types/agent/agent";
@@ -73,18 +72,8 @@ export function SubagentConfigDialog({
   const storeAgents = useAppStore((s) => s.agents);
   const rawAgents = agentsProp ?? storeAgents ?? [];
   const agents = rawAgents.length > 0 ? rawAgents : BUILT_IN_AGENTS;
-  const { models } = useUserModels("chat");
   const [internalReasoningEffort, setInternalReasoningEffort] =
     useState<ReasoningEffort>("medium");
-
-  const selectedModel = subagentModelId
-    ? models.find(
-        (m) => m.id === subagentModelId || m.modelId === subagentModelId,
-      )
-    : undefined;
-  const supportsReasoningEffort =
-    Boolean(selectedModel?.reasoningEffortFormat) &&
-    selectedModel?.reasoningEffortFormat !== "none";
 
   const activeReasoningEffort =
     subagentReasoningEffort ?? internalReasoningEffort;
@@ -123,15 +112,12 @@ export function SubagentConfigDialog({
               onValueChange={onSubagentModelChange}
               disabled={!subagentsEnabled}
             />
-            {supportsReasoningEffort && (
-              <div className="border-border bg-card rounded-lg border p-3">
-                <ReasoningEffortSlider
-                  value={activeReasoningEffort}
-                  onChange={handleReasoningEffortChange}
-                  disabled={!subagentsEnabled}
-                />
-              </div>
-            )}
+            <ModelReasoningEffortCard
+              modelId={subagentModelId}
+              value={activeReasoningEffort}
+              onChange={handleReasoningEffortChange}
+              disabled={!subagentsEnabled}
+            />
           </div>
 
           <Separator />

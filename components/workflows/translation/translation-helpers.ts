@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { triggerTranslation } from "@/actions/workflows/trigger-translation";
 import { LANGUAGES } from "@/config/languages";
 import type { WorkflowTranslation } from "@/drizzle/schemas/workflow-schema";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -190,6 +191,7 @@ export async function executeTranslationRequest(params: {
   sourceLangLabel: string;
   targetLangLabel: string;
   modelId?: string;
+  reasoningEffort?: ReasoningEffort;
   attachment: Attachment | null;
   handleApiError: (err: unknown) => boolean;
   onSuccess: (id: string) => void;
@@ -202,6 +204,7 @@ export async function executeTranslationRequest(params: {
       sourceLanguage: params.sourceLangLabel,
       targetLanguage: params.targetLangLabel,
       modelId: params.modelId || undefined,
+      reasoningEffort: params.reasoningEffort,
       attachment: payloadAttachment,
     });
     if (!res.ok) {

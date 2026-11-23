@@ -59,6 +59,7 @@ export const listWorkflows = defineAction(
           description: row.description ?? "",
           globalContext: row.globalContext ?? undefined,
           modelId: row.modelId ?? undefined,
+          reasoningEffort: row.reasoningEffort ?? null,
           tools: row.tools ?? [],
           skillMode: row.skillMode,
           skillIds: row.skillIds ?? [],

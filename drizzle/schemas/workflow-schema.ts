@@ -5,6 +5,7 @@ import {
   timestampColumns,
   userForeignKeyColumn,
 } from "@/drizzle/schemas/schema-helpers";
+import { REASONING_EFFORTS } from "@/schemas/providers/provider-registry";
 import type {
   WorkflowApprovalConfig,
   WorkflowCanvasConfig,
@@ -59,6 +60,7 @@ export const workflow = pgTable(
     description: text("description"),
     globalContext: text("global_context"),
     modelId: text("model_id"),
+    reasoningEffort: text("reasoning_effort", { enum: REASONING_EFFORTS }),
     tools: text("tools").array().notNull().default(sql`'{}'::text[]`),
     skillMode: text("skill_mode", { enum: ["dynamic", "none", "specific"] })
       .notNull()

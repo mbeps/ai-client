@@ -9,6 +9,7 @@ import { ERROR_CODE } from "@/lib/error/error-code";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import {
   DEFAULT_WORKFLOW_APPROVAL_CONFIG,
@@ -86,6 +87,8 @@ export function useWorkflowEditorForm({
   const [description, setDescription] = useState("");
   const [globalContext, setGlobalContext] = useState("");
   const [modelId, setModelId] = useState("");
+  const [reasoningEffort, setReasoningEffort] =
+    useState<ReasoningEffort | null>(null);
   const [tools, setTools] = useState<Set<string>>(new Set());
   const [skillMode, setSkillMode] = useState<SkillMode>("dynamic");
   const [skillIds, setSkillIds] = useState<Set<string>>(new Set());
@@ -145,6 +148,7 @@ export function useWorkflowEditorForm({
             setDescription,
             setGlobalContext,
             setModelId,
+            setReasoningEffort,
             setTools,
             setSkillMode,
             setSkillIds,
@@ -209,6 +213,8 @@ export function useWorkflowEditorForm({
     setGlobalContext,
     modelId,
     setModelId,
+    reasoningEffort,
+    setReasoningEffort,
     tools,
     skillMode,
     setSkillMode,

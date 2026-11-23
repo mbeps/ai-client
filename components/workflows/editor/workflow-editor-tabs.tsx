@@ -76,6 +76,8 @@ export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
     onDescriptionChange,
     modelId,
     onModelIdChange,
+    reasoningEffort,
+    onReasoningEffortChange,
     requiresFileUpload,
     onRequiresFileUploadChange,
     onDelete,
@@ -241,6 +243,8 @@ export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
           onDescriptionChange={onDescriptionChange}
           modelId={modelId}
           onModelIdChange={onModelIdChange}
+          reasoningEffort={reasoningEffort}
+          onReasoningEffortChange={onReasoningEffortChange}
           requiresFileUpload={requiresFileUpload}
           onRequiresFileUploadChange={onRequiresFileUploadChange}
         />

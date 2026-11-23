@@ -1,7 +1,32 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ReasoningEffortSelector } from "@/components/chat/input/reasoning-effort-selector";
+import {
+  ModelReasoningEffortCard,
+  ReasoningEffortSelector,
+} from "@/components/chat/input/reasoning-effort-selector";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+
+vi.mock("@/hooks/use-user-models", () => ({
+  useUserModels: vi.fn(() => ({
+    models: [
+      {
+        id: "m-1",
+        modelId: "gpt-4o",
+        label: "GPT-4o",
+        providerName: "OpenAI",
+        reasoningEffortFormat: "none",
+      },
+      {
+        id: "m-2",
+        modelId: "o3-mini",
+        label: "o3-mini",
+        providerName: "OpenAI",
+        reasoningEffortFormat: "openai",
+      },
+    ],
+    isLoading: false,
+  })),
+}));
 
 describe("ReasoningEffortSelector", () => {
   it("renders trigger with medium effort by default", () => {
@@ -105,5 +130,34 @@ describe("ReasoningEffortSelector", () => {
     expect(
       screen.getByRole("button", { name: /Reasoning effort: Medium/i }),
     ).toBeDefined();
+  });
+});
+
+describe("ModelReasoningEffortCard", () => {
+  it("returns null when modelId is unset or does not support reasoning effort", () => {
+    const { container, rerender } = render(
+      <ModelReasoningEffortCard modelId={null} value="medium" onChange={vi.fn()} />,
+    );
+    expect(container.firstChild).toBeNull();
+
+    rerender(
+      <ModelReasoningEffortCard modelId="gpt-4o" value="medium" onChange={vi.fn()} />,
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders ReasoningEffortSlider when selected model supports reasoning effort", () => {
+    const handleChange = vi.fn();
+    render(
+      <ModelReasoningEffortCard
+        modelId="o3-mini"
+        value="low"
+        onChange={handleChange}
+      />,
+    );
+
+    expect(screen.getByText("Reasoning Effort")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /^High$/i }));
+    expect(handleChange).toHaveBeenCalledWith("high");
   });
 });

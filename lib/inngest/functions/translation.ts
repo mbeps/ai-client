@@ -12,6 +12,7 @@ import {
   translationChannel,
 } from "@/lib/inngest/translation-channel";
 import { getLogger } from "@/lib/logger";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 
 const DELTA_COALESCE_INTERVAL_MS = 40;
 
@@ -29,6 +30,7 @@ interface TranslationWorkflowEventData {
   targetLanguage: string;
   sourceText: string;
   modelId?: string;
+  reasoningEffort?: ReasoningEffort;
   isImage?: boolean;
   attachmentDataUrl?: string;
   attachmentMimeType?: string;
@@ -94,6 +96,7 @@ export const executeTranslationWorkflow = inngest.createFunction(
       targetLanguage,
       sourceText,
       modelId,
+      reasoningEffort,
       isImage,
       attachmentDataUrl,
       attachmentMimeType,
@@ -145,6 +148,9 @@ export const executeTranslationWorkflow = inngest.createFunction(
 
       const result = streamText({
         model: resolved.sdkProvider.chat(resolved.modelId),
+        headers: reasoningEffort
+          ? { "x-ai-client-reasoning-effort": reasoningEffort }
+          : undefined,
         messages: [
           {
             role: "user",

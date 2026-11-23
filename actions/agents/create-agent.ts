@@ -58,6 +58,7 @@ export const createAgent = defineAction(
           prompt: validated.prompt ?? null,
           subagentPrompt: validated.subagentPrompt ?? null,
           modelId: validated.modelId ?? null,
+          reasoningEffort: validated.reasoningEffort ?? null,
           knowledgebaseIds: validated.knowledgebaseIds ?? [],
           tools: validated.tools ?? [...DEFAULT_ENABLED_TOOLS],
           skillMode: validated.skillMode,

@@ -158,6 +158,7 @@ export function useWorkflowEditor({
         description: form.description,
         globalContext: form.globalContext,
         modelId: form.modelId,
+        reasoningEffort: form.reasoningEffort,
         tools: form.tools,
         skillMode: form.skillMode,
         skillIds: form.skillIds,

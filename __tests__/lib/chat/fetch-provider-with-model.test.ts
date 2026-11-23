@@ -93,5 +93,8 @@ describe("fetchProviderWithModel", () => {
     const result = await fetchProviderWithModel("user-1", { modelId: "openai/gpt-4" });
     expect(result).toBe(fakeResolved);
     expect(buildResolvedProviderMock).toHaveBeenCalledWith(row, "user-1");
+
+    await fetchProviderWithModel("user-1", { modelId: "openai/gpt-4" }, [], "high");
+    expect(buildResolvedProviderMock).toHaveBeenCalledWith(row, "user-1", "high");
   });
 });

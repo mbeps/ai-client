@@ -165,6 +165,7 @@ describe("executeTranslationWorkflow Inngest Function", () => {
           targetLanguage: "Spanish",
           sourceText: "Hello",
           modelId: "custom-model",
+          reasoningEffort: "high",
         },
       },
     });
@@ -172,6 +173,11 @@ describe("executeTranslationWorkflow Inngest Function", () => {
     expect(mockFetchProviderWithModel).toHaveBeenCalledWith("user-1", {
       modelId: "custom-model",
     });
+    expect(mockStreamText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: { "x-ai-client-reasoning-effort": "high" },
+      }),
+    );
   });
 
   it("handles image attachments with dataUrl and mimeType", async () => {
