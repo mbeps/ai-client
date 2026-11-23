@@ -36,4 +36,73 @@ describe("ModelSelector", () => {
     );
     expect(onValueChange).toHaveBeenCalledWith("");
   });
+
+  it("opens the model list and selects a model when rendered outside a dialog", () => {
+    mockUseUserModels.mockReturnValue({
+      models: [
+        {
+          id: "m1",
+          modelId: "gpt-4o",
+          label: "GPT-4o",
+          providerName: "OpenAI",
+          contextWindow: 128000,
+        },
+        {
+          id: "m2",
+          modelId: "claude-3-5-sonnet",
+          label: "Claude 3.5 Sonnet",
+          providerName: "Anthropic",
+          contextWindow: 200000,
+        },
+      ],
+      isLoading: false,
+    });
+    const onValueChange = vi.fn();
+
+    render(<ModelSelector value="gpt-4o" onValueChange={onValueChange} />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Select model" }));
+
+    expect(screen.getByLabelText("Search models")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Claude 3.5 Sonnet"));
+    expect(onValueChange).toHaveBeenCalledWith("claude-3-5-sonnet");
+  });
+
+  it("portals inside the nearest dialog when rendered inside a dialog", () => {
+    mockUseUserModels.mockReturnValue({
+      models: [
+        {
+          id: "m1",
+          modelId: "gpt-4o",
+          label: "GPT-4o",
+          providerName: "OpenAI",
+          contextWindow: 128000,
+        },
+        {
+          id: "m2",
+          modelId: "claude-3-5-sonnet",
+          label: "Claude 3.5 Sonnet",
+          providerName: "Anthropic",
+          contextWindow: 200000,
+        },
+      ],
+      isLoading: false,
+    });
+    const onValueChange = vi.fn();
+
+    render(
+      <div role="dialog" data-testid="dialog-container">
+        <ModelSelector value="gpt-4o" onValueChange={onValueChange} />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Select model" }));
+
+    const dialog = screen.getByTestId("dialog-container");
+    const searchInput = screen.getByLabelText("Search models");
+    expect(dialog).toContainElement(searchInput);
+
+    fireEvent.click(screen.getByText("Claude 3.5 Sonnet"));
+    expect(onValueChange).toHaveBeenCalledWith("claude-3-5-sonnet");
+  });
 });
