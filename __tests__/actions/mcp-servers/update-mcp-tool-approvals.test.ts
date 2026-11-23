@@ -140,6 +140,50 @@ describe("updateMcpToolApprovals", () => {
     });
   });
 
+  it("updates blockedTools on an owned personal server and removes blocked tools from autoApprovedTools", async () => {
+    const updatedRow = {
+      id: "srv-1",
+      userId,
+      name: "My Server",
+      url: "https://example.com/mcp",
+      headers: null,
+      authType: "none",
+      oauthClientId: null,
+      oauthClientSecret: null,
+      oauthScope: null,
+      enabled: true,
+      isPublic: false,
+      autoApprovedTools: ["fetch"],
+      blockedTools: ["search"],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    mockUpdateReturning.mockResolvedValueOnce([updatedRow]);
+
+    const result = await updateMcpToolApprovals({
+      serverId: "srv-1",
+      autoApprovedTools: ["search", "fetch"],
+      blockedTools: [" search ", "search", ""],
+    });
+
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        autoApprovedTools: ["fetch"],
+        blockedTools: ["search"],
+        updatedAt: expect.any(Date),
+      }),
+    );
+    expect(result).toEqual({
+      ok: true,
+      value: expect.objectContaining({
+        id: "srv-1",
+        autoApprovedTools: ["fetch"],
+        blockedTools: ["search"],
+        isInstalled: false,
+      }),
+    });
+  });
+
   it("returns NOT_FOUND if neither owned server nor installation exists", async () => {
     mockUpdateReturning.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 

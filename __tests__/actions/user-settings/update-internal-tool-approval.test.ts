@@ -135,6 +135,29 @@ describe("updateInternalToolApproval", () => {
     expect(result).toEqual({ ok: true, value: updatedRow });
   });
 
+  it("stores block override when approval is set to block", async () => {
+    mockSelectWhere.mockResolvedValueOnce([]);
+    const updatedRow = {
+      id: "settings-1",
+      userId,
+      internalToolApprovals: JSON.stringify({ save_memory: "block" }),
+    };
+    mockReturning.mockResolvedValueOnce([updatedRow]);
+
+    const result = await updateInternalToolApproval({
+      toolName: "save_memory",
+      approval: "block",
+    });
+
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId,
+        internalToolApprovals: JSON.stringify({ save_memory: "block" }),
+      }),
+    );
+    expect(result).toEqual({ ok: true, value: updatedRow });
+  });
+
   it("stores null when all overrides are pruned back to defaults", async () => {
     mockSelectWhere.mockResolvedValueOnce([
       { internalToolApprovals: JSON.stringify({ create_skill: "auto" }) },

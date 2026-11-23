@@ -37,6 +37,10 @@ export const mcpServer = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    blockedTools: text("blocked_tools")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     ...timestampColumns(),
   },
   (table) => [index("mcp_server_user_id_idx").on(table.userId)],
@@ -61,6 +65,10 @@ export const userMcpServerInstall = pgTable(
     oauthClientSecret: text("oauth_client_secret"),
     enabled: boolean("enabled").notNull().default(true),
     autoApprovedTools: text("auto_approved_tools")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    blockedTools: text("blocked_tools")
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),

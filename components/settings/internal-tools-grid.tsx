@@ -13,7 +13,7 @@ import type {
   InternalToolCategory,
 } from "@/config/tools";
 import { useAppStore } from "@/lib/store/use-app-store";
-import type { ApprovalMode } from "@/types/tool/approval";
+import type { ToolPermissionMode } from "@/types/tool/approval";
 
 type CatalogueEntry = (typeof INTERNAL_TOOL_CATALOGUE)[number];
 
@@ -24,9 +24,15 @@ export interface InternalToolsGridProps {
   groups: [InternalToolCategory, CatalogueEntry[]][];
 }
 
+const PERMISSION_TOAST_MESSAGE: Record<ToolPermissionMode, string> = {
+  auto: "Tool set to auto-approve",
+  ask: "Tool set to require approval",
+  block: "Tool blocked",
+};
+
 /**
  * Client wrapper for `/settings/tools` that hydrates `userSettings` from the
- * store and persists per-tool internal approval overrides via
+ * store and persists per-tool internal permission overrides via
  * {@link updateInternalToolApproval}.
  */
 export function InternalToolsGrid({ groups }: InternalToolsGridProps) {
@@ -47,7 +53,7 @@ export function InternalToolsGrid({ groups }: InternalToolsGridProps) {
   );
 
   const handleToggleApproval = useCallback(
-    async (toolName: string, nextApproval: ApprovalMode) => {
+    async (toolName: string, nextApproval: ToolPermissionMode) => {
       setPendingTool(toolName);
       try {
         const res = await updateInternalToolApproval({
@@ -59,11 +65,7 @@ export function InternalToolsGrid({ groups }: InternalToolsGridProps) {
           return;
         }
         updateUserSettingsState(res.value);
-        toast.success(
-          nextApproval === "auto"
-            ? "Tool set to auto-approve"
-            : "Tool set to require approval",
-        );
+        toast.success(PERMISSION_TOAST_MESSAGE[nextApproval]);
       } finally {
         setPendingTool(null);
       }

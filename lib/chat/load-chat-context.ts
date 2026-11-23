@@ -186,6 +186,7 @@ export async function loadChatContext(
             oauthClientSecret: mcpServer.oauthClientSecret,
             oauthScope: mcpServer.oauthScope,
             autoApprovedTools: mcpServer.autoApprovedTools,
+            blockedTools: mcpServer.blockedTools,
           })
           .from(mcpServer)
           .where(
@@ -202,6 +203,7 @@ export async function loadChatContext(
             oauthClientSecret: userMcpServerInstall.oauthClientSecret,
             oauthScope: mcpServer.oauthScope,
             autoApprovedTools: userMcpServerInstall.autoApprovedTools,
+            blockedTools: userMcpServerInstall.blockedTools,
           })
           .from(userMcpServerInstall)
           .innerJoin(mcpServer, eq(userMcpServerInstall.serverId, mcpServer.id))

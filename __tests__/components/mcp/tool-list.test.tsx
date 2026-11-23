@@ -126,6 +126,7 @@ describe("ToolList", () => {
       expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
         serverId: "srv-1",
         autoApprovedTools: ["search", "delete_item"],
+        blockedTools: [],
       });
     });
     expect(mockLoadMcpServers).toHaveBeenCalledTimes(1);
@@ -135,7 +136,7 @@ describe("ToolList", () => {
   it("disables auto-approval for a single tool when Needs approval is selected", async () => {
     mockUpdateMcpToolApprovals.mockResolvedValue({
       ok: true,
-      value: { autoApprovedTools: [] },
+      value: { autoApprovedTools: [], blockedTools: [] },
     });
 
     render(<ToolList server={createServer({ autoApprovedTools: ["search"] })} />);
@@ -149,14 +150,37 @@ describe("ToolList", () => {
       expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
         serverId: "srv-1",
         autoApprovedTools: [],
+        blockedTools: [],
       });
     });
   });
 
-  it("supports batch Always allow and Needs approval dropdown actions", async () => {
+  it("supports blocking a single tool and removes it from autoApprovedTools", async () => {
     mockUpdateMcpToolApprovals.mockResolvedValue({
       ok: true,
-      value: { autoApprovedTools: ["search", "delete_item"] },
+      value: { autoApprovedTools: [], blockedTools: ["search"] },
+    });
+
+    render(<ToolList server={createServer({ autoApprovedTools: ["search"] })} />);
+
+    const searchBlocked = await screen.findByRole("radio", {
+      name: "Blocked search",
+    });
+    fireEvent.click(searchBlocked);
+
+    await waitFor(() => {
+      expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
+        serverId: "srv-1",
+        autoApprovedTools: [],
+        blockedTools: ["search"],
+      });
+    });
+  });
+
+  it("supports batch Always allow, Needs approval, and Blocked dropdown actions", async () => {
+    mockUpdateMcpToolApprovals.mockResolvedValue({
+      ok: true,
+      value: { autoApprovedTools: ["search", "delete_item"], blockedTools: [] },
     });
 
     render(<ToolList server={createServer({ autoApprovedTools: [] })} />);
@@ -176,12 +200,13 @@ describe("ToolList", () => {
       expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
         serverId: "srv-1",
         autoApprovedTools: ["search", "delete_item"],
+        blockedTools: [],
       });
     });
 
     mockUpdateMcpToolApprovals.mockResolvedValue({
       ok: true,
-      value: { autoApprovedTools: [] },
+      value: { autoApprovedTools: [], blockedTools: ["search", "delete_item"] },
     });
 
     const updatedTrigger = await screen.findByRole("button", {
@@ -189,6 +214,30 @@ describe("ToolList", () => {
     });
     fireEvent.pointerDown(updatedTrigger);
     fireEvent.click(updatedTrigger);
+
+    const blockedItem = await screen.findByRole("menuitem", {
+      name: /Blocked/i,
+    });
+    fireEvent.click(blockedItem);
+
+    await waitFor(() => {
+      expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
+        serverId: "srv-1",
+        autoApprovedTools: [],
+        blockedTools: ["search", "delete_item"],
+      });
+    });
+
+    mockUpdateMcpToolApprovals.mockResolvedValue({
+      ok: true,
+      value: { autoApprovedTools: [], blockedTools: [] },
+    });
+
+    const blockedTrigger = await screen.findByRole("button", {
+      name: /Blocked/i,
+    });
+    fireEvent.pointerDown(blockedTrigger);
+    fireEvent.click(blockedTrigger);
 
     const needsApprovalItem = await screen.findByRole("menuitem", {
       name: /Needs approval/i,
@@ -199,6 +248,7 @@ describe("ToolList", () => {
       expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
         serverId: "srv-1",
         autoApprovedTools: [],
+        blockedTools: [],
       });
     });
   });

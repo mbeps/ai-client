@@ -2,7 +2,10 @@ import type { ModelMessage } from "ai";
 import type { ChatStreamEvent } from "@/lib/inngest/chat-channel";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Agent } from "@/types/agent/agent";
-import type { PendingApproval } from "@/types/tool/approval";
+import type {
+  PendingApproval,
+  ToolPermissionMode,
+} from "@/types/tool/approval";
 import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
 export type { CompletedToolRecord };
@@ -49,6 +52,7 @@ export interface BuildOrchestratorToolSetParams {
   resolved: any;
   resolvedModelId: string;
   workerResolved: any;
+  internalToolOverrides?: Record<string, ToolPermissionMode | undefined>;
   wrapSubagentTools?: (
     workerTools: Record<string, any>,
     targetAgent: Agent,

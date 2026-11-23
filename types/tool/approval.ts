@@ -1,10 +1,19 @@
 /**
- * Execution permission mode for a chat session or individual tool.
+ * Execution permission mode for a chat session.
  *
  * - `"ask"`: Requires explicit user approval before executing gated tools.
- * - `"auto"`: Automatically approves tool calls without prompting.
+ * - `"auto"`: Automatically approves non-blocked tool calls without prompting.
  */
 export type ApprovalMode = "ask" | "auto";
+
+/**
+ * Persistent per-tool permission policy for internal and MCP tools.
+ *
+ * - `"ask"`: Requires explicit user approval before executing.
+ * - `"auto"`: Automatically approves tool calls without prompting.
+ * - `"block"`: Blocks the tool from being exposed to or executed by models.
+ */
+export type ToolPermissionMode = ApprovalMode | "block";
 
 /**
  * AI SDK v7 `toolApproval` map entry values produced by policy resolution.

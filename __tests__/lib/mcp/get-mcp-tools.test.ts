@@ -119,5 +119,25 @@ describe("getMcpTools", () => {
     expect(toolSourceMap.duplicateTool).toBe("server-2");
     expect(toolServerIdMap.duplicateTool).toBe("s2");
   });
+
+  it("skips tools listed in server.blockedTools", async () => {
+    connectServerMock.mockResolvedValueOnce({
+      serverId: "s1",
+      serverName: "server-1",
+      tools: {
+        allowedTool: { description: "Allowed" },
+        blockedTool: { description: "Blocked" },
+      },
+      close: vi.fn(),
+    });
+
+    const servers = [
+      { id: "s1", name: "server-1", blockedTools: ["blockedTool"] },
+    ] as McpServerConfig[];
+
+    const { tools } = await getMcpTools(servers);
+
+    expect(Object.keys(tools)).toEqual(["allowedTool"]);
+  });
 });
 

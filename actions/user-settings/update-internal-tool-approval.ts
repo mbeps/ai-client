@@ -15,22 +15,23 @@ import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
 import type { CommonError } from "@/types/error/common-error";
 import type { Result } from "@/types/result";
-import type { ApprovalMode } from "@/types/tool/approval";
+import type { ToolPermissionMode } from "@/types/tool/approval";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
 
 const log = getLogger(["app", "actions", "user-settings", "tool-approval"]);
 
 /**
- * Updates or resets a user's persistent approval override for a single internal
- * tool. Entries matching the catalogue default are pruned to keep storage minimal.
+ * Updates or resets a user's persistent permission override for a single internal
+ * tool (`"auto"`, `"ask"`, or `"block"`). Entries matching the catalogue default
+ * are pruned to keep storage minimal.
  *
- * @param input - Internal tool name and desired approval mode
+ * @param input - Internal tool name and desired permission mode
  * @returns Result wrapping the updated UserSettingsRow
  */
 export const updateInternalToolApproval = defineAction(
   async (input: {
     toolName: string;
-    approval: ApprovalMode;
+    approval: ToolPermissionMode;
   }): Promise<Result<UserSettingsRow, CommonError>> => {
     const session = await requireSession();
 

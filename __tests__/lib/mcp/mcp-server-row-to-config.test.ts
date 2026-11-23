@@ -27,6 +27,7 @@ describe("mcpServerRowToConfig", () => {
       oauthClientSecret: null,
       oauthScope: null,
       autoApprovedTools: [],
+      blockedTools: [],
       userId: "user-1",
     });
   });

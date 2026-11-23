@@ -3147,7 +3147,9 @@ describe("generateChatResponse Inngest Function", () => {
       // 4. Cover undefined ctx.servers in buildAutoApprovedMcpToolsMap
       mockLoadChatContext.mockResolvedValueOnce({
         servers: undefined as any,
-        subagentServers: [{ id: "srv-sub", autoApprovedTools: ["t1"] }] as any,
+        subagentServers: [
+          { id: "srv-sub", autoApprovedTools: ["t1"], blockedTools: ["t2"] },
+        ] as any,
         linkedSubagents: [],
         activeKbIds: [],
         activeKbId: null,

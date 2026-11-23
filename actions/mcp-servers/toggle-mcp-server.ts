@@ -110,6 +110,7 @@ export const toggleMcpServer = defineAction(
         toggledInstall.oauthClientSecret ?? sourceServer.oauthClientSecret,
       oauthScope: sourceServer.oauthScope,
       autoApprovedTools: toggledInstall.autoApprovedTools ?? [],
+      blockedTools: toggledInstall.blockedTools ?? [],
       createdAt: toggledInstall.createdAt,
       updatedAt: toggledInstall.updatedAt,
       isInstalled: true,

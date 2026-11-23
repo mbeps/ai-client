@@ -460,19 +460,37 @@ async function readUserSelection(userMessageId: string, chatId: string) {
   return parseMessageMetadata(row?.metadata);
 }
 
-function buildAutoApprovedMcpToolsMap(
-  servers: Array<{ id?: string; autoApprovedTools?: string[] }> | undefined,
-  subagentServers:
-    | Array<{ id?: string; autoApprovedTools?: string[] }>
+function buildMcpToolPolicyMaps(
+  servers:
+    | Array<{
+        id?: string;
+        autoApprovedTools?: string[];
+        blockedTools?: string[];
+      }>
     | undefined,
-): Record<string, string[]> {
-  const map: Record<string, string[]> = {};
+  subagentServers:
+    | Array<{
+        id?: string;
+        autoApprovedTools?: string[];
+        blockedTools?: string[];
+      }>
+    | undefined,
+): {
+  autoApprovedMcpToolsByServer: Record<string, string[]>;
+  blockedMcpToolsByServer: Record<string, string[]>;
+} {
+  const autoApprovedMcpToolsByServer: Record<string, string[]> = {};
+  const blockedMcpToolsByServer: Record<string, string[]> = {};
   for (const server of [...(servers ?? []), ...(subagentServers ?? [])]) {
-    if (server.id && Array.isArray(server.autoApprovedTools)) {
-      map[server.id] = server.autoApprovedTools;
+    if (!server.id) continue;
+    if (Array.isArray(server.autoApprovedTools)) {
+      autoApprovedMcpToolsByServer[server.id] = server.autoApprovedTools;
+    }
+    if (Array.isArray(server.blockedTools)) {
+      blockedMcpToolsByServer[server.id] = server.blockedTools;
     }
   }
-  return map;
+  return { autoApprovedMcpToolsByServer, blockedMcpToolsByServer };
 }
 
 /**
@@ -705,10 +723,8 @@ export const generateChatResponse = inngest.createFunction(
       const internalToolOverrides = parseInternalToolApprovals(
         userSettings?.internalToolApprovals,
       );
-      const autoApprovedMcpToolsByServer = buildAutoApprovedMcpToolsMap(
-        ctx.servers,
-        ctx.subagentServers,
-      );
+      const { autoApprovedMcpToolsByServer, blockedMcpToolsByServer } =
+        buildMcpToolPolicyMaps(ctx.servers, ctx.subagentServers);
       const resolvedApprovalMode: ApprovalMode =
         approvalMode ?? (userSettings?.defaultAutoApprove ? "auto" : "ask");
 
@@ -736,6 +752,7 @@ export const generateChatResponse = inngest.createFunction(
         resolved,
         resolvedModelId,
         workerResolved,
+        internalToolOverrides,
         wrapSubagentTools: (workerTools, targetAgent) => {
           const subagentApprovalMap = buildToolApproval(
             Object.keys(workerTools),
@@ -743,6 +760,7 @@ export const generateChatResponse = inngest.createFunction(
             {
               internalToolOverrides,
               autoApprovedMcpToolsByServer,
+              blockedMcpToolsByServer,
               toolServerIdMap: mcpState.toolServerIdMap,
               toolRawNameMap: mcpState.toolRawNameMap,
             },
@@ -793,6 +811,7 @@ export const generateChatResponse = inngest.createFunction(
         ? buildToolApproval(Object.keys(allTools), resolvedApprovalMode, {
             internalToolOverrides,
             autoApprovedMcpToolsByServer,
+            blockedMcpToolsByServer,
             toolServerIdMap: mcpState.toolServerIdMap,
             toolRawNameMap: mcpState.toolRawNameMap,
           })

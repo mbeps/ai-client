@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { isInternalToolBlocked } from "@/config/tool-approval";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { registerArtifactTool } from "@/lib/chat/register-artifact-tool";
 import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
@@ -17,6 +18,24 @@ import {
 } from "@/lib/subagents/create-subagent-dispatch-tool";
 import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
 import type { Agent } from "@/types/agent/agent";
+import type { ToolPermissionMode } from "@/types/tool/approval";
+
+/**
+ * Filters out any internal tools explicitly marked `"block"` in user overrides.
+ */
+function filterBlockedInternalTools(
+  tools: Record<string, any>,
+  internalToolOverrides?: Record<string, ToolPermissionMode | undefined>,
+): Record<string, any> {
+  if (!internalToolOverrides) return tools;
+  const filtered: Record<string, any> = {};
+  for (const [name, toolDef] of Object.entries(tools)) {
+    if (!isInternalToolBlocked(name, internalToolOverrides)) {
+      filtered[name] = toolDef;
+    }
+  }
+  return filtered;
+}
 
 /**
  * Determines active target knowledge base IDs from context.
@@ -124,6 +143,7 @@ function buildSubagentDispatchTools(params: {
   allowedSubagents?: BuildOrchestratorToolSetParams["ctx"]["linkedSubagents"];
   toolServerIdMap?: Record<string, string>;
   toolSourceMap?: Record<string, string>;
+  internalToolOverrides?: Record<string, ToolPermissionMode | undefined>;
   wrapSubagentTools?: (
     workerTools: Record<string, any>,
     targetAgent: Agent,
@@ -163,6 +183,7 @@ function buildSubagentDispatchTools(params: {
           },
         );
         const agentSkillTools =
+          !isInternalToolBlocked("load_skill", params.internalToolOverrides) &&
           targetAgent.skillMode !== "none" &&
           (Boolean(targetAgent.skillIds?.length) || params.hasAvailableSkills)
             ? registerSkillTool(params.userId, {
@@ -173,10 +194,15 @@ function buildSubagentDispatchTools(params: {
         return { ...filtered, ...agentSkillTools };
       },
       buildKnowledgebaseTools: (kbIds) =>
-        registerKnowledgebaseTool(kbIds, true, params.userId, undefined, {
-          model: params.kbSubagentModel,
-          contextWindow: params.kbSubagentContextWindow,
-        }),
+        isInternalToolBlocked(
+          "search_knowledge_base",
+          params.internalToolOverrides,
+        )
+          ? {}
+          : registerKnowledgebaseTool(kbIds, true, params.userId, undefined, {
+              model: params.kbSubagentModel,
+              contextWindow: params.kbSubagentContextWindow,
+            }),
       wrapSubagentTools: params.wrapSubagentTools,
     }),
   };
@@ -208,6 +234,7 @@ export function buildOrchestratorToolSet(
     resolved,
     resolvedModelId,
     workerResolved,
+    internalToolOverrides,
   } = params;
 
   if (!isToolCallingModel) {
@@ -230,31 +257,38 @@ export function buildOrchestratorToolSet(
   const kbSubagentContextWindow =
     workerResolved?.contextWindow ?? resolved.contextWindow;
 
-  const kbTools = registerKnowledgebaseTool(
-    targetKbIds,
-    ctx.kbIsReady ?? false,
-    userId,
-    selectedTools,
-    {
-      model: kbSubagentModel,
-      contextWindow: kbSubagentContextWindow,
-    },
-  );
+  const kbTools = isInternalToolBlocked(
+    "search_knowledge_base",
+    internalToolOverrides,
+  )
+    ? {}
+    : registerKnowledgebaseTool(
+        targetKbIds,
+        ctx.kbIsReady ?? false,
+        userId,
+        selectedTools,
+        {
+          model: kbSubagentModel,
+          contextWindow: kbSubagentContextWindow,
+        },
+      );
   const hasKbTool = Object.keys(kbTools).length > 0;
 
-  const isArtifactSelected = isInternalToolAllowed(
-    INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
-    selectedTools,
-  );
+  const isArtifactSelected =
+    !isInternalToolBlocked("manage_artifact", internalToolOverrides) &&
+    isInternalToolAllowed(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT, selectedTools);
   const artifactTools = isArtifactSelected ? registerArtifactTool() : {};
   const hasArtifactTool = Object.keys(artifactTools).length > 0;
 
-  const memoryTools = isMemoryEnabled
-    ? registerMemoryTool(userId, selectedTools)
-    : {};
+  const memoryTools =
+    isMemoryEnabled &&
+    !isInternalToolBlocked("save_memory", internalToolOverrides)
+      ? registerMemoryTool(userId, selectedTools)
+      : {};
 
   const skillTools =
-    ctx.availableSkills.length > 0
+    ctx.availableSkills.length > 0 &&
+    !isInternalToolBlocked("load_skill", internalToolOverrides)
       ? registerSkillTool(userId, {
           projectId: ctx.chatRow?.projectId,
           assistantId: ctx.chatRow?.agentId ?? ctx.chatRow?.assistantId,
@@ -265,23 +299,30 @@ export function buildOrchestratorToolSet(
     INTERNAL_TOOL_IDS.MANAGE_SKILL,
     selectedTools,
   )
-    ? registerSkillAuthoringTools(userId)
+    ? filterBlockedInternalTools(
+        registerSkillAuthoringTools(userId),
+        internalToolOverrides,
+      )
     : {};
 
-  const isSubagentDelegationEnabled = isSubagentEnabled(
-    subagentsEnabled,
-    selectedTools,
-    ctx,
-  );
+  const isSubagentDelegationEnabled =
+    !isInternalToolBlocked("delegate_task", internalToolOverrides) &&
+    isSubagentEnabled(subagentsEnabled, selectedTools, ctx);
 
-  const scratchpadTools = buildScratchpadTools(
-    isSubagentDelegationEnabled,
-    chatId,
-    assistantMessageId,
+  const scratchpadTools = filterBlockedInternalTools(
+    buildScratchpadTools(
+      isSubagentDelegationEnabled,
+      chatId,
+      assistantMessageId,
+    ),
+    internalToolOverrides,
   );
 
   const fileUrlTools =
-    fileAttachments.length > 0 ? registerFileUrlTool(fileAttachments) : {};
+    fileAttachments.length > 0 &&
+    !isInternalToolBlocked("get_file_url", internalToolOverrides)
+      ? registerFileUrlTool(fileAttachments)
+      : {};
 
   const orchestratorActiveTools: Record<string, any> = Object.assign(
     {},
@@ -295,7 +336,11 @@ export function buildOrchestratorToolSet(
     scratchpadTools,
   );
 
-  const isolatedMemoryTools = isMemoryEnabled ? registerMemoryTool(userId) : {};
+  const isolatedMemoryTools =
+    isMemoryEnabled &&
+    !isInternalToolBlocked("save_memory", internalToolOverrides)
+      ? registerMemoryTool(userId)
+      : {};
   const isolatedToolPool: Record<string, any> = Object.assign(
     {},
     params.subagentMcpTools ?? mcpTools,
@@ -322,6 +367,7 @@ export function buildOrchestratorToolSet(
     allowedSubagents: ctx.linkedSubagents,
     toolServerIdMap: params.toolServerIdMap,
     toolSourceMap: params.toolSourceMap,
+    internalToolOverrides,
     wrapSubagentTools: params.wrapSubagentTools,
   });
 

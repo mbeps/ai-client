@@ -19,25 +19,38 @@ import type { Result } from "@/types/result";
 const log = getLogger(["app", "actions", "mcp", "tool-approvals"]);
 
 /**
- * Updates the per-connector `autoApprovedTools` allowlist for either an owned
- * personal MCP server or a user's installation of a public MCP server.
+ * Updates the per-connector `autoApprovedTools` allowlist (and optional
+ * `blockedTools` blocklist) for either an owned personal MCP server or a user's
+ * installation of a public MCP server.
  *
- * @param input - Server identifier and updated list of raw MCP tool names
+ * @param input - Server identifier and updated lists of raw MCP tool names
  * @returns Result wrapping the updated McpServerRow
  */
 export const updateMcpToolApprovals = defineAction(
   async (input: {
     serverId: string;
     autoApprovedTools: string[];
+    blockedTools?: string[];
   }): Promise<Result<McpServerRow, CommonError>> => {
     const session = await requireSession();
+    const cleanedBlocked =
+      input.blockedTools !== undefined
+        ? [...new Set(input.blockedTools.map((t) => t.trim()).filter(Boolean))]
+        : undefined;
+    const blockedSet = new Set(cleanedBlocked);
     const cleaned = [
       ...new Set(input.autoApprovedTools.map((t) => t.trim()).filter(Boolean)),
-    ];
+    ].filter((t) => !blockedSet.has(t));
+
+    const updatePayload = {
+      autoApprovedTools: cleaned,
+      ...(cleanedBlocked !== undefined ? { blockedTools: cleanedBlocked } : {}),
+      updatedAt: new Date(),
+    };
 
     const [updatedPersonal] = await db
       .update(mcpServer)
-      .set({ autoApprovedTools: cleaned, updatedAt: new Date() })
+      .set(updatePayload)
       .where(
         and(
           eq(mcpServer.id, input.serverId),
@@ -50,13 +63,14 @@ export const updateMcpToolApprovals = defineAction(
       log.info("Updated MCP server tool approvals", {
         serverId: updatedPersonal.id,
         count: cleaned.length,
+        blockedCount: cleanedBlocked?.length,
       });
       return ok({ ...updatedPersonal, isInstalled: false });
     }
 
     const [updatedInstall] = await db
       .update(userMcpServerInstall)
-      .set({ autoApprovedTools: cleaned, updatedAt: new Date() })
+      .set(updatePayload)
       .where(
         and(
           eq(userMcpServerInstall.userId, session.user.id),
@@ -84,6 +98,7 @@ export const updateMcpToolApprovals = defineAction(
     log.info("Updated installed MCP server tool approvals", {
       serverId: sourceServer.id,
       count: cleaned.length,
+      blockedCount: cleanedBlocked?.length,
     });
 
     return ok({
@@ -100,6 +115,7 @@ export const updateMcpToolApprovals = defineAction(
         updatedInstall.oauthClientSecret ?? sourceServer.oauthClientSecret,
       oauthScope: sourceServer.oauthScope,
       autoApprovedTools: updatedInstall.autoApprovedTools,
+      blockedTools: updatedInstall.blockedTools ?? [],
       createdAt: updatedInstall.createdAt,
       updatedAt: updatedInstall.updatedAt,
       isInstalled: true,

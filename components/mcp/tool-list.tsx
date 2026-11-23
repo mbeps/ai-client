@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Ban,
   Check,
   ChevronDown,
   CircleCheck,
@@ -25,6 +26,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import type { McpServer } from "@/types/mcp/mcp-server";
+import type { ToolPermissionMode } from "@/types/tool/approval";
 
 /**
  * Props for ToolList component.
@@ -120,58 +122,84 @@ export function ToolList({ server }: ToolListProps) {
   const [autoApprovedTools, setAutoApprovedTools] = useState<string[]>(
     server.autoApprovedTools ?? [],
   );
+  const [blockedTools, setBlockedTools] = useState<string[]>(
+    server.blockedTools ?? [],
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setAutoApprovedTools(server.autoApprovedTools ?? []);
-  }, [server.autoApprovedTools]);
+    setBlockedTools(server.blockedTools ?? []);
+  }, [server.autoApprovedTools, server.blockedTools]);
 
   const persistApprovals = useCallback(
-    async (nextTools: string[], discoveredTools: DiscoveredTool[]) => {
+    async (
+      nextAutoApproved: string[],
+      nextBlocked: string[],
+      discoveredTools: DiscoveredTool[],
+    ) => {
       const discoveredNames = new Set(discoveredTools.map((t) => t.name));
-      const pruned = nextTools.filter((name) => discoveredNames.has(name));
-      const previous = autoApprovedTools;
+      const prunedBlocked = nextBlocked.filter((name) =>
+        discoveredNames.has(name),
+      );
+      const blockedSet = new Set(prunedBlocked);
+      const prunedAutoApproved = nextAutoApproved.filter(
+        (name) => discoveredNames.has(name) && !blockedSet.has(name),
+      );
+      const previousAutoApproved = autoApprovedTools;
+      const previousBlocked = blockedTools;
 
-      setAutoApprovedTools(pruned);
+      setAutoApprovedTools(prunedAutoApproved);
+      setBlockedTools(prunedBlocked);
       setIsSaving(true);
       try {
         const res = await updateMcpToolApprovals({
           serverId: server.id,
-          autoApprovedTools: pruned,
+          autoApprovedTools: prunedAutoApproved,
+          blockedTools: prunedBlocked,
         });
         if (!res.ok) {
-          setAutoApprovedTools(previous);
+          setAutoApprovedTools(previousAutoApproved);
+          setBlockedTools(previousBlocked);
           toast.error(res.error.message);
           return;
         }
         setAutoApprovedTools(res.value.autoApprovedTools);
+        setBlockedTools(res.value.blockedTools ?? []);
         await loadMcpServers();
         toast.success("Tool approval settings updated");
       } finally {
         setIsSaving(false);
       }
     },
-    [autoApprovedTools, loadMcpServers, server.id],
+    [autoApprovedTools, blockedTools, loadMcpServers, server.id],
   );
 
-  const handleToggleTool = useCallback(
+  const handleSetToolPermission = useCallback(
     (
       toolName: string,
-      approved: boolean,
+      mode: ToolPermissionMode,
       discoveredTools: DiscoveredTool[],
     ) => {
-      const nextTools = approved
-        ? [...autoApprovedTools, toolName]
-        : autoApprovedTools.filter((name) => name !== toolName);
-      void persistApprovals(nextTools, discoveredTools);
+      const nextAutoApproved =
+        mode === "auto"
+          ? [...autoApprovedTools, toolName]
+          : autoApprovedTools.filter((name) => name !== toolName);
+      const nextBlocked =
+        mode === "block"
+          ? [...blockedTools, toolName]
+          : blockedTools.filter((name) => name !== toolName);
+      void persistApprovals(nextAutoApproved, nextBlocked, discoveredTools);
     },
-    [autoApprovedTools, persistApprovals],
+    [autoApprovedTools, blockedTools, persistApprovals],
   );
 
-  const handleToggleAll = useCallback(
-    (approveAll: boolean, discoveredTools: DiscoveredTool[]) => {
-      const nextTools = approveAll ? discoveredTools.map((t) => t.name) : [];
-      void persistApprovals(nextTools, discoveredTools);
+  const handleSetAll = useCallback(
+    (mode: ToolPermissionMode, discoveredTools: DiscoveredTool[]) => {
+      const allNames = discoveredTools.map((t) => t.name);
+      const nextAutoApproved = mode === "auto" ? allNames : [];
+      const nextBlocked = mode === "block" ? allNames : [];
+      void persistApprovals(nextAutoApproved, nextBlocked, discoveredTools);
     },
     [persistApprovals],
   );
@@ -189,15 +217,27 @@ export function ToolList({ server }: ToolListProps) {
       headerActions={(items) => {
         const allApproved =
           items.length > 0 &&
-          items.every((t) => autoApprovedTools.includes(t.name));
-        const noneApproved =
+          items.every(
+            (t) =>
+              autoApprovedTools.includes(t.name) &&
+              !blockedTools.includes(t.name),
+          );
+        const allBlocked =
+          items.length > 0 && items.every((t) => blockedTools.includes(t.name));
+        const noneApprovedOrBlocked =
           items.length === 0 ||
-          items.every((t) => !autoApprovedTools.includes(t.name));
+          items.every(
+            (t) =>
+              !autoApprovedTools.includes(t.name) &&
+              !blockedTools.includes(t.name),
+          );
         const batchState = allApproved
           ? "always_allow"
-          : noneApproved
-            ? "needs_approval"
-            : "custom";
+          : allBlocked
+            ? "blocked"
+            : noneApprovedOrBlocked
+              ? "needs_approval"
+              : "custom";
 
         const triggerConfig = {
           always_allow: {
@@ -207,6 +247,10 @@ export function ToolList({ server }: ToolListProps) {
           needs_approval: {
             icon: Hand,
             label: "Needs approval",
+          },
+          blocked: {
+            icon: Ban,
+            label: "Blocked",
           },
           custom: {
             icon: MoreHorizontal,
@@ -234,7 +278,7 @@ export function ToolList({ server }: ToolListProps) {
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem
                 onClick={() => {
-                  if (!noneApproved) handleToggleAll(false, items);
+                  if (!noneApprovedOrBlocked) handleSetAll("ask", items);
                 }}
                 className="justify-between"
               >
@@ -248,7 +292,7 @@ export function ToolList({ server }: ToolListProps) {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  if (!allApproved) handleToggleAll(true, items);
+                  if (!allApproved) handleSetAll("auto", items);
                 }}
                 className="justify-between"
               >
@@ -257,6 +301,20 @@ export function ToolList({ server }: ToolListProps) {
                   <span>Always allow</span>
                 </span>
                 {batchState === "always_allow" && (
+                  <Check className="text-primary size-4" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (!allBlocked) handleSetAll("block", items);
+                }}
+                className="justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Ban className="size-4" />
+                  <span>Blocked</span>
+                </span>
+                {batchState === "blocked" && (
                   <Check className="text-primary size-4" />
                 )}
               </DropdownMenuItem>
@@ -277,7 +335,9 @@ export function ToolList({ server }: ToolListProps) {
         );
       }}
       renderItemActions={(tool, items) => {
-        const isApproved = autoApprovedTools.includes(tool.name);
+        const isBlocked = blockedTools.includes(tool.name);
+        const isApproved = !isBlocked && autoApprovedTools.includes(tool.name);
+        const isNeedsApproval = !isBlocked && !isApproved;
         return (
           <div
             role="radiogroup"
@@ -291,7 +351,9 @@ export function ToolList({ server }: ToolListProps) {
               aria-label={`Always allow ${tool.name}`}
               disabled={isSaving}
               onClick={() => {
-                if (!isApproved) handleToggleTool(tool.name, true, items);
+                if (!isApproved) {
+                  handleSetToolPermission(tool.name, "auto", items);
+                }
               }}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
@@ -306,21 +368,44 @@ export function ToolList({ server }: ToolListProps) {
             <button
               type="button"
               role="radio"
-              aria-checked={!isApproved}
+              aria-checked={isNeedsApproval}
               aria-label={`Needs approval ${tool.name}`}
               disabled={isSaving}
               onClick={() => {
-                if (isApproved) handleToggleTool(tool.name, false, items);
+                if (!isNeedsApproval) {
+                  handleSetToolPermission(tool.name, "ask", items);
+                }
               }}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
-                !isApproved
+                isNeedsApproval
                   ? "bg-background text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
               <Hand className="size-3.5 shrink-0" />
-              {!isApproved && <span>Needs approval</span>}
+              {isNeedsApproval && <span>Needs approval</span>}
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isBlocked}
+              aria-label={`Blocked ${tool.name}`}
+              disabled={isSaving}
+              onClick={() => {
+                if (!isBlocked) {
+                  handleSetToolPermission(tool.name, "block", items);
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
+                isBlocked
+                  ? "bg-background text-destructive shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Ban className="size-3.5 shrink-0" />
+              {isBlocked && <span>Blocked</span>}
             </button>
           </div>
         );

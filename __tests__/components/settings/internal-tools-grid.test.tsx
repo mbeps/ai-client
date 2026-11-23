@@ -64,11 +64,16 @@ describe("InternalToolsGrid", () => {
 
     expect(mockLoadUserSettings).not.toHaveBeenCalled();
 
-    // create_skill is overridden to auto, so clicking toggles it back to ask
-    const toggle = screen.getByRole("button", { name: "Create Skill approval" });
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // create_skill is overridden to auto, so clicking Require approval toggles it back to ask
+    const autoRadio = screen.getByRole("radio", {
+      name: "Auto-approve Create Skill",
+    });
+    const askRadio = screen.getByRole("radio", {
+      name: "Require approval for Create Skill",
+    });
+    expect(autoRadio).toHaveAttribute("aria-checked", "true");
 
-    fireEvent.click(toggle);
+    fireEvent.click(askRadio);
 
     await waitFor(() => {
       expect(mockUpdateInternalToolApproval).toHaveBeenCalledWith({
@@ -84,7 +89,7 @@ describe("InternalToolsGrid", () => {
     );
   });
 
-  it("shows success toast for auto-approve and error toast on failure", async () => {
+  it("shows success toast for auto-approve, block, and error toast on failure", async () => {
     mockUserSettings = { internalToolApprovals: null };
     mockUpdateInternalToolApproval.mockResolvedValueOnce({
       ok: true,
@@ -93,11 +98,29 @@ describe("InternalToolsGrid", () => {
 
     render(<InternalToolsGrid groups={groups} />);
 
-    const toggle = screen.getByRole("button", { name: "Create Skill approval" });
-    fireEvent.click(toggle);
+    const autoRadio = screen.getByRole("radio", {
+      name: "Auto-approve Create Skill",
+    });
+    fireEvent.click(autoRadio);
 
     await waitFor(() => {
       expect(mockToastSuccess).toHaveBeenCalledWith("Tool set to auto-approve");
+    });
+
+    mockUpdateInternalToolApproval.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        internalToolApprovals: JSON.stringify({ create_skill: "block" }),
+      },
+    });
+
+    const blockRadio = screen.getByRole("radio", {
+      name: "Block Create Skill",
+    });
+    fireEvent.click(blockRadio);
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith("Tool blocked");
     });
 
     mockUpdateInternalToolApproval.mockResolvedValueOnce({
@@ -105,7 +128,7 @@ describe("InternalToolsGrid", () => {
       error: { code: "INTERNAL_ERROR", message: "Failed to save" },
     });
 
-    fireEvent.click(toggle);
+    fireEvent.click(autoRadio);
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith("Failed to save");

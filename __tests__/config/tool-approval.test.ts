@@ -3,6 +3,7 @@ import {
   buildToolApproval,
   DEFAULT_AUTO_APPROVED_INTERNAL_TOOLS,
   INTERNAL_TOOL_NAMES,
+  isInternalToolBlocked,
   parseInternalToolApprovals,
   resolveInternalToolApproval,
 } from "@/config/tool-approval";
@@ -59,10 +60,11 @@ describe("tool approval policy", () => {
       expect(parseInternalToolApprovals('"ask"')).toEqual({});
     });
 
-    it("keeps only valid 'ask' and 'auto' entries", () => {
+    it("keeps only valid 'ask', 'auto', and 'block' entries", () => {
       const raw = JSON.stringify({
         create_skill: "auto",
         save_memory: "ask",
+        delete_skill_file: "block",
         invalid_mode: "always",
         numeric: 123,
       });
@@ -70,6 +72,7 @@ describe("tool approval policy", () => {
       expect(parseInternalToolApprovals(raw)).toEqual({
         create_skill: "auto",
         save_memory: "ask",
+        delete_skill_file: "block",
       });
     });
   });
@@ -81,15 +84,34 @@ describe("tool approval policy", () => {
       expect(resolveInternalToolApproval("unknown_tool")).toBe("ask");
     });
 
-    it("applies valid per-user overrides", () => {
+    it("applies valid per-user overrides including block", () => {
       const overrides = {
         create_skill: "auto" as const,
         save_memory: "ask" as const,
+        delete_skill_file: "block" as const,
       };
       expect(resolveInternalToolApproval("create_skill", overrides)).toBe(
         "auto",
       );
       expect(resolveInternalToolApproval("save_memory", overrides)).toBe("ask");
+      expect(resolveInternalToolApproval("delete_skill_file", overrides)).toBe(
+        "block",
+      );
+    });
+  });
+
+  describe("isInternalToolBlocked", () => {
+    it("returns true when tool or manage_memory alias is blocked", () => {
+      expect(isInternalToolBlocked("save_memory", { save_memory: "block" })).toBe(
+        true,
+      );
+      expect(
+        isInternalToolBlocked("manage_memory", { save_memory: "block" }),
+      ).toBe(true);
+      expect(isInternalToolBlocked("save_memory", { save_memory: "auto" })).toBe(
+        false,
+      );
+      expect(isInternalToolBlocked("create_skill")).toBe(false);
     });
   });
 
@@ -211,6 +233,39 @@ describe("tool approval policy", () => {
       expect(result).toEqual({
         orphan_tool: "user-approval",
         unlisted_tool: "user-approval",
+      });
+    });
+
+    it("fails closed to 'user-approval' for blocked internal and MCP tools even in 'auto' mode", () => {
+      const result = buildToolApproval(
+        ["save_memory", "manage_artifact", "search", "fetch"],
+        "auto",
+        {
+          internalToolOverrides: {
+            save_memory: "block",
+          },
+          toolServerIdMap: {
+            search: "server-a",
+            fetch: "server-a",
+          },
+          toolRawNameMap: {
+            search: "search",
+            fetch: "fetch",
+          },
+          blockedMcpToolsByServer: {
+            "server-a": ["search"],
+          },
+          autoApprovedMcpToolsByServer: {
+            "server-a": ["search", "fetch"],
+          },
+        },
+      );
+
+      expect(result).toEqual({
+        save_memory: "user-approval",
+        manage_artifact: "not-applicable",
+        search: "user-approval",
+        fetch: "not-applicable",
       });
     });
   });
