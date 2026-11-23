@@ -269,7 +269,7 @@ async function executeModelStreamPipeline(options: {
   persistAbortedResponse: () => Promise<boolean>;
   reasoningEffort?: ReasoningEffort;
   linkedSubagents?: readonly Agent[];
-  isApprovalResume: boolean;
+  assistantRowState: { persisted: boolean };
   approvalRound: number;
 }): Promise<void> {
   const {
@@ -291,7 +291,7 @@ async function executeModelStreamPipeline(options: {
     accumulator,
     persistAbortedResponse,
     linkedSubagents,
-    isApprovalResume,
+    assistantRowState,
     approvalRound,
   } = options;
 
@@ -324,31 +324,41 @@ async function executeModelStreamPipeline(options: {
   }
 
   if (streamState.pendingApprovals.length > 0) {
+    const round = approvalRound + 1;
     const metadata = buildAssistantFinishMetadata({
       model: resolvedModelId,
       reasoning: accumulator.accumulatedReasoning,
       completedTools: accumulator.completedTools,
       pendingApprovals: streamState.pendingApprovals,
-      approvalRound: approvalRound + 1,
+      approvalRound: round,
       parentUserMessageId: userMessageId,
     });
 
-    if (isApprovalResume) {
-      await updateAssistantResponse({
-        messageId: assistantMessageId,
-        chatId,
-        content: accumulator.accumulatedText,
-        metadata,
-      });
-    } else {
-      await persistAssistantResponse({
-        chatId,
-        assistantMessageId,
-        content: accumulator.accumulatedText,
-        parentId: userMessageId,
-        metadata,
-      });
+    const persisted = assistantRowState.persisted
+      ? await updateAssistantResponse({
+          messageId: assistantMessageId,
+          chatId,
+          content: accumulator.accumulatedText,
+          metadata,
+        })
+      : await persistAssistantResponse({
+          chatId,
+          assistantMessageId,
+          content: accumulator.accumulatedText,
+          parentId: userMessageId,
+          metadata,
+        });
+
+    if (!persisted) {
+      return;
     }
+
+    assistantRowState.persisted = true;
+    await emit({
+      type: "tool-approval-required",
+      approvals: streamState.pendingApprovals,
+      round,
+    });
     return;
   }
 
@@ -399,7 +409,7 @@ async function executeModelStreamPipeline(options: {
     safeUsage,
     abortSignal: abortController.signal,
     emit,
-    isUpdate: isApprovalResume,
+    isUpdate: assistantRowState.persisted,
   });
 }
 
@@ -559,6 +569,8 @@ export const generateChatResponse = inngest.createFunction(
       completedTools: [],
     };
 
+    const assistantRowState = { persisted: isApprovalResume };
+
     const persistAbortedResponse = () =>
       persistAbortedAssistantResponse({
         chatId,
@@ -568,6 +580,7 @@ export const generateChatResponse = inngest.createFunction(
         accumulatedText: accumulator.accumulatedText,
         accumulatedReasoning: accumulator.accumulatedReasoning,
         completedTools: accumulator.completedTools,
+        isUpdate: assistantRowState.persisted,
       });
 
     try {
@@ -614,6 +627,29 @@ export const generateChatResponse = inngest.createFunction(
         }));
         approvalRound = parked.meta.approvalRound;
         parkedApprovals = parked.meta.pendingApprovals;
+
+        const approvedDecisionIds = new Set(
+          event.data.decisions
+            .filter(
+              (d: { approvalId: string; approved: boolean }) => d.approved,
+            )
+            .map((d: { approvalId: string }) => d.approvalId),
+        );
+        for (const pa of parkedApprovals) {
+          if (
+            approvedDecisionIds.has(pa.approvalId) &&
+            !accumulator.completedTools.some(
+              (tc) => tc.toolCallId === pa.toolCallId,
+            )
+          ) {
+            accumulator.completedTools.push({
+              toolCallId: pa.toolCallId,
+              toolName: pa.toolName,
+              args: pa.args,
+              serverName: pa.serverName,
+            });
+          }
+        }
       }
 
       await emit({ type: "start", messageId: assistantMessageId });
@@ -791,14 +827,19 @@ export const generateChatResponse = inngest.createFunction(
                 content: accumulator.accumulatedText,
                 metadata,
               });
-              if (!updated) {
-                await persistAssistantResponse({
+              if (updated) {
+                assistantRowState.persisted = true;
+              } else {
+                const created = await persistAssistantResponse({
                   chatId,
                   assistantMessageId,
                   content: accumulator.accumulatedText,
                   parentId: userMessageId,
                   metadata,
                 });
+                if (created) {
+                  assistantRowState.persisted = true;
+                }
               }
             },
             getNextRound: () => ++approvalRound,
@@ -888,7 +929,7 @@ export const generateChatResponse = inngest.createFunction(
         persistAbortedResponse,
         reasoningEffort,
         linkedSubagents: ctx.linkedSubagents,
-        isApprovalResume,
+        assistantRowState,
         approvalRound,
       });
     } catch (error: unknown) {

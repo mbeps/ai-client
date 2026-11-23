@@ -23,7 +23,9 @@ import type { ApprovalDecision, PendingApproval } from "@/types/tool/approval";
  */
 export interface ToolApprovalDialogProps {
   pendingApprovals: PendingApproval[];
-  onSubmit: (decisions: ApprovalDecision[]) => void | Promise<void>;
+  onSubmit: (
+    decisions: ApprovalDecision[],
+  ) => void | boolean | Promise<void> | Promise<boolean>;
   disabled?: boolean;
 }
 
@@ -91,6 +93,7 @@ export function ToolApprovalDialog({
           toast.error(res.error.message);
           return;
         }
+        await useAppStore.getState().loadMcpServers?.();
       } else {
         const res = await updateInternalToolApproval({
           toolName: currentApproval.toolName,

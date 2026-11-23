@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { ApprovalDecision, PendingApproval } from "@/types/tool/approval";
 
 /**
@@ -15,7 +16,9 @@ import type { ApprovalDecision, PendingApproval } from "@/types/tool/approval";
  */
 export function useApprovalRound(
   pendingApprovals: readonly PendingApproval[],
-  onSubmit: (decisions: ApprovalDecision[]) => void | Promise<void>,
+  onSubmit: (
+    decisions: ApprovalDecision[],
+  ) => void | boolean | Promise<void> | Promise<boolean>,
   disabled = false,
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -23,6 +26,8 @@ export function useApprovalRound(
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const roundKey = pendingApprovals.map((a) => a.approvalId).join(" ");
+  const roundKeyRef = useRef(roundKey);
+  roundKeyRef.current = roundKey;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset staged decisions whenever round identity changes
   useEffect(() => {
@@ -36,8 +41,31 @@ export function useApprovalRound(
   const decidedCount = Object.keys(decisions).length;
   const canGoBack = currentIndex > 0 && !isSubmitted && !disabled;
 
+  const submitOrderedDecisions = useCallback(
+    async (ordered: ApprovalDecision[]) => {
+      const submittedRoundKey = roundKeyRef.current;
+      setIsSubmitted(true);
+      try {
+        const result = await onSubmit(ordered);
+        if (result === false && roundKeyRef.current === submittedRoundKey) {
+          setIsSubmitted(false);
+        }
+      } catch (error) {
+        if (roundKeyRef.current === submittedRoundKey) {
+          setIsSubmitted(false);
+        }
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to submit tool approval",
+        );
+      }
+    },
+    [onSubmit],
+  );
+
   const decideCurrent = useCallback(
-    (approved: boolean) => {
+    async (approved: boolean) => {
       if (disabled || isSubmitted || !currentApproval) return;
 
       const nextDecisions = {
@@ -47,12 +75,11 @@ export function useApprovalRound(
       setDecisions(nextDecisions);
 
       if (currentIndex + 1 >= totalCount) {
-        setIsSubmitted(true);
         const ordered = pendingApprovals.map((item) => ({
           approvalId: item.approvalId,
           approved: Boolean(nextDecisions[item.approvalId]),
         }));
-        void onSubmit(ordered);
+        await submitOrderedDecisions(ordered);
         return;
       }
 
@@ -64,14 +91,14 @@ export function useApprovalRound(
       decisions,
       disabled,
       isSubmitted,
-      onSubmit,
       pendingApprovals,
+      submitOrderedDecisions,
       totalCount,
     ],
   );
 
   const decideAll = useCallback(
-    (approved: boolean) => {
+    async (approved: boolean) => {
       if (disabled || isSubmitted || totalCount === 0) return;
 
       const nextDecisions: Record<string, boolean> = {};
@@ -80,15 +107,20 @@ export function useApprovalRound(
       }
       setDecisions(nextDecisions);
       setCurrentIndex(totalCount - 1);
-      setIsSubmitted(true);
-      void onSubmit(
+      await submitOrderedDecisions(
         pendingApprovals.map((item) => ({
           approvalId: item.approvalId,
           approved,
         })),
       );
     },
-    [disabled, isSubmitted, onSubmit, pendingApprovals, totalCount],
+    [
+      disabled,
+      isSubmitted,
+      pendingApprovals,
+      submitOrderedDecisions,
+      totalCount,
+    ],
   );
 
   const goBack = useCallback(() => {

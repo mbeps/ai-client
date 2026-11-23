@@ -9,6 +9,47 @@ interface QueuedSubagentApproval {
   reject: (reason?: unknown) => void;
 }
 
+const activeAssistantApprovalLocks = new Map<string, Promise<void>>();
+
+function resolveAbortReason(abortSignal: AbortSignal): Error {
+  return abortSignal.reason instanceof Error
+    ? abortSignal.reason
+    : new Error("Approval wait aborted");
+}
+
+/**
+ * Serializes approval persistence + emission + waiting per `assistantMessageId`
+ * so concurrent subagent `delegate_task` calls never overwrite each other's
+ * stored `pendingApprovals` or supersede another subagent's prompt.
+ */
+async function runWithAssistantApprovalLock<T>(
+  assistantMessageId: string,
+  abortSignal: AbortSignal,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const prev =
+    activeAssistantApprovalLocks.get(assistantMessageId) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const chained = prev.then(() => current);
+  activeAssistantApprovalLocks.set(assistantMessageId, chained);
+
+  try {
+    await prev;
+    if (abortSignal.aborted) {
+      throw resolveAbortReason(abortSignal);
+    }
+    return await fn();
+  } finally {
+    release();
+    if (activeAssistantApprovalLocks.get(assistantMessageId) === chained) {
+      activeAssistantApprovalLocks.delete(assistantMessageId);
+    }
+  }
+}
+
 /**
  * Parameters for wrapping a subagent's toolset with sequential human-in-the-loop
  * approval gating.
@@ -68,29 +109,41 @@ export function wrapSubagentToolsWithApproval(
     const batch = pendingBatch;
     pendingBatch = [];
 
-    const round = getNextRound();
-    if (round > maxRounds) {
-      for (const entry of batch) {
-        entry.resolve({ error: "Maximum tool approval rounds exceeded" });
-      }
-      return;
-    }
-
     const approvals = batch.map((entry) => entry.approval);
 
-    let decisions: Map<string, boolean>;
+    let decisions: Map<string, boolean> | null;
     try {
-      await persistPendingApprovals(approvals, round);
-      await emit({
-        type: "tool-approval-required",
-        approvals,
-        round,
-      });
-
-      decisions = await chatApprovalRegistry.waitForDecisions(
+      decisions = await runWithAssistantApprovalLock(
         assistantMessageId,
-        approvals.map((a) => a.approvalId),
         abortSignal,
+        async () => {
+          const round = getNextRound();
+          if (round > maxRounds) {
+            return null;
+          }
+
+          const approvalIds = approvals.map((a) => a.approvalId);
+          const decisionPromise = chatApprovalRegistry.waitForDecisions(
+            assistantMessageId,
+            approvalIds,
+            abortSignal,
+          );
+          decisionPromise.catch(() => {});
+
+          try {
+            await persistPendingApprovals(approvals, round);
+            await emit({
+              type: "tool-approval-required",
+              approvals,
+              round,
+            });
+          } catch (error) {
+            chatApprovalRegistry.cancelBatch(assistantMessageId, approvalIds);
+            throw error;
+          }
+
+          return await decisionPromise;
+        },
       );
     } catch (error) {
       for (const entry of batch) {
@@ -99,7 +152,19 @@ export function wrapSubagentToolsWithApproval(
       return;
     }
 
+    if (decisions === null) {
+      for (const entry of batch) {
+        entry.resolve({ error: "Maximum tool approval rounds exceeded" });
+      }
+      return;
+    }
+
     for (const entry of batch) {
+      if (abortSignal.aborted) {
+        entry.reject(resolveAbortReason(abortSignal));
+        continue;
+      }
+
       if (decisions.get(entry.approval.approvalId) !== true) {
         entry.resolve({ error: "Denied by user" });
         continue;

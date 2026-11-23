@@ -261,4 +261,227 @@ describe("wrapSubagentToolsWithApproval", () => {
     abortController.abort(new Error("User stopped"));
     await expect(pAbort).rejects.toThrow("User stopped");
   });
+
+  it("registers the waiter before persist/emit and releases it if persist or emit fails", async () => {
+    const events: string[] = [];
+    const persistPendingApprovals = vi.fn(async () => {
+      events.push(
+        `persist:hasWaiter=${chatApprovalRegistry.has("msg-pre-reg")}`,
+      );
+    });
+    const emit = vi.fn(async () => {
+      events.push(`emit:hasWaiter=${chatApprovalRegistry.has("msg-pre-reg")}`);
+      throw new Error("Realtime offline");
+    });
+
+    const wrapped = wrapSubagentToolsWithApproval({
+      workerTools: { tool_a: { execute: vi.fn() } },
+      toolApprovalMap: { tool_a: "user-approval" },
+      subagentId: "agent-1",
+      subagentName: "Researcher",
+      toolSourceMap: {},
+      toolServerIdMap: {},
+      assistantMessageId: "msg-pre-reg",
+      chatId: "chat-1",
+      abortSignal: new AbortController().signal,
+      emit,
+      persistPendingApprovals,
+      getNextRound: () => 1,
+      maxRounds: 10,
+    });
+
+    await expect(
+      wrapped.tool_a.execute({}, { toolCallId: "tc-pre" }),
+    ).rejects.toThrow("Realtime offline");
+
+    expect(events).toEqual([
+      "persist:hasWaiter=true",
+      "emit:hasWaiter=true",
+    ]);
+    expect(chatApprovalRegistry.has("msg-pre-reg")).toBe(false);
+  });
+
+  it("serializes concurrent wrappers sharing one assistantMessageId without superseding each other", async () => {
+    let currentRound = 0;
+    const getNextRound = () => ++currentRound;
+    const persistedRounds: Array<{ round: number; tools: string[] }> = [];
+    const emittedRounds: Array<{ round: number; approvals: any[] }> = [];
+
+    const persistPendingApprovals = vi.fn(async (approvals, round) => {
+      persistedRounds.push({
+        round,
+        tools: approvals.map((a: any) => a.toolName),
+      });
+    });
+    const emit = vi.fn(async (evt: any) => {
+      emittedRounds.push({ round: evt.round, approvals: evt.approvals });
+    });
+
+    const execA = vi.fn().mockResolvedValue("res-a");
+    const execB = vi.fn().mockResolvedValue("res-b");
+
+    const wrapperA = wrapSubagentToolsWithApproval({
+      workerTools: { tool_a: { execute: execA } },
+      toolApprovalMap: { tool_a: "user-approval" },
+      subagentId: "sub-a",
+      subagentName: "Agent A",
+      toolSourceMap: {},
+      toolServerIdMap: {},
+      assistantMessageId: "msg-concurrent",
+      chatId: "chat-1",
+      abortSignal: new AbortController().signal,
+      emit,
+      persistPendingApprovals,
+      getNextRound,
+      maxRounds: 10,
+    });
+
+    const wrapperB = wrapSubagentToolsWithApproval({
+      workerTools: { tool_b: { execute: execB } },
+      toolApprovalMap: { tool_b: "user-approval" },
+      subagentId: "sub-b",
+      subagentName: "Agent B",
+      toolSourceMap: {},
+      toolServerIdMap: {},
+      assistantMessageId: "msg-concurrent",
+      chatId: "chat-1",
+      abortSignal: new AbortController().signal,
+      emit,
+      persistPendingApprovals,
+      getNextRound,
+      maxRounds: 10,
+    });
+
+    const pA = wrapperA.tool_a.execute({}, { toolCallId: "tc-a" });
+    const pB = wrapperB.tool_b.execute({}, { toolCallId: "tc-b" });
+
+    // Only round 1 should be persisted & emitted initially
+    await vi.waitFor(() => {
+      expect(emittedRounds).toHaveLength(1);
+    });
+    expect(persistedRounds).toEqual([{ round: 1, tools: ["tool_a"] }]);
+
+    const appA = emittedRounds[0].approvals[0].approvalId;
+    expect(
+      chatApprovalRegistry.resolve("msg-concurrent", [
+        { approvalId: appA, approved: true },
+      ]),
+    ).toBe(true);
+
+    // Round 2 starts only after round 1 is resolved
+    await vi.waitFor(() => {
+      expect(emittedRounds).toHaveLength(2);
+    });
+    expect(persistedRounds).toEqual([
+      { round: 1, tools: ["tool_a"] },
+      { round: 2, tools: ["tool_b"] },
+    ]);
+
+    const appB = emittedRounds[1].approvals[0].approvalId;
+    expect(
+      chatApprovalRegistry.resolve("msg-concurrent", [
+        { approvalId: appB, approved: true },
+      ]),
+    ).toBe(true);
+
+    await expect(Promise.all([pA, pB])).resolves.toEqual(["res-a", "res-b"]);
+  });
+
+  it("checks abortSignal before each approved tool starts and skips remaining handlers on cancellation", async () => {
+    const abortController = new AbortController();
+    const emit = vi.fn().mockResolvedValue(undefined);
+    const persistPendingApprovals = vi.fn().mockResolvedValue(undefined);
+
+    const execFirst = vi.fn(async () => {
+      abortController.abort(new Error("Cancelled mid-batch"));
+      return "first-ok";
+    });
+    const execSecond = vi.fn().mockResolvedValue("second-should-not-run");
+
+    const wrapped = wrapSubagentToolsWithApproval({
+      workerTools: {
+        first_tool: { execute: execFirst },
+        second_tool: { execute: execSecond },
+      },
+      toolApprovalMap: {
+        first_tool: "user-approval",
+        second_tool: "user-approval",
+      },
+      subagentId: "agent-1",
+      subagentName: "Worker",
+      toolSourceMap: {},
+      toolServerIdMap: {},
+      assistantMessageId: "msg-mid-abort",
+      chatId: "chat-1",
+      abortSignal: abortController.signal,
+      emit,
+      persistPendingApprovals,
+      getNextRound: () => 1,
+      maxRounds: 10,
+    });
+
+    const p1 = wrapped.first_tool.execute({}, { toolCallId: "tc-1" });
+    const p2 = wrapped.second_tool.execute({}, { toolCallId: "tc-2" });
+
+    await vi.waitFor(() => {
+      expect(emit).toHaveBeenCalledTimes(1);
+    });
+    const approvals = emit.mock.calls[0]?.[0].approvals;
+    chatApprovalRegistry.resolve("msg-mid-abort", [
+      { approvalId: approvals[0].approvalId, approved: true },
+      { approvalId: approvals[1].approvalId, approved: true },
+    ]);
+
+    await expect(p1).resolves.toBe("first-ok");
+    await expect(p2).rejects.toThrow("Cancelled mid-batch");
+    expect(execSecond).not.toHaveBeenCalled();
+  });
+
+  it("rejects queued wrapper waiting on the lock when abortSignal fires with a non-Error reason", async () => {
+    const abortController = new AbortController();
+    const emit = vi.fn().mockResolvedValue(undefined);
+    const persistPendingApprovals = vi.fn().mockResolvedValue(undefined);
+
+    const w1 = wrapSubagentToolsWithApproval({
+      workerTools: { tool_1: { execute: vi.fn() } },
+      toolApprovalMap: { tool_1: "user-approval" },
+      subagentId: "sub-1",
+      subagentName: "One",
+      toolSourceMap: {},
+      toolServerIdMap: {},
+      assistantMessageId: "msg-lock-abort",
+      chatId: "chat-1",
+      abortSignal: abortController.signal,
+      emit,
+      persistPendingApprovals,
+      getNextRound: () => 1,
+      maxRounds: 10,
+    });
+    const w2 = wrapSubagentToolsWithApproval({
+      workerTools: { tool_2: { execute: vi.fn() } },
+      toolApprovalMap: { tool_2: "user-approval" },
+      subagentId: "sub-2",
+      subagentName: "Two",
+      toolSourceMap: {},
+      toolServerIdMap: {},
+      assistantMessageId: "msg-lock-abort",
+      chatId: "chat-1",
+      abortSignal: abortController.signal,
+      emit,
+      persistPendingApprovals,
+      getNextRound: () => 2,
+      maxRounds: 10,
+    });
+
+    const p1 = w1.tool_1.execute({}, { toolCallId: "tc-1" });
+    const p2 = w2.tool_2.execute({}, { toolCallId: "tc-2" });
+
+    await vi.waitFor(() => {
+      expect(emit).toHaveBeenCalledTimes(1);
+    });
+
+    abortController.abort("string-abort");
+    await expect(p1).rejects.toThrow("Approval wait aborted");
+    await expect(p2).rejects.toThrow("Approval wait aborted");
+  });
 });

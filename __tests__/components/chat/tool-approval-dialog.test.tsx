@@ -25,11 +25,13 @@ const mockMcpServers = vi.hoisted(() => [
     autoApprovedTools: ["list_repos"],
   },
 ]);
+const mockLoadMcpServers = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: {
     getState: () => ({
       mcpServers: mockMcpServers,
       publicMcpServers: [],
+      loadMcpServers: mockLoadMcpServers,
     }),
   },
 }));
@@ -179,6 +181,10 @@ describe("ToolApprovalDialog", () => {
         autoApprovedTools: ["list_repos", "create_issue"],
       });
     });
+    expect(mockLoadMcpServers).toHaveBeenCalledTimes(1);
+    expect(mockLoadMcpServers.mock.invocationCallOrder[0]).toBeLessThan(
+      onSubmit.mock.invocationCallOrder[0],
+    );
     expect(onSubmit).toHaveBeenCalledWith([
       { approvalId: "app-mcp", approved: true },
     ]);

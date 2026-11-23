@@ -246,9 +246,9 @@ export function ChatUI({
       : (parkedPending?.messageId ?? null);
 
   const handleSubmitApprovals = useCallback(
-    async (decisions: ApprovalDecision[]) => {
-      if (!effectiveApprovalMessageId || !submitToolApprovals) return;
-      await submitToolApprovals(effectiveApprovalMessageId, decisions);
+    async (decisions: ApprovalDecision[]): Promise<boolean> => {
+      if (!effectiveApprovalMessageId || !submitToolApprovals) return false;
+      return submitToolApprovals(effectiveApprovalMessageId, decisions);
     },
     [effectiveApprovalMessageId, submitToolApprovals],
   );

@@ -139,10 +139,8 @@ export function ToolList({ server }: ToolListProps) {
       discoveredTools: DiscoveredTool[],
     ) => {
       const discoveredNames = new Set(discoveredTools.map((t) => t.name));
-      const prunedBlocked = nextBlocked.filter((name) =>
-        discoveredNames.has(name),
-      );
-      const blockedSet = new Set(prunedBlocked);
+      const preservedBlocked = [...new Set(nextBlocked)];
+      const blockedSet = new Set(preservedBlocked);
       const prunedAutoApproved = nextAutoApproved.filter(
         (name) => discoveredNames.has(name) && !blockedSet.has(name),
       );
@@ -150,13 +148,13 @@ export function ToolList({ server }: ToolListProps) {
       const previousBlocked = blockedTools;
 
       setAutoApprovedTools(prunedAutoApproved);
-      setBlockedTools(prunedBlocked);
+      setBlockedTools(preservedBlocked);
       setIsSaving(true);
       try {
         const res = await updateMcpToolApprovals({
           serverId: server.id,
           autoApprovedTools: prunedAutoApproved,
-          blockedTools: prunedBlocked,
+          blockedTools: preservedBlocked,
         });
         if (!res.ok) {
           setAutoApprovedTools(previousAutoApproved);
@@ -197,11 +195,18 @@ export function ToolList({ server }: ToolListProps) {
   const handleSetAll = useCallback(
     (mode: ToolPermissionMode, discoveredTools: DiscoveredTool[]) => {
       const allNames = discoveredTools.map((t) => t.name);
+      const discoveredSet = new Set(allNames);
+      const undiscoveredBlocked = blockedTools.filter(
+        (name) => !discoveredSet.has(name),
+      );
       const nextAutoApproved = mode === "auto" ? allNames : [];
-      const nextBlocked = mode === "block" ? allNames : [];
+      const nextBlocked =
+        mode === "block"
+          ? [...undiscoveredBlocked, ...allNames]
+          : undiscoveredBlocked;
       void persistApprovals(nextAutoApproved, nextBlocked, discoveredTools);
     },
-    [persistApprovals],
+    [blockedTools, persistApprovals],
   );
 
   return (

@@ -201,4 +201,67 @@ describe("InternalToolCard", () => {
     ).toBeDisabled();
     expect(screen.getByRole("button", { name: /reset/i })).toBeDisabled();
   });
+
+  it("uses roving tabIndex and arrow keys with wrapping for radio-group keyboard navigation", () => {
+    const onToggleApproval = vi.fn();
+
+    render(
+      <InternalToolCard
+        name="create_skill"
+        displayName="Create Skill"
+        description="Creates a new skill."
+        availability="Always registered."
+        approvalMode="auto"
+        defaultApproval="ask"
+        onToggleApproval={onToggleApproval}
+      />,
+    );
+
+    const autoRadio = screen.getByRole("radio", {
+      name: /Auto-approve Create Skill/i,
+    });
+    const askRadio = screen.getByRole("radio", {
+      name: /Require approval for Create Skill/i,
+    });
+    const blockRadio = screen.getByRole("radio", {
+      name: /Block Create Skill/i,
+    });
+
+    // Only the checked option is in the tab order
+    expect(autoRadio).toHaveAttribute("tabindex", "0");
+    expect(askRadio).toHaveAttribute("tabindex", "-1");
+    expect(blockRadio).toHaveAttribute("tabindex", "-1");
+
+    // ArrowRight moves focus and selects next option (auto -> ask)
+    autoRadio.focus();
+    fireEvent.keyDown(autoRadio, { key: "ArrowRight" });
+    expect(askRadio).toHaveFocus();
+    expect(onToggleApproval).toHaveBeenCalledWith("create_skill", "ask");
+
+    // ArrowDown moves to block (ask -> block)
+    fireEvent.keyDown(askRadio, { key: "ArrowDown" });
+    expect(blockRadio).toHaveFocus();
+    expect(onToggleApproval).toHaveBeenCalledWith("create_skill", "block");
+
+    // ArrowRight wraps from block -> auto (already effectiveApproval="auto", so focus moves without redundant toggle)
+    onToggleApproval.mockClear();
+    fireEvent.keyDown(blockRadio, { key: "ArrowRight" });
+    expect(autoRadio).toHaveFocus();
+    expect(onToggleApproval).not.toHaveBeenCalled();
+
+    // ArrowLeft wraps from auto -> block
+    fireEvent.keyDown(autoRadio, { key: "ArrowLeft" });
+    expect(blockRadio).toHaveFocus();
+    expect(onToggleApproval).toHaveBeenCalledWith("create_skill", "block");
+
+    // ArrowUp moves block -> ask
+    fireEvent.keyDown(blockRadio, { key: "ArrowUp" });
+    expect(askRadio).toHaveFocus();
+    expect(onToggleApproval).toHaveBeenCalledWith("create_skill", "ask");
+
+    // Unrelated keys do nothing
+    onToggleApproval.mockClear();
+    fireEvent.keyDown(askRadio, { key: "Tab" });
+    expect(onToggleApproval).not.toHaveBeenCalled();
+  });
 });

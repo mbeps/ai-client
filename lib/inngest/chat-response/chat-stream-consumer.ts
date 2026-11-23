@@ -117,13 +117,21 @@ async function handleToolCallChunk(
   if (parked) {
     parkedResults?.delete(chunk.toolCallId);
   }
-  completedTools.push({
-    toolCallId: chunk.toolCallId,
-    toolName: chunk.toolName,
-    args,
-    serverName,
-    ...(parked !== undefined ? { result: parked.result } : {}),
-  });
+  const existing = completedTools.find(
+    (t) => t.toolCallId === chunk.toolCallId,
+  );
+  if (existing) {
+    existing.args = args;
+    if (serverName) existing.serverName = serverName;
+  } else {
+    completedTools.push({
+      toolCallId: chunk.toolCallId,
+      toolName: chunk.toolName,
+      args,
+      serverName,
+      ...(parked !== undefined ? { result: parked.result } : {}),
+    });
+  }
   await emit({
     type: "tool-call",
     toolCallId: chunk.toolCallId,
@@ -313,14 +321,13 @@ async function handleToolOutputDeniedChunk(
   });
 }
 
-async function handleToolApprovalRequestChunk(
+function handleToolApprovalRequestChunk(
   chunk: any,
   toolSourceMap: Record<string, string>,
-  emit: (data: ChatStreamEvent) => Promise<void>,
   blockedCallIds: Set<string>,
   pendingApprovals: PendingApproval[],
   approvalContext?: StreamApprovalContext,
-): Promise<void> {
+): void {
   if (chunk.isAutomatic === true) {
     return;
   }
@@ -349,11 +356,6 @@ async function handleToolApprovalRequestChunk(
   };
 
   pendingApprovals.push(approval);
-  await emit({
-    type: "tool-approval-required",
-    approvals: [...pendingApprovals],
-    round,
-  });
 }
 
 async function handleNonDeltaChunk(
@@ -395,10 +397,9 @@ async function handleNonDeltaChunk(
       parkedResults,
     );
   } else if (chunk.type === "tool-approval-request") {
-    await handleToolApprovalRequestChunk(
+    handleToolApprovalRequestChunk(
       chunk,
       toolSourceMap,
-      emit,
       blockedCallIds,
       pendingApprovals,
       approvalContext,

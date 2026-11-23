@@ -132,12 +132,70 @@ describe("updateMcpToolApprovals", () => {
       value: expect.objectContaining({
         id: "srv-pub",
         name: "Public Server",
+        oauthClientSecret: null,
         autoApprovedTools: ["read_docs"],
         isInstalled: true,
         installId: "inst-1",
         isPublic: false,
       }),
     });
+  });
+
+  it("redacts publisher and subscriber oauthClientSecret on installed public server responses", async () => {
+    const installRow = {
+      id: "inst-1",
+      userId,
+      serverId: "srv-pub-secret",
+      headers: null,
+      oauthClientId: null,
+      oauthClientSecret: null,
+      enabled: true,
+      autoApprovedTools: ["read_docs"],
+      blockedTools: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const sourceServer = {
+      id: "srv-pub-secret",
+      userId: "owner-1",
+      name: "Public OAuth Server",
+      url: "https://public.example.com/mcp",
+      authType: "oauth",
+      oauthScope: "read",
+      oauthClientId: "pub-client-id",
+      oauthClientSecret: "publisher-super-secret",
+    };
+
+    mockUpdateReturning
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([installRow])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...installRow, oauthClientSecret: "user-secret" }]);
+    mockSelectWhere
+      .mockResolvedValueOnce([sourceServer])
+      .mockResolvedValueOnce([{ ...sourceServer, oauthClientSecret: null }]);
+
+    const fromSource = await updateMcpToolApprovals({
+      serverId: "srv-pub-secret",
+      autoApprovedTools: ["read_docs"],
+    });
+    expect(fromSource.ok).toBe(true);
+    if (fromSource.ok) {
+      expect(fromSource.value.oauthClientSecret).toBe("[REDACTED]");
+      expect(fromSource.value.oauthClientSecret).not.toBe(
+        "publisher-super-secret",
+      );
+    }
+
+    const fromInstall = await updateMcpToolApprovals({
+      serverId: "srv-pub-secret",
+      autoApprovedTools: ["read_docs"],
+    });
+    expect(fromInstall.ok).toBe(true);
+    if (fromInstall.ok) {
+      expect(fromInstall.value.oauthClientSecret).toBe("[REDACTED]");
+      expect(fromInstall.value.oauthClientSecret).not.toBe("user-secret");
+    }
   });
 
   it("updates blockedTools on an owned personal server and removes blocked tools from autoApprovedTools", async () => {

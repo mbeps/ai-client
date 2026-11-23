@@ -57,11 +57,42 @@ describe("chatApprovalRegistry", () => {
     ]);
 
     expect(resolved).toBe(false);
+    expect(chatApprovalRegistry.canResolve("msg-a", [{ approvalId: "app-1", approved: true }])).toBe(false);
     expect(chatApprovalRegistry.has("msg-a")).toBe(true);
 
     // Clean up pending waiter
     chatApprovalRegistry.cancel("msg-a");
     return expect(promise).rejects.toThrow("Approval cancelled");
+  });
+
+  it("canResolve returns false when no waiter exists or set is empty", () => {
+    expect(
+      chatApprovalRegistry.canResolve("msg-a", [
+        { approvalId: "app-1", approved: true },
+      ]),
+    ).toBe(false);
+  });
+
+  it("cancelBatch removes only the matching batch waiter and leaves other waiters active", async () => {
+    const ac1 = new AbortController();
+    const ac2 = new AbortController();
+
+    const p1 = chatApprovalRegistry.waitForDecisions("msg-a", ["app-1"], ac1.signal);
+    const p2 = chatApprovalRegistry.waitForDecisions("msg-a", ["app-2"], ac2.signal);
+
+    chatApprovalRegistry.cancelBatch("msg-a", ["app-1"]);
+    await expect(p1).rejects.toThrow("Approval cancelled");
+    expect(chatApprovalRegistry.has("msg-a")).toBe(true);
+
+    // cancelBatch on non-existent message or mismatched ids is a safe no-op
+    chatApprovalRegistry.cancelBatch("msg-missing", ["app-1"]);
+    chatApprovalRegistry.cancelBatch("msg-a", ["app-nonexistent"]);
+
+    expect(
+      chatApprovalRegistry.resolve("msg-a", [{ approvalId: "app-2", approved: true }]),
+    ).toBe(true);
+    const map2 = await p2;
+    expect(map2.get("app-2")).toBe(true);
   });
 
   it("rejects immediately when abortSignal is already aborted", async () => {
@@ -112,18 +143,33 @@ describe("chatApprovalRegistry", () => {
     expect(chatApprovalRegistry.has("msg-a")).toBe(false);
   });
 
-  it("replaces and rejects previous waiter if waitForDecisions is called again for same messageId", async () => {
+  it("allows concurrent waiters for the same messageId to coexist and resolve independently", async () => {
     const ac1 = new AbortController();
     const ac2 = new AbortController();
 
     const p1 = chatApprovalRegistry.waitForDecisions("msg-a", ["app-1"], ac1.signal);
     const p2 = chatApprovalRegistry.waitForDecisions("msg-a", ["app-2"], ac2.signal);
 
-    await expect(p1).rejects.toThrow("Superseded by new approval wait");
+    expect(chatApprovalRegistry.has("msg-a")).toBe(true);
+    expect(
+      chatApprovalRegistry.canResolve("msg-a", [{ approvalId: "app-1", approved: true }]),
+    ).toBe(true);
+    expect(
+      chatApprovalRegistry.canResolve("msg-a", [{ approvalId: "app-other", approved: true }]),
+    ).toBe(false);
 
-    chatApprovalRegistry.resolve("msg-a", [{ approvalId: "app-2", approved: true }]);
-    const map = await p2;
-    expect(map.get("app-2")).toBe(true);
+    // Resolving app-2 resolves only p2 while p1 keeps waiting
+    expect(
+      chatApprovalRegistry.resolve("msg-a", [{ approvalId: "app-2", approved: true }]),
+    ).toBe(true);
+    const map2 = await p2;
+    expect(map2.get("app-2")).toBe(true);
+    expect(chatApprovalRegistry.has("msg-a")).toBe(true);
+
+    // Aborting ac1 rejects only p1
+    ac1.abort(new Error("First wait aborted"));
+    await expect(p1).rejects.toThrow("First wait aborted");
+    expect(chatApprovalRegistry.has("msg-a")).toBe(false);
   });
 
   it("cancel rejects an active waiter and is a no-op when absent", async () => {

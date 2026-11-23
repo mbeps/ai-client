@@ -177,6 +177,67 @@ describe("ToolList", () => {
     });
   });
 
+  it("preserves blocked rules for undiscovered tools across per-tool and batch updates", async () => {
+    mockUpdateMcpToolApprovals.mockResolvedValue({
+      ok: true,
+      value: {
+        autoApprovedTools: ["search"],
+        blockedTools: ["undiscovered_dangerous"],
+      },
+    });
+
+    render(
+      <ToolList
+        server={createServer({
+          autoApprovedTools: [],
+          blockedTools: ["undiscovered_dangerous"],
+        })}
+      />,
+    );
+
+    const searchAlwaysAllow = await screen.findByRole("radio", {
+      name: "Always allow search",
+    });
+    fireEvent.click(searchAlwaysAllow);
+
+    await waitFor(() => {
+      expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
+        serverId: "srv-1",
+        autoApprovedTools: ["search"],
+        blockedTools: ["undiscovered_dangerous"],
+      });
+    });
+
+    // Batch "Always allow" must also retain undiscovered blocked rules
+    mockUpdateMcpToolApprovals.mockClear();
+    mockUpdateMcpToolApprovals.mockResolvedValue({
+      ok: true,
+      value: {
+        autoApprovedTools: ["search", "delete_item"],
+        blockedTools: ["undiscovered_dangerous"],
+      },
+    });
+
+    const customTrigger = await screen.findByRole("button", {
+      name: /Custom/i,
+    });
+    fireEvent.pointerDown(customTrigger);
+    fireEvent.click(customTrigger);
+
+    const alwaysAllowItem = await screen.findByRole("menuitem", {
+      name: /Always allow/i,
+    });
+    fireEvent.click(alwaysAllowItem);
+
+    await waitFor(() => {
+      expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
+        serverId: "srv-1",
+        autoApprovedTools: ["search", "delete_item"],
+        blockedTools: ["undiscovered_dangerous"],
+      });
+    });
+  });
+
   it("supports batch Always allow, Needs approval, and Blocked dropdown actions", async () => {
     mockUpdateMcpToolApprovals.mockResolvedValue({
       ok: true,

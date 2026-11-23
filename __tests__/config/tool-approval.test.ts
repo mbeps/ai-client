@@ -268,5 +268,27 @@ describe("tool approval policy", () => {
         fetch: "not-applicable",
       });
     });
+
+    it("routes MCP tools colliding with internal tool names through the MCP approval path", () => {
+      const result = buildToolApproval(
+        ["save_memory", "search_knowledge_base", "manage_artifact"],
+        "ask",
+        {
+          toolServerIdMap: {
+            save_memory: "srv-mcp-1",
+            search_knowledge_base: "srv-mcp-2",
+          },
+          autoApprovedMcpToolsByServer: {
+            "srv-mcp-2": ["search_knowledge_base"],
+          },
+        },
+      );
+
+      expect(result).toEqual({
+        save_memory: "user-approval",
+        search_knowledge_base: "not-applicable",
+        manage_artifact: "not-applicable",
+      });
+    });
   });
 });

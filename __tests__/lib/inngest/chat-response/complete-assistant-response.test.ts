@@ -365,6 +365,31 @@ describe("complete-assistant-response", () => {
       expect(result).toBe(false);
       expect(mockDeleteScratchpadFiles).toHaveBeenCalledWith("asst-stopped-deleted");
     });
+
+    it("updates existing assistant message when persistAbortedAssistantResponse is called with isUpdate: true", async () => {
+      mockUpdateResponse.mockResolvedValueOnce(true);
+
+      const result = await persistAbortedAssistantResponse({
+        chatId: "chat-sub-abort",
+        assistantMessageId: "asst-sub-abort",
+        userMessageId: "user-sub-abort",
+        resolvedModelId: "gpt-4o",
+        accumulatedText: "Partial after subagent",
+        accumulatedReasoning: "",
+        completedTools: [],
+        isUpdate: true,
+      });
+
+      expect(result).toBe(true);
+      expect(mockUpdateResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageId: "asst-sub-abort",
+          chatId: "chat-sub-abort",
+          content: "Partial after subagent",
+        }),
+      );
+      expect(mockPersistResponse).not.toHaveBeenCalled();
+    });
   });
 });
 

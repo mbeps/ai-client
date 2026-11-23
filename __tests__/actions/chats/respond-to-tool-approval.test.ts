@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockRequireSession = vi.hoisted(() => vi.fn());
 const mockSelectLimit = vi.hoisted(() => vi.fn());
 const mockUpdateWhere = vi.hoisted(() => vi.fn());
+const mockCanResolveRegistry = vi.hoisted(() => vi.fn());
 const mockResolveRegistry = vi.hoisted(() => vi.fn());
 const mockInngestSend = vi.hoisted(() => vi.fn());
 
@@ -31,6 +32,7 @@ vi.mock("@/drizzle/db", () => ({
 
 vi.mock("@/lib/chat/chat-approval-registry", () => ({
   chatApprovalRegistry: {
+    canResolve: mockCanResolveRegistry,
     resolve: mockResolveRegistry,
   },
 }));
@@ -86,6 +88,7 @@ describe("respondToToolApproval action", () => {
     mockRequireSession.mockResolvedValue(SESSION);
     mockUpdateWhere.mockResolvedValue(undefined);
     mockInngestSend.mockResolvedValue({ ids: ["evt-1"] });
+    mockCanResolveRegistry.mockReturnValue(false);
     mockResolveRegistry.mockReturnValue(false);
   });
 
@@ -184,7 +187,7 @@ describe("respondToToolApproval action", () => {
     }
   });
 
-  it("resolves in-memory chatApprovalRegistry and clears pendingApprovals in DB when subagent waiter exists", async () => {
+  it("clears pendingApprovals in DB before resolving in-memory chatApprovalRegistry waiter", async () => {
     mockSelectLimit.mockResolvedValueOnce([
       {
         messageId: VALID_MSG_ID,
@@ -193,6 +196,7 @@ describe("respondToToolApproval action", () => {
         metadata: makeMetadata({ model: "gpt-4o" }),
       },
     ]);
+    mockCanResolveRegistry.mockReturnValueOnce(true);
     mockResolveRegistry.mockReturnValueOnce(true);
 
     // Submitted in reverse order; action must order strictly by pendingApprovals
@@ -205,11 +209,39 @@ describe("respondToToolApproval action", () => {
     });
 
     expect(res).toEqual({ ok: true, value: { success: true } });
+    expect(mockUpdateWhere).toHaveBeenCalledOnce();
     expect(mockResolveRegistry).toHaveBeenCalledWith(VALID_MSG_ID, [
       { approvalId: "app-1", approved: true },
       { approvalId: "app-2", approved: false },
     ]);
-    expect(mockUpdateWhere).toHaveBeenCalledOnce();
+    expect(mockUpdateWhere.mock.invocationCallOrder[0]).toBeLessThan(
+      mockResolveRegistry.mock.invocationCallOrder[0],
+    );
+    expect(mockInngestSend).not.toHaveBeenCalled();
+  });
+
+  it("does not resolve the in-memory waiter if clearing pendingApprovals in DB fails", async () => {
+    mockSelectLimit.mockResolvedValueOnce([
+      {
+        messageId: VALID_MSG_ID,
+        chatId: VALID_CHAT_ID,
+        role: "assistant",
+        metadata: makeMetadata({ model: "gpt-4o" }),
+      },
+    ]);
+    mockCanResolveRegistry.mockReturnValueOnce(true);
+    mockUpdateWhere.mockRejectedValueOnce(new Error("DB write failed"));
+
+    const res = await respondToToolApproval({
+      assistantMessageId: VALID_MSG_ID,
+      decisions: [
+        { approvalId: "app-1", approved: true },
+        { approvalId: "app-2", approved: false },
+      ],
+    });
+
+    expect(res.ok).toBe(false);
+    expect(mockResolveRegistry).not.toHaveBeenCalled();
     expect(mockInngestSend).not.toHaveBeenCalled();
   });
 

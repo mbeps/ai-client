@@ -157,7 +157,7 @@ export function buildToolApproval(
   const approvalMap: ToolApprovalMap = {};
 
   for (const name of toolNames) {
-    if (INTERNAL_TOOL_NAMES.has(name)) {
+    if (INTERNAL_TOOL_NAMES.has(name) && !options?.toolServerIdMap?.[name]) {
       const resolved = resolveInternalToolApproval(
         name,
         options?.internalToolOverrides,

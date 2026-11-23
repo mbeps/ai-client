@@ -158,6 +158,7 @@ export async function persistAbortedAssistantResponse(params: {
   accumulatedText: string;
   accumulatedReasoning: string;
   completedTools: CompletedToolRecord[];
+  isUpdate?: boolean;
 }): Promise<boolean> {
   const {
     chatId,
@@ -167,6 +168,7 @@ export async function persistAbortedAssistantResponse(params: {
     accumulatedText,
     accumulatedReasoning,
     completedTools,
+    isUpdate,
   } = params;
 
   if (
@@ -187,13 +189,20 @@ export async function persistAbortedAssistantResponse(params: {
     stopped: true,
   });
 
-  const persisted = await persistAssistantResponse({
-    chatId,
-    assistantMessageId,
-    content: accumulatedText,
-    parentId: userMessageId,
-    metadata,
-  });
+  const persisted = isUpdate
+    ? await updateAssistantResponse({
+        messageId: assistantMessageId,
+        chatId,
+        content: accumulatedText,
+        metadata,
+      })
+    : await persistAssistantResponse({
+        chatId,
+        assistantMessageId,
+        content: accumulatedText,
+        parentId: userMessageId,
+        metadata,
+      });
 
   if (!persisted) {
     const exists = await hasExistingAssistantMessage(

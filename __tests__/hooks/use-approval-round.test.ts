@@ -1,5 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mockToastError = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({
+  toast: { error: mockToastError },
+}));
+
 import { useApprovalRound } from "@/hooks/chat/use-approval-round";
 import type { PendingApproval } from "@/types/tool/approval";
 
@@ -17,6 +23,10 @@ function makeApproval(
 }
 
 describe("useApprovalRound", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("returns empty state when pendingApprovals is empty", () => {
     const onSubmit = vi.fn();
     const { result } = renderHook(() => useApprovalRound([], onSubmit));
@@ -147,5 +157,143 @@ describe("useApprovalRound", () => {
 
     expect(result.current.currentIndex).toBe(0);
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("blocks duplicate submission while pending, resets isSubmitted on rejection or false return, and allows retry", async () => {
+    let rejectFirst!: (err: unknown) => void;
+    const onSubmit = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectFirst = reject;
+          }),
+      )
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce("string failure")
+      .mockResolvedValueOnce(true);
+
+    const approvals = [makeApproval("a1"), makeApproval("a2")];
+    const { result } = renderHook(() => useApprovalRound(approvals, onSubmit));
+
+    // Step to second item and trigger submission
+    act(() => {
+      result.current.decideCurrent(true);
+    });
+
+    let p1!: Promise<void>;
+    act(() => {
+      p1 = result.current.decideCurrent(false) as unknown as Promise<void>;
+    });
+
+    // While pending, duplicate decideCurrent / decideAll must be ignored
+    act(() => {
+      result.current.decideCurrent(true);
+      result.current.decideAll(true);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    // Reject with Error -> resets isSubmitted and shows toast
+    await act(async () => {
+      rejectFirst(new Error("Network dropped"));
+      await p1;
+    });
+    expect(mockToastError).toHaveBeenCalledWith("Network dropped");
+
+    // Retry with decideCurrent returning false -> resets isSubmitted for another retry
+    await act(async () => {
+      await result.current.decideCurrent(true);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+
+    // Retry with decideAll rejecting with non-Error -> shows fallback toast and resets
+    await act(async () => {
+      await result.current.decideAll(true);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(3);
+    expect(mockToastError).toHaveBeenLastCalledWith(
+      "Failed to submit tool approval",
+    );
+
+    // Final retry succeeds -> stays submitted
+    await act(async () => {
+      await result.current.decideAll(true);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(4);
+
+    await act(async () => {
+      await result.current.decideAll(false);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not clear isSubmitted on a newer round when an earlier round fails late", async () => {
+    let resolveOld!: (val: boolean) => void;
+    let rejectOld2!: (err: unknown) => void;
+    const onSubmit = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<boolean>((r) => {
+            resolveOld = r;
+          }),
+      )
+      .mockResolvedValueOnce(true)
+      .mockImplementationOnce(
+        () =>
+          new Promise<boolean>((_, rej) => {
+            rejectOld2 = rej;
+          }),
+      )
+      .mockResolvedValueOnce(true);
+
+    const { result, rerender } = renderHook(
+      ({ items }: { items: PendingApproval[] }) =>
+        useApprovalRound(items, onSubmit),
+      { initialProps: { items: [makeApproval("old-1")] } },
+    );
+
+    let pOld!: Promise<void>;
+    act(() => {
+      pOld = result.current.decideCurrent(true) as unknown as Promise<void>;
+    });
+
+    // Switch to a new round and submit it before old settles
+    rerender({ items: [makeApproval("new-1")] });
+    await act(async () => {
+      await result.current.decideCurrent(true);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+
+    // Old round settles as false -> must not unlock the already-submitted new round
+    await act(async () => {
+      resolveOld(false);
+      await pOld;
+    });
+    await act(async () => {
+      await result.current.decideCurrent(false);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+
+    // Also verify late rejection from an older round does not unlock a newer submitted round
+    rerender({ items: [makeApproval("old-2")] });
+    let pOld2!: Promise<void>;
+    act(() => {
+      pOld2 = result.current.decideCurrent(true) as unknown as Promise<void>;
+    });
+    rerender({ items: [makeApproval("new-2")] });
+    await act(async () => {
+      await result.current.decideCurrent(true);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(4);
+
+    await act(async () => {
+      rejectOld2(new Error("late rejection"));
+      await pOld2;
+    });
+    await act(async () => {
+      await result.current.decideCurrent(false);
+    });
+    expect(onSubmit).toHaveBeenCalledTimes(4);
   });
 });

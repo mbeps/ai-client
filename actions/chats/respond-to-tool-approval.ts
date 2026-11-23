@@ -99,7 +99,7 @@ export const respondToToolApproval = defineAction(
       accepted.push({ approvalId: pending.approvalId, approved });
     }
 
-    if (chatApprovalRegistry.resolve(assistantMessageId, accepted)) {
+    if (chatApprovalRegistry.canResolve(assistantMessageId, accepted)) {
       const existingMetadata = JSON.parse(row.metadata as string) as Record<
         string,
         unknown
@@ -113,8 +113,14 @@ export const respondToToolApproval = defineAction(
           }),
           updatedAt: new Date(),
         })
-        .where(eq(message.id, assistantMessageId));
+        .where(
+          and(
+            eq(message.id, assistantMessageId),
+            eq(message.metadata, row.metadata as string),
+          ),
+        );
 
+      chatApprovalRegistry.resolve(assistantMessageId, accepted);
       return ok({ success: true });
     }
 

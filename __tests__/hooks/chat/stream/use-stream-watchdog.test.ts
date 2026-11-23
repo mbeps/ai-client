@@ -214,7 +214,7 @@ describe("useStreamWatchdog", () => {
     expect(setIsStreaming).not.toHaveBeenCalledWith(false);
   });
 
-  it("pauses stall sync and abort while awaitingApprovalRef is true", async () => {
+  it("reconciles from DB without aborting while awaitingApprovalRef is true and approval remains pending", async () => {
     const syncFromDb = vi.fn().mockResolvedValue(false);
     const setIsStreaming = vi.fn();
     const refs = createRefs({
@@ -239,7 +239,36 @@ describe("useStreamWatchdog", () => {
       await vi.advanceTimersByTimeAsync(2000);
     }
 
-    expect(syncFromDb).not.toHaveBeenCalled();
+    expect(syncFromDb).toHaveBeenCalled();
     expect(setIsStreaming).not.toHaveBeenCalledWith(false);
+  });
+
+  it("clears watchdog and inflight state when reconciliation succeeds while awaitingApprovalRef is true", async () => {
+    const syncFromDb = vi.fn().mockResolvedValue(true);
+    const setIsStreaming = vi.fn();
+    const refs = createRefs({
+      awaitingApprovalRef: { current: true },
+      lastChunkTimeRef: { current: Date.now() - 10000 },
+    });
+
+    renderHook(() =>
+      useStreamWatchdog(
+        "chat-awaiting-resolved",
+        true,
+        false,
+        "connected",
+        null,
+        syncFromDb,
+        setIsStreaming,
+        refs as any,
+      ),
+    );
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(syncFromDb).toHaveBeenCalledTimes(1);
+    expect(mockClearInflightState).toHaveBeenCalledWith(
+      "chat-awaiting-resolved",
+    );
   });
 });

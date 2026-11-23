@@ -23,6 +23,7 @@ import {
 import { executeStopStream } from "@/hooks/chat/stream/use-stream-stop";
 import { useStreamWatchdog } from "@/hooks/chat/stream/use-stream-watchdog";
 import { useApiError } from "@/hooks/use-api-error";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { ApprovalDecision, ApprovalMode } from "@/types/tool/approval";
@@ -102,6 +103,32 @@ export function useStreamResponse(
       );
 
       if (assistantMsg) {
+        if (streamRefs.awaitingApprovalRef.current) {
+          const meta = parseMessageMetadata(assistantMsg.metadata);
+          if (meta.pendingApprovals.length > 0 && meta.finishReason === null) {
+            const currentIds = pendingApprovals
+              .map((a) => a.approvalId)
+              .join(" ");
+            const dbIds = meta.pendingApprovals
+              .map((a) => a.approvalId)
+              .join(" ");
+            if (dbIds !== currentIds) {
+              streamRefs.lastChunkTimeRef.current = Date.now();
+              setPendingApprovals(meta.pendingApprovals);
+              setApprovalsDisabled(false);
+            }
+            return false;
+          }
+
+          if (meta.finishReason === null) {
+            streamRefs.awaitingApprovalRef.current = false;
+            streamRefs.lastChunkTimeRef.current = Date.now();
+            setPendingApprovals([]);
+            setApprovalsDisabled(false);
+            return false;
+          }
+        }
+
         applySyncedAssistantMessage(
           chatId,
           data,
@@ -121,7 +148,10 @@ export function useStreamResponse(
     upsertChat,
     options,
     activeLeaf,
+    pendingApprovals,
     resetStreamingState,
+    setApprovalsDisabled,
+    setPendingApprovals,
     streamRefs,
     setChatNotFound,
   ]);
@@ -214,14 +244,29 @@ export function useStreamResponse(
       decisions: ApprovalDecision[],
     ): Promise<boolean> => {
       setApprovalsDisabled(true);
-      const res = await respondToToolApproval({
-        assistantMessageId: targetAssistantMessageId,
-        decisions,
-      });
+      let res: Awaited<ReturnType<typeof respondToToolApproval>>;
+      try {
+        res = await respondToToolApproval({
+          assistantMessageId: targetAssistantMessageId,
+          decisions,
+        });
+      } catch (error) {
+        setApprovalsDisabled(false);
+        handleApiError(
+          error,
+          error instanceof Error
+            ? error.message
+            : "Failed to submit tool approval",
+        );
+        return false;
+      }
 
       if (!res.ok) {
         setApprovalsDisabled(false);
-        handleApiError(res.error);
+        handleApiError(
+          res.error,
+          res.error.message || "Failed to submit tool approval",
+        );
         return false;
       }
 

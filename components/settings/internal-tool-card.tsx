@@ -1,4 +1,7 @@
+"use client";
+
 import { Ban, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { type KeyboardEvent, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,6 +90,30 @@ export function InternalToolCard({
     defaultApproval !== undefined && effectiveApproval !== defaultApproval;
   const label = displayName ?? name;
   const isInteractive = !disabled && Boolean(onToggleApproval);
+  const radioRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const handleRadioKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    let delta = 0;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      delta = 1;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      delta = -1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    const count = PERMISSION_OPTIONS.length;
+    const nextIndex = (index + delta + count) % count;
+    const nextOption = PERMISSION_OPTIONS[nextIndex];
+    radioRefs.current[nextIndex]?.focus();
+    if (isInteractive && effectiveApproval !== nextOption.mode) {
+      onToggleApproval?.(name, nextOption.mode);
+    }
+  };
 
   return (
     <Card className="gap-4 py-5">
@@ -102,17 +129,22 @@ export function InternalToolCard({
             aria-label={`${label} permission`}
             className="bg-muted inline-flex shrink-0 items-center gap-0.5 rounded-lg p-0.5"
           >
-            {PERMISSION_OPTIONS.map((option) => {
+            {PERMISSION_OPTIONS.map((option, index) => {
               const isSelected = effectiveApproval === option.mode;
               const Icon = option.icon;
               return (
                 <button
                   key={option.mode}
+                  ref={(el) => {
+                    radioRefs.current[index] = el;
+                  }}
                   type="button"
                   role="radio"
                   aria-checked={isSelected}
                   aria-label={`${option.actionPrefix} ${label}`}
+                  tabIndex={isSelected ? 0 : -1}
                   disabled={!isInteractive}
+                  onKeyDown={(event) => handleRadioKeyDown(event, index)}
                   onClick={() => {
                     if (!isSelected) {
                       onToggleApproval?.(name, option.mode);

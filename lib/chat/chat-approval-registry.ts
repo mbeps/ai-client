@@ -7,21 +7,60 @@ interface ApprovalWaiter {
   cleanup: () => void;
 }
 
+function toDecisionMap(
+  decisions: readonly ApprovalDecision[],
+): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  for (const decision of decisions) {
+    map.set(decision.approvalId, decision.approved);
+  }
+  return map;
+}
+
+function matchesExpectedIds(
+  expectedApprovalIds: readonly string[],
+  decisionMap: ReadonlyMap<string, boolean>,
+): boolean {
+  return expectedApprovalIds.every((id) => decisionMap.has(id));
+}
+
+function hasSameApprovalIds(
+  a: readonly string[],
+  b: readonly string[],
+): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
 /**
  * In-memory registry coordinating in-flight subagent tool approval pauses
  * within an active Inngest chat generation run.
  *
  * Mirrors `chatAbortRegistry`: allows `respondToToolApproval` to immediately
  * unblock a waiting subagent step without spawning a new Inngest resume event.
+ * Supports multiple concurrent waiters per `assistantMessageId` keyed by their
+ * expected `approvalId` batches.
  */
 class ChatApprovalRegistry {
-  private waiters = new Map<string, ApprovalWaiter>();
+  private waiters = new Map<string, Set<ApprovalWaiter>>();
+
+  private removeWaiter(
+    assistantMessageId: string,
+    set: Set<ApprovalWaiter>,
+    waiter: ApprovalWaiter,
+  ): void {
+    set.delete(waiter);
+    if (set.size === 0) {
+      this.waiters.delete(assistantMessageId);
+    }
+  }
 
   /**
    * Registers a waiter for `assistantMessageId` and resolves once all
    * `expectedApprovalIds` are answered via `resolve()`.
    *
-   * Rejects immediately if `abortSignal` is already aborted or aborts while waiting.
+   * Concurrent waits for the same `assistantMessageId` coexist without
+   * superseding one another. Rejects immediately if `abortSignal` is already
+   * aborted or aborts while waiting.
    */
   waitForDecisions(
     assistantMessageId: string,
@@ -36,16 +75,16 @@ class ChatApprovalRegistry {
       return Promise.reject(reason);
     }
 
-    const existing = this.waiters.get(assistantMessageId);
-    if (existing) {
-      this.waiters.delete(assistantMessageId);
-      existing.cleanup();
-      existing.reject(new Error("Superseded by new approval wait"));
-    }
-
     return new Promise<Map<string, boolean>>((resolve, reject) => {
+      let waiter!: ApprovalWaiter;
+      let set = this.waiters.get(assistantMessageId);
+      if (!set) {
+        set = new Set();
+        this.waiters.set(assistantMessageId, set);
+      }
+
       const onAbort = () => {
-        this.waiters.delete(assistantMessageId);
+        this.removeWaiter(assistantMessageId, set, waiter);
         const reason =
           abortSignal.reason instanceof Error
             ? abortSignal.reason
@@ -57,68 +96,120 @@ class ChatApprovalRegistry {
         abortSignal.removeEventListener("abort", onAbort);
       };
 
-      abortSignal.addEventListener("abort", onAbort, { once: true });
-
-      this.waiters.set(assistantMessageId, {
+      waiter = {
         expectedApprovalIds,
         resolve,
         reject,
         cleanup,
-      });
+      };
+
+      abortSignal.addEventListener("abort", onAbort, { once: true });
+      set.add(waiter);
     });
   }
 
   /**
-   * Resolves an active in-memory approval waiter for `assistantMessageId`.
+   * Checks whether at least one registered waiter for `assistantMessageId`
+   * matches all decisions in `decisions`.
+   */
+  canResolve(
+    assistantMessageId: string,
+    decisions: readonly ApprovalDecision[],
+  ): boolean {
+    const set = this.waiters.get(assistantMessageId);
+    if (!set || set.size === 0) {
+      return false;
+    }
+
+    const decisionMap = toDecisionMap(decisions);
+    for (const waiter of set) {
+      if (matchesExpectedIds(waiter.expectedApprovalIds, decisionMap)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Resolves all active in-memory approval waiters for `assistantMessageId`
+   * whose expected approval IDs are satisfied by `decisions`.
    *
-   * @returns `true` if a matching waiter existed with all expected decisions and
-   * was resolved; `false` otherwise so the caller can dispatch an Inngest event.
+   * @returns `true` if at least one matching waiter existed and was resolved;
+   * `false` otherwise so the caller can dispatch an Inngest event.
    */
   resolve(
     assistantMessageId: string,
     decisions: readonly ApprovalDecision[],
   ): boolean {
-    const waiter = this.waiters.get(assistantMessageId);
-    if (!waiter) {
+    const set = this.waiters.get(assistantMessageId);
+    if (!set || set.size === 0) {
       return false;
     }
 
-    const decisionMap = new Map<string, boolean>();
-    for (const decision of decisions) {
-      decisionMap.set(decision.approvalId, decision.approved);
-    }
-
-    for (const expectedId of waiter.expectedApprovalIds) {
-      if (!decisionMap.has(expectedId)) {
-        return false;
+    const decisionMap = toDecisionMap(decisions);
+    const matched: ApprovalWaiter[] = [];
+    for (const waiter of set) {
+      if (matchesExpectedIds(waiter.expectedApprovalIds, decisionMap)) {
+        matched.push(waiter);
       }
     }
 
-    this.waiters.delete(assistantMessageId);
-    waiter.cleanup();
-    waiter.resolve(decisionMap);
+    if (matched.length === 0) {
+      return false;
+    }
+
+    for (const waiter of matched) {
+      this.removeWaiter(assistantMessageId, set, waiter);
+      waiter.cleanup();
+      waiter.resolve(decisionMap);
+    }
     return true;
   }
 
   /**
-   * Cancels and rejects an active approval waiter on stream stop or failure.
+   * Cancels and rejects a specific batch waiter for `assistantMessageId`
+   * (e.g. when persistence or realtime emission fails after pre-registration).
    */
-  cancel(assistantMessageId: string): void {
-    const waiter = this.waiters.get(assistantMessageId);
-    if (!waiter) {
-      return;
-    }
+  cancelBatch(
+    assistantMessageId: string,
+    expectedApprovalIds: readonly string[],
+  ): void {
+    const set = this.waiters.get(assistantMessageId);
+    if (!set) return;
 
-    this.waiters.delete(assistantMessageId);
-    waiter.cleanup();
-    waiter.reject(new Error("Approval cancelled"));
+    for (const waiter of set) {
+      if (hasSameApprovalIds(waiter.expectedApprovalIds, expectedApprovalIds)) {
+        this.removeWaiter(assistantMessageId, set, waiter);
+        waiter.cleanup();
+        waiter.reject(new Error("Approval cancelled"));
+        break;
+      }
+    }
   }
 
   /**
-   * Checks whether an approval waiter is currently registered for `assistantMessageId`.
+   * Cancels and rejects all active approval waiters on stream stop or failure.
+   */
+  cancel(assistantMessageId: string): void {
+    const set = this.waiters.get(assistantMessageId);
+    if (!set) {
+      return;
+    }
+
+    const waiters = [...set];
+    this.waiters.delete(assistantMessageId);
+    for (const waiter of waiters) {
+      waiter.cleanup();
+      waiter.reject(new Error("Approval cancelled"));
+    }
+  }
+
+  /**
+   * Checks whether any approval waiter is currently registered for `assistantMessageId`.
    */
   has(assistantMessageId: string): boolean {
-    return this.waiters.has(assistantMessageId);
+    const set = this.waiters.get(assistantMessageId);
+    return Boolean(set && set.size > 0);
   }
 }
 

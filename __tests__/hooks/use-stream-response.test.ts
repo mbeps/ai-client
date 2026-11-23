@@ -2962,7 +2962,212 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
         decisions: [{ approvalId: "app-1", approved: true }],
       });
 
+      // Rejected promise path restores approvalsDisabled and reports error
+      mockRespondToToolApproval.mockRejectedValueOnce(
+        new Error("Connection dropped"),
+      );
+      await act(async () => {
+        ok = await result.current.submitToolApprovals("msg-ast-1", [
+          { approvalId: "app-1", approved: true },
+        ]);
+      });
+      expect(ok).toBe(false);
+      expect(result.current.approvalsDisabled).toBe(false);
+      expect(mockHandleApiError).toHaveBeenCalledWith(
+        expect.any(Error),
+        "Connection dropped",
+      );
+
+      // Non-Error rejection + empty error message fallback
+      mockRespondToToolApproval.mockRejectedValueOnce("network-down");
+      await act(async () => {
+        ok = await result.current.submitToolApprovals("msg-ast-1", [
+          { approvalId: "app-1", approved: true },
+        ]);
+      });
+      expect(ok).toBe(false);
+      expect(mockHandleApiError).toHaveBeenLastCalledWith(
+        "network-down",
+        "Failed to submit tool approval",
+      );
+
+      mockRespondToToolApproval.mockResolvedValueOnce({
+        ok: false,
+        error: { code: "UNKNOWN", message: "" },
+      });
+      await act(async () => {
+        ok = await result.current.submitToolApprovals("msg-ast-1", [
+          { approvalId: "app-1", approved: true },
+        ]);
+      });
+      expect(ok).toBe(false);
+      expect(mockHandleApiError).toHaveBeenLastCalledWith(
+        { code: "UNKNOWN", message: "" },
+        "Failed to submit tool approval",
+      );
+
       unmount();
+    });
+
+    it("reconciles awaitingApproval state from DB across pending, updated-round, subagent-cleared, and finished states", async () => {
+      vi.useFakeTimers();
+      mockStoreState.chats = {
+        "chat-reconcile": { id: "chat-reconcile", messages: {} },
+      };
+
+      const approval1 = {
+        approvalId: "app-1",
+        toolCallId: "call-1",
+        toolName: "create_skill",
+        args: {},
+        signature: "sig-1",
+      };
+      const approval2 = {
+        approvalId: "app-2",
+        toolCallId: "call-2",
+        toolName: "write_skill_file",
+        args: {},
+        signature: "sig-2",
+      };
+
+      const { result, rerender, unmount: uRec } = renderHook(() =>
+        useStreamResponse("chat-reconcile"),
+      );
+
+      await act(async () => {
+        await result.current.streamResponse("u-rec", "run", null);
+      });
+
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [
+            { data: { type: "start", messageId: "ast-rec" } },
+            {
+              data: {
+                type: "tool-approval-required",
+                approvals: [approval1],
+                round: 1,
+              },
+            },
+          ],
+        };
+        rerender();
+      });
+
+      // 1. DB still holds the same pending round -> keep waiting without clearing state
+      mockGetChat.mockResolvedValueOnce({
+        ok: true,
+        value: {
+          id: "chat-reconcile",
+          messages: [
+            {
+              id: "ast-rec",
+              role: "assistant",
+              parentId: "u-rec",
+              content: "",
+              metadata: JSON.stringify({ pendingApprovals: [approval1] }),
+            },
+          ],
+        },
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.pendingApprovals).toEqual([approval1]);
+
+      // 2. Another tab moved to round 2 -> update pendingApprovals
+      mockGetChat.mockResolvedValueOnce({
+        ok: true,
+        value: {
+          id: "chat-reconcile",
+          messages: [
+            {
+              id: "ast-rec",
+              role: "assistant",
+              parentId: "u-rec",
+              content: "",
+              metadata: JSON.stringify({ pendingApprovals: [approval2] }),
+            },
+          ],
+        },
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(result.current.pendingApprovals).toEqual([approval2]);
+
+      // 3. Another tab answered a subagent approval (pendingApprovals: [], no finishReason) -> clear waiting dialog, keep streaming
+      mockGetChat.mockResolvedValueOnce({
+        ok: true,
+        value: {
+          id: "chat-reconcile",
+          messages: [
+            {
+              id: "ast-rec",
+              role: "assistant",
+              parentId: "u-rec",
+              content: "",
+              metadata: JSON.stringify({ pendingApprovals: [] }),
+            },
+          ],
+        },
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(result.current.pendingApprovals).toEqual([]);
+      expect(result.current.isLoading).toBe(true);
+
+      // Trigger another approval wait and then complete in DB -> full finish sync
+      await act(async () => {
+        realtimeState.messages = {
+          ...realtimeState.messages,
+          delta: [
+            ...realtimeState.messages.delta,
+            {
+              data: {
+                type: "tool-approval-required",
+                approvals: [approval1],
+                round: 3,
+              },
+            },
+          ],
+        };
+        rerender();
+      });
+
+      mockBuildChatFromRows.mockReturnValueOnce({
+        id: "chat-reconcile",
+        messages: {},
+      });
+      mockGetChat.mockResolvedValueOnce({
+        ok: true,
+        value: {
+          id: "chat-reconcile",
+          messages: [
+            {
+              id: "ast-rec",
+              role: "assistant",
+              parentId: "u-rec",
+              content: "Completed elsewhere",
+              metadata: JSON.stringify({
+                pendingApprovals: [],
+                finishReason: "stop",
+              }),
+            },
+          ],
+        },
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.pendingApprovals).toEqual([]);
+
+      uRec();
+      vi.useRealTimers();
     });
 
     it("forwards approvalMode in streamResponse metadata and /api/chat payload", async () => {

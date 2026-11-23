@@ -112,7 +112,9 @@ export const updateMcpToolApprovals = defineAction(
       authType: sourceServer.authType,
       oauthClientId: updatedInstall.oauthClientId ?? sourceServer.oauthClientId,
       oauthClientSecret:
-        updatedInstall.oauthClientSecret ?? sourceServer.oauthClientSecret,
+        (updatedInstall.oauthClientSecret ?? sourceServer.oauthClientSecret)
+          ? "[REDACTED]"
+          : null,
       oauthScope: sourceServer.oauthScope,
       autoApprovedTools: updatedInstall.autoApprovedTools,
       blockedTools: updatedInstall.blockedTools ?? [],

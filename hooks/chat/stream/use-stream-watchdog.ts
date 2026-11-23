@@ -19,6 +19,7 @@ function shouldTriggerWatchdogSync(params: {
   timeSinceLastChunk: number;
   timeSinceStart: number;
   hasActiveCallingTools: boolean;
+  isAwaitingApproval: boolean;
 }): boolean {
   if (params.isConnectionError) return true;
   if (
@@ -28,7 +29,7 @@ function shouldTriggerWatchdogSync(params: {
     return true;
   }
   return (
-    !params.hasActiveCallingTools &&
+    (!params.hasActiveCallingTools || params.isAwaitingApproval) &&
     params.timeSinceStart > 5000 &&
     params.timeSinceLastChunk > 5000
   );
@@ -44,8 +45,10 @@ function shouldTriggerWatchdogSync(params: {
 function shouldAbortStalledWatchdog(params: {
   isConnectionError: boolean;
   hasActiveCallingTools: boolean;
+  isAwaitingApproval: boolean;
   attempts: number;
 }): boolean {
+  if (params.isAwaitingApproval) return false;
   if (params.isConnectionError && params.attempts >= 10) return true;
   return !params.hasActiveCallingTools && params.attempts >= 30;
 }
@@ -63,6 +66,7 @@ async function executeWatchdogTick(params: {
   setIsStreaming: (is: boolean) => void;
   isConnectionError: boolean;
   hasActiveCallingTools: boolean;
+  isAwaitingApproval: boolean;
   attempts: number;
   shouldSync: boolean;
 }) {
@@ -79,6 +83,7 @@ async function executeWatchdogTick(params: {
     shouldAbortStalledWatchdog({
       isConnectionError: params.isConnectionError,
       hasActiveCallingTools: params.hasActiveCallingTools,
+      isAwaitingApproval: params.isAwaitingApproval,
       attempts: params.attempts,
     })
   ) {
@@ -115,14 +120,7 @@ function createWatchdogTickStatus(
   realtimeError: unknown,
   attempts: number,
 ) {
-  if (refs.awaitingApprovalRef?.current) {
-    return {
-      isConnectionError: false,
-      hasActiveCallingTools: true,
-      shouldSync: false,
-    };
-  }
-
+  const isAwaitingApproval = Boolean(refs.awaitingApprovalRef?.current);
   const timeSinceLastChunk = Date.now() - refs.lastChunkTimeRef.current;
   const timeSinceStart = Date.now() - refs.pendingRef.current.startTime;
   const hasActiveCallingTools = refs.activeToolCallsRef.current.some(
@@ -138,9 +136,15 @@ function createWatchdogTickStatus(
     timeSinceLastChunk,
     timeSinceStart,
     hasActiveCallingTools,
+    isAwaitingApproval,
   });
 
-  return { isConnectionError, hasActiveCallingTools, shouldSync };
+  return {
+    isConnectionError,
+    hasActiveCallingTools,
+    isAwaitingApproval,
+    shouldSync,
+  };
 }
 
 /**
@@ -201,6 +205,7 @@ export function useStreamWatchdog(
         setIsStreaming,
         isConnectionError: tick.isConnectionError,
         hasActiveCallingTools: tick.hasActiveCallingTools,
+        isAwaitingApproval: tick.isAwaitingApproval,
         attempts,
         shouldSync: tick.shouldSync,
       });
