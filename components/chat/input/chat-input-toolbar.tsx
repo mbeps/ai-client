@@ -251,22 +251,19 @@ function ApprovalModeToggleButton({
         <Button
           type="button"
           variant="ghost"
-          size={isAuto ? "sm" : "icon"}
+          size="icon"
           onClick={onToggle}
           disabled={disabled}
           aria-label={`Tool approval mode: ${mode}`}
           aria-pressed={isAuto}
           className={
             isAuto
-              ? "h-7 gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2 text-xs font-medium text-amber-700 hover:bg-amber-500/25 dark:text-amber-300"
+              ? "h-7 w-7 rounded-full border border-amber-500/40 bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-300"
               : "text-muted-foreground hover:text-foreground h-7 w-7 rounded-full"
           }
         >
           {isAuto ? (
-            <>
-              <ShieldOff className="h-3.5 w-3.5 shrink-0" />
-              <span>Allow all</span>
-            </>
+            <ShieldOff className="h-3.5 w-3.5" />
           ) : (
             <ShieldCheck className="h-3.5 w-3.5" />
           )}

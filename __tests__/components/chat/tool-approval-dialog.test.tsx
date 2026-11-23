@@ -69,6 +69,10 @@ describe("ToolApprovalDialog", () => {
     expect(screen.getByText("Built-in")).toBeInTheDocument();
     expect(screen.getByText("Create Skill")).toBeInTheDocument();
     expect(screen.getByText("create_skill")).toBeInTheDocument();
+    expect(screen.queryByText("Needs confirmation")).not.toBeInTheDocument();
+    expect(screen.queryByText(/"my-skill"/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Create Skill/i }));
     expect(screen.getByText("Needs confirmation")).toBeInTheDocument();
     expect(screen.getByText(/"my-skill"/)).toBeInTheDocument();
 

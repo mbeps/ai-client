@@ -1,6 +1,13 @@
 "use client";
 
-import { ShieldAlert, ShieldCheck, Wrench } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  CircleCheck,
+  Hand,
+  MoreHorizontal,
+  Wrench,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { updateMcpToolApprovals } from "@/actions/mcp-servers/update-mcp-tool-approvals";
@@ -8,8 +15,14 @@ import type { DiscoveryResult } from "@/components/mcp/mcp-item-list";
 import { McpItemList } from "@/components/mcp/mcp-item-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAppStore } from "@/lib/store/use-app-store";
+import { cn } from "@/lib/utils";
 import type { DiscoveredTool } from "@/types/mcp/discovered-tool";
 import type { McpServer } from "@/types/mcp/mcp-server";
 
@@ -177,44 +190,138 @@ export function ToolList({ server }: ToolListProps) {
         const allApproved =
           items.length > 0 &&
           items.every((t) => autoApprovedTools.includes(t.name));
+        const noneApproved =
+          items.length === 0 ||
+          items.every((t) => !autoApprovedTools.includes(t.name));
+        const batchState = allApproved
+          ? "always_allow"
+          : noneApproved
+            ? "needs_approval"
+            : "custom";
+
+        const triggerConfig = {
+          always_allow: {
+            icon: CircleCheck,
+            label: "Always allow",
+          },
+          needs_approval: {
+            icon: Hand,
+            label: "Needs approval",
+          },
+          custom: {
+            icon: MoreHorizontal,
+            label: "Custom",
+          },
+        }[batchState];
+
+        const TriggerIcon = triggerConfig.icon;
+
         return (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isSaving}
-            onClick={() => handleToggleAll(!allApproved, items)}
-            className="h-8 text-xs"
-          >
-            {allApproved ? "Require approval for all" : "Auto-approve all"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isSaving || items.length === 0}
+                className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium"
+              >
+                <TriggerIcon className="size-3.5" />
+                <span>{triggerConfig.label}</span>
+                <ChevronDown className="text-muted-foreground size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={() => {
+                  if (!noneApproved) handleToggleAll(false, items);
+                }}
+                className="justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <Hand className="size-4" />
+                  <span>Needs approval</span>
+                </span>
+                {batchState === "needs_approval" && (
+                  <Check className="text-primary size-4" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (!allApproved) handleToggleAll(true, items);
+                }}
+                className="justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <CircleCheck className="size-4" />
+                  <span>Always allow</span>
+                </span>
+                {batchState === "always_allow" && (
+                  <Check className="text-primary size-4" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled
+                className="justify-between opacity-100"
+              >
+                <span className="flex items-center gap-2">
+                  <MoreHorizontal className="size-4" />
+                  <span>Custom</span>
+                </span>
+                {batchState === "custom" && (
+                  <Check className="text-primary size-4" />
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
       }}
       renderItemActions={(tool, items) => {
         const isApproved = autoApprovedTools.includes(tool.name);
         return (
-          <div className="flex items-center gap-2.5">
-            <span className="text-muted-foreground hidden items-center gap-1 text-xs sm:inline-flex">
-              {isApproved ? (
-                <>
-                  <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Auto-approved</span>
-                </>
-              ) : (
-                <>
-                  <ShieldAlert className="size-3.5 text-amber-600 dark:text-amber-400" />
-                  <span>Requires approval</span>
-                </>
-              )}
-            </span>
-            <Switch
-              checked={isApproved}
+          <div
+            role="radiogroup"
+            aria-label={`Approval setting for ${tool.name}`}
+            className="bg-muted inline-flex items-center gap-0.5 rounded-lg p-0.5"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={isApproved}
+              aria-label={`Always allow ${tool.name}`}
               disabled={isSaving}
-              aria-label={`Auto-approve ${tool.name}`}
-              onCheckedChange={(checked) =>
-                handleToggleTool(tool.name, checked, items)
-              }
-            />
+              onClick={() => {
+                if (!isApproved) handleToggleTool(tool.name, true, items);
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
+                isApproved
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <CircleCheck className="size-3.5 shrink-0" />
+              {isApproved && <span>Always allow</span>}
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={!isApproved}
+              aria-label={`Needs approval ${tool.name}`}
+              disabled={isSaving}
+              onClick={() => {
+                if (isApproved) handleToggleTool(tool.name, false, items);
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50",
+                !isApproved
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Hand className="size-3.5 shrink-0" />
+              {!isApproved && <span>Needs approval</span>}
+            </button>
           </div>
         );
       }}

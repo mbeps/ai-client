@@ -72,18 +72,31 @@ describe("ToolList", () => {
     });
   });
 
-  it("renders per-tool approval switches as siblings of accordion triggers without nested buttons", async () => {
+  it("renders per-tool approval tabs with label only on selected option and no nested buttons", async () => {
     const { container } = render(<ToolList server={createServer()} />);
 
-    const searchSwitch = await screen.findByRole("switch", {
-      name: "Auto-approve search",
+    const searchAlwaysAllow = await screen.findByRole("radio", {
+      name: "Always allow search",
     });
-    const deleteSwitch = screen.getByRole("switch", {
-      name: "Auto-approve delete_item",
+    const searchNeedsApproval = screen.getByRole("radio", {
+      name: "Needs approval search",
+    });
+    const deleteAlwaysAllow = screen.getByRole("radio", {
+      name: "Always allow delete_item",
+    });
+    const deleteNeedsApproval = screen.getByRole("radio", {
+      name: "Needs approval delete_item",
     });
 
-    expect(searchSwitch).toBeChecked();
-    expect(deleteSwitch).not.toBeChecked();
+    expect(searchAlwaysAllow).toHaveAttribute("aria-checked", "true");
+    expect(searchNeedsApproval).toHaveAttribute("aria-checked", "false");
+    expect(searchAlwaysAllow).toHaveTextContent("Always allow");
+    expect(searchNeedsApproval).not.toHaveTextContent("Needs approval");
+
+    expect(deleteAlwaysAllow).toHaveAttribute("aria-checked", "false");
+    expect(deleteNeedsApproval).toHaveAttribute("aria-checked", "true");
+    expect(deleteAlwaysAllow).not.toHaveTextContent("Always allow");
+    expect(deleteNeedsApproval).toHaveTextContent("Needs approval");
 
     // Ensure no <button> is nested inside another <button>
     const nestedButtons = container.querySelectorAll("button button");
@@ -104,10 +117,10 @@ describe("ToolList", () => {
       />,
     );
 
-    const deleteSwitch = await screen.findByRole("switch", {
-      name: "Auto-approve delete_item",
+    const deleteAlwaysAllow = await screen.findByRole("radio", {
+      name: "Always allow delete_item",
     });
-    fireEvent.click(deleteSwitch);
+    fireEvent.click(deleteAlwaysAllow);
 
     await waitFor(() => {
       expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
@@ -119,7 +132,7 @@ describe("ToolList", () => {
     expect(mockToastSuccess).toHaveBeenCalled();
   });
 
-  it("disables auto-approval for a single tool when toggled off", async () => {
+  it("disables auto-approval for a single tool when Needs approval is selected", async () => {
     mockUpdateMcpToolApprovals.mockResolvedValue({
       ok: true,
       value: { autoApprovedTools: [] },
@@ -127,10 +140,10 @@ describe("ToolList", () => {
 
     render(<ToolList server={createServer({ autoApprovedTools: ["search"] })} />);
 
-    const searchSwitch = await screen.findByRole("switch", {
-      name: "Auto-approve search",
+    const searchNeedsApproval = await screen.findByRole("radio", {
+      name: "Needs approval search",
     });
-    fireEvent.click(searchSwitch);
+    fireEvent.click(searchNeedsApproval);
 
     await waitFor(() => {
       expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
@@ -140,7 +153,7 @@ describe("ToolList", () => {
     });
   });
 
-  it("supports bulk Auto-approve all and Require approval for all", async () => {
+  it("supports batch Always allow and Needs approval dropdown actions", async () => {
     mockUpdateMcpToolApprovals.mockResolvedValue({
       ok: true,
       value: { autoApprovedTools: ["search", "delete_item"] },
@@ -148,10 +161,16 @@ describe("ToolList", () => {
 
     render(<ToolList server={createServer({ autoApprovedTools: [] })} />);
 
-    const approveAllBtn = await screen.findByRole("button", {
-      name: "Auto-approve all",
+    const batchTrigger = await screen.findByRole("button", {
+      name: /Needs approval/i,
     });
-    fireEvent.click(approveAllBtn);
+    fireEvent.pointerDown(batchTrigger);
+    fireEvent.click(batchTrigger);
+
+    const alwaysAllowItem = await screen.findByRole("menuitem", {
+      name: /Always allow/i,
+    });
+    fireEvent.click(alwaysAllowItem);
 
     await waitFor(() => {
       expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
@@ -165,10 +184,16 @@ describe("ToolList", () => {
       value: { autoApprovedTools: [] },
     });
 
-    const requireAllBtn = await screen.findByRole("button", {
-      name: "Require approval for all",
+    const updatedTrigger = await screen.findByRole("button", {
+      name: /Always allow/i,
     });
-    fireEvent.click(requireAllBtn);
+    fireEvent.pointerDown(updatedTrigger);
+    fireEvent.click(updatedTrigger);
+
+    const needsApprovalItem = await screen.findByRole("menuitem", {
+      name: /Needs approval/i,
+    });
+    fireEvent.click(needsApprovalItem);
 
     await waitFor(() => {
       expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
@@ -176,6 +201,15 @@ describe("ToolList", () => {
         autoApprovedTools: [],
       });
     });
+  });
+
+  it("shows Custom in batch dropdown when tools have mixed approval states", async () => {
+    render(<ToolList server={createServer({ autoApprovedTools: ["search"] })} />);
+
+    const batchTrigger = await screen.findByRole("button", {
+      name: /Custom/i,
+    });
+    expect(batchTrigger).toBeInTheDocument();
   });
 
   it("reverts optimistic state and shows error toast when update fails", async () => {
@@ -186,17 +220,17 @@ describe("ToolList", () => {
 
     render(<ToolList server={createServer({ autoApprovedTools: [] })} />);
 
-    const searchSwitch = await screen.findByRole("switch", {
-      name: "Auto-approve search",
+    const searchAlwaysAllow = await screen.findByRole("radio", {
+      name: "Always allow search",
     });
-    expect(searchSwitch).not.toBeChecked();
+    expect(searchAlwaysAllow).toHaveAttribute("aria-checked", "false");
 
-    fireEvent.click(searchSwitch);
+    fireEvent.click(searchAlwaysAllow);
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith("Server not found");
     });
-    expect(searchSwitch).not.toBeChecked();
+    expect(searchAlwaysAllow).toHaveAttribute("aria-checked", "false");
   });
 
   it("renders tool description and parameter schema when accordion is expanded", async () => {

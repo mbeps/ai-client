@@ -5,6 +5,12 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { updateMcpToolApprovals } from "@/actions/mcp-servers/update-mcp-tool-approvals";
 import { updateInternalToolApproval } from "@/actions/user-settings/update-internal-tool-approval";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getInternalToolDisplayName } from "@/config/tools";
@@ -142,22 +148,32 @@ export function ToolApprovalDialog({
         </div>
       </div>
 
-      <div className="mb-2.5 space-y-1.5">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-sm font-medium">{displayName}</span>
-          <code className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-xs">
-            {currentApproval.toolName}
-          </code>
-        </div>
-        {currentApproval.reason && (
-          <p className="text-muted-foreground text-xs">
-            {currentApproval.reason}
-          </p>
-        )}
-        <pre className="bg-muted/60 max-h-44 overflow-y-auto rounded-md border p-2 font-mono text-xs break-words whitespace-pre-wrap">
-          {formatToolArgs(currentApproval.args)}
-        </pre>
-      </div>
+      <Accordion
+        type="single"
+        collapsible
+        className="mb-2.5 rounded-lg border px-3"
+      >
+        <AccordionItem value="tool-call">
+          <AccordionTrigger className="items-center py-2.5 hover:no-underline">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="text-sm font-medium">{displayName}</span>
+              <code className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-xs">
+                {currentApproval.toolName}
+              </code>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-1.5 pb-2.5">
+            {currentApproval.reason && (
+              <p className="text-muted-foreground text-xs">
+                {currentApproval.reason}
+              </p>
+            )}
+            <pre className="bg-muted/60 max-h-44 overflow-y-auto rounded-md border p-2 font-mono text-xs break-words whitespace-pre-wrap">
+              {formatToolArgs(currentApproval.args)}
+            </pre>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
