@@ -221,6 +221,8 @@ export function IfConditionConfig({ data, onChange }: IfConditionConfigProps) {
               onValueChange={(value) =>
                 onChange({ modelId: value || undefined })
               }
+              allowClear
+              placeholder="Inherit workflow default"
               className="bg-card h-9 w-full border px-3"
             />
           </div>

@@ -217,8 +217,11 @@ export function filterStepTools(params: FilterStepToolsParams): {
     Object.assign(filteredTools, registerSkillAuthoringTools(userId));
   }
 
+  const hasStepSubagents = Boolean(
+    step.subagentIds && step.subagentIds.length > 0,
+  );
   if (
-    allowedToolIds.has(INTERNAL_TOOL_IDS.DELEGATE_TASK) &&
+    (allowedToolIds.has(INTERNAL_TOOL_IDS.DELEGATE_TASK) || hasStepSubagents) &&
     linkedSubagents &&
     linkedSubagents.length > 0 &&
     resolvedProvider

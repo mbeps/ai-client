@@ -314,4 +314,45 @@ describe("loadWorkflowContext", () => {
     });
     expect(resNoKb.kbContext).toBe("");
   });
+
+  it("applies nodeOverride knowledgeBaseIds, skillMode, skillIds, and subagentIds", async () => {
+    mockHybridSearch.mockResolvedValueOnce([{ content: "Node KB chunk" }]);
+    mockResolveProvider.mockResolvedValueOnce({
+      modelId: "gpt-4o",
+      sdkProvider: { chat: (id: string) => ({ modelId: id }) },
+      modelRow: { contextWindow: 128000 },
+    });
+
+    const res = await loadWorkflowContext({
+      userId: "u1",
+      workflowRow: {
+        id: "wf-1",
+        name: "Flow",
+        description: null,
+        globalContext: null,
+        modelId: "gpt-4o",
+        knowledgeBaseIds: ["wf-kb"],
+        tools: [],
+        skillMode: "none",
+        skillIds: [],
+        subagentIds: [],
+        canvasConfig: { enabled: false, allowedTypes: [] },
+      },
+      nodes: [],
+      nodeOverride: {
+        knowledgeBaseIds: ["node-kb"],
+        skillMode: "specific",
+        skillIds: ["sk-node"],
+        subagentIds: ["builtin:researcher"],
+      },
+    });
+
+    expect(mockHybridSearch).toHaveBeenCalledWith(
+      ["node-kb"],
+      "Flow",
+      "u1",
+      expect.any(Number),
+    );
+    expect(res.kbContext).toContain("Node KB chunk");
+  });
 });

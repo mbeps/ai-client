@@ -247,6 +247,12 @@ export async function executeSingleWorkflowNode(params: {
     workflowRow,
     nodes: allNodes,
     modelOverride: node.data.modelId ?? null,
+    nodeOverride: {
+      knowledgeBaseIds: node.data.knowledgeBaseIds,
+      skillMode: node.data.skillMode,
+      skillIds: node.data.skillIds,
+      subagentIds: node.data.subagentIds,
+    },
   });
 
   try {

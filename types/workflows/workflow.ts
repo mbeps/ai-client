@@ -89,6 +89,10 @@ export interface AiStepNodeData {
   modelId?: string;
   mcpServerIds: string[];
   toolIds: string[];
+  knowledgeBaseIds?: string[];
+  skillMode?: "inherit" | SkillMode;
+  skillIds?: string[];
+  subagentIds?: string[];
   requiresReview: boolean;
   reviewTiming?: "before" | "after";
   toolApprovalMode?: "inherit" | "auto" | "ask";

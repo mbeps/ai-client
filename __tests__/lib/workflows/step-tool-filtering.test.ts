@@ -272,4 +272,47 @@ describe("step-tool-filtering", () => {
     ).toBe("Loaded file ctx");
     expect(await resolveStepFileContext(null, [], "u1")).toBe("");
   });
+
+  it("registers delegate_task when step.subagentIds is configured even without explicit DELEGATE_TASK toolId", () => {
+    const res = filterStepTools({
+      step: {
+        kind: "ai_step",
+        variableName: "s4",
+        prompt: "Delegate",
+        mcpServerIds: [],
+        toolIds: [],
+        subagentIds: ["sub-1"],
+        requiresReview: false,
+      },
+      workflowRow: {
+        tools: [],
+        requiresFileUpload: false,
+        canvasConfig: { enabled: false, allowedTypes: [] },
+      },
+      allServers: [],
+      runMcpTools: {},
+      runToolSourceMap: {},
+      userId: "u1",
+      skillCatalog: [],
+      activeWorkbookFilePath: null,
+      currentAttachmentRows: [],
+      dryRun: false,
+      linkedSubagents: [
+        {
+          id: "sub-1",
+          name: "Sub1",
+          description: "D",
+          prompt: "P",
+          tools: [],
+          knowledgebaseIds: [],
+        } as any,
+      ],
+      resolvedProvider: {
+        modelId: "gpt-4o",
+        sdkProvider: { chat: (id: string) => ({ modelId: id }) },
+        modelRow: {},
+      } as any,
+    });
+    expect(res.filteredTools.delegate_task).toBeDefined();
+  });
 });

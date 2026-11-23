@@ -243,4 +243,111 @@ describe("WorkflowNodeConfigSheet", () => {
     expect(onConfirmAdd).toHaveBeenCalledTimes(1);
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("navigates AI step sections and updates tools, knowledgebases, skills, and subagents", () => {
+    const onUpdateNode = vi.fn();
+    render(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={vi.fn()}
+        node={{
+          ...nodes[1],
+          data: {
+            kind: "ai_step",
+            variableName: "step1",
+            prompt: "Analyze input",
+            mcpServerIds: [],
+            toolIds: ["internal:tool:manage_artifact"],
+            knowledgeBaseIds: ["kb-1"],
+            skillMode: "specific",
+            skillIds: ["sk-1"],
+            subagentIds: ["builtin:researcher"],
+            requiresReview: false,
+          },
+        }}
+        allNodes={nodes}
+        edges={edges}
+        workflowId="wf-1"
+        mcpServers={[]}
+        knowledgebases={[
+          {
+            id: "kb-1",
+            name: "Product Docs",
+            description: "Docs",
+            indexStatus: "ready",
+          } as any,
+          {
+            id: "kb-2",
+            name: "Sales KB",
+            description: "Sales",
+            indexStatus: "ready",
+          } as any,
+        ]}
+        skills={[
+          {
+            id: "sk-1",
+            name: "sql-helper",
+            displayName: "SQL Helper",
+            description: "Helps write SQL",
+            enabled: true,
+          } as any,
+        ]}
+        agents={[
+          {
+            id: "builtin:researcher",
+            name: "Researcher",
+            description: "Researches topics",
+            isBuiltIn: true,
+            isOrchestrator: false,
+            subagentIds: [],
+          } as any,
+        ]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+
+    // Switch to Tools & MCP
+    fireEvent.click(screen.getByRole("button", { name: /Tools & MCP/i }));
+    expect(screen.getByText("Tools & MCP Capabilities")).toBeInTheDocument();
+
+    // Switch to Knowledge and toggle kb-2
+    fireEvent.click(screen.getByRole("button", { name: /Knowledge/i }));
+    expect(screen.getByText("Knowledge Bases")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Sales KB"));
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n2",
+      expect.objectContaining({
+        data: expect.objectContaining({
+          knowledgeBaseIds: ["kb-1", "kb-2"],
+        }),
+      }),
+    );
+
+    // Switch to Skills and toggle sk-1
+    fireEvent.click(screen.getByRole("button", { name: /Skills/i }));
+    expect(screen.getByText("Agent Skills")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("SQL Helper"));
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n2",
+      expect.objectContaining({
+        data: expect.objectContaining({
+          skillIds: [],
+        }),
+      }),
+    );
+
+    // Switch to Subagents and toggle Researcher
+    fireEvent.click(screen.getByRole("button", { name: /Subagents/i }));
+    expect(screen.getByText("Subagent Delegation")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Researcher"));
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n2",
+      expect.objectContaining({
+        data: expect.objectContaining({
+          subagentIds: [],
+        }),
+      }),
+    );
+  });
 });

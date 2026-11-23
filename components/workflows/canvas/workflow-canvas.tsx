@@ -26,7 +26,10 @@ import { useWorkflowEditorStore } from "@/components/workflows/canvas/workflow-e
 import { WorkflowNodeConfigSheet } from "@/components/workflows/canvas/workflow-node-config-sheet";
 import { WorkflowNodePalette } from "@/components/workflows/canvas/workflow-node-palette";
 import { createDefaultWorkflowNode } from "@/components/workflows/editor/workflow-editor-helpers";
+import type { Agent } from "@/types/agent/agent";
+import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { McpServer } from "@/types/mcp/mcp-server";
+import type { Skill } from "@/types/skill/skill";
 import type {
   WorkflowEdge,
   WorkflowNode,
@@ -58,6 +61,9 @@ export interface WorkflowCanvasProps {
   onRegenerateWebhookSecret?: () => Promise<void> | void;
   nodeStates?: Record<string, WorkflowNodeRunState>;
   mcpServers?: McpServer[];
+  knowledgebases?: Knowledgebase[];
+  skills?: Skill[];
+  agents?: Agent[];
   readOnly?: boolean;
 }
 
@@ -76,6 +82,9 @@ function WorkflowCanvasInner({
   onRegenerateWebhookSecret,
   nodeStates,
   mcpServers = [],
+  knowledgebases = [],
+  skills = [],
+  agents = [],
   readOnly = false,
 }: WorkflowCanvasProps) {
   const instance = useReactFlow();
@@ -292,6 +301,9 @@ function WorkflowCanvasInner({
           workflowId={workflowId}
           webhookSecret={webhookSecret}
           mcpServers={mcpServers}
+          knowledgebases={knowledgebases}
+          skills={skills}
+          agents={agents}
           isNew={Boolean(pendingNode)}
           onConfirmAdd={() => {
             if (pendingNode && onAddNode) {

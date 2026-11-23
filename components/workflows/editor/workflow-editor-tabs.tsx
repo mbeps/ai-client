@@ -112,6 +112,9 @@ export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
           onRunWorkflow={onRunWorkflow}
           onRegenerateWebhookSecret={onRegenerateWebhookSecret}
           mcpServers={mcpServers}
+          knowledgebases={knowledgebases}
+          skills={skills}
+          agents={agents}
         />
       </SidebarTabsContent>
 

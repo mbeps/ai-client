@@ -27,6 +27,13 @@ import type {
 
 const log = getLogger(["app", "workflows", "context"]);
 
+interface NodeContextOverride {
+  knowledgeBaseIds?: string[];
+  skillMode?: "inherit" | SkillMode;
+  skillIds?: string[];
+  subagentIds?: string[];
+}
+
 interface LoadWorkflowContextArgs {
   userId: string;
   workflowRow: {
@@ -44,6 +51,7 @@ interface LoadWorkflowContextArgs {
   };
   nodes: WorkflowNode[];
   modelOverride?: string | null;
+  nodeOverride?: NodeContextOverride;
 }
 
 /**
@@ -55,6 +63,7 @@ export async function loadWorkflowContext({
   workflowRow,
   nodes,
   modelOverride,
+  nodeOverride,
 }: LoadWorkflowContextArgs) {
   const serversPromise = Promise.all([
     db
@@ -102,7 +111,14 @@ export async function loadWorkflowContext({
     ? resolveProvider(userId, model)
     : resolveDefaultChatProvider(userId);
 
-  const skillMode: SkillMode = workflowRow.skillMode ?? "dynamic";
+  const skillMode: SkillMode =
+    nodeOverride?.skillMode && nodeOverride.skillMode !== "inherit"
+      ? nodeOverride.skillMode
+      : (workflowRow.skillMode ?? "dynamic");
+  const effectiveSkillIds =
+    nodeOverride?.skillMode && nodeOverride.skillMode !== "inherit"
+      ? (nodeOverride.skillIds ?? [])
+      : (workflowRow.skillIds ?? []);
   const skillsPromise: Promise<SkillRow[]> =
     skillMode === "none"
       ? Promise.resolve([])
@@ -114,7 +130,10 @@ export async function loadWorkflowContext({
           ) as Promise<SkillRow[]>);
 
   let kbContextPromise: Promise<string> = Promise.resolve("");
-  const kbIds = workflowRow.knowledgeBaseIds;
+  const kbIds =
+    nodeOverride?.knowledgeBaseIds && nodeOverride.knowledgeBaseIds.length > 0
+      ? nodeOverride.knowledgeBaseIds
+      : workflowRow.knowledgeBaseIds;
   if (kbIds && kbIds.length > 0) {
     kbContextPromise = (async () => {
       try {
@@ -167,7 +186,7 @@ export async function loadWorkflowContext({
 
   const { availableSkills, selectedSkills } = resolveContextSkills({
     skillMode,
-    skillIds: workflowRow.skillIds ?? [],
+    skillIds: effectiveSkillIds,
     userSkills,
   });
 
@@ -206,9 +225,13 @@ export async function loadWorkflowContext({
     ...(kbSubagentConfig ? [kbSubagentConfig] : []),
   );
 
+  const effectiveSubagentIds =
+    nodeOverride?.subagentIds && nodeOverride.subagentIds.length > 0
+      ? nodeOverride.subagentIds
+      : workflowRow.subagentIds;
   const linkedSubagents =
-    workflowRow.subagentIds && workflowRow.subagentIds.length > 0
-      ? await resolveLinkedSubagents(userId, workflowRow.subagentIds)
+    effectiveSubagentIds && effectiveSubagentIds.length > 0
+      ? await resolveLinkedSubagents(userId, effectiveSubagentIds)
       : [];
 
   return {
