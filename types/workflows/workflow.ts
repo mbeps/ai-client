@@ -229,6 +229,7 @@ export interface WorkflowNodeRunState {
     serverName?: string;
   }>;
   pendingToolApprovals?: PendingApproval[];
+  gateId?: string;
   outputAttachmentId?: string;
   errorMessage?: string;
   startedAt?: string;

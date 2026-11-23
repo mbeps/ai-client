@@ -124,6 +124,37 @@ describe("ToolPickerList", () => {
     );
   });
 
+  it("calls onBulkSelectBatch in a single call when provided", () => {
+    const handleBulkSelect = vi.fn();
+    const handleBulkSelectBatch = vi.fn();
+    render(
+      <ToolPickerList
+        servers={mockServers}
+        selectedTools={new Set()}
+        onToggleTool={vi.fn()}
+        onBulkSelect={handleBulkSelect}
+        onBulkSelectBatch={handleBulkSelectBatch}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Select All"));
+    expect(handleBulkSelectBatch).toHaveBeenCalledTimes(1);
+    expect(handleBulkSelectBatch).toHaveBeenCalledWith(
+      [
+        {
+          serverId: "internal",
+          toolNames: ["manage_artifact", "manage_memory"],
+        },
+        {
+          serverId: "srv-1",
+          toolNames: [],
+        },
+      ],
+      true,
+    );
+    expect(handleBulkSelect).not.toHaveBeenCalled();
+  });
+
   it("calls onBulkSelect when section checkbox on accordion header is clicked", () => {
     const handleBulkSelect = vi.fn();
     render(

@@ -64,6 +64,8 @@ export interface WorkflowCanvasProps {
   knowledgebases?: Knowledgebase[];
   skills?: Skill[];
   agents?: Agent[];
+  selectedNodeId?: string | null;
+  onSelectNode?: (nodeId: string | null) => void;
   readOnly?: boolean;
 }
 
@@ -85,11 +87,24 @@ function WorkflowCanvasInner({
   knowledgebases = [],
   skills = [],
   agents = [],
+  selectedNodeId: controlledSelectedNodeId,
+  onSelectNode,
   readOnly = false,
 }: WorkflowCanvasProps) {
   const instance = useReactFlow();
-  const { selectedNodeId, setSelectedNodeId, setEditorInstance } =
-    useWorkflowEditorStore();
+  const {
+    selectedNodeId: storeSelectedNodeId,
+    setSelectedNodeId: setStoreSelectedNodeId,
+    setEditorInstance,
+  } = useWorkflowEditorStore();
+  const selectedNodeId =
+    controlledSelectedNodeId !== undefined
+      ? controlledSelectedNodeId
+      : storeSelectedNodeId;
+  const setSelectedNodeId = onSelectNode ?? setStoreSelectedNodeId;
+  const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [pendingNode, setPendingNode] = useState<WorkflowNode | null>(null);
   const [inspectorNodeId, setInspectorNodeId] = useState<string | null>(null);
   const measuredRef = useRef<Map<string, { width?: number; height?: number }>>(
@@ -143,13 +158,14 @@ function WorkflowCanvasInner({
         target: edge.targetNodeId,
         sourceHandle: edge.sourceHandle,
         targetHandle: edge.targetHandle,
+        selected: selectedEdgeIds.has(edge.id),
         label:
           edge.sourceHandle === "true" || edge.sourceHandle === "false"
             ? edge.sourceHandle
             : undefined,
         animated: nodeStates?.[edge.sourceNodeId]?.status === "running",
       })),
-    [edges, nodeStates],
+    [edges, nodeStates, selectedEdgeIds],
   );
 
   const handleRfNodesChange: OnNodesChange<Node<WorkflowCanvasNodeData>> = (
@@ -183,10 +199,15 @@ function WorkflowCanvasInner({
   };
 
   const handleRfEdgesChange: OnEdgesChange<Edge> = (changeset) => {
-    if (readOnly || !onEdgesChange) return;
     const updated = changeset.applyTo(rfEdges);
+    setSelectedEdgeIds(
+      new Set(updated.filter((e) => e.selected).map((e) => e.id)),
+    );
+    if (readOnly || !onEdgesChange) return;
     const keepIds = new Set(updated.map((e) => e.id));
-    onEdgesChange(edges.filter((e) => keepIds.has(e.id)));
+    if (keepIds.size !== edges.length) {
+      onEdgesChange(edges.filter((e) => keepIds.has(e.id)));
+    }
   };
 
   const handleConnect = (connection: Connection) => {
@@ -246,6 +267,7 @@ function WorkflowCanvasInner({
         }}
         onPaneClick={() => {
           setSelectedNodeId(null);
+          setSelectedEdgeIds(new Set());
         }}
         nodesDraggable={!readOnly}
         nodesConnectable={!readOnly}

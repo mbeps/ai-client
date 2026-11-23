@@ -354,5 +354,30 @@ describe("loadWorkflowContext", () => {
       expect.any(Number),
     );
     expect(res.kbContext).toContain("Node KB chunk");
+
+    mockResolveProvider.mockResolvedValueOnce({
+      modelId: "gpt-4o",
+      sdkProvider: { chat: (id: string) => ({ modelId: id }) },
+      modelRow: { contextWindow: 128000 },
+    });
+    const noSkillIdsRes = await loadWorkflowContext({
+      userId: "u1",
+      workflowRow: {
+        id: "wf-1",
+        name: "Flow",
+        description: null,
+        globalContext: null,
+        modelId: "gpt-4o",
+        knowledgeBaseIds: [],
+        tools: [],
+        skillMode: "dynamic",
+        skillIds: ["sk-wf"],
+        subagentIds: [],
+        canvasConfig: { enabled: false, allowedTypes: [] },
+      },
+      nodes: [],
+      nodeOverride: { skillMode: "specific" },
+    });
+    expect(noSkillIdsRes.selectedSkills).toEqual([]);
   });
 });

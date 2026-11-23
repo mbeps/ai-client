@@ -29,10 +29,16 @@ export const approveWorkflowRunAction = defineAction(
         message: parsed.error.issues[0].message,
       });
     }
-    const { runId, nodeId, approved, feedback, toolDecisions } = parsed.data;
+    const { runId, nodeId, gateId, approved, feedback, toolDecisions } =
+      parsed.data;
 
     const [row] = await db
-      .select({ id: workflowRun.id })
+      .select({
+        id: workflowRun.id,
+        status: workflowRun.status,
+        currentNodeId: workflowRun.currentNodeId,
+        nodeStates: workflowRun.nodeStates,
+      })
       .from(workflowRun)
       .where(
         and(eq(workflowRun.id, runId), eq(workflowRun.userId, session.user.id)),
@@ -45,11 +51,52 @@ export const approveWorkflowRunAction = defineAction(
       });
     }
 
+    if (
+      (row.status !== "awaiting_review" &&
+        row.status !== "awaiting_tool_approval") ||
+      row.currentNodeId !== nodeId
+    ) {
+      return fail({
+        code: ERROR_CODE.CONFLICT,
+        message: "Workflow run is not awaiting approval for this node",
+      });
+    }
+
+    const activeNodeState = row.nodeStates?.[nodeId];
+    const activeGateId = activeNodeState?.gateId;
+    if (gateId && activeGateId && gateId !== activeGateId) {
+      return fail({
+        code: ERROR_CODE.CONFLICT,
+        message: "Approval gate has expired or already been resolved",
+      });
+    }
+
+    if (row.status === "awaiting_tool_approval") {
+      const pendingApprovals = activeNodeState?.pendingToolApprovals ?? [];
+      if (pendingApprovals.length > 0 && (approved || toolDecisions)) {
+        const pendingIds = new Set(pendingApprovals.map((p) => p.approvalId));
+        const decisionIds = new Set(
+          (toolDecisions ?? []).map((d) => d.approvalId),
+        );
+        const allMatched =
+          pendingIds.size === decisionIds.size &&
+          [...pendingIds].every((id) => decisionIds.has(id));
+        if (!allMatched) {
+          return fail({
+            code: ERROR_CODE.INVALID_INPUT,
+            message:
+              "Tool approval decisions must match all pending tool calls",
+          });
+        }
+      }
+    }
+
     await inngest.send({
       name: "workflows/run.approved",
       data: {
         runId,
         nodeId,
+        gateId: activeGateId,
         approved,
         feedback,
         toolDecisions,

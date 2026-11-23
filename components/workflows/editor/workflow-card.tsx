@@ -46,7 +46,10 @@ export function WorkflowCard({ workflow }: WorkflowCardProps) {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                <Link href={ROUTES.WORKFLOWS.AUTOMATIONS.detail(workflow.id)}>
+                <Link
+                  href={ROUTES.WORKFLOWS.AUTOMATIONS.detail(workflow.id)}
+                  aria-label="Edit Workflow"
+                >
                   <Settings2 className="h-4 w-4" />
                 </Link>
               </Button>
@@ -59,6 +62,7 @@ export function WorkflowCard({ workflow }: WorkflowCardProps) {
               <Button size="icon" className="h-8 w-8" asChild>
                 <Link
                   href={`${ROUTES.WORKFLOWS.AUTOMATIONS.detail(workflow.id)}?tab=runs`}
+                  aria-label="View Runs"
                 >
                   <PlayCircle className="h-4 w-4" />
                 </Link>

@@ -90,7 +90,19 @@ export function WorkflowRunNodeCard({
       )}
     >
       <CardContent className="space-y-3 p-4">
-        <div className="flex items-center justify-between gap-2">
+        <div
+          className="focus-visible:ring-ring flex items-center justify-between gap-2 rounded outline-none focus-visible:ring-2"
+          role="button"
+          tabIndex={0}
+          aria-label={`Select ${node.name}`}
+          onKeyDown={(e) => {
+            if (e.target !== e.currentTarget) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onClick();
+            }
+          }}
+        >
           <div className="flex items-center gap-2">
             <NodeStatusIndicator status={status}>
               <span className="m-1 block h-2 w-2 rounded-full bg-current" />

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { workflowRun } from "@/drizzle/schemas/workflow-schema";
 import { InvalidArtifactFormatError } from "@/lib/error/invalid-artifact-format-error";
@@ -28,7 +28,9 @@ async function persistExplicitStepArtifact(
       await db
         .update(workflowRun)
         .set({ status: "failed", errorMessage: msg })
-        .where(eq(workflowRun.id, runId));
+        .where(
+          and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
+        );
 
       await emit({
         type: "error",
@@ -177,7 +179,7 @@ export async function handleStepArtifactOutput(
     await db
       .update(workflowRun)
       .set({ status: "failed", errorMessage })
-      .where(eq(workflowRun.id, runId));
+      .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")));
     await emit({ type: "error", message: errorMessage });
 
     return {

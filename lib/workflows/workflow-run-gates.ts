@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { workflowRun } from "@/drizzle/schemas/workflow-schema";
 import type { WorkflowStreamEvent } from "@/lib/inngest/workflow-run-channel";
@@ -29,32 +30,44 @@ export async function awaitHumanReviewGate(params: {
 }): Promise<boolean> {
   const { step, runId, nodeId, reviewPhase, nodeStates, emit } = params;
 
-  await step.run(`pause-${reviewPhase}-review-${nodeId}`, async () => {
-    nodeStates[nodeId] = {
-      ...nodeStates[nodeId],
-      status: "awaiting_review",
-      reviewPhase,
-    };
-    await db
-      .update(workflowRun)
-      .set({
+  const gateId = (await step.run(
+    `pause-${reviewPhase}-review-${nodeId}`,
+    async () => {
+      const nextGateId = randomUUID();
+      nodeStates[nodeId] = {
+        ...nodeStates[nodeId],
         status: "awaiting_review",
-        currentNodeId: nodeId,
-        nodeStates,
-        updatedAt: new Date(),
-      })
-      .where(eq(workflowRun.id, runId));
-    await emit({
-      type: "workflow-review-required",
-      runId,
-      nodeId,
-      reviewPhase,
-    });
-  });
+        reviewPhase,
+        gateId: nextGateId,
+      };
+      const paused = await db
+        .update(workflowRun)
+        .set({
+          status: "awaiting_review",
+          currentNodeId: nodeId,
+          nodeStates,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
+        .returning({ id: workflowRun.id });
+      if (paused.length === 0) return null;
+      await emit({
+        type: "workflow-review-required",
+        runId,
+        nodeId,
+        reviewPhase,
+      });
+      return nextGateId;
+    },
+  )) as string | null;
+
+  if (!gateId) {
+    return false;
+  }
 
   const evt = await step.waitForEvent(`wait-${reviewPhase}-review-${nodeId}`, {
     event: "workflows/run.approved",
-    match: "data.runId",
+    if: `async.data.runId == ${JSON.stringify(runId)} && async.data.nodeId == ${JSON.stringify(nodeId)} && async.data.gateId == ${JSON.stringify(gateId)}`,
     timeout: "7d",
   });
 
@@ -65,21 +78,34 @@ export async function awaitHumanReviewGate(params: {
     return false;
   }
 
-  if (evt.data?.approved === false) {
+  if (
+    evt.data?.nodeId !== nodeId ||
+    evt.data?.gateId !== gateId ||
+    evt.data?.approved !== true
+  ) {
+    const message =
+      evt.data?.approved === false
+        ? "Rejected by reviewer"
+        : "Invalid approval event";
     await step.run(`reject-${reviewPhase}-review-${nodeId}`, async () => {
-      await failWorkflowRun(runId, nodeId, "Rejected by reviewer", emit);
+      await failWorkflowRun(runId, nodeId, message, emit);
     });
     return false;
   }
 
-  await step.run(`resume-${reviewPhase}-review-${nodeId}`, async () => {
-    await db
-      .update(workflowRun)
-      .set({ status: "running", updatedAt: new Date() })
-      .where(eq(workflowRun.id, runId));
-  });
+  const resumed = await step.run(
+    `resume-${reviewPhase}-review-${nodeId}`,
+    async () => {
+      const updated = await db
+        .update(workflowRun)
+        .set({ status: "running", updatedAt: new Date() })
+        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
+        .returning({ id: workflowRun.id });
+      return updated.length > 0;
+    },
+  );
 
-  return true;
+  return Boolean(resumed);
 }
 
 function mapToolApprovalDecisions(
@@ -88,13 +114,25 @@ function mapToolApprovalDecisions(
     approved?: boolean;
     toolDecisions?: Array<{ approvalId: string; approved: boolean }>;
   },
-): ResumedToolDecision[] {
+): ResumedToolDecision[] | null {
+  if (evtData.approved === false) {
+    return pendingApprovals.map((approval) => ({
+      approval,
+      approved: false,
+    }));
+  }
+
   const decisionMap = new Map(
     (evtData.toolDecisions ?? []).map((d) => [d.approvalId, d.approved]),
   );
+  for (const approval of pendingApprovals) {
+    if (typeof decisionMap.get(approval.approvalId) !== "boolean") {
+      return null;
+    }
+  }
   return pendingApprovals.map((approval) => ({
     approval,
-    approved: decisionMap.get(approval.approvalId) ?? Boolean(evtData.approved),
+    approved: decisionMap.get(approval.approvalId)!,
   }));
 }
 
@@ -144,15 +182,17 @@ export async function resolvePendingToolApprovalLoop(params: {
 
   while (outcome.status === "awaiting_tool_approval") {
     const pendingApprovals = outcome.pendingApprovals;
-    await step.run(
+    const gateId = (await step.run(
       `pause-tool-approval-${node.id}-${approvalRound}`,
       async () => {
+        const nextGateId = randomUUID();
         nodeStates[node.id] = {
           ...nodeStates[node.id],
           status: "awaiting_tool_approval",
           pendingToolApprovals: pendingApprovals,
+          gateId: nextGateId,
         };
-        await db
+        const paused = await db
           .update(workflowRun)
           .set({
             status: "awaiting_tool_approval",
@@ -160,19 +200,32 @@ export async function resolvePendingToolApprovalLoop(params: {
             nodeStates,
             updatedAt: new Date(),
           })
-          .where(eq(workflowRun.id, runId));
+          .where(
+            and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
+          )
+          .returning({ id: workflowRun.id });
+        if (paused.length === 0) return null;
         await emit({
           type: "workflow-tool-approval-required",
           runId,
           nodeId: node.id,
           approvals: pendingApprovals,
         });
+        return nextGateId;
       },
-    );
+    )) as string | null;
+
+    if (!gateId) {
+      return { status: "cancelled" };
+    }
 
     const evt = await step.waitForEvent(
       `wait-tool-approval-${node.id}-${approvalRound}`,
-      { event: "workflows/run.approved", match: "data.runId", timeout: "7d" },
+      {
+        event: "workflows/run.approved",
+        if: `async.data.runId == ${JSON.stringify(runId)} && async.data.nodeId == ${JSON.stringify(node.id)} && async.data.gateId == ${JSON.stringify(gateId)}`,
+        timeout: "7d",
+      },
     );
 
     if (!evt) {
@@ -185,21 +238,52 @@ export async function resolvePendingToolApprovalLoop(params: {
       return { status: "failed" };
     }
 
-    const resumedDecisions = mapToolApprovalDecisions(
-      pendingApprovals,
-      (evt.data ?? {}) as {
-        approved?: boolean;
-        toolDecisions?: Array<{ approvalId: string; approved: boolean }>;
-      },
-    );
+    const evtData = evt.data as
+      | {
+          nodeId?: string;
+          gateId?: string;
+          approved?: boolean;
+          toolDecisions?: Array<{ approvalId: string; approved: boolean }>;
+        }
+      | undefined;
+
+    const resumedDecisions =
+      evtData &&
+      evtData.nodeId === node.id &&
+      evtData.gateId === gateId &&
+      typeof evtData.approved === "boolean"
+        ? mapToolApprovalDecisions(pendingApprovals, evtData)
+        : null;
+
+    if (!resumedDecisions) {
+      await step.run(
+        `invalid-tool-approval-${node.id}-${approvalRound}`,
+        async () => {
+          await failWorkflowRun(
+            runId,
+            node.id,
+            "Invalid tool approval event",
+            emit,
+          );
+        },
+      );
+      return { status: "failed" };
+    }
 
     outcome = (await step.run(
       `resume-node-${node.id}-${approvalRound}`,
       async () => {
-        await db
+        const resumed = await db
           .update(workflowRun)
           .set({ status: "running", updatedAt: new Date() })
-          .where(eq(workflowRun.id, runId));
+          .where(
+            and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
+          )
+          .returning({ id: workflowRun.id });
+
+        if (resumed.length === 0) {
+          return { status: "cancelled" } satisfies NodeStepOutcome;
+        }
 
         return executeSingleWorkflowNode({
           runId,

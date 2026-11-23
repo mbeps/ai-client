@@ -46,8 +46,28 @@ export function WorkflowCanvasConfigTab({
     const next = checked
       ? [...new Set([...canvasConfig.allowedTypes, type])]
       : canvasConfig.allowedTypes.filter((item) => item !== type);
-    onCanvasConfigChange({ ...canvasConfig, allowedTypes: next });
+    const nextDefault =
+      canvasConfig.defaultType &&
+      canvasConfig.defaultType !== "any" &&
+      !next.includes(canvasConfig.defaultType)
+        ? "any"
+        : canvasConfig.defaultType;
+    onCanvasConfigChange({
+      ...canvasConfig,
+      allowedTypes: next,
+      defaultType: nextDefault,
+    });
   };
+
+  const allowedFormatOptions = CANVAS_FORMAT_OPTIONS.filter((option) =>
+    canvasConfig.allowedTypes.includes(option.value),
+  );
+  const selectedDefaultType =
+    canvasConfig.defaultType &&
+    (canvasConfig.defaultType === "any" ||
+      canvasConfig.allowedTypes.includes(canvasConfig.defaultType))
+      ? canvasConfig.defaultType
+      : "any";
 
   return (
     <div className="space-y-8">
@@ -127,7 +147,7 @@ export function WorkflowCanvasConfigTab({
         <div className="space-y-2">
           <Label>Default Output Format</Label>
           <Select
-            value={canvasConfig.defaultType ?? "any"}
+            value={selectedDefaultType}
             onValueChange={(value) =>
               onCanvasConfigChange({
                 ...canvasConfig,
@@ -140,7 +160,7 @@ export function WorkflowCanvasConfigTab({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="any">Auto / Any Allowed</SelectItem>
-              {CANVAS_FORMAT_OPTIONS.map((option) => (
+              {allowedFormatOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>

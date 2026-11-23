@@ -14,6 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { SPREADSHEET_EXTENSIONS } from "@/config/attachments";
 
 /** Props for {@link WorkflowRunDialog}. */
 export interface WorkflowRunDialogProps {
@@ -69,7 +70,7 @@ export function WorkflowRunDialog({
               <input
                 type="file"
                 multiple
-                accept=".xlsx,.xls,.csv,.pdf,.txt,.md,.json"
+                accept={Array.from(SPREADSHEET_EXTENSIONS).join(",")}
                 onChange={(e) =>
                   onRunFilesChange(Array.from(e.target.files ?? []))
                 }

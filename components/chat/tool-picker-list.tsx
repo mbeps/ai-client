@@ -28,6 +28,10 @@ export interface ToolPickerListProps {
     toolNames: string[],
     select: boolean,
   ) => void;
+  onBulkSelectBatch?: (
+    groups: Array<{ serverId: string; toolNames: string[] }>,
+    select: boolean,
+  ) => void;
   className?: string;
   maxHeight?: string;
 }
@@ -128,6 +132,7 @@ export function ToolPickerList({
   selectedTools,
   onToggleTool,
   onBulkSelect,
+  onBulkSelectBatch,
   className,
   maxHeight,
 }: ToolPickerListProps) {
@@ -242,21 +247,27 @@ export function ToolPickerList({
 
   const toggleAll = () => {
     const shouldSelect = !isAllSelected;
-    onBulkSelect(
-      "internal",
-      ["manage_artifact", "manage_memory"],
-      shouldSelect,
-    );
-    enabledServers.forEach((s) => {
-      const content = serverContent[s.id];
-      if (content?.tools) {
-        onBulkSelect(
-          s.id,
-          content.tools.map((t) => t.name),
-          shouldSelect,
-        );
-      }
-    });
+    const groups = [
+      {
+        serverId: "internal",
+        toolNames: ["manage_artifact", "manage_memory"],
+      },
+      ...enabledServers
+        .filter((s) => Boolean(serverContent[s.id]?.tools))
+        .map((s) => ({
+          serverId: s.id,
+          toolNames: serverContent[s.id]!.tools.map((t) => t.name),
+        })),
+    ];
+
+    if (onBulkSelectBatch) {
+      onBulkSelectBatch(groups, shouldSelect);
+      return;
+    }
+
+    for (const group of groups) {
+      onBulkSelect(group.serverId, group.toolNames, shouldSelect);
+    }
   };
 
   return (

@@ -82,7 +82,15 @@ const manualTriggerNodeDataSchema = z.object({
 const webhookTriggerNodeDataSchema = z.object({
   kind: z.literal("webhook_trigger"),
   variableName: variableNameField,
-  secretHeaderName: z.string().max(100).optional(),
+  secretHeaderName: z
+    .string()
+    .trim()
+    .max(100)
+    .regex(
+      /^[!#$%&'*+.^_`|~0-9A-Za-z-]*$/,
+      "Header name must contain only HTTP token characters",
+    )
+    .optional(),
   samplePayload: z.string().max(20000).optional(),
 });
 
@@ -262,6 +270,13 @@ export const updateWorkflowSchema = baseWorkflowSchema
     edges: z.array(workflowEdgeSchema).optional(),
   })
   .superRefine((data, ctx) => {
+    if (data.edges !== undefined && data.nodes === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["edges"],
+        message: "Edges cannot be updated without providing nodes",
+      });
+    }
     validateUniqueVariableNames(data.nodes, ctx);
   });
 
@@ -287,6 +302,7 @@ export const createWorkflowRunSchema = z.object({
 export const approveWorkflowRunSchema = z.object({
   runId: z.string().uuid(),
   nodeId: z.string().min(1),
+  gateId: z.string().min(1).optional(),
   approved: z.boolean(),
   feedback: z.string().max(2000).optional(),
   toolDecisions: z

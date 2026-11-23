@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { getWorkflow } from "@/actions/workflows/get-workflow";
 import { hydrateWorkflowFormState } from "@/components/workflows/editor/workflow-editor-helpers";
 import { useKnowledgebases } from "@/hooks/use-knowledgebases";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import { updateBulkToolSelection } from "@/lib/update-bulk-tool-selection";
@@ -107,6 +108,7 @@ export function useWorkflowEditorForm({
     isNew ? createInitialEdges() : [],
   );
   const [isLoading, setIsLoading] = useState(!isNew);
+  const [isNotFound, setIsNotFound] = useState(false);
 
   useEffect(() => {
     if (mcpServers.length === 0) loadMcpServers();
@@ -128,7 +130,13 @@ export function useWorkflowEditorForm({
       try {
         const res = await getWorkflow(id);
         if (!res.ok || !res.value) {
-          if (mounted) notFound();
+          if (mounted) {
+            if (!res.ok && res.error.code !== ERROR_CODE.NOT_FOUND) {
+              handleApiError(res.error, "Failed to load workflow");
+            } else {
+              setIsNotFound(true);
+            }
+          }
           return;
         }
         if (mounted) {
@@ -184,6 +192,10 @@ export function useWorkflowEditorForm({
     );
   };
 
+  if (isNotFound) {
+    notFound();
+  }
+
   return {
     mcpServers,
     skills,
@@ -219,6 +231,7 @@ export function useWorkflowEditorForm({
     edges,
     setEdges,
     isLoading,
+    isNotFound,
     handleToggleTool,
     handleBulkSelectTools,
   };

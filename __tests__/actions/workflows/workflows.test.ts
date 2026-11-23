@@ -358,4 +358,86 @@ describe("Workflow Server Actions", () => {
     const delMiss = await deleteWorkflow(WF_ID);
     expect(delMiss.ok).toBe(false);
   });
+
+  it("rejects dangling edge endpoints and foreign node knowledgeBaseIds in createWorkflow and updateWorkflow", async () => {
+    const danglingCreate = await createWorkflow({
+      name: "Bad Edges",
+      nodes: [
+        {
+          id: "n1",
+          type: "manual_trigger",
+          name: "Trigger",
+          position: { x: 0, y: 0 },
+          data: { kind: "manual_trigger", variableName: "trigger" },
+        },
+      ],
+      edges: [{ id: "e1", sourceNodeId: "n1", targetNodeId: "missing" }],
+    });
+    expect(danglingCreate.ok).toBe(false);
+    if (!danglingCreate.ok) expect(danglingCreate.error.code).toBe(ERROR_CODE.INVALID_INPUT);
+
+    const danglingUpdate = await updateWorkflow(WF_ID, {
+      nodes: [
+        {
+          id: "n1",
+          type: "manual_trigger",
+          name: "Trigger",
+          position: { x: 0, y: 0 },
+          data: { kind: "manual_trigger", variableName: "trigger" },
+        },
+      ],
+      edges: [{ id: "e1", sourceNodeId: "missing", targetNodeId: "n1" }],
+    });
+    expect(danglingUpdate.ok).toBe(false);
+    if (!danglingUpdate.ok) expect(danglingUpdate.error.code).toBe(ERROR_CODE.INVALID_INPUT);
+
+    mockFilterOwnedKbIds.mockResolvedValueOnce([]);
+    const foreignStepKbCreate = await createWorkflow({
+      name: "Foreign Step KB",
+      nodes: [
+        {
+          id: "n2",
+          type: "ai_step",
+          name: "Step",
+          position: { x: 0, y: 0 },
+          data: {
+            kind: "ai_step",
+            variableName: "step1",
+            prompt: "Run",
+            mcpServerIds: [],
+            toolIds: [],
+            knowledgeBaseIds: ["kb-foreign"],
+            requiresReview: false,
+          },
+        },
+      ],
+      edges: [],
+    });
+    expect(foreignStepKbCreate.ok).toBe(false);
+    if (!foreignStepKbCreate.ok) expect(foreignStepKbCreate.error.code).toBe(ERROR_CODE.FORBIDDEN);
+
+    mockFilterOwnedKbIds.mockResolvedValueOnce([]);
+    const foreignStepKbUpdate = await updateWorkflow(WF_ID, {
+      nodes: [
+        {
+          id: "n2",
+          type: "ai_step",
+          name: "Step",
+          position: { x: 0, y: 0 },
+          data: {
+            kind: "ai_step",
+            variableName: "step1",
+            prompt: "Run",
+            mcpServerIds: [],
+            toolIds: [],
+            knowledgeBaseIds: ["kb-foreign"],
+            requiresReview: false,
+          },
+        },
+      ],
+      edges: [],
+    });
+    expect(foreignStepKbUpdate.ok).toBe(false);
+    if (!foreignStepKbUpdate.ok) expect(foreignStepKbUpdate.error.code).toBe(ERROR_CODE.FORBIDDEN);
+  });
 });

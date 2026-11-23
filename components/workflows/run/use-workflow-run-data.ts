@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getAttachmentUrl } from "@/actions/attachments/get-attachment-url";
 import { approveWorkflowRunAction } from "@/actions/workflow-runs/approve-workflow-run";
 import { getWorkflowRun } from "@/actions/workflow-runs/get-workflow-run";
 import { getWorkflow } from "@/actions/workflows/get-workflow";
 import { mapRunRowToWorkflowRun } from "@/components/workflows/run/state-helpers";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import type {
   WorkflowNodeRunState,
   WorkflowRunItem,
@@ -25,10 +26,12 @@ export function useWorkflowRunData(runId: string) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isArtifactOpen, setIsArtifactOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
   const [attachmentMeta, setAttachmentMeta] = useState<
     Record<string, { url: string; name: string }>
   >({});
+  const mountedRef = useRef(true);
 
   const loadAttachmentUrls = useCallback(async (ids: string[]) => {
     if (ids.length === 0) return;
@@ -47,18 +50,27 @@ export function useWorkflowRunData(runId: string) {
     setAttachmentMeta((prev) => ({ ...prev, ...meta }));
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
+  const loadRunData = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
       const runRes = await getWorkflowRun(runId);
+      if (!mountedRef.current) return;
       if (!runRes.ok || !runRes.value) {
-        if (mounted) setIsLoading(false);
+        if (!runRes.ok && runRes.error.code !== ERROR_CODE.NOT_FOUND) {
+          setLoadError(runRes.error.message || "Failed to load workflow run");
+        }
         return;
       }
 
       const mapped = mapRunRowToWorkflowRun(runRes.value);
       const wfRes = await getWorkflow(mapped.workflowId);
-      if (!mounted) return;
+      if (!mountedRef.current) return;
+
+      if (!wfRes.ok && wfRes.error.code !== ERROR_CODE.NOT_FOUND) {
+        setLoadError(wfRes.error.message || "Failed to load workflow");
+        return;
+      }
 
       const loadedWorkflow = wfRes.ok && wfRes.value ? wfRes.value : null;
       setRun(mapped);
@@ -82,20 +94,33 @@ export function useWorkflowRunData(runId: string) {
         ...mapped.outputAttachmentIds,
       ];
       void loadAttachmentUrls(attachmentIds);
-      setIsLoading(false);
+    } catch (err) {
+      if (mountedRef.current) {
+        setLoadError(
+          err instanceof Error ? err.message : "Failed to load workflow run",
+        );
+      }
+    } finally {
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
     }
-
-    load();
-    return () => {
-      mounted = false;
-    };
   }, [runId, loadAttachmentUrls]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    void loadRunData();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [loadRunData]);
 
   const submitApproval = async (
     approved: boolean,
     options?: { feedback?: string; toolDecisions?: Record<string, boolean> },
   ) => {
     if (!run?.currentNodeId) return;
+    const submittedNodeId = run.currentNodeId;
     setIsApproving(true);
     try {
       const formattedDecisions = options?.toolDecisions
@@ -108,7 +133,7 @@ export function useWorkflowRunData(runId: string) {
         : undefined;
       const res = await approveWorkflowRunAction({
         runId: run.id,
-        nodeId: run.currentNodeId,
+        nodeId: submittedNodeId,
         approved,
         feedback: options?.feedback || undefined,
         toolDecisions: formattedDecisions,
@@ -117,14 +142,18 @@ export function useWorkflowRunData(runId: string) {
         toast.error(res.error.message || "Failed to submit approval");
         return;
       }
-      setRun((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: approved ? "running" : "failed",
-            }
-          : prev,
-      );
+      setRun((prev) => {
+        if (!prev) return prev;
+        const stillAwaitingSameGate =
+          (prev.status === "awaiting_review" ||
+            prev.status === "awaiting_tool_approval") &&
+          prev.currentNodeId === submittedNodeId;
+        if (!stillAwaitingSameGate) return prev;
+        return {
+          ...prev,
+          status: approved ? "running" : "failed",
+        };
+      });
       toast.success(
         approved
           ? "Approval submitted — resuming workflow"
@@ -157,6 +186,8 @@ export function useWorkflowRunData(runId: string) {
     isArtifactOpen,
     setIsArtifactOpen,
     isLoading,
+    loadError,
+    retryLoad: loadRunData,
     isApproving,
     attachmentMeta,
     loadAttachmentUrls,

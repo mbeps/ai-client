@@ -88,6 +88,10 @@ export function ModelSelector({
     return allowClear ? null : (models[0] ?? null);
   }, [models, value, allowClear]);
 
+  const hasUnavailableOverride = allowClear && Boolean(value) && !selectedModel;
+  const canShowClear =
+    allowClear && !disabled && (Boolean(selectedModel) || Boolean(value));
+
   const groupedModels = useMemo<ModelGroup[]>(() => {
     const groups = new Map<string, UserModelOption[]>();
     for (const model of models) {
@@ -122,26 +126,32 @@ export function ModelSelector({
           aria-label="Select model"
           className={cn(
             "border-border/60 hover:bg-muted/70 hover:text-foreground focus-visible:ring-ring flex h-7 w-[200px] cursor-default items-center justify-between gap-2 rounded-full border px-2 text-left text-xs transition-colors focus-visible:ring-1 disabled:cursor-not-allowed",
-            allowClear && selectedModel && "pr-7",
+            allowClear && (selectedModel || value) && "pr-7",
             className,
           )}
         >
           <span
             className={cn(
               "truncate",
-              (isLoading || isEmpty || (!selectedModel && allowClear)) &&
+              (isLoading ||
+                isEmpty ||
+                (!selectedModel && allowClear && !hasUnavailableOverride)) &&
                 "text-muted-foreground",
             )}
           >
-            <ComboboxValue
-              placeholder={
-                isLoading
-                  ? "Loading models..."
-                  : isEmpty
-                    ? "No models configured"
-                    : (placeholder ?? "Select model...")
+            <ComboboxValue>
+              {(selected) =>
+                selected
+                  ? (selected as UserModelOption).label
+                  : isLoading
+                    ? "Loading models..."
+                    : isEmpty
+                      ? "No models configured"
+                      : hasUnavailableOverride
+                        ? `Unavailable (${value})`
+                        : (placeholder ?? "Select model...")
               }
-            />
+            </ComboboxValue>
           </span>
         </ComboboxTrigger>
 
@@ -182,7 +192,7 @@ export function ModelSelector({
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
-      {allowClear && selectedModel && !disabled && (
+      {canShowClear && (
         <button
           type="button"
           aria-label="Clear model override"

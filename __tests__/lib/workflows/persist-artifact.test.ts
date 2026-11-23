@@ -227,4 +227,50 @@ describe("persistWorkflowArtifact", () => {
     expect(resStr).toBeNull();
     expect(mockDelete).toHaveBeenCalledTimes(2);
   });
+
+  it("handles single-row 2D and 3D-nested spreadsheet data", async () => {
+    const res = await persistWorkflowArtifact(
+      {
+        kind: "artifact",
+        stepIndex: 0,
+        artifact: {
+          type: "spreadsheet",
+          title: "SingleRow",
+          content: JSON.stringify({
+            sheets: [{ name: "S1", data: [["ColA", "ColB"]] }],
+          }),
+        },
+      },
+      "u1",
+      "run-1",
+    );
+    expect(res).not.toBeNull();
+
+    const nestedRes = await persistWorkflowArtifact(
+      {
+        kind: "artifact",
+        stepIndex: 1,
+        artifact: {
+          type: "spreadsheet",
+          title: "Nested3D",
+          content: JSON.stringify({
+            sheets: [
+              {
+                name: "S1",
+                data: [
+                  [
+                    ["ColA", "ColB"],
+                    ["1", "2"],
+                  ],
+                ],
+              },
+            ],
+          }),
+        },
+      },
+      "u1",
+      "run-1",
+    );
+    expect(nestedRes).not.toBeNull();
+  });
 });

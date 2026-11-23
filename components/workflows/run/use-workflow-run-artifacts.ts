@@ -38,16 +38,31 @@ export function useWorkflowRunArtifacts({
   >({});
   const [isLoadingArtifact, setIsLoadingArtifact] = useState(false);
 
-  const inlineArtifact = useMemo(
-    () =>
-      resolveNodePreviewArtifact(
+  const selectedHasOwnOutput = Boolean(
+    selectedNodeId &&
+      (nodeStates[selectedNodeId]?.artifact ||
+        nodeStates[selectedNodeId]?.outputAttachmentId),
+  );
+
+  const inlineArtifact = useMemo(() => {
+    if (selectedNodeId && nodeStates[selectedNodeId]?.artifact) {
+      return resolveNodePreviewArtifact(
         selectedNodeId,
         nodes,
         nodeStates,
-        sharedCanvas,
-      ),
-    [selectedNodeId, nodes, nodeStates, sharedCanvas],
-  );
+        false,
+      );
+    }
+    if (selectedHasOwnOutput) {
+      return null;
+    }
+    return resolveNodePreviewArtifact(
+      selectedNodeId,
+      nodes,
+      nodeStates,
+      sharedCanvas,
+    );
+  }, [selectedNodeId, nodeStates, nodes, sharedCanvas, selectedHasOwnOutput]);
 
   const targetAttachmentId = useMemo(
     () =>
@@ -67,7 +82,10 @@ export function useWorkflowRunArtifacts({
   );
 
   useEffect(() => {
-    if (!targetAttachmentId || artifactCache[targetAttachmentId]) return;
+    if (!targetAttachmentId || artifactCache[targetAttachmentId]) {
+      setIsLoadingArtifact(false);
+      return;
+    }
     let active = true;
     setIsLoadingArtifact(true);
 

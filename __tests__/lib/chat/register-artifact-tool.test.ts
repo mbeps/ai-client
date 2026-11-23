@@ -274,5 +274,15 @@ describe("registerArtifactTool", () => {
         },
       ],
     });
+
+    const nonObjSheetRes = await (tools.manage_artifact as any).execute({
+      type: "spreadsheet",
+      title: "Mixed Sheets",
+      sheets: [null as any],
+    });
+    expect(nonObjSheetRes.success).toBe(true);
+    expect(JSON.parse(nonObjSheetRes.artifact.content)).toEqual({
+      sheets: [null],
+    });
   });
 });

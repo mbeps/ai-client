@@ -1,13 +1,25 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ResizablePanelGroup } from "@/components/ui/resizable";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkflowRunApprovalBanner } from "@/components/workflows/run/workflow-run-approval-banner";
+import { WorkflowRunFilesSection } from "@/components/workflows/run/workflow-run-files-section";
 import { WorkflowRunHeader } from "@/components/workflows/run/workflow-run-header";
 import { WorkflowRunNodeCard } from "@/components/workflows/run/workflow-run-node-card";
 import { WorkflowRunPreviewPane } from "@/components/workflows/run/workflow-run-preview-pane";
 import { WorkflowRunTimeline } from "@/components/workflows/run/workflow-run-timeline";
 import type { WorkflowNode, WorkflowNodeRunState } from "@/types/workflows/workflow";
+
+const mockDownloadFile = vi.hoisted(() => vi.fn());
+const mockToastError = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/utils/download-file", () => ({
+  downloadFile: mockDownloadFile,
+}));
+
+vi.mock("sonner", () => ({
+  toast: { error: mockToastError },
+}));
 
 vi.mock("@/components/chat/artifact-panel", () => ({
   ArtifactPanel: ({ artifact }: { artifact: { title: string } }) => (
@@ -222,5 +234,28 @@ describe("Workflow Run Workbench Components", () => {
     const toggleCanvasBtn = screen.getByRole("button", { name: /Close/i });
     fireEvent.click(toggleCanvasBtn);
     expect(onCardClick).toHaveBeenCalledTimes(1);
+
+    // Keyboard activation on card header calls onClick without interfering with nested controls
+    const headerTrigger = screen.getByRole("button", {
+      name: /Select Generate Summary/i,
+    });
+    fireEvent.keyDown(headerTrigger, { key: "Enter" });
+    fireEvent.keyDown(headerTrigger, { key: " " });
+    expect(onCardClick).toHaveBeenCalledTimes(3);
+  });
+
+  it("shows toast error when WorkflowRunFilesSection fails to download a file", async () => {
+    mockDownloadFile.mockRejectedValueOnce(new Error("Network error"));
+    render(
+      <WorkflowRunFilesSection
+        inputAttachmentIds={["att-1"]}
+        attachmentMeta={{ "att-1": { url: "https://example.com/a.xlsx", name: "a.xlsx" } }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("a.xlsx"));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("Failed to download file");
+    });
   });
 });

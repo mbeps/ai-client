@@ -5,6 +5,7 @@ import { notFound, useParams } from "next/navigation";
 import { useState } from "react";
 import { PageContainer } from "@/components/shared/page-container";
 import { EntityDetailSkeleton } from "@/components/skeletons/entity-detail-skeleton";
+import { Button } from "@/components/ui/button";
 import { ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { WorkflowCanvas } from "@/components/workflows/canvas/workflow-canvas";
 import { calculateWorkflowProgress } from "@/components/workflows/run/state-helpers";
@@ -14,7 +15,10 @@ import { useWorkflowRunStream } from "@/components/workflows/run/use-workflow-ru
 import { WorkflowRunApprovalBanner } from "@/components/workflows/run/workflow-run-approval-banner";
 import { WorkflowRunFilesSection } from "@/components/workflows/run/workflow-run-files-section";
 import { WorkflowRunHeader } from "@/components/workflows/run/workflow-run-header";
-import { WorkflowRunPreviewPane } from "@/components/workflows/run/workflow-run-preview-pane";
+import {
+  WorkflowRunPreviewContent,
+  WorkflowRunPreviewPane,
+} from "@/components/workflows/run/workflow-run-preview-pane";
 import { WorkflowRunTimeline } from "@/components/workflows/run/workflow-run-timeline";
 
 /**
@@ -36,6 +40,8 @@ export default function WorkflowRunDetailPage() {
     isArtifactOpen,
     setIsArtifactOpen,
     isLoading,
+    loadError,
+    retryLoad,
     isApproving,
     attachmentMeta,
     loadAttachmentUrls,
@@ -43,7 +49,7 @@ export default function WorkflowRunDetailPage() {
     handleSubmitToolDecisions,
   } = useWorkflowRunData(runId);
 
-  const { streamError } = useWorkflowRunStream({
+  const { streamError, retryStart } = useWorkflowRunStream({
     runId,
     run,
     workflow,
@@ -62,6 +68,20 @@ export default function WorkflowRunDetailPage() {
   });
 
   if (isLoading) return <EntityDetailSkeleton />;
+  if (loadError && (!run || !workflow)) {
+    return (
+      <PageContainer className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+        <AlertCircle className="text-destructive h-10 w-10" />
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">Failed to load workflow run</h2>
+          <p className="text-muted-foreground text-sm">{loadError}</p>
+        </div>
+        <Button type="button" onClick={() => void retryLoad()}>
+          Retry
+        </Button>
+      </PageContainer>
+    );
+  }
   if (!run || !workflow) return notFound();
 
   const currentNode =
@@ -93,9 +113,21 @@ export default function WorkflowRunDetailPage() {
       />
 
       {errorToShow && (
-        <div className="border-destructive/50 bg-destructive/10 text-destructive m-4 flex shrink-0 items-center gap-2 rounded-lg border px-4 py-3 text-sm">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{errorToShow}</span>
+        <div className="border-destructive/50 bg-destructive/10 text-destructive m-4 flex shrink-0 items-center justify-between gap-2 rounded-lg border px-4 py-3 text-sm">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{errorToShow}</span>
+          </div>
+          {run.status === "pending" && streamError && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={retryStart}
+            >
+              Retry
+            </Button>
+          )}
         </div>
       )}
 
@@ -124,6 +156,8 @@ export default function WorkflowRunDetailPage() {
                   nodes={workflow.nodes}
                   edges={workflow.edges}
                   nodeStates={nodeStates}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={setSelectedNodeId}
                   readOnly
                 />
               </div>
@@ -141,6 +175,16 @@ export default function WorkflowRunDetailPage() {
               outputAttachmentIds={run.outputAttachmentIds}
               attachmentMeta={attachmentMeta}
             />
+
+            <div className="bg-card h-[420px] border-t lg:hidden">
+              <WorkflowRunPreviewContent
+                isLoadingArtifact={isLoadingArtifact}
+                currentArtifact={currentArtifact}
+                isArtifactOpen={isArtifactOpen}
+                onCloseArtifact={() => setIsArtifactOpen(false)}
+                selectedNodeId={selectedNodeId}
+              />
+            </div>
           </div>
         </ResizablePanel>
 

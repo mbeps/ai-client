@@ -87,3 +87,17 @@ export function resolveNodeExecutionEligibility(
 
   return "skip";
 }
+
+/**
+ * Returns true if any edge references a source or target node missing from `nodes`.
+ */
+export function hasInvalidEdgeEndpoints(
+  nodes: Array<{ id: string }>,
+  edges: Array<{ sourceNodeId: string; targetNodeId: string }>,
+): boolean {
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  return edges.some(
+    (edge) =>
+      !nodeIds.has(edge.sourceNodeId) || !nodeIds.has(edge.targetNodeId),
+  );
+}

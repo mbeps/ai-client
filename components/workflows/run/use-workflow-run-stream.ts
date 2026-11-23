@@ -174,6 +174,7 @@ export function useWorkflowRunStream({
   const activeNodeRef = useRef<string | null>(null);
   const lastProcessedIndexRef = useRef(0);
   const hasStartedRef = useRef(false);
+  const autoStartAttemptedRef = useRef(false);
 
   const isExecutionActive =
     run?.status === "pending" ||
@@ -184,6 +185,26 @@ export function useWorkflowRunStream({
   useEffect(() => {
     lastProcessedIndexRef.current = 0;
     hasStartedRef.current = false;
+    autoStartAttemptedRef.current = false;
+  }, []);
+
+  const startRun = useCallback((targetRunId: string) => {
+    if (hasStartedRef.current) return;
+    hasStartedRef.current = true;
+    setStreamError(null);
+    void startWorkflowRunAction(targetRunId)
+      .then((res) => {
+        if (!res.ok) {
+          hasStartedRef.current = false;
+          setStreamError(res.error.message || "Failed to start workflow run");
+        }
+      })
+      .catch((err) => {
+        hasStartedRef.current = false;
+        setStreamError(
+          err instanceof Error ? err.message : "Failed to start workflow run",
+        );
+      });
   }, []);
 
   useEffect(() => {
@@ -191,17 +212,18 @@ export function useWorkflowRunStream({
       !run ||
       !workflow ||
       run.status !== "pending" ||
-      hasStartedRef.current
+      autoStartAttemptedRef.current
     ) {
       return;
     }
-    hasStartedRef.current = true;
-    void startWorkflowRunAction(run.id).then((res) => {
-      if (!res.ok) {
-        setStreamError(res.error.message || "Failed to start workflow run");
-      }
-    });
-  }, [run, workflow]);
+    autoStartAttemptedRef.current = true;
+    startRun(run.id);
+  }, [run, workflow, startRun]);
+
+  const retryStart = useCallback(() => {
+    if (!run || !workflow || run.status !== "pending") return;
+    startRun(run.id);
+  }, [run, workflow, startRun]);
 
   const fetchToken = useCallback(async () => {
     if (!runId) throw new Error("No runId");
@@ -251,5 +273,5 @@ export function useWorkflowRunStream({
     handleApiError,
   ]);
 
-  return { streamError };
+  return { streamError, retryStart };
 }

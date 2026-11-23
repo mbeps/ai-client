@@ -47,7 +47,7 @@ describe("executeHttpRequestNode", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(null, {
         status: 302,
-        headers: { location: "http://169.254.169.254/latest/meta-data" },
+        headers: { location: "https://169.254.169.254/latest/meta-data" },
       }),
     );
 
@@ -252,5 +252,189 @@ describe("executeHttpRequestNode", () => {
         dryRun: false,
       }),
     ).rejects.toThrow("HTTP 503");
+  });
+
+  it("blocks HTTPS-to-HTTP redirect downgrades", async () => {
+    mockIsBlockedUrl.mockResolvedValue(false);
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { location: "http://other.example.com/insecure" },
+      }),
+    );
+
+    await expect(
+      executeHttpRequestNode({
+        runId: "run-1",
+        nodeId: "http-1",
+        data: {
+          kind: "http_request",
+          variableName: "http1",
+          method: "GET",
+          url: "https://api.example.com/start",
+          headers: [],
+        },
+        context: {},
+        dryRun: false,
+      }),
+    ).rejects.toThrow("Blocked URL: HTTPS to HTTP redirect downgrade");
+  });
+
+  it("strips credentials/body on cross-origin redirects and respects 301/302/303 vs 307/308 semantics", async () => {
+    mockIsBlockedUrl.mockResolvedValue(false);
+    // 1. 307 same-origin preserves POST method, headers, and body
+    const sameOriginFetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 307,
+          headers: { location: "https://api.example.com/v2/items" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+
+    await executeHttpRequestNode({
+      runId: "run-1",
+      nodeId: "http-1",
+      data: {
+        kind: "http_request",
+        variableName: "http1",
+        method: "POST",
+        url: "https://api.example.com/v1/items",
+        headers: [{ key: "Authorization", value: "Bearer secret" }],
+        body: '{"name":"item"}',
+      },
+      context: {},
+      dryRun: false,
+    });
+
+    expect(sameOriginFetch).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.com/v2/items",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Authorization: "Bearer secret" }),
+        body: '{"name":"item"}',
+      }),
+    );
+
+    // 2. 302 cross-origin strips headers, drops body, and changes POST to GET
+    vi.restoreAllMocks();
+    mockIsBlockedUrl.mockResolvedValue(false);
+    const crossOriginFetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://cdn.other.com/result" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 204,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+
+    const res = await executeHttpRequestNode({
+      runId: "run-1",
+      nodeId: "http-1",
+      data: {
+        kind: "http_request",
+        variableName: "http1",
+        method: "POST",
+        url: "https://api.example.com/submit",
+        headers: [{ key: "Authorization", value: "Bearer secret" }],
+        body: '{"payload":1}',
+      },
+      context: {},
+      dryRun: false,
+    });
+
+    expect(crossOriginFetch).toHaveBeenNthCalledWith(
+      2,
+      "https://cdn.other.com/result",
+      expect.objectContaining({
+        method: "GET",
+        headers: {},
+        body: undefined,
+      }),
+    );
+    expect(res.data).toBeNull();
+
+    // 3. 303 on GET keeps GET, 200 with empty JSON body returns null, and undefined method defaults to GET
+    vi.restoreAllMocks();
+    mockIsBlockedUrl.mockResolvedValue(false);
+    const getRedirectFetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 303,
+          headers: { location: "https://api.example.com/done" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response("   ", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+
+    const emptyJsonRes = await executeHttpRequestNode({
+      runId: "run-1",
+      nodeId: "http-1",
+      data: {
+        kind: "http_request",
+        variableName: "http1",
+        method: undefined as any,
+        url: "https://api.example.com/poll",
+        headers: [],
+      },
+      context: {},
+      dryRun: false,
+    });
+    expect(getRedirectFetch).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.com/done",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(emptyJsonRes.data).toBeNull();
+
+    // 4. 303 on HEAD keeps HEAD
+    vi.restoreAllMocks();
+    mockIsBlockedUrl.mockResolvedValue(false);
+    const headRedirectFetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 303,
+          headers: { location: "https://api.example.com/head-target" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await executeHttpRequestNode({
+      runId: "run-1",
+      nodeId: "http-1",
+      data: {
+        kind: "http_request",
+        variableName: "http1",
+        method: "HEAD" as any,
+        url: "https://api.example.com/head",
+        headers: [],
+      },
+      context: {},
+      dryRun: false,
+    });
+    expect(headRedirectFetch).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.com/head-target",
+      expect.objectContaining({ method: "HEAD" }),
+    );
   });
 });

@@ -71,13 +71,16 @@ export function AiStepConfig({
     [mcpServers],
   );
 
-  const ensureServerIncluded = (serverId: string) => {
+  const ensureServerIncluded = (
+    serverId: string,
+    currentServerIds: string[],
+  ) => {
     if (
       serverId !== "internal" &&
-      data.mcpServerIds.length > 0 &&
-      !data.mcpServerIds.includes(serverId)
+      currentServerIds.length > 0 &&
+      !currentServerIds.includes(serverId)
     ) {
-      return [...data.mcpServerIds, serverId];
+      return [...currentServerIds, serverId];
     }
     return undefined;
   };
@@ -86,10 +89,40 @@ export function AiStepConfig({
     const toolId = `${serverId}:tool:${toolName}`;
     const isAdding = !selectedToolSet.has(toolId);
     const nextTools = Array.from(toggleSetItem(selectedToolSet, toolId));
-    const nextServers = isAdding ? ensureServerIncluded(serverId) : undefined;
+    const nextServers = isAdding
+      ? ensureServerIncluded(serverId, data.mcpServerIds)
+      : undefined;
     onChange({
       toolIds: nextTools,
       ...(nextServers ? { mcpServerIds: nextServers } : {}),
+    });
+  };
+
+  const handleBulkSelectToolGroups = (
+    groups: Array<{ serverId: string; toolNames: string[] }>,
+    select: boolean,
+  ) => {
+    const next = new Set(selectedToolSet);
+    let nextServers = data.mcpServerIds;
+    for (const { serverId, toolNames } of groups) {
+      for (const name of toolNames) {
+        const toolId = `${serverId}:tool:${name}`;
+        if (select) {
+          next.add(toolId);
+        } else {
+          next.delete(toolId);
+        }
+      }
+      if (select) {
+        const updated = ensureServerIncluded(serverId, nextServers);
+        if (updated) nextServers = updated;
+      }
+    }
+    onChange({
+      toolIds: Array.from(next),
+      ...(nextServers !== data.mcpServerIds
+        ? { mcpServerIds: nextServers }
+        : {}),
     });
   };
 
@@ -98,20 +131,7 @@ export function AiStepConfig({
     toolNames: string[],
     select: boolean,
   ) => {
-    const next = new Set(selectedToolSet);
-    for (const name of toolNames) {
-      const toolId = `${serverId}:tool:${name}`;
-      if (select) {
-        next.add(toolId);
-      } else {
-        next.delete(toolId);
-      }
-    }
-    const nextServers = select ? ensureServerIncluded(serverId) : undefined;
-    onChange({
-      toolIds: Array.from(next),
-      ...(nextServers ? { mcpServerIds: nextServers } : {}),
-    });
+    handleBulkSelectToolGroups([{ serverId, toolNames }], select);
   };
 
   const handleToggleSubagent = (agentId: string) => {
@@ -159,6 +179,7 @@ export function AiStepConfig({
           selectedTools={selectedToolSet}
           onToggleTool={handleToggleTool}
           onBulkSelect={handleBulkSelectTools}
+          onBulkSelectBatch={handleBulkSelectToolGroups}
           maxHeight="420px"
         />
       </div>

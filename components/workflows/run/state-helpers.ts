@@ -213,12 +213,24 @@ export function resolveNodePreviewArtifact(
   }
 
   if (sharedCanvas) {
+    let latestNodeId: string | null = null;
+    let latestCompletedAt = -Infinity;
     for (let i = nodes.length - 1; i >= 0; i--) {
       const node = nodes[i];
-      const artifact = nodeStates[node.id]?.artifact;
-      if (artifact) {
-        return formatForNode(node.id, artifact);
+      const state = nodeStates[node.id];
+      if (!state?.artifact) continue;
+      const ts = state.completedAt ? Date.parse(state.completedAt) : NaN;
+      if (!Number.isNaN(ts)) {
+        if (ts > latestCompletedAt) {
+          latestCompletedAt = ts;
+          latestNodeId = node.id;
+        }
+      } else if (latestNodeId === null) {
+        latestNodeId = node.id;
       }
+    }
+    if (latestNodeId && nodeStates[latestNodeId]?.artifact) {
+      return formatForNode(latestNodeId, nodeStates[latestNodeId].artifact!);
     }
   }
 

@@ -29,7 +29,12 @@ vi.mock("@/lib/inngest/client", () => ({
 }));
 
 // Mock Drizzle database
-const mockUpdateWhere = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const mockUpdateReturning = vi.hoisted(() =>
+  vi.fn().mockResolvedValue([{ id: "run-wf-999" }]),
+);
+const mockUpdateWhere = vi.hoisted(() =>
+  vi.fn().mockReturnValue({ returning: mockUpdateReturning }),
+);
 const mockUpdateSet = vi.hoisted(() => vi.fn().mockReturnValue({ where: mockUpdateWhere }));
 const mockUpdate = vi.hoisted(() => vi.fn().mockReturnValue({ set: mockUpdateSet }));
 
@@ -148,6 +153,7 @@ describe("cancelJob Server Action", () => {
 
   describe("Dual-Layer Abort for DAG Workflows", () => {
     it("updates workflowRun status in DB to failed and emits workflows/run.cancel", async () => {
+      mockUpdateReturning.mockResolvedValueOnce([{ id: "run-wf-999" }]);
       const result = await cancelJob("run-123", {
         workflowRunId: "run-wf-999",
       });
@@ -159,11 +165,27 @@ describe("cancelJob Server Action", () => {
         errorMessage: "Cancelled by user",
       });
       expect(mockUpdateWhere).toHaveBeenCalled();
+      expect(mockUpdateReturning).toHaveBeenCalled();
       expect(mockInngest.send).toHaveBeenCalledWith({
         name: "workflows/run.cancel",
         data: { runId: "run-wf-999" },
       });
       expect(result).toEqual({ ok: true, value: { success: true } });
+    });
+
+    it("returns NOT_FOUND and skips workflows/run.cancel when workflowRun does not belong to user or is missing", async () => {
+      mockUpdateReturning.mockResolvedValueOnce([]);
+      const result = await cancelJob("run-123", {
+        workflowRunId: "run-wf-foreign",
+      });
+
+      expect(mockInngest.send).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "NOT_FOUND",
+        }),
+      });
     });
   });
 

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { NonRetriableError } from "inngest";
 import { db } from "@/drizzle/db";
 import {
@@ -56,14 +56,17 @@ export const executeWorkflowRun = inngest.createFunction(
       const { runId } = event.data.event.data as { runId?: string };
       if (!runId) return;
       const appErr = toAppError(error);
-      await db
+      const updated = await db
         .update(workflowRun)
         .set({
           status: "failed",
           errorMessage: appErr.message,
           updatedAt: new Date(),
         })
-        .where(eq(workflowRun.id, runId));
+        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
+        .returning({ id: workflowRun.id });
+
+      if (updated.length === 0) return;
 
       const ch = workflowRunChannel({ runId });
       await inngest.realtime
@@ -137,15 +140,24 @@ export const executeWorkflowRun = inngest.createFunction(
 
       const sortedNodes = validateAndSortWorkflowGraph(nodes, edges);
 
-      await db
+      const initialized = await db
         .update(workflowRun)
         .set({ status: "running", errorMessage: null, updatedAt: new Date() })
-        .where(eq(workflowRun.id, runId));
+        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
+        .returning({ id: workflowRun.id });
+
+      if (initialized.length === 0) {
+        return { cancelled: true as const, runRow, wfRow, sortedNodes, edges };
+      }
 
       await emit({ type: "workflow-start", runId });
 
-      return { runRow, wfRow, sortedNodes, edges };
+      return { cancelled: false as const, runRow, wfRow, sortedNodes, edges };
     });
+
+    if (init.cancelled) {
+      return { success: false, cancelled: true };
+    }
 
     const { runRow, wfRow, sortedNodes, edges } = init;
     const nodeStates: Record<string, WorkflowNodeRunState> = {
@@ -176,7 +188,9 @@ export const executeWorkflowRun = inngest.createFunction(
           await db
             .update(workflowRun)
             .set({ nodeStates, updatedAt: new Date() })
-            .where(eq(workflowRun.id, runId));
+            .where(
+              and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
+            );
           await emit({ type: "workflow-node-skipped", runId, nodeId: node.id });
         });
         continue;
@@ -260,7 +274,9 @@ export const executeWorkflowRun = inngest.createFunction(
             outputAttachmentIds,
             updatedAt: new Date(),
           })
-          .where(eq(workflowRun.id, runId));
+          .where(
+            and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
+          );
         await emit({
           type: "workflow-node-complete",
           runId,
@@ -283,8 +299,8 @@ export const executeWorkflowRun = inngest.createFunction(
       }
     }
 
-    await step.run("finalize-workflow-run", async () => {
-      await db
+    const completed = await step.run("finalize-workflow-run", async () => {
+      const updated = await db
         .update(workflowRun)
         .set({
           status: "completed",
@@ -292,14 +308,24 @@ export const executeWorkflowRun = inngest.createFunction(
           outputAttachmentIds,
           updatedAt: new Date(),
         })
-        .where(eq(workflowRun.id, runId));
+        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
+        .returning({ id: workflowRun.id });
+
+      if (updated.length === 0) {
+        return false;
+      }
 
       await emit({
         type: "workflow-complete",
         runId,
         outputAttachmentIds,
       });
+      return true;
     });
+
+    if (!completed) {
+      return { success: false, cancelled: true };
+    }
 
     return { success: true, completed: true };
   },

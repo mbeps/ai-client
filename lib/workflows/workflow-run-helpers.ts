@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import {
   type WorkflowRow,
@@ -71,7 +71,7 @@ export async function failWorkflowRun(
   errorMessage: string,
   emit: (data: WorkflowStreamEvent) => Promise<void>,
 ): Promise<void> {
-  await db
+  const updated = await db
     .update(workflowRun)
     .set({
       status: "failed",
@@ -79,9 +79,12 @@ export async function failWorkflowRun(
       errorMessage,
       updatedAt: new Date(),
     })
-    .where(eq(workflowRun.id, runId));
+    .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
+    .returning({ id: workflowRun.id });
 
-  await emit({ type: "error", nodeId, message: errorMessage });
+  if (updated.length > 0) {
+    await emit({ type: "error", nodeId, message: errorMessage });
+  }
 }
 
 /**

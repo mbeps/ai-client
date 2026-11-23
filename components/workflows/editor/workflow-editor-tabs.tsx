@@ -109,7 +109,7 @@ export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
           onUpdateNode={onUpdateNode}
           onDeleteNode={onDeleteNode}
           onAutoLayout={onAutoLayout}
-          onRunWorkflow={onRunWorkflow}
+          onRunWorkflow={isNew ? undefined : onRunWorkflow}
           onRegenerateWebhookSecret={onRegenerateWebhookSecret}
           mcpServers={mcpServers}
           knowledgebases={knowledgebases}

@@ -53,9 +53,9 @@ export const cancelJob = defineAction(
       }
     }
 
-    // 2. If this is a workflow run, update DB record to failed and emit cancel event
+    // 2. If this is a workflow run, verify ownership via owner-scoped update before emitting cancel event
     if (options?.workflowRunId) {
-      await db
+      const cancelledRows = await db
         .update(workflowRun)
         .set({
           status: "failed",
@@ -66,7 +66,16 @@ export const cancelJob = defineAction(
             eq(workflowRun.id, options.workflowRunId),
             eq(workflowRun.userId, userId),
           ),
-        );
+        )
+        .returning({ id: workflowRun.id });
+
+      if (cancelledRows.length === 0) {
+        return fail({
+          code: ERROR_CODE.NOT_FOUND,
+          message: "Workflow run not found",
+        });
+      }
+
       await inngest.send({
         name: "workflows/run.cancel",
         data: { runId: options.workflowRunId },

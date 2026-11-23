@@ -350,4 +350,73 @@ describe("WorkflowNodeConfigSheet", () => {
       }),
     );
   });
+
+  it("shows HTTP request body for DELETE with unquoted {{json ...}} placeholder and batches Select All in AI tools", () => {
+    const onUpdateNode = vi.fn();
+    const { rerender } = render(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={vi.fn()}
+        node={{
+          ...nodes[3],
+          data: {
+            kind: "http_request",
+            variableName: "http1",
+            method: "DELETE",
+            url: "https://api.example.com/item",
+            headers: [],
+          },
+        }}
+        allNodes={nodes}
+        edges={edges}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+
+    const bodyInput = screen.getByLabelText("JSON / Request Body");
+    expect(bodyInput).toBeInTheDocument();
+    expect(bodyInput).toHaveAttribute(
+      "placeholder",
+      '{"summary": {{json step1.summary}}}',
+    );
+
+    rerender(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={vi.fn()}
+        node={{
+          ...nodes[1],
+          data: {
+            kind: "ai_step",
+            variableName: "step1",
+            prompt: "Run",
+            mcpServerIds: ["srv-1"],
+            toolIds: [],
+            requiresReview: false,
+          },
+        }}
+        allNodes={nodes}
+        edges={edges}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Tools & MCP/i }));
+    fireEvent.click(screen.getByText("Select All"));
+    expect(onUpdateNode).toHaveBeenCalledTimes(1);
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n2",
+      expect.objectContaining({
+        data: expect.objectContaining({
+          toolIds: ["internal:tool:manage_artifact", "internal:tool:manage_memory"],
+        }),
+      }),
+    );
+  });
 });

@@ -183,5 +183,35 @@ describe("Workflow Run State Helpers", () => {
       false,
     );
     expect(noFallback).toBeNull();
+
+    // Shared fallback orders candidates by completedAt descending regardless of node array order
+    const multiArtifact = resolveNodePreviewArtifact(
+      "n1",
+      sampleNodes,
+      {
+        n1: {
+          status: "completed",
+          completedAt: "2026-11-23T12:00:00.000Z",
+          artifact: {
+            id: "art-newer",
+            type: "markdown",
+            title: "Newer From Earlier Node",
+            content: "Newer",
+          },
+        },
+        n2: {
+          status: "completed",
+          completedAt: "2026-11-23T10:00:00.000Z",
+          artifact: {
+            id: "art-older",
+            type: "markdown",
+            title: "Older From Later Node",
+            content: "Older",
+          },
+        },
+      },
+      true,
+    );
+    expect(multiArtifact?.id).toBe("art-newer");
   });
 });

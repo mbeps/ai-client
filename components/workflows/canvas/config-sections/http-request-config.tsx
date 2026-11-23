@@ -129,7 +129,7 @@ export function HttpRequestConfig({ data, onChange }: HttpRequestConfigProps) {
         ))}
       </div>
 
-      {data.method !== "GET" && data.method !== "DELETE" && (
+      {data.method !== "GET" && (
         <div className="space-y-1.5">
           <Label htmlFor="http-request-body">JSON / Request Body</Label>
           <Textarea
@@ -137,7 +137,7 @@ export function HttpRequestConfig({ data, onChange }: HttpRequestConfigProps) {
             rows={4}
             value={data.body ?? ""}
             onChange={(e) => onChange({ body: e.target.value })}
-            placeholder='{"summary": "{{json step1.summary}}"}'
+            placeholder='{"summary": {{json step1.summary}}}'
             className="font-mono text-xs"
           />
         </div>

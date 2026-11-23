@@ -63,7 +63,8 @@ export function resolveStepCanvasPolicy(
   const enforcedType =
     nodeCanvasMode !== "any" &&
     canvasConfig.defaultType &&
-    canvasConfig.defaultType !== "any"
+    canvasConfig.defaultType !== "any" &&
+    allowed.includes(canvasConfig.defaultType)
       ? canvasConfig.defaultType
       : null;
 

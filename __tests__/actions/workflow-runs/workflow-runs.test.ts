@@ -124,9 +124,43 @@ describe("Workflow Run Server Actions", () => {
     mockSelectWhere.mockResolvedValueOnce([]);
     const notFoundRes = await startWorkflowRunAction(RUN_ID);
     expect(notFoundRes.ok).toBe(false);
+
+    vi.mocked(inngest.send).mockRejectedValueOnce(new Error("Inngest down"));
+    const dispatchErr = await startWorkflowRunAction(RUN_ID);
+    expect(dispatchErr.ok).toBe(false);
+    if (!dispatchErr.ok) {
+      expect(dispatchErr.error.code).toBe(ERROR_CODE.INTERNAL);
+    }
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "pending" }),
+    );
   });
 
-  it("approveWorkflowRunAction validates payload, checks ownership, and dispatches workflows/run.approved", async () => {
+  it("approveWorkflowRunAction validates payload, checks ownership, gate state, and dispatches workflows/run.approved", async () => {
+    const waitingToolRun = {
+      id: RUN_ID,
+      workflowId: WF_ID,
+      userId: "user-1",
+      status: "awaiting_tool_approval",
+      currentNodeId: "node-1",
+      nodeStates: {
+        "node-1": {
+          status: "awaiting_tool_approval",
+          gateId: "gate-1",
+          pendingToolApprovals: [
+            {
+              approvalId: "app-1",
+              toolCallId: "tc-1",
+              toolName: "delete_item",
+              args: {},
+              signature: "sig-1",
+            },
+          ],
+        },
+      },
+    };
+    mockSelectWhere.mockResolvedValueOnce([waitingToolRun]);
+
     const res = await approveWorkflowRunAction({
       runId: RUN_ID,
       nodeId: "node-1",
@@ -139,11 +173,112 @@ describe("Workflow Run Server Actions", () => {
       data: {
         runId: RUN_ID,
         nodeId: "node-1",
+        gateId: "gate-1",
         approved: true,
         feedback: undefined,
         toolDecisions: [{ approvalId: "app-1", approved: true }],
       },
     });
+
+    // Rejects stale gateId
+    mockSelectWhere.mockResolvedValueOnce([waitingToolRun]);
+    const staleGate = await approveWorkflowRunAction({
+      runId: RUN_ID,
+      nodeId: "node-1",
+      gateId: "stale-gate",
+      approved: true,
+      toolDecisions: [{ approvalId: "app-1", approved: true }],
+    });
+    expect(staleGate.ok).toBe(false);
+    if (!staleGate.ok) expect(staleGate.error.code).toBe(ERROR_CODE.CONFLICT);
+
+    // Rejects wrong status or wrong currentNodeId
+    mockSelectWhere.mockResolvedValueOnce([{ ...waitingToolRun, status: "running" }]);
+    const wrongStatus = await approveWorkflowRunAction({
+      runId: RUN_ID,
+      nodeId: "node-1",
+      approved: true,
+    });
+    expect(wrongStatus.ok).toBe(false);
+    if (!wrongStatus.ok) expect(wrongStatus.error.code).toBe(ERROR_CODE.CONFLICT);
+
+    // Rejects mismatched toolDecisions when awaiting_tool_approval and approved !== false
+    mockSelectWhere.mockResolvedValueOnce([waitingToolRun]);
+    const badDecisions = await approveWorkflowRunAction({
+      runId: RUN_ID,
+      nodeId: "node-1",
+      approved: true,
+      toolDecisions: [{ approvalId: "wrong-id", approved: true }],
+    });
+    expect(badDecisions.ok).toBe(false);
+    if (!badDecisions.ok) expect(badDecisions.error.code).toBe(ERROR_CODE.INVALID_INPUT);
+
+    // Rejects approved: true with undefined toolDecisions when tools are pending
+    mockSelectWhere.mockResolvedValueOnce([waitingToolRun]);
+    const missingDecisions = await approveWorkflowRunAction({
+      runId: RUN_ID,
+      nodeId: "node-1",
+      approved: true,
+    });
+    expect(missingDecisions.ok).toBe(false);
+    if (!missingDecisions.ok) expect(missingDecisions.error.code).toBe(ERROR_CODE.INVALID_INPUT);
+
+    // Bulk rejection (approved: false, toolDecisions omitted) is allowed
+    mockSelectWhere.mockResolvedValueOnce([waitingToolRun]);
+    const bulkReject = await approveWorkflowRunAction({
+      runId: RUN_ID,
+      nodeId: "node-1",
+      approved: false,
+    });
+    expect(bulkReject.ok).toBe(true);
+
+    // Works when nodeStates is null or pendingToolApprovals is undefined
+    mockSelectWhere.mockResolvedValueOnce([
+      {
+        ...waitingToolRun,
+        nodeStates: null,
+      },
+    ]);
+    const nullStatesOk = await approveWorkflowRunAction({
+      runId: RUN_ID,
+      nodeId: "node-1",
+      approved: true,
+    });
+    expect(nullStatesOk.ok).toBe(true);
+
+    mockSelectWhere.mockResolvedValueOnce([
+      {
+        ...waitingToolRun,
+        nodeStates: { "node-1": { status: "awaiting_tool_approval" } },
+      },
+    ]);
+    const noPendingListOk = await approveWorkflowRunAction({
+      runId: RUN_ID,
+      nodeId: "node-1",
+      approved: true,
+    });
+    expect(noPendingListOk.ok).toBe(true);
+
+    // Works for awaiting_review without toolDecisions
+    mockSelectWhere.mockResolvedValueOnce([
+      {
+        id: RUN_ID,
+        workflowId: WF_ID,
+        userId: "user-1",
+        status: "awaiting_review",
+        currentNodeId: "node-1",
+        nodeStates: {
+          "node-1": { status: "awaiting_review", gateId: "gate-rev" },
+        },
+      },
+    ]);
+    const reviewRes = await approveWorkflowRunAction({
+      runId: RUN_ID,
+      nodeId: "node-1",
+      gateId: "gate-rev",
+      approved: true,
+    });
+    expect(reviewRes.ok).toBe(true);
 
     mockSelectWhere.mockResolvedValueOnce([]);
     const miss = await approveWorkflowRunAction({

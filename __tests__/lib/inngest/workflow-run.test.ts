@@ -9,7 +9,14 @@ import {
 } from "@/lib/workflows/workflow-run-helpers";
 
 const mockSelectWhere = vi.hoisted(() => vi.fn());
-const mockUpdateWhere = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const mockUpdateReturning = vi.hoisted(() =>
+  vi.fn().mockResolvedValue([{ id: "run-1" }]),
+);
+const mockUpdateWhere = vi.hoisted(() =>
+  vi.fn().mockImplementation(() =>
+    Object.assign(Promise.resolve([]), { returning: mockUpdateReturning }),
+  ),
+);
 const mockUpdateSet = vi.hoisted(() =>
   vi.fn().mockReturnValue({ where: mockUpdateWhere }),
 );
@@ -92,15 +99,43 @@ const baseWorkflow = {
 
 function createStepMock(waitResults: unknown[] = []) {
   let waitIdx = 0;
+  let lastGateId: string | undefined;
   return {
-    run: vi.fn(async (_name: string, fn: () => unknown) => fn()),
-    waitForEvent: vi.fn(async () => waitResults[waitIdx++] ?? null),
+    run: vi.fn(async (name: string, fn: () => unknown) => {
+      const result = await fn();
+      if (name.startsWith("pause-") && typeof result === "string") {
+        lastGateId = result;
+      }
+      return result;
+    }),
+    waitForEvent: vi.fn(async () => {
+      const next = waitResults[waitIdx++] ?? null;
+      if (
+        next &&
+        typeof next === "object" &&
+        "data" in next &&
+        next.data &&
+        typeof next.data === "object" &&
+        !("gateId" in next.data) &&
+        lastGateId
+      ) {
+        return {
+          ...next,
+          data: { ...(next.data as Record<string, unknown>), gateId: lastGateId },
+        };
+      }
+      return next;
+    }),
   };
 }
 
 describe("executeWorkflowRun Inngest DAG Function", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUpdateReturning.mockResolvedValue([{ id: "run-1" }]);
+    mockUpdateWhere.mockImplementation(() =>
+      Object.assign(Promise.resolve([]), { returning: mockUpdateReturning }),
+    );
     mockBuildFileContext.mockResolvedValue({ attachmentRows: [] });
     mockLoadWorkflowContext.mockResolvedValue({
       allServers: [],
@@ -535,23 +570,31 @@ describe("executeWorkflowRun Inngest DAG Function", () => {
     ).rejects.toThrow(NonRetriableError);
 
     const onFailure = (executeWorkflowRun as any).opts?.onFailure;
-    if (typeof onFailure === "function") {
-      await onFailure({
-        event: { data: { event: { data: {} } } },
-        error: new Error("Ignored"),
-      });
-      vi.spyOn(inngest.realtime, "publish").mockRejectedValueOnce(new Error("rt-err"));
-      await onFailure({
-        event: { data: { event: { data: { runId: "run-err" } } } },
-        error: new Error("Boom"),
-      });
-      expect(mockUpdateSet).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: "failed",
-          errorMessage: expect.stringContaining("Something went wrong"),
-        }),
-      );
-    }
+    expect(typeof onFailure).toBe("function");
+    await onFailure({
+      event: { data: { event: { data: {} } } },
+      error: new Error("Ignored"),
+    });
+    vi.spyOn(inngest.realtime, "publish").mockRejectedValueOnce(new Error("rt-err"));
+    await onFailure({
+      event: { data: { event: { data: { runId: "run-err" } } } },
+      error: new Error("Boom"),
+    });
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        errorMessage: expect.stringContaining("Something went wrong"),
+      }),
+    );
+
+    // Already-failed runs are not overwritten by onFailure
+    mockUpdateReturning.mockResolvedValueOnce([]);
+    const publishBefore = vi.mocked(inngest.realtime.publish).mock.calls.length;
+    await onFailure({
+      event: { data: { event: { data: { runId: "run-already-failed" } } } },
+      error: new Error("Boom again"),
+    });
+    expect(vi.mocked(inngest.realtime.publish).mock.calls.length).toBe(publishBefore);
   });
 
   it("covers null runRow arrays, after-review rejection, tool resume without toolDecisions, webhook seed fallback, and llm resolveProvider failure", async () => {
@@ -695,6 +738,38 @@ describe("executeWorkflowRun Inngest DAG Function", () => {
       if (selIdx === 4) return Promise.resolve([]);
       return Promise.resolve([{ ...nullRunRow, status: "running" }]);
     });
+    mockExecuteAiStepNode.mockResolvedValueOnce({
+      status: "awaiting_tool_approval",
+      pendingApprovals: [
+        { approvalId: "a-x", toolCallId: "t-x", toolName: "t", args: {}, signature: "s" },
+      ],
+      toolCalls: [],
+    });
+
+    const fn = (executeWorkflowRun as any).fn;
+    // 4a. Malformed tool approval event (missing decisions / data undefined) fails closed
+    const badToolApproval = await fn({
+      event: { data: { runId: "run-null", workflowId: "wf-1", userId: "user-1" } },
+      step: createStepMock([{ data: undefined }]),
+    });
+    expect(badToolApproval).toEqual({ success: false });
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        errorMessage: "Invalid tool approval event",
+      }),
+    );
+
+    // 4b. After tool approval, after-review rejection stops the workflow
+    selIdx = 0;
+    mockSelectWhere.mockImplementation(() => {
+      selIdx++;
+      if (selIdx === 1) return Promise.resolve([nullRunRow]);
+      if (selIdx === 2) return Promise.resolve([baseWorkflow]);
+      if (selIdx === 3) return Promise.resolve(afterRejectNodes);
+      if (selIdx === 4) return Promise.resolve([]);
+      return Promise.resolve([{ ...nullRunRow, status: "running" }]);
+    });
     mockExecuteAiStepNode
       .mockResolvedValueOnce({
         status: "awaiting_tool_approval",
@@ -712,16 +787,27 @@ describe("executeWorkflowRun Inngest DAG Function", () => {
         activeWorkbookFilePath: null,
         toolCalls: [],
       });
-
-    const fn = (executeWorkflowRun as any).fn;
     const afterRej = await fn({
       event: { data: { runId: "run-null", workflowId: "wf-1", userId: "user-1" } },
       step: createStepMock([
-        { data: undefined },
+        {
+          data: {
+            runId: "run-null",
+            nodeId: "n-ai-after",
+            approved: true,
+            toolDecisions: [{ approvalId: "a-x", approved: true }],
+          },
+        },
         { data: { runId: "run-null", nodeId: "n-ai-after", approved: false } },
       ]),
     });
     expect(afterRej).toEqual({ success: false });
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        errorMessage: "Rejected by reviewer",
+      }),
+    );
   });
 
   it("handles tool approval timeout, cancelled mid-run, failed AI step, hybrid If model lookup, file upload attachments, and realtime publish error", async () => {
@@ -993,5 +1079,242 @@ describe("executeWorkflowRun Inngest DAG Function", () => {
     expect(mockExecuteAiStepNode).toHaveBeenCalledTimes(2);
     expect(mockExecuteAiStepNode.mock.calls[0][0].activeArtifact).toBeNull();
     expect(mockExecuteAiStepNode.mock.calls[1][0].activeArtifact).toEqual(step1Art);
+  });
+
+  it("handles cancellation guards in init, finalize, review/tool gates, invalid review event, bulk tool rejection, and sharedCanvas false", async () => {
+    const fn = (executeWorkflowRun as any).fn;
+    const baseRun = {
+      id: "run-guard",
+      workflowId: "wf-1",
+      userId: "user-1",
+      triggerType: "manual",
+      status: "pending",
+      dryRun: false,
+      initialData: {},
+      nodeStates: {},
+      contextData: {},
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+    };
+    const reviewNode = {
+      id: "n-rev",
+      workflowId: "wf-1",
+      type: "ai_step" as const,
+      name: "RevStep",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "ai_step" as const,
+        variableName: "s1",
+        prompt: "Go",
+        mcpServerIds: [],
+        toolIds: [],
+        requiresReview: true,
+        reviewTiming: "before" as const,
+      },
+    };
+
+    const seedSelect = (nodes: unknown[]) => {
+      let idx = 0;
+      mockSelectWhere.mockImplementation(() => {
+        idx++;
+        if (idx === 1) return Promise.resolve([baseRun]);
+        if (idx === 2) return Promise.resolve([baseWorkflow]);
+        if (idx === 3) return Promise.resolve(nodes);
+        if (idx === 4) return Promise.resolve([]);
+        return Promise.resolve([{ ...baseRun, status: "running" }]);
+      });
+    };
+
+    // 1. init cancelled before run starts
+    seedSelect([reviewNode]);
+    mockUpdateReturning.mockResolvedValueOnce([]);
+    await expect(
+      fn({
+        event: { data: { runId: "run-guard", workflowId: "wf-1", userId: "user-1" } },
+        step: createStepMock([]),
+      }),
+    ).resolves.toEqual({ success: false, cancelled: true });
+
+    // 2. finalize cancelled right before completion
+    seedSelect([{ ...reviewNode, data: { ...reviewNode.data, requiresReview: false } }]);
+    mockExecuteAiStepNode.mockResolvedValueOnce({
+      status: "completed",
+      summary: "OK",
+      artifact: null,
+      currentOutputAttachmentIds: [],
+      currentAttachmentRows: [],
+      activeWorkbookFilePath: null,
+      toolCalls: [],
+    });
+    mockUpdateReturning
+      .mockResolvedValueOnce([{ id: "run-guard" }]) // init
+      .mockResolvedValueOnce([]); // finalize
+    await expect(
+      fn({
+        event: { data: { runId: "run-guard", workflowId: "wf-1", userId: "user-1" } },
+        step: createStepMock([]),
+      }),
+    ).resolves.toEqual({ success: false, cancelled: true });
+
+    // 3. awaitHumanReviewGate pause fails (already failed/cancelled)
+    seedSelect([reviewNode]);
+    mockUpdateReturning
+      .mockResolvedValueOnce([{ id: "run-guard" }]) // init
+      .mockResolvedValueOnce([]); // pause review
+    await expect(
+      fn({
+        event: { data: { runId: "run-guard", workflowId: "wf-1", userId: "user-1" } },
+        step: createStepMock([]),
+      }),
+    ).resolves.toEqual({ success: false });
+
+    // 4. awaitHumanReviewGate receives malformed non-boolean approved
+    seedSelect([reviewNode]);
+    await expect(
+      fn({
+        event: { data: { runId: "run-guard", workflowId: "wf-1", userId: "user-1" } },
+        step: createStepMock([
+          { data: { runId: "run-guard", nodeId: "n-rev", approved: "invalid" } },
+        ]),
+      }),
+    ).resolves.toEqual({ success: false });
+
+    // 5. resolvePendingToolApprovalLoop: pause fails -> cancelled
+    const toolNode = {
+      ...reviewNode,
+      data: { ...reviewNode.data, requiresReview: false },
+    };
+    seedSelect([toolNode]);
+    mockExecuteAiStepNode.mockResolvedValueOnce({
+      status: "awaiting_tool_approval",
+      pendingApprovals: [
+        { approvalId: "a-1", toolCallId: "t-1", toolName: "rm", args: {}, signature: "sig" },
+      ],
+      toolCalls: [],
+    });
+    mockUpdateReturning
+      .mockResolvedValueOnce([{ id: "run-guard" }]) // init
+      .mockResolvedValueOnce([]); // pause tool approval
+    await expect(
+      fn({
+        event: { data: { runId: "run-guard", workflowId: "wf-1", userId: "user-1" } },
+        step: createStepMock([]),
+      }),
+    ).resolves.toEqual({ success: false, cancelled: true });
+
+    // 6. resolvePendingToolApprovalLoop: approved: true with undefined toolDecisions -> fails closed
+    seedSelect([toolNode]);
+    mockExecuteAiStepNode.mockResolvedValueOnce({
+      status: "awaiting_tool_approval",
+      pendingApprovals: [
+        { approvalId: "a-1", toolCallId: "t-1", toolName: "rm", args: {}, signature: "sig" },
+      ],
+      toolCalls: [],
+    });
+    await expect(
+      fn({
+        event: { data: { runId: "run-guard", workflowId: "wf-1", userId: "user-1" } },
+        step: createStepMock([
+          { data: { runId: "run-guard", nodeId: "n-rev", approved: true } },
+        ]),
+      }),
+    ).resolves.toEqual({ success: false });
+
+    // 7. resolvePendingToolApprovalLoop: bulk reject (approved: false) maps decisions & completes
+    seedSelect([toolNode]);
+    mockExecuteAiStepNode
+      .mockResolvedValueOnce({
+        status: "awaiting_tool_approval",
+        pendingApprovals: [
+          { approvalId: "a-1", toolCallId: "t-1", toolName: "rm", args: {}, signature: "sig" },
+        ],
+        toolCalls: [],
+      })
+      .mockResolvedValueOnce({
+        status: "completed",
+        summary: "Declined tool safely",
+        artifact: null,
+        currentOutputAttachmentIds: [],
+        currentAttachmentRows: [],
+        activeWorkbookFilePath: null,
+        toolCalls: [],
+      });
+    await expect(
+      fn({
+        event: { data: { runId: "run-guard", workflowId: "wf-1", userId: "user-1" } },
+        step: createStepMock([
+          { data: { runId: "run-guard", nodeId: "n-rev", approved: false } },
+        ]),
+      }),
+    ).resolves.toEqual({ success: true, completed: true });
+
+    // 8. resolvePendingToolApprovalLoop: resume DB guard returns [] -> cancelled
+    seedSelect([toolNode]);
+    mockExecuteAiStepNode.mockResolvedValueOnce({
+      status: "awaiting_tool_approval",
+      pendingApprovals: [
+        { approvalId: "a-1", toolCallId: "t-1", toolName: "rm", args: {}, signature: "sig" },
+      ],
+      toolCalls: [],
+    });
+    mockUpdateReturning
+      .mockResolvedValueOnce([{ id: "run-guard" }]) // init
+      .mockResolvedValueOnce([{ id: "run-guard" }]) // pause
+      .mockResolvedValueOnce([]); // resume guard
+    await expect(
+      fn({
+        event: { data: { runId: "run-guard", workflowId: "wf-1", userId: "user-1" } },
+        step: createStepMock([
+          {
+            data: {
+              runId: "run-guard",
+              nodeId: "n-rev",
+              approved: true,
+              toolDecisions: [{ approvalId: "a-1", approved: true }],
+            },
+          },
+        ]),
+      }),
+    ).resolves.toEqual({ success: false, cancelled: true });
+
+    // 9. failWorkflowRun does not emit when update returning is empty, and executeSingleWorkflowNode sharedCanvas=false returns null activeArtifact
+    const emitSpy = vi.fn();
+    mockUpdateReturning.mockResolvedValueOnce([]);
+    await failWorkflowRun("r-already-failed", "n1", "Ignored emit", emitSpy);
+    expect(emitSpy).not.toHaveBeenCalled();
+
+    mockSelectWhere.mockResolvedValue([{ id: "r-sc", status: "running" }]);
+    mockExecuteAiStepNode.mockResolvedValueOnce({
+      status: "completed",
+      summary: "Done",
+      artifact: { id: "a1", type: "markdown", title: "Doc", content: "# Hi" },
+      currentOutputAttachmentIds: [],
+      currentAttachmentRows: [],
+      activeWorkbookFilePath: null,
+      toolCalls: [],
+    });
+    const noSharedOut = await executeSingleWorkflowNode({
+      runId: "r-sc",
+      userId: "user-1",
+      node: toolNode,
+      stepIndex: 0,
+      allNodes: [toolNode],
+      workflowRow: {
+        ...baseWorkflow,
+        canvasConfig: { enabled: true, allowedTypes: ["markdown"], defaultType: "any", sharedCanvas: false },
+      } as any,
+      initialData: {},
+      contextData: {},
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      activeArtifact: null,
+      dryRun: false,
+      emit: vi.fn(),
+    });
+    expect(noSharedOut.status).toBe("completed");
+    if (noSharedOut.status === "completed") {
+      expect(noSharedOut.activeArtifact).toBeNull();
+    }
   });
 });

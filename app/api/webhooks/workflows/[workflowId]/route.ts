@@ -29,12 +29,17 @@ function verifySecretTimingSafe(
   return timingSafeEqual(providedDigest, expectedDigest);
 }
 
+const HTTP_TOKEN_HEADER_REGEX = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+
 function extractProvidedSecret(
   request: NextRequest,
   customHeaderName?: string,
 ): string | null {
+  const trimmed = customHeaderName?.trim().toLowerCase() ?? "";
   const headerName =
-    customHeaderName?.trim().toLowerCase() || "x-webhook-secret";
+    trimmed && HTTP_TOKEN_HEADER_REGEX.test(trimmed)
+      ? trimmed
+      : "x-webhook-secret";
   const directHeader = request.headers.get(headerName);
   if (directHeader) return directHeader;
 
@@ -126,6 +131,11 @@ export async function POST(
     },
   };
 
+  const deliveryId =
+    request.headers.get("x-request-id") ||
+    request.headers.get("x-webhook-delivery") ||
+    randomUUID();
+
   const [createdRun] = await db
     .insert(workflowRun)
     .values({
@@ -142,20 +152,35 @@ export async function POST(
     })
     .returning();
 
-  const deliveryId =
-    request.headers.get("x-request-id") ||
-    request.headers.get("x-webhook-delivery") ||
-    randomUUID();
-
-  await inngest.send({
-    id: deliveryId,
-    name: "workflows/execute.run",
-    data: {
+  try {
+    await inngest.send({
+      id: deliveryId,
+      name: "workflows/execute.run",
+      data: {
+        runId: createdRun.id,
+        workflowId: wf.id,
+        userId: wf.userId,
+      },
+    });
+  } catch (err) {
+    log.error("Failed to dispatch webhook workflow run {runId}", {
       runId: createdRun.id,
       workflowId: wf.id,
-      userId: wf.userId,
-    },
-  });
+      error: err instanceof Error ? err.message : String(err),
+    });
+    await db
+      .update(workflowRun)
+      .set({
+        status: "failed",
+        errorMessage: "Failed to dispatch workflow execution",
+        updatedAt: new Date(),
+      })
+      .where(eq(workflowRun.id, createdRun.id));
+    return NextResponse.json(
+      { error: "Failed to dispatch workflow execution" },
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({ ok: true, runId: createdRun.id }, { status: 202 });
 }

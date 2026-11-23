@@ -1,6 +1,7 @@
 "use client";
 
 import { Download, FileSpreadsheet } from "lucide-react";
+import { toast } from "sonner";
 import { downloadFile } from "@/lib/utils/download-file";
 
 /** Props for {@link WorkflowRunFilesSection}. */
@@ -31,9 +32,13 @@ function AttachmentDownloadList({
             key={`${prefix}-${attId}`}
             href={meta.url}
             download={meta.name}
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
-              downloadFile(meta.url, meta.name);
+              try {
+                await downloadFile(meta.url, meta.name);
+              } catch {
+                toast.error("Failed to download file");
+              }
             }}
             className="hover:bg-accent flex items-center justify-between rounded-md border px-3 py-2 text-xs transition-colors"
           >

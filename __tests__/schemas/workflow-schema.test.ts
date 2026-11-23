@@ -216,11 +216,48 @@ describe("Workflow Schemas", () => {
     const approval = approveWorkflowRunSchema.parse({
       runId: "550e8400-e29b-41d4-a716-446655440001",
       nodeId: "node-1",
+      gateId: "gate-1",
       approved: true,
       feedback: "Looks good",
       toolDecisions: [{ approvalId: "app-1", approved: false }],
     });
     expect(approval.approved).toBe(true);
+    expect(approval.gateId).toBe("gate-1");
     expect(approval.toolDecisions).toHaveLength(1);
+  });
+
+  it("enforces HTTP token rules for webhook secretHeaderName and requires nodes when updating edges", () => {
+    expect(
+      workflowNodeSchema.safeParse({
+        id: "wh-1",
+        type: "webhook_trigger",
+        name: "Hook",
+        position: { x: 0, y: 0 },
+        data: {
+          kind: "webhook_trigger",
+          variableName: "webhook",
+          secretHeaderName: " x-custom-sig ",
+        },
+      }).success,
+    ).toBe(true);
+
+    expect(
+      workflowNodeSchema.safeParse({
+        id: "wh-bad",
+        type: "webhook_trigger",
+        name: "Hook",
+        position: { x: 0, y: 0 },
+        data: {
+          kind: "webhook_trigger",
+          variableName: "webhook",
+          secretHeaderName: "bad header name",
+        },
+      }).success,
+    ).toBe(false);
+
+    const edgesWithoutNodes = updateWorkflowSchema.safeParse({
+      edges: [{ id: "e1", sourceNodeId: "n1", targetNodeId: "n2" }],
+    });
+    expect(edgesWithoutNodes.success).toBe(false);
   });
 });

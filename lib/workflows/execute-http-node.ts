@@ -11,6 +11,12 @@ async function fetchWithSsrfRedirectGuard(
   init: RequestInit,
 ): Promise<Response> {
   let currentUrl = initialUrl;
+  let currentMethod = init.method ?? "GET";
+  let currentHeaders: Record<string, string> = {
+    ...(init.headers as Record<string, string> | undefined),
+  };
+  let currentBody = init.body;
+  const initialOrigin = new URL(initialUrl).origin;
 
   for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
     if (hop > 0 && (await isBlockedUrl(currentUrl))) {
@@ -19,6 +25,9 @@ async function fetchWithSsrfRedirectGuard(
 
     const response = await fetch(currentUrl, {
       ...init,
+      method: currentMethod,
+      headers: currentHeaders,
+      body: currentBody,
       redirect: "manual",
     });
 
@@ -27,8 +36,34 @@ async function fetchWithSsrfRedirectGuard(
       response.status < 400 &&
       response.headers.get("location")
     ) {
-      const location = response.headers.get("location")!;
-      currentUrl = new URL(location, currentUrl).toString();
+      const prevParsed = new URL(currentUrl);
+      const nextParsed = new URL(response.headers.get("location")!, currentUrl);
+
+      if (prevParsed.protocol === "https:" && nextParsed.protocol === "http:") {
+        throw new NonRetriableError(
+          "Blocked URL: HTTPS to HTTP redirect downgrade",
+        );
+      }
+
+      if (
+        nextParsed.origin !== initialOrigin ||
+        nextParsed.origin !== prevParsed.origin
+      ) {
+        currentHeaders = {};
+        currentBody = undefined;
+      }
+
+      const shouldConvertToGet =
+        response.status === 303
+          ? currentMethod !== "GET" && currentMethod !== "HEAD"
+          : (response.status === 301 || response.status === 302) &&
+            currentMethod === "POST";
+      if (shouldConvertToGet) {
+        currentMethod = "GET";
+        currentBody = undefined;
+      }
+
+      currentUrl = nextParsed.toString();
       continue;
     }
 
@@ -116,9 +151,15 @@ export async function executeHttpRequestNode(params: {
   }
 
   const contentType = response.headers.get("content-type") ?? "";
-  const parsedData = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
+  let parsedData: unknown = null;
+  if (response.status !== 204 && response.status !== 205) {
+    const rawText = await response.text();
+    if (rawText.trim() !== "") {
+      parsedData = contentType.includes("application/json")
+        ? JSON.parse(rawText)
+        : rawText;
+    }
+  }
 
   return {
     status: response.status,

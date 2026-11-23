@@ -163,6 +163,30 @@ describe("step-tool-filtering", () => {
     expect(prompt).toContain("DRY RUN");
     expect(prompt).toContain("KB data");
     expect(prompt).toContain("SK2");
+
+    const untitledSharedPrompt = buildStepSystemPrompt({
+      compiledPrompt: "Edit",
+      nodeData: {
+        kind: "ai_step",
+        variableName: "s1",
+        prompt: "Edit",
+        mcpServerIds: [],
+        toolIds: [],
+        requiresReview: false,
+      },
+      workflowRow: {
+        globalContext: null,
+        canvasConfig: { enabled: true, allowedTypes: ["markdown"], sharedCanvas: true },
+      },
+      filteredTools,
+      skillCatalog: [],
+      preloadedSkills: [],
+      kbContext: "",
+      fileContext: "",
+      dryRun: false,
+      activeArtifact: { id: "a1", type: "markdown", title: "", content: "hello" },
+    });
+    expect(untitledSharedPrompt).toContain('"Untitled Artifact"');
   });
 
   it("throws VisionNotSupportedError when image attachments exist on non-vision model", () => {
@@ -314,5 +338,23 @@ describe("step-tool-filtering", () => {
       } as any,
     });
     expect(res.filteredTools.delegate_task).toBeDefined();
+  });
+
+  it("ignores defaultType in resolveStepCanvasPolicy when not included in allowedTypes", () => {
+    const policy = resolveStepCanvasPolicy(undefined, {
+      enabled: true,
+      allowedTypes: ["markdown"],
+      defaultType: "spreadsheet",
+    });
+    expect(policy.allowedTypes).toEqual(["markdown"]);
+    expect(policy.enforcedType).toBeNull();
+
+    const matchedPolicy = resolveStepCanvasPolicy(undefined, {
+      enabled: true,
+      allowedTypes: ["markdown", "spreadsheet"],
+      defaultType: "spreadsheet",
+    });
+    expect(matchedPolicy.allowedTypes).toEqual(["markdown", "spreadsheet"]);
+    expect(matchedPolicy.enforcedType).toBe("spreadsheet");
   });
 });

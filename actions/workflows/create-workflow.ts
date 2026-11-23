@@ -17,10 +17,13 @@ import { requireSession } from "@/lib/auth/require-session";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { toAppError } from "@/lib/error/to-app-error";
 import { defineAction } from "@/lib/factories/define-action";
-import { filterOwnedKbIds } from "@/lib/knowledgebases/filter-owned-kb-ids";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
-import { validateAndSortWorkflowGraph } from "@/lib/workflows/dag-planner";
+import { assertWorkflowKbsOwned } from "@/lib/workflows/assert-workflow-kbs-owned";
+import {
+  hasInvalidEdgeEndpoints,
+  validateAndSortWorkflowGraph,
+} from "@/lib/workflows/dag-planner";
 import { createWorkflowSchema } from "@/schemas/workflows/workflow";
 import type { CommonError } from "@/types/error/common-error";
 import type { Result } from "@/types/result";
@@ -94,6 +97,13 @@ export const createWorkflow = defineAction(
     const nodes = validated.nodes ?? defaults.nodes;
     const edges = validated.edges ?? (validated.nodes ? [] : defaults.edges);
 
+    if (hasInvalidEdgeEndpoints(nodes, edges)) {
+      return fail({
+        code: ERROR_CODE.INVALID_INPUT,
+        message: "Edge endpoints must reference nodes in this workflow",
+      });
+    }
+
     try {
       validateAndSortWorkflowGraph(nodes, edges);
     } catch (err) {
@@ -103,17 +113,17 @@ export const createWorkflow = defineAction(
       });
     }
 
-    const uniqueKbIds = [
-      ...new Set(validated.knowledgeBaseIds.filter(Boolean)),
-    ];
-    if (uniqueKbIds.length > 0) {
-      const ownedKbIds = await filterOwnedKbIds(session.user.id, uniqueKbIds);
-      if (ownedKbIds.length !== uniqueKbIds.length) {
-        return fail({
-          code: ERROR_CODE.FORBIDDEN,
-          message: "One or more knowledge bases are not accessible",
-        });
-      }
+    if (
+      !(await assertWorkflowKbsOwned(
+        session.user.id,
+        validated.knowledgeBaseIds,
+        nodes,
+      ))
+    ) {
+      return fail({
+        code: ERROR_CODE.FORBIDDEN,
+        message: "One or more knowledge bases are not accessible",
+      });
     }
 
     const subagentIds = validated.subagentIds ?? [];

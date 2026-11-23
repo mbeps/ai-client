@@ -210,4 +210,102 @@ describe("WorkflowCanvas", () => {
     }>;
     expect(rfNodes[0]?.measured).toEqual({ width: 256, height: 96 });
   });
+
+  it("supports controlled selectedNodeId/onSelectNode, preserves selectedEdgeIds, and removes edges cleanly", () => {
+    const onSelectNode = vi.fn();
+    const onEdgesChange = vi.fn();
+    const sampleEdges = [
+      {
+        id: "e1",
+        sourceNodeId: "n1",
+        targetNodeId: "n2",
+        sourceHandle: "main",
+        targetHandle: "main",
+      },
+    ];
+
+    const { rerender } = render(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={sampleEdges}
+        selectedNodeId="n1"
+        onSelectNode={onSelectNode}
+        onNodesChange={vi.fn()}
+        onEdgesChange={onEdgesChange}
+        onAddNode={vi.fn()}
+        onUpdateNode={vi.fn()}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+
+    expect(
+      (capturedReactFlowProps.nodes as Array<{ id: string; selected?: boolean }>).find(
+        (n) => n.id === "n1",
+      )?.selected,
+    ).toBe(true);
+
+    // Clicking a node notifies controlled onSelectNode
+    const rfOnNodeClick = capturedReactFlowProps.onNodeClick as (
+      e: unknown,
+      node: { id: string },
+    ) => void;
+    act(() => {
+      rfOnNodeClick({}, { id: "n2" });
+    });
+    expect(onSelectNode).toHaveBeenCalledWith("n2");
+
+    // Selecting an edge preserves selected state across edge array rebuilds
+    const rfOnEdgesChange = capturedReactFlowProps.onEdgesChange as (changeset: {
+      applyTo: (edges: Array<Record<string, unknown>>) => Array<Record<string, unknown>>;
+    }) => void;
+    act(() => {
+      rfOnEdgesChange({
+        applyTo: (prev) => prev.map((e) => ({ ...e, selected: true })),
+      });
+    });
+
+    rerender(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={[...sampleEdges]}
+        selectedNodeId="n2"
+        onSelectNode={onSelectNode}
+        onNodesChange={vi.fn()}
+        onEdgesChange={onEdgesChange}
+        onAddNode={vi.fn()}
+        onUpdateNode={vi.fn()}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+
+    expect(
+      (capturedReactFlowProps.edges as Array<{ id: string; selected?: boolean }>)[0]
+        ?.selected,
+    ).toBe(true);
+
+    // Pane click clears both node selection and selected edges
+    const rfOnPaneClick = capturedReactFlowProps.onPaneClick as () => void;
+    act(() => {
+      rfOnPaneClick();
+    });
+    expect(onSelectNode).toHaveBeenCalledWith(null);
+    expect(
+      (capturedReactFlowProps.edges as Array<{ id: string; selected?: boolean }>)[0]
+        ?.selected,
+    ).toBe(false);
+
+    // Edge removal notifies onEdgesChange
+    act(() => {
+      (
+        capturedReactFlowProps.onEdgesChange as (c: {
+          applyTo: () => Array<Record<string, unknown>>;
+        }) => void
+      )({
+        applyTo: () => [],
+      });
+    });
+    expect(onEdgesChange).toHaveBeenCalledWith([]);
+  });
 });

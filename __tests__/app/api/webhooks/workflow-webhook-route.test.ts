@@ -7,6 +7,10 @@ const mockInsertReturning = vi.hoisted(() => vi.fn());
 const mockInsertValues = vi.hoisted(() =>
   vi.fn(() => ({ returning: mockInsertReturning })),
 );
+const mockUpdateWhere = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const mockUpdateSet = vi.hoisted(() =>
+  vi.fn(() => ({ where: mockUpdateWhere })),
+);
 
 vi.mock("@/drizzle/db", () => ({
   db: {
@@ -16,6 +20,7 @@ vi.mock("@/drizzle/db", () => ({
       })),
     })),
     insert: vi.fn(() => ({ values: mockInsertValues })),
+    update: vi.fn(() => ({ set: mockUpdateSet })),
   },
 }));
 
@@ -152,5 +157,37 @@ describe("POST /api/webhooks/workflows/[workflowId]", () => {
       params: Promise.resolve({ workflowId: "wf-1" }),
     });
     expect(resBearer.status).toBe(202);
+  });
+
+  it("falls back to x-webhook-secret when secretHeaderName is invalid and marks run failed with 503 if inngest.send throws", async () => {
+    mockSelectWhere
+      .mockResolvedValueOnce([{ id: "wf-1", userId: "u1", webhookSecret: "super-secret" }])
+      .mockResolvedValueOnce([
+        {
+          id: "n1",
+          type: "webhook_trigger",
+          data: {
+            kind: "webhook_trigger",
+            variableName: "webhook",
+            secretHeaderName: "invalid header name",
+          },
+        },
+      ]);
+
+    vi.mocked(inngest.send).mockRejectedValueOnce(new Error("Inngest unreachable"));
+
+    const req = new NextRequest("http://localhost:3000/api/webhooks/workflows/wf-1", {
+      method: "POST",
+      headers: { "x-webhook-secret": "super-secret" },
+      body: "{}",
+    });
+    const res = await POST(req, { params: Promise.resolve({ workflowId: "wf-1" }) });
+    expect(res.status).toBe(503);
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "failed",
+        errorMessage: "Failed to dispatch workflow execution",
+      }),
+    );
   });
 });

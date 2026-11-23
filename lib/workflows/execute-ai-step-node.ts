@@ -1,5 +1,5 @@
 import { generateText, isStepCount } from "ai";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { workflowRun } from "@/drizzle/schemas/workflow-schema";
@@ -294,7 +294,7 @@ export async function executeAiStepNode(
     await db
       .update(workflowRun)
       .set({ status: "failed", errorMessage: classified.message })
-      .where(eq(workflowRun.id, runId));
+      .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")));
     await emit({
       type: "error",
       nodeId,

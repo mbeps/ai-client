@@ -52,14 +52,32 @@ export const startWorkflowRunAction = defineAction(
       return ok({ success: true });
     }
 
-    await inngest.send({
-      name: "workflows/execute.run",
-      data: {
-        runId,
-        workflowId: claimed.workflowId,
-        userId: session.user.id,
-      },
-    });
+    try {
+      await inngest.send({
+        name: "workflows/execute.run",
+        data: {
+          runId,
+          workflowId: claimed.workflowId,
+          userId: session.user.id,
+        },
+      });
+    } catch {
+      await db
+        .update(workflowRun)
+        .set({ status: "pending", updatedAt: new Date() })
+        .where(
+          and(
+            eq(workflowRun.id, runId),
+            eq(workflowRun.userId, session.user.id),
+            eq(workflowRun.status, "running"),
+          ),
+        );
+      return fail({
+        code: ERROR_CODE.INTERNAL,
+        message: "Failed to dispatch workflow execution",
+        ref: "inngest-dispatch",
+      });
+    }
 
     return ok({ success: true });
   },
