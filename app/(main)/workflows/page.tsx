@@ -3,6 +3,7 @@ import Link from "next/link";
 import { listWorkflows } from "@/actions/workflows/list-workflows";
 import { PageHeader } from "@/components/page-header";
 import { PageContainer } from "@/components/shared/page-container";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WorkflowCard } from "@/components/workflows/editor/workflow-card";
 import { ROUTES } from "@/config/routes";
@@ -19,6 +20,14 @@ export default async function WorkflowsPage() {
       <PageHeader
         icon={<Workflow className="h-8 w-8 text-amber-500" />}
         title={ROUTES.WORKFLOWS.AUTOMATIONS.name}
+        badge={
+          <Badge
+            variant="outline"
+            className="border-amber-500/30 bg-amber-500/10 px-1.5 py-0 font-mono text-[10px] font-semibold tracking-wider text-amber-700 uppercase dark:text-amber-300"
+          >
+            BETA
+          </Badge>
+        }
         description="Build and run visual multi-node AI workflows, branches, HTTP integrations, and interactive Canvas outputs."
         action={
           <Button asChild>

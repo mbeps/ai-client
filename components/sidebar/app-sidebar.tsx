@@ -50,6 +50,7 @@ import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
 import { useAppStore } from "@/lib/store/use-app-store";
 import { cn } from "@/lib/utils";
+import { Badge } from "../ui/badge";
 
 /**
  * Main application sidebar for authenticated routes.
@@ -186,6 +187,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     >
                       <Workflow className="mr-2 h-4 w-4 text-amber-500" />
                       <span>{ROUTES.WORKFLOWS.AUTOMATIONS.name}</span>
+                      <Badge
+                        variant="outline"
+                        className="ml-auto border-amber-500/30 bg-amber-500/10 px-1.5 py-0 font-mono text-[10px] font-semibold tracking-wider text-amber-700 uppercase dark:text-amber-300"
+                      >
+                        BETA
+                      </Badge>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
