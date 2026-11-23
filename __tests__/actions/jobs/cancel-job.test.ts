@@ -29,7 +29,12 @@ vi.mock("@/lib/inngest/client", () => ({
 }));
 
 // Mock Drizzle database
-const mockUpdateWhere = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+const mockUpdateReturning = vi.hoisted(() =>
+  vi.fn().mockResolvedValue([{ id: "run-wf-999" }]),
+);
+const mockUpdateWhere = vi.hoisted(() =>
+  vi.fn().mockReturnValue({ returning: mockUpdateReturning }),
+);
 const mockUpdateSet = vi.hoisted(() => vi.fn().mockReturnValue({ where: mockUpdateWhere }));
 const mockUpdate = vi.hoisted(() => vi.fn().mockReturnValue({ set: mockUpdateSet }));
 
@@ -40,7 +45,7 @@ vi.mock("@/drizzle/db", () => ({
 }));
 
 import { cancelJob } from "@/actions/jobs/cancel-job";
-import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
+import { workflowRun } from "@/drizzle/schemas/workflow-schema";
 
 describe("cancelJob Server Action", () => {
   const mockUser = { id: "user-123", email: "test@example.com" };
@@ -146,29 +151,49 @@ describe("cancelJob Server Action", () => {
     });
   });
 
-  describe("Dual-Layer Abort for Transform Workflows", () => {
-    it("updates transformRun status in DB to failed", async () => {
+  describe("Dual-Layer Abort for DAG Workflows", () => {
+    it("updates workflowRun status in DB to failed and emits workflows/run.cancel", async () => {
+      mockUpdateReturning.mockResolvedValueOnce([{ id: "run-wf-999" }]);
       const result = await cancelJob("run-123", {
-        transformRunId: "run-tf-999",
+        workflowRunId: "run-wf-999",
       });
 
       expect(mockCancelInngestRun).toHaveBeenCalledWith("run-123", mockUser.id);
-      expect(mockUpdate).toHaveBeenCalledWith(transformRun);
+      expect(mockUpdate).toHaveBeenCalledWith(workflowRun);
       expect(mockUpdateSet).toHaveBeenCalledWith({
         status: "failed",
         errorMessage: "Cancelled by user",
       });
       expect(mockUpdateWhere).toHaveBeenCalled();
-      expect(mockInngest.send).not.toHaveBeenCalled();
+      expect(mockUpdateReturning).toHaveBeenCalled();
+      expect(mockInngest.send).toHaveBeenCalledWith({
+        name: "workflows/run.cancel",
+        data: { runId: "run-wf-999" },
+      });
       expect(result).toEqual({ ok: true, value: { success: true } });
+    });
+
+    it("returns NOT_FOUND and skips workflows/run.cancel when workflowRun does not belong to user or is missing", async () => {
+      mockUpdateReturning.mockResolvedValueOnce([]);
+      const result = await cancelJob("run-123", {
+        workflowRunId: "run-wf-foreign",
+      });
+
+      expect(mockInngest.send).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        ok: false,
+        error: expect.objectContaining({
+          code: "NOT_FOUND",
+        }),
+      });
     });
   });
 
-  describe("Dual-Layer Abort with Both Chat and Transform Options", () => {
+  describe("Dual-Layer Abort with Both Chat and Workflow Options", () => {
     it("executes both abort pathways if both options are provided", async () => {
       const result = await cancelJob("run-123", {
         chatId: "chat-xyz",
-        transformRunId: "run-tf-999",
+        workflowRunId: "run-wf-999",
       });
 
       expect(mockChatAbortRegistry.abort).toHaveBeenCalledWith("chat-xyz");
@@ -179,7 +204,7 @@ describe("cancelJob Server Action", () => {
           userId: mockUser.id,
         },
       });
-      expect(mockUpdate).toHaveBeenCalledWith(transformRun);
+      expect(mockUpdate).toHaveBeenCalledWith(workflowRun);
       expect(result).toEqual({ ok: true, value: { success: true } });
     });
   });

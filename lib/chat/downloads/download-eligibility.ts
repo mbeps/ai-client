@@ -7,6 +7,7 @@ import {
 const STORAGE_URL_SUBSTRINGS = [
   "/attachments/",
   "/outputs/",
+  "/workflow-outputs/",
   "/transforms/",
   "X-Amz-Signature",
   "X-Amz-Credential",

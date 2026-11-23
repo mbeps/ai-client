@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { X } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { ModelDetailsHoverCard } from "@/components/shared/model-details-hover-card";
 import {
   Combobox,
@@ -32,6 +33,10 @@ interface ModelSelectorProps {
   disabled?: boolean;
   /** Filter model list by runtime type (chat by default). */
   type?: "chat" | "embedding" | "both";
+  /** Allow clearing the selection back to empty string (for optional overrides). */
+  allowClear?: boolean;
+  /** Placeholder shown when no model is selected and allowClear is true. */
+  placeholder?: string;
 }
 
 /**
@@ -61,17 +66,31 @@ export function ModelSelector({
   className,
   disabled,
   type = "chat",
+  allowClear = false,
+  placeholder,
 }: ModelSelectorProps) {
   const { models, isLoading } = useUserModels(type);
   const isEmpty = !isLoading && models.length === 0;
-
-  const selectedModel = useMemo(
-    () =>
-      models.find((m) => m.id === value || m.modelId === value) ??
-      models[0] ??
-      null,
-    [models, value],
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
+    null,
   );
+
+  // Portal inside the nearest dialog/sheet so Radix modal focus-trap doesn't block pointer/input events.
+  const triggerRef = useCallback((el: HTMLElement | null) => {
+    const dialog =
+      (el?.closest('[role="dialog"]') as HTMLElement | null) ?? null;
+    setPortalContainer((prev) => (prev === dialog ? prev : dialog));
+  }, []);
+
+  const selectedModel = useMemo(() => {
+    const match = models.find((m) => m.id === value || m.modelId === value);
+    if (match) return match;
+    return allowClear ? null : (models[0] ?? null);
+  }, [models, value, allowClear]);
+
+  const hasUnavailableOverride = allowClear && Boolean(value) && !selectedModel;
+  const canShowClear =
+    allowClear && !disabled && (Boolean(selectedModel) || Boolean(value));
 
   const groupedModels = useMemo<ModelGroup[]>(() => {
     const groups = new Map<string, UserModelOption[]>();
@@ -87,67 +106,105 @@ export function ModelSelector({
   }, [models]);
 
   return (
-    <Combobox
-      items={groupedModels}
-      value={selectedModel}
-      onValueChange={(val) =>
-        val && onValueChange((val as UserModelOption).modelId)
-      }
-      itemToStringValue={(m) => (m as UserModelOption).label}
-      disabled={disabled || isLoading || isEmpty}
+    <div
+      className={cn(
+        "relative flex items-center",
+        className?.includes("w-full") && "w-full",
+      )}
     >
-      <ComboboxTrigger
-        aria-label="Select model"
-        className={cn(
-          "border-border/60 hover:bg-muted/70 hover:text-foreground focus-visible:ring-ring flex h-7 w-[200px] cursor-default items-center justify-between gap-2 rounded-full border px-2 text-left text-xs transition-colors focus-visible:ring-1 disabled:cursor-not-allowed",
-          className,
-        )}
+      <Combobox
+        items={groupedModels}
+        value={selectedModel}
+        onValueChange={(val) =>
+          onValueChange(val ? (val as UserModelOption).modelId : "")
+        }
+        itemToStringValue={(m) => (m as UserModelOption).label}
+        disabled={disabled || isLoading || isEmpty}
       >
-        <span
+        <ComboboxTrigger
+          ref={triggerRef}
+          aria-label="Select model"
           className={cn(
-            "truncate",
-            (isLoading || isEmpty) && "text-muted-foreground",
+            "border-border/60 hover:bg-muted/70 hover:text-foreground focus-visible:ring-ring flex h-7 w-[200px] cursor-default items-center justify-between gap-2 rounded-full border px-2 text-left text-xs transition-colors focus-visible:ring-1 disabled:cursor-not-allowed",
+            allowClear && (selectedModel || value) && "pr-7",
+            className,
           )}
         >
-          <ComboboxValue
-            placeholder={
-              isLoading ? "Loading models..." : "No models configured"
-            }
-          />
-        </span>
-      </ComboboxTrigger>
+          <span
+            className={cn(
+              "truncate",
+              (isLoading ||
+                isEmpty ||
+                (!selectedModel && allowClear && !hasUnavailableOverride)) &&
+                "text-muted-foreground",
+            )}
+          >
+            <ComboboxValue>
+              {(selected) =>
+                selected
+                  ? (selected as UserModelOption).label
+                  : isLoading
+                    ? "Loading models..."
+                    : isEmpty
+                      ? "No models configured"
+                      : hasUnavailableOverride
+                        ? `Unavailable (${value})`
+                        : (placeholder ?? "Select model...")
+              }
+            </ComboboxValue>
+          </span>
+        </ComboboxTrigger>
 
-      <ComboboxContent className="w-64 p-0" side="top" align="start">
-        <ComboboxFilterInput
-          placeholder="Search models..."
-          aria-label="Search models"
-        />
-        <ComboboxEmpty className="py-3">No models found.</ComboboxEmpty>
-        <ComboboxList>
-          {(group: ModelGroup) => (
-            <ComboboxGroup key={group.provider} items={group.items}>
-              <ComboboxLabel className="text-muted-foreground/70 text-[10px] font-semibold tracking-wider capitalize">
-                {group.provider}
-              </ComboboxLabel>
-              <ComboboxCollection>
-                {(model: UserModelOption) => (
-                  <ComboboxItem
-                    key={model.id}
-                    value={model}
-                    className="p-0! text-xs"
-                  >
-                    <ModelDetailsHoverCard model={model}>
-                      <div className="flex w-full cursor-default items-center gap-2 px-2 py-1.5">
-                        <span className="truncate">{model.label}</span>
-                      </div>
-                    </ModelDetailsHoverCard>
-                  </ComboboxItem>
-                )}
-              </ComboboxCollection>
-            </ComboboxGroup>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
+        <ComboboxContent
+          className="w-64 p-0"
+          side="top"
+          align="start"
+          portalContainer={portalContainer}
+        >
+          <ComboboxFilterInput
+            placeholder="Search models..."
+            aria-label="Search models"
+          />
+          <ComboboxEmpty className="py-3">No models found.</ComboboxEmpty>
+          <ComboboxList>
+            {(group: ModelGroup) => (
+              <ComboboxGroup key={group.provider} items={group.items}>
+                <ComboboxLabel className="text-muted-foreground/70 text-[10px] font-semibold tracking-wider capitalize">
+                  {group.provider}
+                </ComboboxLabel>
+                <ComboboxCollection>
+                  {(model: UserModelOption) => (
+                    <ComboboxItem
+                      key={model.id}
+                      value={model}
+                      className="p-0! text-xs"
+                    >
+                      <ModelDetailsHoverCard model={model}>
+                        <div className="flex w-full cursor-default items-center gap-2 px-2 py-1.5">
+                          <span className="truncate">{model.label}</span>
+                        </div>
+                      </ModelDetailsHoverCard>
+                    </ComboboxItem>
+                  )}
+                </ComboboxCollection>
+              </ComboboxGroup>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+      {canShowClear && (
+        <button
+          type="button"
+          aria-label="Clear model override"
+          onClick={(e) => {
+            e.stopPropagation();
+            onValueChange("");
+          }}
+          className="text-muted-foreground hover:text-foreground absolute right-7 rounded-sm p-0.5 transition-colors"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
   );
 }

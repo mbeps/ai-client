@@ -379,13 +379,13 @@ describe("deleteAgent", () => {
     expect(chainable.transaction).not.toHaveBeenCalled();
   });
 
-  it("deletes agent and unbinds chat, agent, project, transformAgent, skill, and prompt references in transaction", async () => {
+  it("deletes agent and unbinds chat, agent, project, workflow, skill, and prompt references in transaction", async () => {
     chainable.returning.mockResolvedValueOnce([{ id: AGENT_ID }]);
     const res = await deleteAgent(AGENT_ID);
     expect(res).toEqual({ ok: true, value: { deletedCount: 1 } });
     expect(chainable.transaction).toHaveBeenCalledTimes(1);
     expect(chainable.delete).toHaveBeenCalledTimes(1);
-    // 1 chat unbind + 5 array_remove unbinds (agent, project, transformAgent, skill, prompt)
+    // 1 chat unbind + 5 array_remove unbinds (agent, project, workflow, skill, prompt)
     expect(chainable.update).toHaveBeenCalledTimes(6);
   });
 
@@ -400,16 +400,16 @@ describe("deleteAgent", () => {
 });
 
 describe("listAgents", () => {
-  it("returns owned agents with computed usedByCount across agents, projects, and transformAgents", async () => {
+  it("returns owned agents with computed usedByCount across agents, projects, and workflows", async () => {
     chainable.orderBy.mockResolvedValueOnce([
       AGENT_ROW,
       { ...AGENT_ROW, id: SUBAGENT_ID, name: "Leaf" },
     ]);
-    // 2 additional select().from().where() calls for project and transformAgent
+    // 2 additional select().from().where() calls for project and workflow
     chainable.where
       .mockImplementationOnce(() => chainable) // first query: agent (chains to orderBy)
       .mockResolvedValueOnce([{ subagentIds: [SUBAGENT_ID] }]) // project
-      .mockResolvedValueOnce([{ subagentIds: [SUBAGENT_ID] }]); // transformAgent
+      .mockResolvedValueOnce([{ subagentIds: [SUBAGENT_ID] }]); // workflow
 
     const res = await listAgents();
     expect(res.ok).toBe(true);

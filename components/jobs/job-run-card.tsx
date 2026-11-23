@@ -9,8 +9,8 @@ import {
   ExternalLink,
   FileText,
   Languages,
-  List,
   MessageSquare,
+  Workflow,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,7 @@ function formatJobDuration(durationMs?: number): string | null {
 const JOB_TYPE_META: Record<JobType, { label: string; icon: typeof Activity }> =
   {
     chat: { label: "Chat", icon: MessageSquare },
-    transform: { label: "Step-by-Step", icon: List },
+    workflow: { label: "Workflow", icon: Workflow },
     translation: { label: "Translation", icon: Languages },
     "kb-ingest": { label: "KB Ingest", icon: FileText },
     "kb-reindex": { label: "KB Re-index", icon: Database },

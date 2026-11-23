@@ -50,9 +50,9 @@ vi.mock("@/actions/skills/list-skills", () => ({
   listSkills: vi.fn(),
 }));
 
-// Transform Agents
-vi.mock("@/actions/transform-agents/list-transform-agents", () => ({
-  listTransformAgents: vi.fn(),
+// Workflows
+vi.mock("@/actions/workflows/list-workflows", () => ({
+  listWorkflows: vi.fn(),
 }));
 
 // User Settings
@@ -71,7 +71,7 @@ import { DEFAULT_AGENT_GUARDRAILS } from "@/drizzle/schemas/agent-schema";
 import { listMcpServers as listMcpServersAction } from "@/actions/mcp-servers/list-mcp-servers";
 import { listPublicMcpServers as listPublicMcpServersAction } from "@/actions/mcp-servers/list-public-mcp-servers";
 import { listSkills as listSkillsAction } from "@/actions/skills/list-skills";
-import { listTransformAgents as listTransformAgentsAction } from "@/actions/transform-agents/list-transform-agents";
+import { listWorkflows as listWorkflowsAction } from "@/actions/workflows/list-workflows";
 import { getUserSettings as getUserSettingsAction } from "@/actions/user-settings/get-user-settings";
 import { discoverAllPrompts as discoverAllPromptsAction } from "@/actions/mcp/discover-all-prompts";
 // ─── Import mocked modules for per-test configuration ─────────────────────
@@ -461,7 +461,7 @@ describe("T5.4 resetEntityState clears entity state", () => {
     expect(useAppStore.getState().prompts).toHaveLength(0);
     expect(useAppStore.getState().mcpServers).toHaveLength(0);
     expect(useAppStore.getState().publicMcpServers).toHaveLength(0);
-    expect(useAppStore.getState().transformAgents).toHaveLength(0);
+    expect(useAppStore.getState().workflows).toHaveLength(0);
     expect(useAppStore.getState().mcpPrompts).toHaveLength(0);
     expect(useAppStore.getState().userSettings).toBeNull();
   });
@@ -523,44 +523,53 @@ describe("T5.4 resetEntityState clears entity state", () => {
     expect(skills[1].files).toEqual([]);
   });
 
-  it("loads transform agents with valid and invalid steps JSON", async () => {
-    vi.mocked(listTransformAgentsAction).mockResolvedValueOnce([
+  it("loads workflows into store with defaults", async () => {
+    vi.mocked(listWorkflowsAction).mockResolvedValueOnce([
       {
-        id: "ta-1",
+        id: "wf-1",
         userId: "u1",
-        name: "Agent 1",
+        name: "Workflow 1",
         description: "desc",
         globalContext: "context",
         modelId: "gpt-4",
         tools: ["tool-1"],
+        skillMode: "dynamic",
+        skillIds: [],
         knowledgeBaseIds: ["kb-1"],
+        subagentIds: [],
         requiresFileUpload: true,
-        steps: JSON.stringify([{ name: "step 1" }]),
+        canvasConfig: { enabled: true, allowedTypes: ["markdown"], defaultType: "markdown" },
+        approvalConfig: { defaultReviewGate: "none", toolApprovalMode: "auto", autoApprovedTools: [] },
+        nodeCount: 2,
+        hasManualTrigger: true,
+        hasWebhookTrigger: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      },
+      } as any,
       {
-        id: "ta-2",
+        id: "wf-2",
         userId: "u1",
-        name: "Agent 2",
+        name: "Workflow 2",
         description: null,
         globalContext: null,
         modelId: null,
         tools: null,
+        skillMode: "dynamic",
+        skillIds: null,
         knowledgeBaseIds: null,
+        subagentIds: null,
         requiresFileUpload: false,
-        steps: "invalid-json-steps",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      },
+      } as any,
     ]);
 
-    await useAppStore.getState().loadTransformAgents();
-    const agents = useAppStore.getState().transformAgents;
-    expect(agents).toHaveLength(2);
-    expect(agents[0].steps).toHaveLength(1);
-    expect(agents[1].steps).toEqual([]);
-    expect(agents[1].description).toBe("");
+    await useAppStore.getState().loadWorkflows();
+    const workflows = useAppStore.getState().workflows;
+    expect(workflows).toHaveLength(2);
+    expect(workflows[0].nodeCount).toBe(2);
+    expect(workflows[1].description).toBe("");
+    expect(workflows[1].tools).toEqual([]);
   });
 
   it("loads public MCP servers into store", async () => {

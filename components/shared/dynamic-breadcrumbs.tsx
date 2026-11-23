@@ -8,8 +8,8 @@ import { useShallow } from "zustand/react/shallow";
 import { getKnowledgebase } from "@/actions/knowledgebases/get-knowledgebase";
 import { listProviders } from "@/actions/providers/list-providers";
 import { getSkill } from "@/actions/skills/get-skill";
-import { getTransformAgent } from "@/actions/transform-agents/get-transform-agent";
-import { getTransformRun } from "@/actions/transform-runs/get-transform-run";
+import { getWorkflowRun } from "@/actions/workflow-runs/get-workflow-run";
+import { getWorkflow } from "@/actions/workflows/get-workflow";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -44,7 +44,6 @@ const ROUTE_LABELS: Record<string, string> = {
   prompts: "Prompts",
   workflows: "Workflows",
   translation: "Translation",
-  transform: "Step-by-Step Automations",
   new: "New",
 };
 
@@ -65,7 +64,7 @@ interface StoreLookupEntities {
   prompts: Array<{ id: string }>;
   skills: Array<{ id: string }>;
   mcpServers: Array<{ id: string }>;
-  transformAgents: Array<{ id: string }>;
+  workflows: Array<{ id: string }>;
 }
 
 /**
@@ -89,21 +88,21 @@ interface BreadcrumbLabelContext {
   prompts: Array<{ id: string; title: string }>;
   skills: Array<{ id: string; name: string; displayName?: string | null }>;
   mcpServers: Array<{ id: string; name: string }>;
-  transformAgents: Array<{ id: string; name: string }>;
+  workflows: Array<{ id: string; name: string }>;
   resolvedLabels: Record<string, string>;
 }
 
 /**
- * Resolves a transform workflow run segment to a formatted creation date string.
+ * Resolves a workflow run segment to a formatted creation date string.
  *
  * @param segment - Run UUID segment
  * @returns Formatted date string or null if not found/error
  */
-async function resolveTransformRunLabel(
+async function resolveWorkflowRunLabel(
   segment: string,
 ): Promise<string | null> {
   try {
-    const res = await getTransformRun(segment);
+    const res = await getWorkflowRun(segment);
     if (res.ok && res.value) {
       return format(new Date(res.value.createdAt), "dd/MM/yyyy HH:mm");
     }
@@ -114,21 +113,19 @@ async function resolveTransformRunLabel(
 }
 
 /**
- * Resolves a transform workflow agent segment to its agent name.
+ * Resolves a workflow segment to its name.
  *
- * @param segment - Agent UUID segment
- * @returns Agent name or null if not found/error
+ * @param segment - Workflow UUID segment
+ * @returns Workflow name or null if not found/error
  */
-async function resolveTransformAgentLabel(
-  segment: string,
-): Promise<string | null> {
+async function resolveWorkflowLabel(segment: string): Promise<string | null> {
   try {
-    const res = await getTransformAgent(segment);
+    const res = await getWorkflow(segment);
     if (res.ok && res.value) {
       return res.value.name;
     }
   } catch (err) {
-    logger.error("Failed to resolve transform agent label", err);
+    logger.error("Failed to resolve workflow label", err);
   }
   return null;
 }
@@ -205,12 +202,12 @@ async function resolveDynamicSegmentLabel(
   prevSegment: string | undefined,
   pathname: string,
 ): Promise<string | null> {
-  if (pathname.startsWith(ROUTES.WORKFLOWS.TRANSFORM.path)) {
+  if (pathname.startsWith(ROUTES.WORKFLOWS.AUTOMATIONS.path)) {
     if (prevSegment && UUID_REGEX.test(prevSegment)) {
-      return resolveTransformRunLabel(segment);
+      return resolveWorkflowRunLabel(segment);
     }
-    if (prevSegment === "transform") {
-      return resolveTransformAgentLabel(segment);
+    if (prevSegment === "workflows") {
+      return resolveWorkflowLabel(segment);
     }
     return null;
   }
@@ -248,7 +245,7 @@ function isSegmentInStore(
   if (store.prompts.some((p) => p.id === segment)) return true;
   if (store.skills.some((s) => s.id === segment)) return true;
   if (store.mcpServers.some((s) => s.id === segment)) return true;
-  if (store.transformAgents.some((a) => a.id === segment)) return true;
+  if (store.workflows.some((w) => w.id === segment)) return true;
   return false;
 }
 
@@ -275,12 +272,7 @@ function resolveStoreEntityLabel(
   segment: string,
   ctx: Pick<
     BreadcrumbLabelContext,
-    | "projects"
-    | "agents"
-    | "prompts"
-    | "skills"
-    | "mcpServers"
-    | "transformAgents"
+    "projects" | "agents" | "prompts" | "skills" | "mcpServers" | "workflows"
   >,
 ): string | undefined {
   const project = ctx.projects.find((p) => p.id === segment);
@@ -298,8 +290,8 @@ function resolveStoreEntityLabel(
   const mcp = ctx.mcpServers.find((s) => s.id === segment);
   if (mcp) return mcp.name;
 
-  const transformAgent = ctx.transformAgents.find((a) => a.id === segment);
-  if (transformAgent) return transformAgent.name;
+  const wf = ctx.workflows.find((w) => w.id === segment);
+  if (wf) return wf.name;
 
   return undefined;
 }
@@ -389,14 +381,14 @@ export function DynamicBreadcrumbs() {
     skills,
     mcpServers,
     publicMcpServers,
-    transformAgents,
+    workflows,
     loadProjects,
     loadPrompts,
     loadAgents,
     loadSkills,
     loadMcpServers,
     loadPublicMcpServers,
-    loadTransformAgents,
+    loadWorkflows,
   } = useAppStore(
     useShallow((state) => ({
       projects: state.projects,
@@ -405,14 +397,14 @@ export function DynamicBreadcrumbs() {
       skills: state.skills,
       mcpServers: state.mcpServers,
       publicMcpServers: state.publicMcpServers,
-      transformAgents: state.transformAgents,
+      workflows: state.workflows,
       loadProjects: state.loadProjects,
       loadPrompts: state.loadPrompts,
       loadAgents: state.loadAgents,
       loadSkills: state.loadSkills,
       loadMcpServers: state.loadMcpServers,
       loadPublicMcpServers: state.loadPublicMcpServers,
-      loadTransformAgents: state.loadTransformAgents,
+      loadWorkflows: state.loadWorkflows,
     })),
   );
 
@@ -493,15 +485,15 @@ export function DynamicBreadcrumbs() {
     }
   }, [publicMcpServers.length, loadPublicMcpServers]);
 
-  // Load transform agents if on a transform workflow path
+  // Load workflows if on a workflow path
   React.useEffect(() => {
     if (
-      pathname.includes(ROUTES.WORKFLOWS.TRANSFORM.path) &&
-      transformAgents.length === 0
+      pathname.includes(ROUTES.WORKFLOWS.AUTOMATIONS.path) &&
+      workflows.length === 0
     ) {
-      loadTransformAgents().catch(() => {});
+      loadWorkflows().catch(() => {});
     }
-  }, [pathname, transformAgents.length, loadTransformAgents]);
+  }, [pathname, workflows.length, loadWorkflows]);
 
   // Resolve IDs that aren't in state
   React.useEffect(() => {
@@ -520,7 +512,7 @@ export function DynamicBreadcrumbs() {
               prompts,
               skills,
               mcpServers,
-              transformAgents,
+              workflows,
             },
             chatId,
             Boolean(currentChatData),
@@ -564,7 +556,7 @@ export function DynamicBreadcrumbs() {
     prompts,
     skills,
     mcpServers,
-    transformAgents,
+    workflows,
     chatId,
     currentChatData,
     resolvedLabels,
@@ -589,7 +581,7 @@ export function DynamicBreadcrumbs() {
             prompts,
             skills,
             mcpServers,
-            transformAgents,
+            workflows,
             resolvedLabels,
           });
 

@@ -7,6 +7,8 @@ interface PageHeaderProps {
   icon: React.ReactNode;
   /** Primary heading text. */
   title: string;
+  /** Optional badge displayed next to the title. */
+  badge?: React.ReactNode;
   /** Supporting subheading shown below the title. */
   description: string;
   /** Optional action element (e.g. a button) aligned to the far right. */
@@ -25,6 +27,7 @@ interface PageHeaderProps {
 export function PageHeader({
   icon,
   title,
+  badge,
   description,
   action,
 }: PageHeaderProps) {
@@ -33,7 +36,10 @@ export function PageHeader({
       <div className="flex items-center gap-3">
         {icon}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+            {badge}
+          </div>
           <p className="text-muted-foreground">{description}</p>
         </div>
       </div>

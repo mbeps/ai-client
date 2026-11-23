@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createProjectSchema, projectSchema, updateProjectSchema } from "@/schemas/project/project";
 import { createAgentSchema, agentEntitySchema, updateAgentSchema } from "@/schemas/agent/agent";
-import { createTransformAgentSchema, updateTransformAgentSchema } from "@/schemas/workflows/transform-agent";
+import {
+  createWorkflowSchema,
+  updateWorkflowSchema,
+} from "@/schemas/workflows/workflow";
 import { skillModeSchema, skillIdsSchema } from "@/schemas/skill/skill-config";
 
 describe("Skill Config Schemas", () => {
@@ -49,15 +52,15 @@ describe("Skill Config Schemas", () => {
     expect(agentEntitySchema.shape.skillMode).toBeDefined();
   });
 
-  it("should accept skillMode and skillIds in transform agent schemas", () => {
-    const data = createTransformAgentSchema.parse({
-      name: "Test Agent",
+  it("should accept skillMode and skillIds in workflow schemas", () => {
+    const data = createWorkflowSchema.parse({
+      name: "Test Workflow",
       skillMode: "dynamic",
       skillIds: [],
     });
     expect(data.skillMode).toBe("dynamic");
 
-    const updateData = updateTransformAgentSchema.parse({
+    const updateData = updateWorkflowSchema.parse({
       skillMode: "specific",
       skillIds: ["skill-x"],
     });
@@ -67,11 +70,11 @@ describe("Skill Config Schemas", () => {
 
   it("should not inject skill defaults into a partial update", () => {
     // Regression: `skillModeSchema.optional()` still applies the inner `.default()`
-    // in Zod v4, so a partial update would silently reset the agent's skills.
-    const partial = updateTransformAgentSchema.parse({ name: "Renamed" });
+    // in Zod v4, so a partial update would silently reset the workflow's skills.
+    const partial = updateWorkflowSchema.parse({ name: "Renamed" });
     expect(partial.skillMode).toBeUndefined();
     expect(partial.skillIds).toBeUndefined();
     expect(partial.tools).toBeUndefined();
-    expect(partial.steps).toBeUndefined();
+    expect(partial.nodes).toBeUndefined();
   });
 });

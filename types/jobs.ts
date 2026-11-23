@@ -3,7 +3,7 @@
  */
 export type JobType =
   | "chat"
-  | "transform"
+  | "workflow"
   | "translation"
   | "kb-ingest"
   | "kb-reindex"

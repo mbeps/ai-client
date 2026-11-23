@@ -92,8 +92,8 @@ export function resolveJobType(eventName?: string | null): JobType {
   switch (eventName) {
     case "chat/response.generate":
       return "chat";
-    case "workflows/transform.execute":
-      return "transform";
+    case "workflows/execute.run":
+      return "workflow";
     case "workflows/translate.execute":
       return "translation";
     case "knowledgebase/document.ingest":
@@ -269,17 +269,17 @@ function extractPayloadEntityId(
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function resolveTransformUrl(
+function resolveWorkflowUrl(
   payloadData?: Record<string, any>,
   entityId?: string,
 ): string {
-  if (payloadData?.agentId && entityId) {
-    return `/transform/${payloadData.agentId}/${entityId}`;
+  if (payloadData?.workflowId && entityId) {
+    return `/workflows/${payloadData.workflowId}/${entityId}`;
   }
   if (entityId) {
-    return `/transform?runId=${entityId}`;
+    return `/workflows?runId=${entityId}`;
   }
-  return "/transform";
+  return "/workflows";
 }
 
 /**
@@ -310,12 +310,12 @@ const JOB_METADATA_BUILDERS: Record<JobType, MetadataBuilder> = {
     subtitle: payloadData?.model ? `Model: ${payloadData.model}` : undefined,
     url: entityId ? `/chats/${entityId}` : undefined,
   }),
-  transform: (payloadData, entityId) => ({
-    title: "Transform Workflow",
-    subtitle: payloadData?.agentName
-      ? String(payloadData.agentName)
+  workflow: (payloadData, entityId) => ({
+    title: "DAG Workflow",
+    subtitle: payloadData?.workflowName
+      ? String(payloadData.workflowName)
       : undefined,
-    url: resolveTransformUrl(payloadData, entityId),
+    url: resolveWorkflowUrl(payloadData, entityId),
   }),
   translation: (payloadData) => ({
     title: "Document Translation",

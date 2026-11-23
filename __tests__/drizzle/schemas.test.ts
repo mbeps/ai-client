@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import { attachment, chat, message } from "@/drizzle/schemas/chat-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
 import {
-  transformAgent,
-  transformRun,
-} from "@/drizzle/schemas/transform-agent-schema";
+  workflow,
+  workflowEdge,
+  workflowNode,
+  workflowRun,
+} from "@/drizzle/schemas/workflow-schema";
 
 describe("chat-schema", () => {
   it("message table has updatedAt with onUpdate", () => {
@@ -21,8 +23,8 @@ describe("chat-schema", () => {
   });
 });
 
-describe("transform-agent-schema", () => {
-  it.each([transformAgent, transformRun])(
+describe("workflow-schema", () => {
+  it.each([workflow, workflowNode, workflowRun])(
     "%o updatedAt uses DB defaultNow + onUpdate",
     (table) => {
       const col = getTableColumns(table).updatedAt;
@@ -31,24 +33,32 @@ describe("transform-agent-schema", () => {
       expect(col.onUpdateFn).toBeDefined();
     },
   );
+
+  it("defines workflowEdge with cascade foreign keys", () => {
+    const { foreignKeys } = getTableConfig(workflowEdge);
+    expect(foreignKeys.length).toBeGreaterThanOrEqual(3);
+    for (const fk of foreignKeys) {
+      expect(fk.onDelete).toBe("cascade");
+    }
+  });
 });
 
-describe("attachment.transformRunId FK (A-H5)", () => {
-  it("references transform_run with onDelete set null and is indexed", () => {
+describe("attachment.workflowRunId FK", () => {
+  it("references workflow_run with onDelete set null and is indexed", () => {
     const { foreignKeys, indexes } = getTableConfig(attachment);
     const fk = foreignKeys.find(
       (f) =>
-        getTableName(f.reference().foreignColumns[0].table) === "transform_run",
+        getTableName(f.reference().foreignColumns[0].table) === "workflow_run",
     );
     expect(fk).toBeDefined();
     const ref = fk!.reference();
-    expect(ref.columns[0].name).toBe("transform_run_id");
+    expect(ref.columns[0].name).toBe("workflow_run_id");
     expect(ref.foreignColumns[0].name).toBe("id");
     expect(fk!.onDelete).toBe("set null");
     expect(
       indexes.some((i) =>
         i.config.columns.some(
-          (c) => "name" in c && c.name === "transform_run_id",
+          (c) => "name" in c && c.name === "workflow_run_id",
         ),
       ),
     ).toBe(true);

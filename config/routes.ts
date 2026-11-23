@@ -40,8 +40,8 @@ const API_BASE = "/api" as const;
 /** Base path segment for translation workflows. */
 const TRANSLATION_BASE = "/translation" as const;
 
-/** Base path segment for transform workflows. */
-const TRANSFORM_BASE = "/transform" as const;
+/** Base path segment for visual DAG workflows. */
+const WORKFLOWS_BASE = "/workflows" as const;
 
 /** Base path segment for jobs. */
 const JOBS_BASE = "/jobs" as const;
@@ -182,6 +182,10 @@ export const ROUTES = {
         name: "MCP OAuth Client Metadata",
       },
     },
+    WEBHOOKS: {
+      workflow: (workflowId: string) =>
+        `${API_BASE}/webhooks/workflows/${workflowId}` as const,
+    },
   },
   JOBS: {
     path: JOBS_BASE,
@@ -193,13 +197,13 @@ export const ROUTES = {
       path: TRANSLATION_BASE,
       name: "Translation",
     },
-    TRANSFORM: {
-      path: TRANSFORM_BASE,
-      name: "Step-by-Step Automations",
-      new: `${TRANSFORM_BASE}/new` as const,
-      detail: (id: string) => `${TRANSFORM_BASE}/${id}` as const,
-      runs: (agentId: string, runId: string) =>
-        `${TRANSFORM_BASE}/${agentId}/${runId}` as const,
+    AUTOMATIONS: {
+      path: WORKFLOWS_BASE,
+      name: "Workflows",
+      new: `${WORKFLOWS_BASE}/new` as const,
+      detail: (id: string) => `${WORKFLOWS_BASE}/${id}` as const,
+      runs: (workflowId: string, runId: string) =>
+        `${WORKFLOWS_BASE}/${workflowId}/${runId}` as const,
     },
   },
 } as const;

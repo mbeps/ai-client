@@ -12,8 +12,8 @@ import type { MessageRow } from "@/types/message/message-row";
 import type { Project } from "@/types/project/project";
 import type { Prompt } from "@/types/prompt/prompt";
 import type { Skill } from "@/types/skill/skill";
-import type { TransformAgent } from "@/types/transform/transform-agent";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
+import type { WorkflowItem } from "@/types/workflows/workflow";
 
 /**
  * Global application state shape for the Zustand store.
@@ -85,10 +85,9 @@ export type AppState = {
   publicMcpServers: PublicMcpServer[];
 
   /**
-   * All transform agents (multi-step workflows).
-   * Automation templates for bulk document processing and repetitive tasks.
+   * All visual DAG workflows configured by the user.
    */
-  transformAgents: TransformAgent[];
+  workflows: WorkflowItem[];
 
   /**
    * All discovered MCP prompts (ephemeral).
@@ -103,15 +102,12 @@ export type AppState = {
    */
   loadError: string | null;
 
-  // ---- Transform Agent Actions ----
+  // ---- Workflow Actions ----
 
   /**
-   * Loads all transform agents for the current user from the server.
-   * Initializes the transformAgents array on app startup.
-   *
-   * @returns Promise resolving when transform agents are loaded
+   * Loads all visual DAG workflows for the current user from the server.
    */
-  loadTransformAgents: () => Promise<void>;
+  loadWorkflows: () => Promise<void>;
 
   /**
    * Triggers discovery of prompts from all enabled MCP servers.

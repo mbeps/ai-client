@@ -39,8 +39,8 @@ vi.mock("@/actions/mcp-servers/list-mcp-servers", () => ({
 vi.mock("@/actions/mcp-servers/list-public-mcp-servers", () => ({
   listPublicMcpServers: vi.fn(),
 }));
-vi.mock("@/actions/transform-agents/list-transform-agents", () => ({
-  listTransformAgents: vi.fn(),
+vi.mock("@/actions/workflows/list-workflows", () => ({
+  listWorkflows: vi.fn(),
 }));
 vi.mock("@/actions/user-settings/get-user-settings", () => ({
   getUserSettings: vi.fn(),
@@ -85,7 +85,7 @@ const RESET_STATE = {
   userSettings: null,
   mcpServers: [],
   publicMcpServers: [],
-  transformAgents: [],
+  workflows: [],
   mcpPrompts: [],
 };
 

@@ -6,7 +6,7 @@ import {
 import { db } from "@/drizzle/db";
 import { agent } from "@/drizzle/schemas/agent-schema";
 import { project } from "@/drizzle/schemas/project-schema";
-import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { workflow } from "@/drizzle/schemas/workflow-schema";
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
@@ -142,7 +142,7 @@ export async function validateAgentCanBecomeOrchestrator(
   agentId: string,
   tx: SubagentLinkTx = db,
 ): Promise<Result<void, CommonError>> {
-  const [agentRefs, projectRefs, transformRefs] = await Promise.all([
+  const [agentRefs, projectRefs, workflowRefs] = await Promise.all([
     tx
       .select({ id: agent.id })
       .from(agent)
@@ -164,12 +164,12 @@ export async function validateAgentCanBecomeOrchestrator(
       )
       .limit(1),
     tx
-      .select({ id: transformAgent.id })
-      .from(transformAgent)
+      .select({ id: workflow.id })
+      .from(workflow)
       .where(
         and(
-          eq(transformAgent.userId, userId),
-          sql`${agentId} = ANY(${transformAgent.subagentIds})`,
+          eq(workflow.userId, userId),
+          sql`${agentId} = ANY(${workflow.subagentIds})`,
         ),
       )
       .limit(1),
@@ -178,7 +178,7 @@ export async function validateAgentCanBecomeOrchestrator(
   if (
     agentRefs.length > 0 ||
     projectRefs.length > 0 ||
-    transformRefs.length > 0
+    workflowRefs.length > 0
   ) {
     return fail({
       code: ERROR_CODE.INVALID_INPUT,

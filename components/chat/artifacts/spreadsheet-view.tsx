@@ -130,6 +130,15 @@ function useSpreadsheetData(content: string): ArtifactSpreadsheetData {
   }, [content]);
 }
 
+function normalizeSheetData<T>(rawData: T[]): T[] {
+  return Array.isArray(rawData) &&
+    rawData.length === 1 &&
+    Array.isArray(rawData[0]) &&
+    Array.isArray((rawData[0] as unknown[])[0])
+    ? (rawData[0] as unknown as T[])
+    : rawData;
+}
+
 /**
  * Renders multi-sheet spreadsheet artifacts with search, filtering, and XLSX export.
  * Supports multiple format inputs (JSON multi-sheet, legacy arrays, CSV).
@@ -148,12 +157,12 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
   const [globalFilter, setGlobalFilter] = useState("");
 
   const activeSheet = useMemo(() => {
-    return (
-      spreadsheetData.sheets[activeSheetIndex] || {
-        name: "N/A",
-        data: [],
-      }
-    );
+    const raw = spreadsheetData.sheets[activeSheetIndex] || {
+      name: "N/A",
+      data: [],
+    };
+    const data = normalizeSheetData(raw.data);
+    return data === raw.data ? raw : { ...raw, data };
   }, [spreadsheetData.sheets, activeSheetIndex]);
 
   // Transform sheet data into a format TanStack Table likes
@@ -281,12 +290,12 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
     try {
       const workbook = xlsx.utils.book_new();
       spreadsheetData.sheets.forEach((sheet) => {
-        const isSheetAOA =
-          sheet.data.length > 0 && Array.isArray(sheet.data[0]);
+        const sheetRows = normalizeSheetData(sheet.data);
+        const isSheetAOA = sheetRows.length > 0 && Array.isArray(sheetRows[0]);
         let worksheet: xlsx.WorkSheet;
 
         if (isSheetAOA) {
-          const flatData = sheet.data.map((row) =>
+          const flatData = sheetRows.map((row) =>
             Array.isArray(row)
               ? row.map((cell) =>
                   cell && typeof cell === "object" && "v" in cell
@@ -297,7 +306,7 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
           );
           worksheet = xlsx.utils.aoa_to_sheet(flatData);
         } else {
-          worksheet = xlsx.utils.json_to_sheet(sheet.data);
+          worksheet = xlsx.utils.json_to_sheet(sheetRows);
         }
 
         xlsx.utils.book_append_sheet(workbook, worksheet, sheet.name);

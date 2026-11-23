@@ -79,10 +79,10 @@ const sampleJobs: JobItem[] = [
   },
   {
     id: "run-2",
-    functionId: "workflow-transform",
-    functionName: "Transform Runner",
-    eventName: "workflows/transform.start",
-    type: "transform",
+    functionId: "workflow-run",
+    functionName: "Workflow Runner",
+    eventName: "workflows/execute.run",
+    type: "workflow",
     title: "PDF Extract Agent",
     subtitle: "Step 2 of 4",
     status: "QUEUED",
@@ -90,7 +90,7 @@ const sampleJobs: JobItem[] = [
     startedAt: null,
     endedAt: null,
     durationMs: undefined,
-    url: "/transform/agent-1/run-2",
+    url: "/workflows/wf-1/run-2",
     entityId: "run-2",
     entityDeleted: false,
   },
@@ -432,7 +432,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     await waitFor(() => {
       expect(mockCancelJob).toHaveBeenCalledWith("run-1", {
         chatId: "chat-1",
-        transformRunId: undefined,
+        workflowRunId: undefined,
       });
       expect(toast.success).toHaveBeenCalledWith(
         "Job run cancelled successfully",
@@ -440,7 +440,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     });
   });
 
-  it("handles cancelled transform agent job with transformRunId", async () => {
+  it("handles cancelled workflow job with workflowRunId", async () => {
     const user = userEvent.setup();
     render(<JobsView />);
 
@@ -448,11 +448,11 @@ describe("Running Jobs Page & JobsView Component", () => {
       expect(screen.getByText("Project Alpha Chat")).toBeInTheDocument();
     });
 
-    // Switch to Queued tab where transform job is located
+    // Switch to Queued tab where workflow job is located
     await user.click(screen.getByRole("tab", { name: /queued/i }));
     expect(screen.getByText("PDF Extract Agent")).toBeInTheDocument();
 
-    // Cancel transform job
+    // Cancel workflow job
     const cancelButton = screen.getByRole("button", { name: /cancel/i });
     fireEvent.click(cancelButton);
 
@@ -464,7 +464,7 @@ describe("Running Jobs Page & JobsView Component", () => {
     await waitFor(() => {
       expect(mockCancelJob).toHaveBeenCalledWith("run-2", {
         chatId: undefined,
-        transformRunId: "run-2",
+        workflowRunId: "run-2",
       });
     });
   });

@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { getLogger } from "@/lib/logger";
-import { isSpreadsheetMutationTool } from "@/lib/transform/is-spreadsheet-mutation-tool";
+import { isSpreadsheetMutationTool } from "@/lib/workflows/is-spreadsheet-mutation-tool";
 import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
 
 const log = getLogger(["app", "chat", "download-fallback"]);

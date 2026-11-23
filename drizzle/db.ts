@@ -13,7 +13,6 @@ import * as projectSchema from "@/drizzle/schemas/project-schema";
 import * as promptSchema from "@/drizzle/schemas/prompt-schema";
 import * as skillSchema from "@/drizzle/schemas/skill-schema";
 import * as subagentSchema from "@/drizzle/schemas/subagent-schema";
-import * as transformAgentSchema from "@/drizzle/schemas/transform-agent-schema";
 import * as userMemorySchema from "@/drizzle/schemas/user-memory-schema";
 import * as userSettingsSchema from "@/drizzle/schemas/user-settings-schema";
 import * as workflowSchema from "@/drizzle/schemas/workflow-schema";
@@ -32,7 +31,6 @@ const schema = {
   ...promptSchema,
   ...skillSchema,
   ...subagentSchema,
-  ...transformAgentSchema,
   ...userMemorySchema,
   ...userSettingsSchema,
   ...workflowSchema,

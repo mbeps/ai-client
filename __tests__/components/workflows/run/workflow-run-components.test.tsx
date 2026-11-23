@@ -1,0 +1,261 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { ResizablePanelGroup } from "@/components/ui/resizable";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { WorkflowRunApprovalBanner } from "@/components/workflows/run/workflow-run-approval-banner";
+import { WorkflowRunFilesSection } from "@/components/workflows/run/workflow-run-files-section";
+import { WorkflowRunHeader } from "@/components/workflows/run/workflow-run-header";
+import { WorkflowRunNodeCard } from "@/components/workflows/run/workflow-run-node-card";
+import { WorkflowRunPreviewPane } from "@/components/workflows/run/workflow-run-preview-pane";
+import { WorkflowRunTimeline } from "@/components/workflows/run/workflow-run-timeline";
+import type { WorkflowNode, WorkflowNodeRunState } from "@/types/workflows/workflow";
+
+const mockDownloadFile = vi.hoisted(() => vi.fn());
+const mockToastError = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/utils/download-file", () => ({
+  downloadFile: mockDownloadFile,
+}));
+
+vi.mock("sonner", () => ({
+  toast: { error: mockToastError },
+}));
+
+vi.mock("@/components/chat/artifact-panel", () => ({
+  ArtifactPanel: ({ artifact }: { artifact: { title: string } }) => (
+    <div data-testid="mock-artifact-panel">{artifact.title}</div>
+  ),
+}));
+
+const sampleNodes: WorkflowNode[] = [
+  {
+    id: "n1",
+    type: "if_condition",
+    name: "Check Total",
+    position: { x: 0, y: 0 },
+    data: {
+      kind: "if_condition",
+      variableName: "branch1",
+      evaluationMode: "deterministic",
+      logic: "and",
+      rules: [],
+    },
+  },
+  {
+    id: "n2",
+    type: "ai_step",
+    name: "Generate Summary",
+    position: { x: 300, y: 0 },
+    data: {
+      kind: "ai_step",
+      variableName: "step1",
+      prompt: "Summarize",
+      mcpServerIds: [],
+      toolIds: [],
+      requiresReview: true,
+    },
+  },
+];
+
+describe("Workflow Run Workbench Components", () => {
+  it("renders WorkflowRunApprovalBanner for review pause and submits approve/reject", () => {
+    const onSubmitReview = vi.fn();
+    render(
+      <WorkflowRunApprovalBanner
+        status="awaiting_review"
+        currentNode={sampleNodes[1]}
+        nodeState={{ status: "awaiting_review", reviewPhase: "after" }}
+        onSubmitReview={onSubmitReview}
+        onSubmitToolDecisions={vi.fn()}
+        isSubmitting={false}
+      />,
+    );
+
+    expect(screen.getByText(/Generate Summary/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Approve & Continue/i }));
+    expect(onSubmitReview).toHaveBeenCalledWith(true, "");
+
+    fireEvent.click(screen.getByRole("button", { name: /Reject & Stop/i }));
+    expect(onSubmitReview).toHaveBeenCalledWith(false, "");
+  });
+
+  it("renders WorkflowRunApprovalBanner for tool execution approvals", () => {
+    const onSubmitToolDecisions = vi.fn();
+    render(
+      <WorkflowRunApprovalBanner
+        status="awaiting_tool_approval"
+        currentNode={sampleNodes[1]}
+        nodeState={{
+          status: "awaiting_tool_approval",
+          pendingToolApprovals: [
+            {
+              approvalId: "tc-1",
+              toolCallId: "tc-1",
+              toolName: "delete_row",
+              serverId: "srv-1",
+              serverName: "sheets",
+              args: { row: 2 },
+              signature: "delete_row:{}",
+            },
+          ],
+        }}
+        onSubmitReview={vi.fn()}
+        onSubmitToolDecisions={onSubmitToolDecisions}
+        isSubmitting={false}
+      />,
+    );
+
+    expect(screen.getByText("delete_row")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Approve All & Resume/i }),
+    );
+    expect(onSubmitToolDecisions).toHaveBeenCalledWith(true, { "tc-1": true });
+  });
+
+  it("renders WorkflowRunNodeCard, WorkflowRunTimeline, Header, and PreviewPane", () => {
+    const onSelectNode = vi.fn();
+    const onViewModeChange = vi.fn();
+    const nodeStates: Record<string, WorkflowNodeRunState> = {
+      n1: {
+        status: "completed",
+        branchTaken: "true",
+        conditionReasoning: "Total > 100",
+      },
+      n2: {
+        status: "completed",
+        summary: "Summary complete",
+      },
+    };
+
+    render(
+      <TooltipProvider>
+        <div>
+          <WorkflowRunHeader
+            workflowId="wf-1"
+            workflowName="Invoice Flow"
+            status="completed"
+            progress={100}
+            dryRun={true}
+            viewMode="graph"
+            onViewModeChange={onViewModeChange}
+          />
+          <WorkflowRunNodeCard
+            node={sampleNodes[0]}
+            state={nodeStates.n1}
+            isSelected={false}
+            onClick={() => onSelectNode("n1")}
+          />
+          <WorkflowRunTimeline
+            nodes={sampleNodes}
+            nodeStates={nodeStates}
+            selectedNodeId="n1"
+            onSelectNode={onSelectNode}
+          />
+          <ResizablePanelGroup orientation="horizontal">
+            <WorkflowRunPreviewPane
+              isLoadingArtifact={false}
+              currentArtifact={{
+                id: "art-1",
+                type: "markdown",
+                title: "Invoice Report",
+                content: "# Report",
+              }}
+              isArtifactOpen={true}
+              onCloseArtifact={vi.fn()}
+              selectedNodeId="n2"
+            />
+          </ResizablePanelGroup>
+        </div>
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Invoice Flow")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Timeline View/i }));
+    expect(onViewModeChange).toHaveBeenCalledWith("timeline");
+    expect(screen.getAllByText(/true/i).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("mock-artifact-panel")).toHaveTextContent(
+      "Invoice Report",
+    );
+  });
+
+  it("renders WorkflowRunNodeCard with thinking tab, markdown body, tool traces, and canvas card", () => {
+    const onCardClick = vi.fn();
+    render(
+      <TooltipProvider>
+        <WorkflowRunNodeCard
+          node={sampleNodes[1]}
+          state={{
+            status: "completed",
+            summary:
+              "<think>Checking car specs</think>\n\n**Added BMW 320d** to workbook.",
+            toolCalls: [
+              {
+                toolCallId: "tc-1",
+                toolName: "create_workbook",
+                args: { name: "cars.xlsx" },
+                result: { ok: true },
+                status: "complete",
+              },
+            ],
+            artifact: {
+              id: "art-step-1",
+              type: "spreadsheet",
+              title: "Cars Workbook",
+              content: "Brand,Model\nBMW,320d",
+            },
+            completedAt: "2026-11-23T18:00:00.000Z",
+          }}
+          isSelected={true}
+          onClick={onCardClick}
+        />
+      </TooltipProvider>,
+    );
+
+    // Raw <think> tags should not appear in visible output; Thought process tab should
+    expect(screen.queryByText(/<think>/)).not.toBeInTheDocument();
+    const thoughtTrigger = screen.getByRole("button", {
+      name: /Thought process/i,
+    });
+    expect(thoughtTrigger).toBeInTheDocument();
+
+    // Toggling the thought process tab should reveal reasoning without triggering card onClick
+    fireEvent.click(thoughtTrigger);
+    expect(screen.getByText("Checking car specs")).toBeInTheDocument();
+    expect(onCardClick).not.toHaveBeenCalled();
+
+    // Markdown should render bold text cleanly
+    const boldEl = screen.getByText("Added BMW 320d");
+    expect(boldEl.tagName).toBe("STRONG");
+
+    // Tool call should render via ToolTraceStep (not plain badge)
+    expect(screen.getByText("create_workbook")).toBeInTheDocument();
+
+    // Artifact should render via CanvasCard and clicking its toggle selects the node
+    const toggleCanvasBtn = screen.getByRole("button", { name: /Close/i });
+    fireEvent.click(toggleCanvasBtn);
+    expect(onCardClick).toHaveBeenCalledTimes(1);
+
+    // Keyboard activation on card header calls onClick without interfering with nested controls
+    const headerTrigger = screen.getByRole("button", {
+      name: /Select Generate Summary/i,
+    });
+    fireEvent.keyDown(headerTrigger, { key: "Enter" });
+    fireEvent.keyDown(headerTrigger, { key: " " });
+    expect(onCardClick).toHaveBeenCalledTimes(3);
+  });
+
+  it("shows toast error when WorkflowRunFilesSection fails to download a file", async () => {
+    mockDownloadFile.mockRejectedValueOnce(new Error("Network error"));
+    render(
+      <WorkflowRunFilesSection
+        inputAttachmentIds={["att-1"]}
+        attachmentMeta={{ "att-1": { url: "https://example.com/a.xlsx", name: "a.xlsx" } }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("a.xlsx"));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("Failed to download file");
+    });
+  });
+});

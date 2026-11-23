@@ -4,7 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { agent } from "@/drizzle/schemas/agent-schema";
 import { project } from "@/drizzle/schemas/project-schema";
-import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { workflow } from "@/drizzle/schemas/workflow-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { defineAction } from "@/lib/factories/define-action";
 import { ok } from "@/lib/result/ok";
@@ -29,7 +29,7 @@ export const listAgents = defineAction(
   async (): Promise<Result<AgentRowWithUsage[], CommonError>> => {
     const session = await requireSession();
 
-    const [agentRows, projectRefs, transformRefs] = await Promise.all([
+    const [agentRows, projectRefs, workflowRefs] = await Promise.all([
       db
         .select()
         .from(agent)
@@ -40,9 +40,9 @@ export const listAgents = defineAction(
         .from(project)
         .where(eq(project.userId, session.user.id)),
       db
-        .select({ subagentIds: transformAgent.subagentIds })
-        .from(transformAgent)
-        .where(eq(transformAgent.userId, session.user.id)),
+        .select({ subagentIds: workflow.subagentIds })
+        .from(workflow)
+        .where(eq(workflow.userId, session.user.id)),
     ]);
 
     const usageCounts = new Map<string, number>();
@@ -56,7 +56,7 @@ export const listAgents = defineAction(
 
     countRefs(agentRows);
     countRefs(projectRefs);
-    countRefs(transformRefs);
+    countRefs(workflowRefs);
 
     return ok(
       agentRows.map((row) => ({

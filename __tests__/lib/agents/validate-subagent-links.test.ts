@@ -188,7 +188,7 @@ describe("validateAgentCanBecomeOrchestrator", () => {
     }
   });
 
-  it("rejects when agent is referenced in a transformAgent's subagentIds (Rule 2)", async () => {
+  it("rejects when agent is referenced in a workflow's subagentIds (Rule 2)", async () => {
     mockDb.selectLimit
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])

@@ -7,10 +7,10 @@ import { chat } from "@/drizzle/schemas/chat-schema";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import {
-  transformAgent,
-  transformRun,
-} from "@/drizzle/schemas/transform-agent-schema";
-import { workflowTranslation } from "@/drizzle/schemas/workflow-schema";
+  workflow,
+  workflowRun,
+  workflowTranslation,
+} from "@/drizzle/schemas/workflow-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { defineAction } from "@/lib/factories/define-action";
 import { fetchUserInngestRuns } from "@/lib/inngest/run-service";
@@ -36,7 +36,7 @@ export interface ListJobsOptions {
  */
 interface EntityIdBuckets {
   chatIds: Set<string>;
-  transformRunIds: Set<string>;
+  workflowRunIds: Set<string>;
   translationIds: Set<string>;
   kbDocIds: Set<string>;
   kbIds: Set<string>;
@@ -58,10 +58,10 @@ interface ChatEntity {
  *
  * @author Maruf Bepary
  */
-interface TransformEntity {
+interface WorkflowEntity {
   id: string;
-  agentId: string;
-  agentName: string | null;
+  workflowId: string;
+  workflowName: string | null;
 }
 
 /**
@@ -103,23 +103,16 @@ interface KbEntity {
  */
 interface EntityMaps {
   chatMap: Map<string, ChatEntity>;
-  transformMap: Map<string, TransformEntity>;
+  workflowMap: Map<string, WorkflowEntity>;
   translationMap: Map<string, TranslationEntity>;
   kbDocMap: Map<string, KbDocEntity>;
   kbMap: Map<string, KbEntity>;
 }
 
-/**
- * Collects unique entity IDs per job type for batched database queries.
- *
- * @param jobs - List of raw job items to extract entity IDs from
- * @returns Bucket map containing ID sets for each entity category
- * @author Maruf Bepary
- */
 function collectEntityIds(jobs: readonly JobItem[]): EntityIdBuckets {
   const buckets: EntityIdBuckets = {
     chatIds: new Set<string>(),
-    transformRunIds: new Set<string>(),
+    workflowRunIds: new Set<string>(),
     translationIds: new Set<string>(),
     kbDocIds: new Set<string>(),
     kbIds: new Set<string>(),
@@ -131,8 +124,8 @@ function collectEntityIds(jobs: readonly JobItem[]): EntityIdBuckets {
       case "chat":
         buckets.chatIds.add(job.entityId);
         break;
-      case "transform":
-        buckets.transformRunIds.add(job.entityId);
+      case "workflow":
+        buckets.workflowRunIds.add(job.entityId);
         break;
       case "translation":
         buckets.translationIds.add(job.entityId);
@@ -163,7 +156,7 @@ async function fetchEntityMaps(
   userId: string,
   buckets: EntityIdBuckets,
 ): Promise<EntityMaps> {
-  const [chatRows, transformRows, translationRows, kbDocRows, kbRows] =
+  const [chatRows, workflowRows, translationRows, kbDocRows, kbRows] =
     await Promise.all([
       buckets.chatIds.size > 0
         ? db
@@ -181,22 +174,19 @@ async function fetchEntityMaps(
             )
         : Promise.resolve([]),
 
-      buckets.transformRunIds.size > 0
+      buckets.workflowRunIds.size > 0
         ? db
             .select({
-              id: transformRun.id,
-              agentId: transformRun.agentId,
-              agentName: transformAgent.name,
+              id: workflowRun.id,
+              workflowId: workflowRun.workflowId,
+              workflowName: workflow.name,
             })
-            .from(transformRun)
-            .leftJoin(
-              transformAgent,
-              eq(transformRun.agentId, transformAgent.id),
-            )
+            .from(workflowRun)
+            .leftJoin(workflow, eq(workflowRun.workflowId, workflow.id))
             .where(
               and(
-                inArray(transformRun.id, [...buckets.transformRunIds]),
-                eq(transformRun.userId, userId),
+                inArray(workflowRun.id, [...buckets.workflowRunIds]),
+                eq(workflowRun.userId, userId),
               ),
             )
         : Promise.resolve([]),
@@ -251,7 +241,7 @@ async function fetchEntityMaps(
 
   return {
     chatMap: new Map(chatRows.map((row) => [row.id, row])),
-    transformMap: new Map(transformRows.map((row) => [row.id, row])),
+    workflowMap: new Map(workflowRows.map((row) => [row.id, row])),
     translationMap: new Map(translationRows.map((row) => [row.id, row])),
     kbDocMap: new Map(kbDocRows.map((row) => [row.id, row])),
     kbMap: new Map(kbRows.map((row) => [row.id, row])),
@@ -293,20 +283,20 @@ function enrichChatJob(job: JobItem, entity?: ChatEntity): JobItem {
  * @returns Enriched job item
  * @author Maruf Bepary
  */
-function enrichTransformJob(job: JobItem, entity?: TransformEntity): JobItem {
+function enrichWorkflowJob(job: JobItem, entity?: WorkflowEntity): JobItem {
   if (!entity) {
     return {
       ...job,
       entityDeleted: true,
-      title: "Transform (Deleted or Unavailable)",
+      title: "Workflow (Deleted or Unavailable)",
       url: undefined,
     };
   }
   return {
     ...job,
     entityDeleted: false,
-    title: entity.agentName || job.title,
-    url: ROUTES.WORKFLOWS.TRANSFORM.runs(entity.agentId, entity.id),
+    title: entity.workflowName || job.title,
+    url: ROUTES.WORKFLOWS.AUTOMATIONS.runs(entity.workflowId, entity.id),
   };
 }
 
@@ -404,8 +394,8 @@ function enrichJobItem(job: JobItem, maps: EntityMaps): JobItem {
   switch (job.type) {
     case "chat":
       return enrichChatJob(job, maps.chatMap.get(job.entityId));
-    case "transform":
-      return enrichTransformJob(job, maps.transformMap.get(job.entityId));
+    case "workflow":
+      return enrichWorkflowJob(job, maps.workflowMap.get(job.entityId));
     case "translation":
       return enrichTranslationJob(job, maps.translationMap.get(job.entityId));
     case "kb-ingest":
