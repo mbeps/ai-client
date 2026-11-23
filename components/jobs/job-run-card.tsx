@@ -10,9 +10,11 @@ import {
   FileText,
   Languages,
   MessageSquare,
+  ShieldAlert,
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
+import { JobApprovalPanel } from "@/components/jobs/job-approval-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +23,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { JobItem, JobStatus, JobType } from "@/types/jobs";
+import { cn } from "@/lib/utils";
+import type {
+  JobApprovalInfo,
+  JobItem,
+  JobStatus,
+  JobType,
+} from "@/types/jobs";
+import type { ApprovalDecision } from "@/types/tool/approval";
 
 /**
  * Formats duration in milliseconds into a concise readable string.
@@ -196,16 +205,16 @@ function JobCardTitle({
   const hasLink = Boolean(url && !entityDeleted);
 
   return (
-    <div className="mt-0.5 flex items-center gap-1.5">
+    <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
       {hasLink ? (
         <Link
           href={url as string}
-          className="text-foreground hover:text-primary truncate text-sm font-medium transition-colors hover:underline"
+          className="text-foreground hover:text-primary truncate text-sm font-semibold transition-colors hover:underline"
         >
           {title}
         </Link>
       ) : (
-        <span className="text-foreground truncate text-sm font-medium">
+        <span className="text-foreground truncate text-sm font-semibold">
           {title}
         </span>
       )}
@@ -243,27 +252,29 @@ function JobCardMetaDetails({
   formattedDuration,
   functionName,
 }: JobCardMetaDetailsProps) {
-  if (errorMessage) {
-    return (
-      <p className="text-destructive mt-0.5 line-clamp-1 font-mono text-xs">
-        {errorMessage}
-      </p>
-    );
-  }
-
   return (
-    <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
-      {timingText && (
-        <span className="flex items-center gap-1">
-          <Clock className="size-3 shrink-0" />
-          <span>{timingText}</span>
-        </span>
-      )}
-      {formattedDuration && <span>• duration: {formattedDuration}</span>}
-      {functionName && (
-        <span className="font-mono text-[11px] opacity-70">
-          ({functionName})
-        </span>
+    <div className="mt-1 space-y-1.5">
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+        {timingText && (
+          <span className="flex items-center gap-1">
+            <Clock className="size-3 shrink-0" />
+            <span>{timingText}</span>
+          </span>
+        )}
+        {formattedDuration && (
+          <span className="tabular-nums">• {formattedDuration}</span>
+        )}
+        {functionName && (
+          <span className="bg-muted/60 rounded px-1.5 py-0.5 font-mono text-[10px] opacity-80">
+            {functionName}
+          </span>
+        )}
+      </div>
+
+      {errorMessage && (
+        <p className="border-destructive/20 bg-destructive/5 text-destructive line-clamp-2 rounded-md border px-2 py-1 font-mono text-xs">
+          {errorMessage}
+        </p>
       )}
     </div>
   );
@@ -338,23 +349,77 @@ function JobCardActions({
 export interface JobRunCardProps {
   job: JobItem;
   onCancel: (job: JobItem) => void;
+  isApproving?: boolean;
+  onApproveWorkflowReview?: (
+    approval: Extract<JobApprovalInfo, { kind: "workflow-review" }>,
+    approved: boolean,
+    feedback?: string,
+  ) => Promise<void> | void;
+  onSubmitToolDecisions?: (
+    approval: Extract<JobApprovalInfo, { kind: "workflow-tool" | "chat-tool" }>,
+    approved: boolean,
+    decisions: ApprovalDecision[],
+  ) => Promise<void> | void;
 }
 
 /**
- * Card displaying an individual background job run with status, timing, deep link, and cancellation actions.
+ * Renders a status badge indicating a job is paused waiting for user approval.
  */
-export function JobRunCard({ job, onCancel }: JobRunCardProps) {
+function JobApprovalBadge({ approval }: { approval: JobApprovalInfo }) {
+  const isReview = approval.kind === "workflow-review";
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1 text-[11px]",
+        isReview
+          ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          : "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+      )}
+    >
+      <ShieldAlert className="size-3" />
+      {isReview ? "Awaiting Review" : "Approval Required"}
+    </Badge>
+  );
+}
+
+/**
+ * Card displaying an individual background job run with status, timing, deep link,
+ * inline approval controls (when paused), and cancellation actions.
+ */
+export function JobRunCard({
+  job,
+  onCancel,
+  isApproving = false,
+  onApproveWorkflowReview,
+  onSubmitToolDecisions,
+}: JobRunCardProps) {
   const typeMeta = getJobTypeMeta(job.type);
   const TypeIcon = typeMeta.icon;
   const formattedDuration = formatJobDuration(job.durationMs);
   const timingText = formatJobTiming(job.startedAt, job.queuedAt);
+  const hasApproval = Boolean(job.approval);
 
   return (
-    <Card className="hover:border-primary/30 py-0 transition-all">
-      <CardContent className="flex items-center gap-2.5 p-2.5">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <div className="bg-secondary/50 text-secondary-foreground shrink-0 rounded-md p-1.5">
-            <TypeIcon className="size-3.5" />
+    <Card
+      className={cn(
+        "overflow-hidden py-0 transition-colors",
+        hasApproval
+          ? "border-amber-500/40 shadow-xs"
+          : "hover:border-primary/30",
+      )}
+    >
+      <CardContent className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div
+            className={cn(
+              "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border",
+              hasApproval
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                : "border-border/60 bg-muted/50 text-muted-foreground",
+            )}
+          >
+            <TypeIcon className="size-4" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -362,6 +427,7 @@ export function JobRunCard({ job, onCancel }: JobRunCardProps) {
                 {typeMeta.label}
               </Badge>
               <JobStatusBadge status={job.status} />
+              {job.approval && <JobApprovalBadge approval={job.approval} />}
               {job.entityDeleted && <JobDeletedBadge />}
             </div>
 
@@ -389,6 +455,15 @@ export function JobRunCard({ job, onCancel }: JobRunCardProps) {
           job={job}
         />
       </CardContent>
+
+      {job.approval && onApproveWorkflowReview && onSubmitToolDecisions && (
+        <JobApprovalPanel
+          approval={job.approval}
+          isSubmitting={isApproving}
+          onApproveWorkflowReview={onApproveWorkflowReview}
+          onSubmitToolDecisions={onSubmitToolDecisions}
+        />
+      )}
     </Card>
   );
 }

@@ -1,3 +1,5 @@
+import type { PendingApproval } from "@/types/tool/approval";
+
 /**
  * Category/type of an Inngest background job.
  */
@@ -28,6 +30,32 @@ export type JobFilterTab =
   | "completed"
   | "failed"
   | "all";
+
+/**
+ * Pending human review or tool execution approval attached to an active job.
+ */
+export type JobApprovalInfo =
+  | {
+      kind: "workflow-review";
+      runId: string;
+      nodeId: string;
+      nodeName?: string;
+      gateId?: string;
+      reviewPhase?: "before" | "after";
+    }
+  | {
+      kind: "workflow-tool";
+      runId: string;
+      nodeId: string;
+      nodeName?: string;
+      gateId?: string;
+      pendingApprovals: PendingApproval[];
+    }
+  | {
+      kind: "chat-tool";
+      assistantMessageId: string;
+      pendingApprovals: PendingApproval[];
+    };
 
 /**
  * Normalized representation of an Inngest job run.
@@ -65,6 +93,8 @@ export interface JobItem {
   entityId?: string;
   /** Whether the underlying entity was deleted. */
   entityDeleted?: boolean;
+  /** Pending approval gate or tool execution requests if the job is paused waiting for user action. */
+  approval?: JobApprovalInfo;
 }
 
 /**

@@ -66,11 +66,11 @@ export function JobsEmptyState({
   );
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-      <div className="bg-muted rounded-full p-4">
-        <Activity className="text-muted-foreground size-8" />
+    <div className="bg-card/40 flex flex-col items-center justify-center rounded-xl border border-dashed p-10 text-center">
+      <div className="bg-muted/80 rounded-full border p-3.5">
+        <Activity className="text-muted-foreground size-6" />
       </div>
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+      <h3 className="mt-4 text-base font-semibold">{title}</h3>
       <p className="text-muted-foreground mt-1 max-w-sm text-sm">
         {description}
       </p>

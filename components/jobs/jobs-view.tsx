@@ -1,10 +1,13 @@
 "use client";
 
+import { ShieldAlert } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { respondToToolApproval } from "@/actions/chats/respond-to-tool-approval";
 import { cancelJob } from "@/actions/jobs/cancel-job";
 import { listJobs } from "@/actions/jobs/list-jobs";
+import { approveWorkflowRunAction } from "@/actions/workflow-runs/approve-workflow-run";
 import { CancelJobDialog } from "@/components/jobs/cancel-job-dialog";
 import { JobRunCard } from "@/components/jobs/job-run-card";
 import { JobsControlsBar } from "@/components/jobs/jobs-controls-bar";
@@ -18,20 +21,36 @@ import { JobsOfflineBanner } from "@/components/jobs/jobs-offline-banner";
 import { JobsStatCards } from "@/components/jobs/jobs-stat-cards";
 import { useJobsPolling } from "@/components/jobs/use-jobs-polling";
 import { TableListSkeleton } from "@/components/skeletons/table-list-skeleton";
-import type { JobFilterTab, JobItem } from "@/types/jobs";
+import { Badge } from "@/components/ui/badge";
+import type { JobApprovalInfo, JobFilterTab, JobItem } from "@/types/jobs";
+import type { ApprovalDecision } from "@/types/tool/approval";
 
 /**
  * Page header component.
  */
-function JobsHeader() {
+function JobsHeader({
+  awaitingApprovalCount,
+}: {
+  awaitingApprovalCount: number;
+}) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Running Jobs</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           Monitor, track, and manage active background tasks and workflow runs.
         </p>
       </div>
+      {awaitingApprovalCount > 0 && (
+        <Badge
+          variant="outline"
+          className="w-fit gap-1.5 border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+        >
+          <ShieldAlert className="size-3.5" />
+          <span className="tabular-nums">{awaitingApprovalCount}</span>
+          awaiting approval
+        </Badge>
+      )}
     </div>
   );
 }
@@ -44,18 +63,48 @@ function JobsHeader() {
 interface JobsListProps {
   jobs: JobItem[];
   onCancel: (job: JobItem) => void;
+  approvingJobId: string | null;
+  onApproveWorkflowReview: (
+    jobId: string,
+    approval: Extract<JobApprovalInfo, { kind: "workflow-review" }>,
+    approved: boolean,
+    feedback?: string,
+  ) => Promise<void>;
+  onSubmitToolDecisions: (
+    jobId: string,
+    approval: Extract<JobApprovalInfo, { kind: "workflow-tool" | "chat-tool" }>,
+    approved: boolean,
+    decisions: ApprovalDecision[],
+  ) => Promise<void>;
 }
 
 /**
  * Renders the collection of job cards.
  */
-function JobsList({ jobs, onCancel }: JobsListProps) {
+function JobsList({
+  jobs,
+  onCancel,
+  approvingJobId,
+  onApproveWorkflowReview,
+  onSubmitToolDecisions,
+}: JobsListProps) {
   if (jobs.length === 0) return null;
 
   return (
     <div className="grid grid-cols-1 gap-3">
       {jobs.map((job) => (
-        <JobRunCard key={job.id} job={job} onCancel={onCancel} />
+        <JobRunCard
+          key={job.id}
+          job={job}
+          onCancel={onCancel}
+          isApproving={approvingJobId === job.id}
+          onApproveWorkflowReview={(approval, approved, feedback) =>
+            onApproveWorkflowReview(job.id, approval, approved, feedback)
+          }
+          onSubmitToolDecisions={(approval, approved, decisions) =>
+            onSubmitToolDecisions(job.id, approval, approved, decisions)
+          }
+        />
       ))}
     </div>
   );
@@ -81,6 +130,7 @@ export function JobsView() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [cancelTarget, setCancelTarget] = useState<JobItem | null>(null);
+  const [approvingJobId, setApprovingJobId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // URL state persistence via nuqs
@@ -167,14 +217,90 @@ export function JobsView() {
     });
   };
 
+  const handleApproveWorkflowReview = async (
+    jobId: string,
+    approval: Extract<JobApprovalInfo, { kind: "workflow-review" }>,
+    approved: boolean,
+    feedback?: string,
+  ) => {
+    setApprovingJobId(jobId);
+    try {
+      const res = await approveWorkflowRunAction({
+        runId: approval.runId,
+        nodeId: approval.nodeId,
+        gateId: approval.gateId,
+        approved,
+        feedback,
+      });
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to submit approval");
+        return;
+      }
+      toast.success(
+        approved
+          ? "Approval submitted — resuming workflow"
+          : "Run rejected and stopped",
+      );
+      await loadJobs(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to submit approval",
+      );
+    } finally {
+      setApprovingJobId(null);
+    }
+  };
+
+  const handleSubmitToolDecisions = async (
+    jobId: string,
+    approval: Extract<JobApprovalInfo, { kind: "workflow-tool" | "chat-tool" }>,
+    approved: boolean,
+    decisions: ApprovalDecision[],
+  ) => {
+    setApprovingJobId(jobId);
+    try {
+      const res =
+        approval.kind === "workflow-tool"
+          ? await approveWorkflowRunAction({
+              runId: approval.runId,
+              nodeId: approval.nodeId,
+              gateId: approval.gateId,
+              approved,
+              toolDecisions: decisions,
+            })
+          : await respondToToolApproval({
+              assistantMessageId: approval.assistantMessageId,
+              decisions,
+            });
+
+      if (!res.ok) {
+        toast.error(res.error.message || "Failed to submit tool approval");
+        return;
+      }
+      toast.success(
+        approved
+          ? "Tool approval submitted — resuming run"
+          : "Tool execution denied",
+      );
+      await loadJobs(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to submit tool approval",
+      );
+    } finally {
+      setApprovingJobId(null);
+    }
+  };
+
   const statCounts = computeStatCounts(jobs);
+  const awaitingApprovalCount = jobs.filter((j) => Boolean(j.approval)).length;
   const filteredJobs = jobs.filter((job) =>
     matchesJobFilter(job, activeTab, searchQuery),
   );
 
   return (
     <div className="space-y-6">
-      <JobsHeader />
+      <JobsHeader awaitingApprovalCount={awaitingApprovalCount} />
 
       <JobsOfflineBanner
         offline={offline}
@@ -186,6 +312,7 @@ export function JobsView() {
         counts={statCounts}
         activeTab={activeTab}
         onTabChange={handleTabChange}
+        awaitingApprovalCount={awaitingApprovalCount}
       />
 
       <JobsControlsBar
@@ -202,7 +329,13 @@ export function JobsView() {
 
       {loading && jobs.length === 0 && <TableListSkeleton rows={4} />}
 
-      <JobsList jobs={filteredJobs} onCancel={setCancelTarget} />
+      <JobsList
+        jobs={filteredJobs}
+        onCancel={setCancelTarget}
+        approvingJobId={approvingJobId}
+        onApproveWorkflowReview={handleApproveWorkflowReview}
+        onSubmitToolDecisions={handleSubmitToolDecisions}
+      />
 
       {filteredJobs.length === 0 && !loading && (
         <JobsEmptyState activeTab={activeTab} searchQuery={searchQuery} />

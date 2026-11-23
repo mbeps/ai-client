@@ -59,6 +59,16 @@ vi.mock("@/actions/jobs/cancel-job", () => ({
   cancelJob: mockCancelJob,
 }));
 
+const mockApproveWorkflowRunAction = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/workflow-runs/approve-workflow-run", () => ({
+  approveWorkflowRunAction: mockApproveWorkflowRunAction,
+}));
+
+const mockRespondToToolApproval = vi.hoisted(() => vi.fn());
+vi.mock("@/actions/chats/respond-to-tool-approval", () => ({
+  respondToToolApproval: mockRespondToToolApproval,
+}));
+
 const sampleJobs: JobItem[] = [
   {
     id: "run-1",
@@ -163,6 +173,14 @@ describe("Running Jobs Page & JobsView Component", () => {
       value: {
         success: true,
       },
+    });
+    mockApproveWorkflowRunAction.mockResolvedValue({
+      ok: true,
+      value: { success: true },
+    });
+    mockRespondToToolApproval.mockResolvedValue({
+      ok: true,
+      value: { success: true },
     });
   });
 
@@ -614,6 +632,187 @@ describe("Running Jobs Page & JobsView Component", () => {
     await waitFor(() => {
       expect(mockListJobs).toHaveBeenCalledTimes(3);
       expect(toast.error).toHaveBeenCalledWith("Network connection lost");
+    });
+  });
+
+  it("renders workflow human review approval panel and submits approval with feedback", async () => {
+    const user = userEvent.setup();
+    mockListJobs.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        jobs: [
+          {
+            id: "run-review-1",
+            functionId: "workflow-run",
+            functionName: "Workflow Runner",
+            eventName: "workflows/execute.run",
+            type: "workflow",
+            title: "Invoice Approval Flow",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00.000Z",
+            startedAt: "2026-09-28T10:00:01.000Z",
+            endedAt: null,
+            url: "/workflows/wf-1/run-wf-1",
+            entityId: "run-wf-1",
+            approval: {
+              kind: "workflow-review",
+              runId: "run-wf-1",
+              nodeId: "node-1",
+              nodeName: "Verify Totals",
+              gateId: "gate-1",
+              reviewPhase: "before",
+            },
+          },
+        ],
+        offline: false,
+      },
+    });
+
+    render(<JobsView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Awaiting Review")).toBeInTheDocument();
+      expect(
+        screen.getByText(/human review required — verify totals/i),
+      ).toBeInTheDocument();
+    });
+
+    const feedbackInput = screen.getByLabelText("Review feedback");
+    await user.type(feedbackInput, "Looks good");
+    await user.click(screen.getByRole("button", { name: /^approve$/i }));
+
+    await waitFor(() => {
+      expect(mockApproveWorkflowRunAction).toHaveBeenCalledWith({
+        runId: "run-wf-1",
+        nodeId: "node-1",
+        gateId: "gate-1",
+        approved: true,
+        feedback: "Looks good",
+      });
+      expect(toast.success).toHaveBeenCalledWith(
+        "Approval submitted — resuming workflow",
+      );
+    });
+  });
+
+  it("renders workflow tool approval panel and submits tool decisions", async () => {
+    const user = userEvent.setup();
+    mockListJobs.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        jobs: [
+          {
+            id: "run-wf-tool-1",
+            functionId: "workflow-run",
+            functionName: "Workflow Runner",
+            eventName: "workflows/execute.run",
+            type: "workflow",
+            title: "Deploy Automation",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00.000Z",
+            startedAt: "2026-09-28T10:00:01.000Z",
+            endedAt: null,
+            url: "/workflows/wf-2/run-wf-2",
+            entityId: "run-wf-2",
+            approval: {
+              kind: "workflow-tool",
+              runId: "run-wf-2",
+              nodeId: "node-2",
+              nodeName: "Publish Step",
+              gateId: "gate-2",
+              pendingApprovals: [
+                {
+                  approvalId: "app-1",
+                  toolCallId: "tc-1",
+                  toolName: "send_email",
+                  serverName: "Gmail",
+                  args: { to: "team@example.com" },
+                  signature: "sig-1",
+                },
+              ],
+            },
+          },
+        ],
+        offline: false,
+      },
+    });
+
+    render(<JobsView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Approval Required")).toBeInTheDocument();
+      expect(screen.getByText("send_email")).toBeInTheDocument();
+      expect(screen.getByText("Gmail")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /^approve$/i }));
+
+    await waitFor(() => {
+      expect(mockApproveWorkflowRunAction).toHaveBeenCalledWith({
+        runId: "run-wf-2",
+        nodeId: "node-2",
+        gateId: "gate-2",
+        approved: true,
+        toolDecisions: [{ approvalId: "app-1", approved: true }],
+      });
+      expect(toast.success).toHaveBeenCalledWith(
+        "Tool approval submitted — resuming run",
+      );
+    });
+  });
+
+  it("renders chat tool approval panel and calls respondToToolApproval on deny", async () => {
+    const user = userEvent.setup();
+    mockListJobs.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        jobs: [
+          {
+            id: "run-chat-tool-1",
+            functionId: "chat-stream",
+            functionName: "Chat Stream Runner",
+            eventName: "chat/response.generate",
+            type: "chat",
+            title: "Research Chat",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00.000Z",
+            startedAt: "2026-09-28T10:00:01.000Z",
+            endedAt: null,
+            url: "/chats/chat-99",
+            entityId: "chat-99",
+            approval: {
+              kind: "chat-tool",
+              assistantMessageId: "msg-99",
+              pendingApprovals: [
+                {
+                  approvalId: "app-chat-1",
+                  toolCallId: "tc-chat-1",
+                  toolName: "delete_file",
+                  args: { path: "/tmp/a.txt" },
+                  signature: "sig-c1",
+                },
+              ],
+            },
+          },
+        ],
+        offline: false,
+      },
+    });
+
+    render(<JobsView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("delete_file")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /^deny$/i }));
+
+    await waitFor(() => {
+      expect(mockRespondToToolApproval).toHaveBeenCalledWith({
+        assistantMessageId: "msg-99",
+        decisions: [{ approvalId: "app-chat-1", approved: false }],
+      });
+      expect(toast.success).toHaveBeenCalledWith("Tool execution denied");
     });
   });
 });

@@ -29,12 +29,12 @@ const STAT_CONFIGS: readonly StatCardConfig[] = [
     icon: Activity,
     colorClasses: {
       active:
-        "border-blue-400 bg-blue-100/90 text-blue-900 ring-2 ring-blue-500/70 shadow-xs dark:border-blue-700 dark:bg-blue-950/70 dark:text-blue-100 dark:ring-blue-400/60",
+        "border-blue-500/60 bg-blue-500/10 text-foreground shadow-xs dark:border-blue-400/50 dark:bg-blue-500/15",
       inactive:
-        "border-blue-200/80 bg-blue-50/50 text-blue-800 hover:bg-blue-100/60 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300 dark:hover:bg-blue-950/40",
-      icon: "text-blue-600 dark:text-blue-400",
-      text: "text-blue-900 dark:text-blue-200",
-      count: "text-blue-700 dark:text-blue-300",
+        "border-border/70 bg-card/60 text-muted-foreground hover:border-blue-500/30 hover:bg-card",
+      icon: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400",
+      text: "text-foreground",
+      count: "text-blue-600 dark:text-blue-400",
     },
   },
   {
@@ -43,12 +43,12 @@ const STAT_CONFIGS: readonly StatCardConfig[] = [
     icon: Clock,
     colorClasses: {
       active:
-        "border-amber-400 bg-amber-100/90 text-amber-900 ring-2 ring-amber-500/70 shadow-xs dark:border-amber-700 dark:bg-amber-950/70 dark:text-amber-100 dark:ring-amber-400/60",
+        "border-amber-500/60 bg-amber-500/10 text-foreground shadow-xs dark:border-amber-400/50 dark:bg-amber-500/15",
       inactive:
-        "border-amber-200/80 bg-amber-50/50 text-amber-800 hover:bg-amber-100/60 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300 dark:hover:bg-amber-950/40",
-      icon: "text-amber-600 dark:text-amber-400",
-      text: "text-amber-900 dark:text-amber-200",
-      count: "text-amber-700 dark:text-amber-300",
+        "border-border/70 bg-card/60 text-muted-foreground hover:border-amber-500/30 hover:bg-card",
+      icon: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+      text: "text-foreground",
+      count: "text-amber-600 dark:text-amber-400",
     },
   },
   {
@@ -57,12 +57,12 @@ const STAT_CONFIGS: readonly StatCardConfig[] = [
     icon: CheckCircle2,
     colorClasses: {
       active:
-        "border-emerald-400 bg-emerald-100/90 text-emerald-900 ring-2 ring-emerald-500/70 shadow-xs dark:border-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-100 dark:ring-emerald-400/60",
+        "border-emerald-500/60 bg-emerald-500/10 text-foreground shadow-xs dark:border-emerald-400/50 dark:bg-emerald-500/15",
       inactive:
-        "border-emerald-200/80 bg-emerald-50/50 text-emerald-800 hover:bg-emerald-100/60 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300 dark:hover:bg-emerald-950/40",
-      icon: "text-emerald-600 dark:text-emerald-400",
-      text: "text-emerald-900 dark:text-emerald-200",
-      count: "text-emerald-700 dark:text-emerald-300",
+        "border-border/70 bg-card/60 text-muted-foreground hover:border-emerald-500/30 hover:bg-card",
+      icon: "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400",
+      text: "text-foreground",
+      count: "text-emerald-600 dark:text-emerald-400",
     },
   },
   {
@@ -71,12 +71,12 @@ const STAT_CONFIGS: readonly StatCardConfig[] = [
     icon: XCircle,
     colorClasses: {
       active:
-        "border-rose-400 bg-rose-100/90 text-rose-900 ring-2 ring-rose-500/70 shadow-xs dark:border-rose-700 dark:bg-rose-950/70 dark:text-rose-100 dark:ring-rose-400/60",
+        "border-rose-500/60 bg-rose-500/10 text-foreground shadow-xs dark:border-rose-400/50 dark:bg-rose-500/15",
       inactive:
-        "border-rose-200/80 bg-rose-50/50 text-rose-800 hover:bg-rose-100/60 dark:border-rose-900/40 dark:bg-rose-950/20 dark:text-rose-300 dark:hover:bg-rose-950/40",
-      icon: "text-rose-600 dark:text-rose-400",
-      text: "text-rose-900 dark:text-rose-200",
-      count: "text-rose-700 dark:text-rose-300",
+        "border-border/70 bg-card/60 text-muted-foreground hover:border-rose-500/30 hover:bg-card",
+      icon: "bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400",
+      text: "text-foreground",
+      count: "text-rose-600 dark:text-rose-400",
     },
   },
 ];
@@ -103,6 +103,7 @@ export interface JobsStatCardsProps {
   counts: JobsStatCounts;
   activeTab: JobFilterTab;
   onTabChange: (tab: JobFilterTab) => void;
+  awaitingApprovalCount?: number;
 }
 
 /**
@@ -114,6 +115,7 @@ interface StatCardButtonProps {
   card: StatCardConfig;
   isActive: boolean;
   count: number;
+  awaitingCount?: number;
   onClick: () => void;
 }
 
@@ -128,6 +130,7 @@ function StatCardButton({
   card,
   isActive,
   count,
+  awaitingCount = 0,
   onClick,
 }: StatCardButtonProps) {
   const Icon = card.icon;
@@ -140,18 +143,30 @@ function StatCardButton({
       aria-label={`${card.label} jobs, ${count} total`}
       onClick={onClick}
       className={cn(
-        "flex h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border px-3.5 py-2 text-left transition-all duration-150 select-none",
+        "flex h-12 cursor-pointer items-center justify-between gap-3 rounded-xl border px-3.5 py-2 text-left transition-all duration-150 select-none",
         "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden",
         isActive ? card.colorClasses.active : card.colorClasses.inactive,
       )}
     >
       <div className="flex min-w-0 items-center gap-2.5">
-        <Icon className={cn("size-4 shrink-0", card.colorClasses.icon)} />
+        <span
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-lg",
+            card.colorClasses.icon,
+          )}
+        >
+          <Icon className="size-4" />
+        </span>
         <span
           className={cn("truncate text-sm font-medium", card.colorClasses.text)}
         >
           {card.label}
         </span>
+        {awaitingCount > 0 && (
+          <span className="hidden rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 sm:inline-flex dark:text-amber-400">
+            {awaitingCount} awaiting
+          </span>
+        )}
       </div>
       <span
         className={cn(
@@ -172,6 +187,7 @@ export function JobsStatCards({
   counts,
   activeTab,
   onTabChange,
+  awaitingApprovalCount = 0,
 }: JobsStatCardsProps) {
   return (
     <div
@@ -185,6 +201,7 @@ export function JobsStatCards({
           card={card}
           isActive={activeTab === card.id}
           count={counts[card.id] ?? 0}
+          awaitingCount={card.id === "running" ? awaitingApprovalCount : 0}
           onClick={() => onTabChange(card.id)}
         />
       ))}

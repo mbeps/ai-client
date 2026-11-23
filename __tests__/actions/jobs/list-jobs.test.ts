@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/config/routes";
-import { chat } from "@/drizzle/schemas/chat-schema";
+import { chat, message } from "@/drizzle/schemas/chat-schema";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import {
   workflow,
+  workflowNode,
   workflowRun,
   workflowTranslation,
 } from "@/drizzle/schemas/workflow-schema";
@@ -25,7 +26,9 @@ vi.mock("@/lib/inngest/run-service", () => ({
 // Mock Drizzle database
 const mockDbData = vi.hoisted(() => ({
   chats: [] as any[],
+  messages: [] as any[],
   workflowRuns: [] as any[],
+  workflowNodes: [] as any[],
   translations: [] as any[],
   kbDocs: [] as any[],
   knowledgebases: [] as any[],
@@ -42,6 +45,13 @@ vi.mock("@/drizzle/db", () => {
           where: vi.fn().mockImplementation(() => Promise.resolve(mockDbData.chats)),
         };
       }
+      if (table === message) {
+        return {
+          where: vi
+            .fn()
+            .mockImplementation(() => Promise.resolve(mockDbData.messages)),
+        };
+      }
       if (table === workflowRun) {
         return {
           leftJoin: vi.fn().mockReturnValue({
@@ -52,6 +62,13 @@ vi.mock("@/drizzle/db", () => {
           where: vi
             .fn()
             .mockImplementation(() => Promise.resolve(mockDbData.workflowRuns)),
+        };
+      }
+      if (table === workflowNode) {
+        return {
+          where: vi
+            .fn()
+            .mockImplementation(() => Promise.resolve(mockDbData.workflowNodes)),
         };
       }
       if (table === workflowTranslation) {
@@ -777,6 +794,120 @@ describe("listJobs Server Action", () => {
         mockUser.id,
         options,
       );
+    });
+
+    it("enriches workflow job awaiting human review with approval metadata", async () => {
+      mockFetchUserInngestRuns.mockResolvedValueOnce({
+        jobs: [
+          {
+            id: "inngest-wf-1",
+            functionId: "fn-workflow",
+            functionName: "Workflow Runner",
+            eventName: "workflows/execute.run",
+            type: "workflow",
+            title: "DAG Workflow",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00Z",
+            startedAt: "2026-09-28T10:00:01Z",
+            endedAt: null,
+            entityId: "run-review-1",
+          },
+        ],
+        offline: false,
+      });
+
+      mockDbData.workflowRuns = [
+        {
+          id: "run-review-1",
+          workflowId: "wf-1",
+          workflowName: "Expense Approval",
+          status: "awaiting_review",
+          currentNodeId: "node-review",
+          nodeStates: {
+            "node-review": {
+              status: "awaiting_review",
+              gateId: "gate-99",
+              reviewPhase: "before",
+            },
+          },
+        },
+      ];
+      mockDbData.workflowNodes = [{ id: "node-review", name: "Manager Signoff" }];
+
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const job = (res as any).value.jobs[0];
+      expect(job.approval).toEqual({
+        kind: "workflow-review",
+        runId: "run-review-1",
+        nodeId: "node-review",
+        nodeName: "Manager Signoff",
+        gateId: "gate-99",
+        reviewPhase: "before",
+      });
+    });
+
+    it("enriches running chat job with pending tool approvals from currentLeafId message", async () => {
+      mockFetchUserInngestRuns.mockResolvedValueOnce({
+        jobs: [
+          {
+            id: "inngest-chat-1",
+            functionId: "chat-response",
+            functionName: "Chat Runner",
+            eventName: "chat/response.generate",
+            type: "chat",
+            title: "Chat Response",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00Z",
+            startedAt: "2026-09-28T10:00:01Z",
+            endedAt: null,
+            entityId: "chat-1",
+          },
+        ],
+        offline: false,
+      });
+
+      mockDbData.chats = [
+        {
+          id: "chat-1",
+          title: "Ops Chat",
+          projectId: null,
+          currentLeafId: "msg-leaf-1",
+        },
+      ];
+      mockDbData.messages = [
+        {
+          id: "msg-leaf-1",
+          metadata: JSON.stringify({
+            pendingApprovals: [
+              {
+                approvalId: "app-1",
+                toolCallId: "tc-1",
+                toolName: "run_query",
+                args: { sql: "SELECT 1" },
+                signature: "sig-1",
+              },
+            ],
+          }),
+        },
+      ];
+
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const job = (res as any).value.jobs[0];
+      expect(job.approval).toEqual({
+        kind: "chat-tool",
+        assistantMessageId: "msg-leaf-1",
+        pendingApprovals: [
+          {
+            approvalId: "app-1",
+            toolCallId: "tc-1",
+            toolName: "run_query",
+            args: { sql: "SELECT 1" },
+            signature: "sig-1",
+          },
+        ],
+      });
     });
   });
 });
