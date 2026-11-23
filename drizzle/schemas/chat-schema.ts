@@ -3,7 +3,7 @@ import {
   timestampColumns,
   userForeignKeyColumn,
 } from "@/drizzle/schemas/schema-helpers";
-import { transformRun } from "@/drizzle/schemas/transform-agent-schema";
+import { workflowRun } from "@/drizzle/schemas/workflow-schema";
 
 /**
  * Stores chat sessions scoped to users, optional projects, and optional assistants.
@@ -64,7 +64,7 @@ export const attachment = pgTable(
     messageId: text("message_id").references(() => message.id, {
       onDelete: "cascade",
     }),
-    transformRunId: text("transform_run_id").references(() => transformRun.id, {
+    workflowRunId: text("workflow_run_id").references(() => workflowRun.id, {
       onDelete: "set null",
     }),
     userId: userForeignKeyColumn(),
@@ -77,7 +77,7 @@ export const attachment = pgTable(
   },
   (table) => [
     index("attachment_message_id_idx").on(table.messageId),
-    index("attachment_transform_run_id_idx").on(table.transformRunId),
+    index("attachment_workflow_run_id_idx").on(table.workflowRunId),
     index("attachment_user_id_idx").on(table.userId),
     index("attachment_key_idx").on(table.key),
   ],

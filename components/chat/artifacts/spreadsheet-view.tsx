@@ -148,12 +148,18 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
   const [globalFilter, setGlobalFilter] = useState("");
 
   const activeSheet = useMemo(() => {
-    return (
-      spreadsheetData.sheets[activeSheetIndex] || {
-        name: "N/A",
-        data: [],
-      }
-    );
+    const raw = spreadsheetData.sheets[activeSheetIndex] || {
+      name: "N/A",
+      data: [],
+    };
+    const data =
+      Array.isArray(raw.data) &&
+      raw.data.length === 1 &&
+      Array.isArray(raw.data[0]) &&
+      Array.isArray((raw.data[0] as unknown[])[0])
+        ? (raw.data[0] as unknown as typeof raw.data)
+        : raw.data;
+    return data === raw.data ? raw : { ...raw, data };
   }, [spreadsheetData.sheets, activeSheetIndex]);
 
   // Transform sheet data into a format TanStack Table likes

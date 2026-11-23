@@ -146,8 +146,8 @@ export function JobsView() {
         const res = await cancelJob(cancelTarget.id, {
           chatId:
             cancelTarget.type === "chat" ? cancelTarget.entityId : undefined,
-          transformRunId:
-            cancelTarget.type === "transform"
+          workflowRunId:
+            cancelTarget.type === "workflow"
               ? cancelTarget.entityId
               : undefined,
         });

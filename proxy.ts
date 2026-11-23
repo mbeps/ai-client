@@ -13,6 +13,7 @@ const PUBLIC_PREFIXES = [
   "/api/auth", // Better Auth handler at app/api/auth/[...all]/route.ts
   "/api/inngest", // Inngest serve handler
   "/api/mcp/oauth/client-metadata", // Public OAuth Client ID Metadata Document (RFC 7591 / CIMD)
+  "/api/webhooks/workflows", // Inbound workflow webhook endpoints verified via timing-safe secret
 ];
 
 /**

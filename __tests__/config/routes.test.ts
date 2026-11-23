@@ -127,6 +127,12 @@ describe("ROUTES — static paths", () => {
   it("API.AUTH path", () => {
     expect(ROUTES.API.AUTH.path).toBe("/api/auth");
   });
+
+  it("API.WEBHOOKS.workflow path", () => {
+    expect(ROUTES.API.WEBHOOKS.workflow("wf-1")).toBe(
+      "/api/webhooks/workflows/wf-1",
+    );
+  });
 });
 
 describe("ROUTES — Workflows", () => {
@@ -134,12 +140,12 @@ describe("ROUTES — Workflows", () => {
     expect(ROUTES.WORKFLOWS.TRANSLATION.path).toBe("/translation");
   });
 
-  it("WORKFLOWS.TRANSFORM path", () => {
-    expect(ROUTES.WORKFLOWS.TRANSFORM.path).toBe("/transform");
+  it("WORKFLOWS.AUTOMATIONS path", () => {
+    expect(ROUTES.WORKFLOWS.AUTOMATIONS.path).toBe("/workflows");
   });
 
-  it("WORKFLOWS.TRANSFORM.new path", () => {
-    expect(ROUTES.WORKFLOWS.TRANSFORM.new).toBe("/transform/new");
+  it("WORKFLOWS.AUTOMATIONS.new path", () => {
+    expect(ROUTES.WORKFLOWS.AUTOMATIONS.new).toBe("/workflows/new");
   });
 });
 
@@ -226,15 +232,15 @@ describe("ROUTES — dynamic helpers", () => {
     );
   });
 
-  it("WORKFLOWS.TRANSFORM.detail returns correct path", () => {
-    expect(ROUTES.WORKFLOWS.TRANSFORM.detail("agent-123")).toBe(
-      "/transform/agent-123",
+  it("WORKFLOWS.AUTOMATIONS.detail returns correct path", () => {
+    expect(ROUTES.WORKFLOWS.AUTOMATIONS.detail("wf-123")).toBe(
+      "/workflows/wf-123",
     );
   });
 
-  it("WORKFLOWS.TRANSFORM.runs returns correct path", () => {
-    expect(ROUTES.WORKFLOWS.TRANSFORM.runs("agent-123", "run-456")).toBe(
-      "/transform/agent-123/run-456",
+  it("WORKFLOWS.AUTOMATIONS.runs returns correct path", () => {
+    expect(ROUTES.WORKFLOWS.AUTOMATIONS.runs("wf-123", "run-456")).toBe(
+      "/workflows/wf-123/run-456",
     );
   });
 
@@ -270,8 +276,8 @@ describe("ROUTES — name properties", () => {
     expect(ROUTES.KNOWLEDGEBASES.name).toBe("Knowledge Bases");
   });
 
-  it("WORKFLOWS.TRANSFORM has correct name", () => {
-    expect(ROUTES.WORKFLOWS.TRANSFORM.name).toBe("Step-by-Step Automations");
+  it("WORKFLOWS.AUTOMATIONS has correct name", () => {
+    expect(ROUTES.WORKFLOWS.AUTOMATIONS.name).toBe("Workflows");
   });
 });
 

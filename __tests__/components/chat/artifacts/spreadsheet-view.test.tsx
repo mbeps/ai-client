@@ -164,4 +164,33 @@ describe("SpreadsheetView", () => {
     expect(screen.getByText("Column 3")).toBeInTheDocument();
     expect(screen.getByText("Val2")).toBeInTheDocument();
   });
+
+  it("unwraps accidentally 3D-nested sheet data arrays", () => {
+    const nested3d = {
+      sheets: [
+        {
+          name: "Car Specs",
+          data: [
+            [
+              ["Brand", "Model", "Speed"],
+              ["Lexus", "IS 300h", 210],
+              ["BMW", "320d", 235],
+            ],
+          ],
+        },
+      ],
+    };
+
+    render(
+      <SpreadsheetView
+        title="Car Specs"
+        content={JSON.stringify(nested3d)}
+      />,
+    );
+
+    expect(screen.getByText("Brand")).toBeInTheDocument();
+    expect(screen.getByText("Lexus")).toBeInTheDocument();
+    expect(screen.getByText("BMW")).toBeInTheDocument();
+    expect(screen.queryByText("No matching results.")).not.toBeInTheDocument();
+  });
 });

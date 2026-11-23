@@ -26,9 +26,9 @@ vi.mock("@/config/env", () => ({
 }));
 
 // Mock actions
-const mockGetTransformRun = vi.fn();
-vi.mock("@/actions/transform-runs/get-transform-run", () => ({
-  getTransformRun: (...args: any[]) => mockGetTransformRun(...args),
+const mockGetWorkflowRun = vi.fn();
+vi.mock("@/actions/workflow-runs/get-workflow-run", () => ({
+  getWorkflowRun: (...args: any[]) => mockGetWorkflowRun(...args),
 }));
 
 vi.mock("@/actions/skills/get-skill", () => ({
@@ -72,7 +72,7 @@ describe("DynamicBreadcrumbs", () => {
       ],
       mcpServers: [],
       publicMcpServers: [],
-      transformAgents: [],
+      workflows: [],
       chats: {},
     });
   });
@@ -129,15 +129,15 @@ describe("DynamicBreadcrumbs", () => {
     expect(await screen.findByText("OpenRouter")).toBeDefined();
   });
 
-  it("renders Step-by-Step Automations in breadcrumb for /transform", () => {
-    mockPathname.mockReturnValue("/transform");
+  it("renders Workflows in breadcrumb for /workflows", () => {
+    mockPathname.mockReturnValue("/workflows");
 
     render(<DynamicBreadcrumbs />);
 
-    expect(screen.getByText("Step-by-Step Automations")).toBeDefined();
+    expect(screen.getByText("Workflows")).toBeDefined();
   });
 
-  it("does not call getTransformRun for project chat route /projects/[id]/[chatId]", async () => {
+  it("does not call getWorkflowRun for project chat route /projects/[id]/[chatId]", async () => {
     const projectId = "11111111-1111-4111-8111-111111111111";
     const chatId = "22222222-2222-4222-8222-222222222222";
 
@@ -176,10 +176,10 @@ describe("DynamicBreadcrumbs", () => {
     expect(screen.getByText("Projects")).toBeDefined();
     expect(screen.getByText("My Project")).toBeDefined();
     expect(screen.getByText("Project Chat Session")).toBeDefined();
-    expect(mockGetTransformRun).not.toHaveBeenCalled();
+    expect(mockGetWorkflowRun).not.toHaveBeenCalled();
   });
 
-  it("does not call getTransformRun for agent chat route /agents/[id]/[chatId]", async () => {
+  it("does not call getWorkflowRun for agent chat route /agents/[id]/[chatId]", async () => {
     const assistantId = "33333333-3333-4333-8333-333333333333";
     const chatId = "44444444-4444-4444-8444-444444444444";
 
@@ -228,6 +228,6 @@ describe("DynamicBreadcrumbs", () => {
     expect(screen.getByText("Agents")).toBeDefined();
     expect(screen.getByText("Coding Assistant")).toBeDefined();
     expect(screen.getByText("Assistant Chat Session")).toBeDefined();
-    expect(mockGetTransformRun).not.toHaveBeenCalled();
+    expect(mockGetWorkflowRun).not.toHaveBeenCalled();
   });
 });

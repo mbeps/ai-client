@@ -3,8 +3,11 @@ import { ROUTES } from "@/config/routes";
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
-import { transformAgent, transformRun } from "@/drizzle/schemas/transform-agent-schema";
-import { workflowTranslation } from "@/drizzle/schemas/workflow-schema";
+import {
+  workflow,
+  workflowRun,
+  workflowTranslation,
+} from "@/drizzle/schemas/workflow-schema";
 import type { JobItem } from "@/types/jobs";
 
 // Mock auth session
@@ -22,7 +25,7 @@ vi.mock("@/lib/inngest/run-service", () => ({
 // Mock Drizzle database
 const mockDbData = vi.hoisted(() => ({
   chats: [] as any[],
-  transformRuns: [] as any[],
+  workflowRuns: [] as any[],
   translations: [] as any[],
   kbDocs: [] as any[],
   knowledgebases: [] as any[],
@@ -39,16 +42,16 @@ vi.mock("@/drizzle/db", () => {
           where: vi.fn().mockImplementation(() => Promise.resolve(mockDbData.chats)),
         };
       }
-      if (table === transformRun) {
+      if (table === workflowRun) {
         return {
           leftJoin: vi.fn().mockReturnValue({
             where: vi
               .fn()
-              .mockImplementation(() => Promise.resolve(mockDbData.transformRuns)),
+              .mockImplementation(() => Promise.resolve(mockDbData.workflowRuns)),
           }),
           where: vi
             .fn()
-            .mockImplementation(() => Promise.resolve(mockDbData.transformRuns)),
+            .mockImplementation(() => Promise.resolve(mockDbData.workflowRuns)),
         };
       }
       if (table === workflowTranslation) {
@@ -99,7 +102,7 @@ describe("listJobs Server Action", () => {
       session: { id: "session-abc" },
     });
     mockDbData.chats = [];
-    mockDbData.transformRuns = [];
+    mockDbData.workflowRuns = [];
     mockDbData.translations = [];
     mockDbData.kbDocs = [];
     mockDbData.knowledgebases = [];
@@ -246,19 +249,19 @@ describe("listJobs Server Action", () => {
       expect(enriched.entityDeleted).toBe(false);
     });
 
-    it("enriches transform job with agent name and runs URL", async () => {
+    it("enriches workflow job with workflow name and runs URL", async () => {
       const rawJob: JobItem = {
-        id: "run-tf-1",
-        functionId: "fn-transform",
-        functionName: "Execute Transform",
-        eventName: "workflows/transform.execute",
-        type: "transform",
-        title: "Transform Workflow",
+        id: "run-wf-1",
+        functionId: "fn-workflow",
+        functionName: "Execute Workflow",
+        eventName: "workflows/execute.run",
+        type: "workflow",
+        title: "DAG Workflow",
         status: "RUNNING",
         queuedAt: "2026-09-28T10:00:00Z",
         startedAt: "2026-09-28T10:00:01Z",
         endedAt: null,
-        entityId: "run-tf-1",
+        entityId: "run-wf-1",
       };
 
       mockFetchUserInngestRuns.mockResolvedValueOnce({
@@ -266,11 +269,11 @@ describe("listJobs Server Action", () => {
         offline: false,
       });
 
-      mockDbData.transformRuns = [
+      mockDbData.workflowRuns = [
         {
-          id: "run-tf-1",
-          agentId: "agent-xyz",
-          agentName: "CSV to JSON Processor",
+          id: "run-wf-1",
+          workflowId: "wf-xyz",
+          workflowName: "CSV to JSON Processor",
         },
       ];
 
@@ -282,7 +285,7 @@ describe("listJobs Server Action", () => {
       const enriched = result.jobs[0];
       expect(enriched.title).toBe("CSV to JSON Processor");
       expect(enriched.url).toBe(
-        ROUTES.WORKFLOWS.TRANSFORM.runs("agent-xyz", "run-tf-1"),
+        ROUTES.WORKFLOWS.AUTOMATIONS.runs("wf-xyz", "run-wf-1"),
       );
       expect(enriched.entityDeleted).toBe(false);
     });
@@ -440,20 +443,20 @@ describe("listJobs Server Action", () => {
       expect(enriched.url).toBeUndefined();
     });
 
-    it("handles deleted transform entity", async () => {
+    it("handles deleted workflow entity", async () => {
       const rawJob: JobItem = {
-        id: "run-tf-del",
-        functionId: "fn-transform",
-        functionName: "Execute Transform",
-        eventName: "workflows/transform.execute",
-        type: "transform",
-        title: "Transform Workflow",
+        id: "run-wf-del",
+        functionId: "fn-workflow",
+        functionName: "Execute Workflow",
+        eventName: "workflows/execute.run",
+        type: "workflow",
+        title: "DAG Workflow",
         status: "FAILED",
         queuedAt: "2026-09-28T10:00:00Z",
         startedAt: null,
         endedAt: null,
         entityId: "deleted-run-id",
-        url: "/transform?runId=deleted-run-id",
+        url: "/workflows?runId=deleted-run-id",
       };
 
       mockFetchUserInngestRuns.mockResolvedValueOnce({
@@ -461,7 +464,7 @@ describe("listJobs Server Action", () => {
         offline: false,
       });
 
-      mockDbData.transformRuns = [];
+      mockDbData.workflowRuns = [];
 
       const res = await listJobs();
       expect(res.ok).toBe(true);
@@ -470,7 +473,7 @@ describe("listJobs Server Action", () => {
       expect(result.jobs).toHaveLength(1);
       const enriched = result.jobs[0];
       expect(enriched.entityDeleted).toBe(true);
-      expect(enriched.title).toBe("Transform (Deleted or Unavailable)");
+      expect(enriched.title).toBe("Workflow (Deleted or Unavailable)");
       expect(enriched.url).toBeUndefined();
     });
 
@@ -723,19 +726,19 @@ describe("listJobs Server Action", () => {
       expect(result.jobs[0].title).toBe("Default Chat Title");
     });
 
-    it("keeps transform title when agentName is not present in record", async () => {
+    it("keeps workflow title when workflowName is not present in record", async () => {
       const rawJob: JobItem = {
-        id: "run-tf-no-agent",
-        functionId: "fn-transform",
-        functionName: "Execute Transform",
-        eventName: "workflows/transform.execute",
-        type: "transform",
-        title: "Default Transform Title",
+        id: "run-wf-no-name",
+        functionId: "fn-workflow",
+        functionName: "Execute Workflow",
+        eventName: "workflows/execute.run",
+        type: "workflow",
+        title: "Default Workflow Title",
         status: "RUNNING",
         queuedAt: "2026-09-28T10:00:00Z",
         startedAt: null,
         endedAt: null,
-        entityId: "run-tf-no-agent",
+        entityId: "run-wf-no-name",
       };
 
       mockFetchUserInngestRuns.mockResolvedValueOnce({
@@ -743,11 +746,11 @@ describe("listJobs Server Action", () => {
         offline: false,
       });
 
-      mockDbData.transformRuns = [
+      mockDbData.workflowRuns = [
         {
-          id: "run-tf-no-agent",
-          agentId: "agent-xyz",
-          agentName: null,
+          id: "run-wf-no-name",
+          workflowId: "wf-xyz",
+          workflowName: null,
         },
       ];
 
@@ -755,9 +758,9 @@ describe("listJobs Server Action", () => {
       expect(res.ok).toBe(true);
       const result = (res as any).value;
 
-      expect(result.jobs[0].title).toBe("Default Transform Title");
+      expect(result.jobs[0].title).toBe("Default Workflow Title");
       expect(result.jobs[0].url).toBe(
-        ROUTES.WORKFLOWS.TRANSFORM.runs("agent-xyz", "run-tf-no-agent"),
+        ROUTES.WORKFLOWS.AUTOMATIONS.runs("wf-xyz", "run-wf-no-name"),
       );
     });
 

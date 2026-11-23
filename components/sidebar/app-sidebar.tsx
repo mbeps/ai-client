@@ -7,7 +7,6 @@ import {
   Database,
   FolderOpen,
   Languages,
-  List,
   MessageSquare,
   MessageSquarePlus,
   MoreHorizontal,
@@ -151,7 +150,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                     isActive={
                       pathname.startsWith(ROUTES.WORKFLOWS.TRANSLATION.path) ||
-                      pathname.startsWith(ROUTES.WORKFLOWS.TRANSFORM.path)
+                      pathname.startsWith(ROUTES.WORKFLOWS.AUTOMATIONS.path)
                     }
                   >
                     <Workflow className="h-4 w-4" />
@@ -179,14 +178,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
-                      href={ROUTES.WORKFLOWS.TRANSFORM.path}
+                      href={ROUTES.WORKFLOWS.AUTOMATIONS.path}
                       className="cursor-pointer"
                       onClick={() => {
                         if (isMobile) setOpenMobile(false);
                       }}
                     >
-                      <List className="mr-2 h-4 w-4 text-amber-500" />
-                      <span>{ROUTES.WORKFLOWS.TRANSFORM.name}</span>
+                      <Workflow className="mr-2 h-4 w-4 text-amber-500" />
+                      <span>{ROUTES.WORKFLOWS.AUTOMATIONS.name}</span>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

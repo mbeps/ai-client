@@ -153,7 +153,7 @@ describe("Inngest Run Service (Unified REST v2)", () => {
               data: [
                 {
                   id: "run-with-event-id",
-                  function: { id: "fn-transform", name: "Transform Agent", slug: "transform-agent" },
+                  function: { id: "fn-workflow", name: "Workflow Automation", slug: "run-workflow-automation" },
                   trigger: {
                     eventIds: ["event-abc-123"],
                   },
@@ -171,11 +171,11 @@ describe("Inngest Run Service (Unified REST v2)", () => {
             status: 200,
             json: async () => ({
               data: {
-                name: "workflows/transform.execute",
+                name: "workflows/execute.run",
                 data: {
                   userId: "user-123",
-                  runId: "tr-777",
-                  agentName: "Analyzer",
+                  runId: "wf-run-777",
+                  workflowName: "Analyzer",
                 },
               },
             }),
@@ -189,8 +189,8 @@ describe("Inngest Run Service (Unified REST v2)", () => {
 
       expect(eventFetched).toBe(true);
       expect(result.jobs).toHaveLength(1);
-      expect(result.jobs[0].type).toBe("transform");
-      expect(result.jobs[0].entityId).toBe("tr-777");
+      expect(result.jobs[0].type).toBe("workflow");
+      expect(result.jobs[0].entityId).toBe("wf-run-777");
       expect(result.jobs[0].subtitle).toBe("Analyzer");
     });
 
@@ -761,7 +761,7 @@ describe("Inngest Run Service (Unified REST v2)", () => {
       );
 
       expect(resolveJobType("chat/response.generate")).toBe("chat");
-      expect(resolveJobType("workflows/transform.execute")).toBe("transform");
+      expect(resolveJobType("workflows/execute.run")).toBe("workflow");
       expect(resolveJobType("workflows/translate.execute")).toBe("translation");
       expect(resolveJobType("knowledgebase/document.ingest")).toBe("kb-ingest");
       expect(resolveJobType("knowledgebase/reindex")).toBe("kb-reindex");
@@ -779,30 +779,30 @@ describe("Inngest Run Service (Unified REST v2)", () => {
       expect(chatMeta.entityId).toBe("c-1");
       expect(chatMeta.url).toBe("/chats/c-1");
 
-      const transformMeta1 = resolveJobMetadata(
-        "transform",
-        "workflows/transform.execute",
+      const workflowMeta1 = resolveJobMetadata(
+        "workflow",
+        "workflows/execute.run",
         "fn",
-        { agentId: "ag-1", runId: "tr-1", agentName: "Worker" },
+        { workflowId: "wf-1", runId: "tr-1", workflowName: "Worker" },
       );
-      expect(transformMeta1.url).toBe("/transform/ag-1/tr-1");
-      expect(transformMeta1.subtitle).toBe("Worker");
+      expect(workflowMeta1.url).toBe("/workflows/wf-1/tr-1");
+      expect(workflowMeta1.subtitle).toBe("Worker");
 
-      const transformMeta2 = resolveJobMetadata(
-        "transform",
-        "workflows/transform.execute",
+      const workflowMeta2 = resolveJobMetadata(
+        "workflow",
+        "workflows/execute.run",
         "fn",
         { runId: "tr-2" },
       );
-      expect(transformMeta2.url).toBe("/transform?runId=tr-2");
+      expect(workflowMeta2.url).toBe("/workflows?runId=tr-2");
 
-      const transformMeta3 = resolveJobMetadata(
-        "transform",
-        "workflows/transform.execute",
+      const workflowMeta3 = resolveJobMetadata(
+        "workflow",
+        "workflows/execute.run",
         "fn",
         undefined,
       );
-      expect(transformMeta3.url).toBe("/transform");
+      expect(workflowMeta3.url).toBe("/workflows");
 
       const translationMeta1 = resolveJobMetadata(
         "translation",

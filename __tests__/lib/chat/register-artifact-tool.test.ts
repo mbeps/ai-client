@@ -241,4 +241,38 @@ describe("registerArtifactTool", () => {
       });
     });
   });
+
+  it("unwraps accidentally 3D-nested sheets[i].data arrays", async () => {
+    const tools = registerArtifactTool();
+    const result = await (tools.manage_artifact as any).execute({
+      type: "spreadsheet",
+      title: "Car Specs",
+      sheets: [
+        {
+          name: "Car Specs",
+          data: [
+            [
+              ["Brand", "Model"],
+              ["Lexus", "IS 300h"],
+              ["BMW", "320d"],
+            ],
+          ],
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(JSON.parse(result.artifact.content)).toEqual({
+      sheets: [
+        {
+          name: "Car Specs",
+          data: [
+            ["Brand", "Model"],
+            ["Lexus", "IS 300h"],
+            ["BMW", "320d"],
+          ],
+        },
+      ],
+    });
+  });
 });

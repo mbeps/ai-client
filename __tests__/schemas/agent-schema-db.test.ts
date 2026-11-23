@@ -7,7 +7,7 @@ import { chat } from "@/drizzle/schemas/chat-schema";
 import { project } from "@/drizzle/schemas/project-schema";
 import { prompt } from "@/drizzle/schemas/prompt-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
-import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { workflow } from "@/drizzle/schemas/workflow-schema";
 
 describe("Database Agent Schema", () => {
   it("should define all unified agent columns", () => {
@@ -43,9 +43,9 @@ describe("Database Agent Schema", () => {
     expect(chat.agentId).toBeDefined();
   });
 
-  it("should have subagentIds on project and transformAgent schemas", () => {
+  it("should have subagentIds on project and workflow schemas", () => {
     expect(project.subagentIds).toBeDefined();
-    expect(transformAgent.subagentIds).toBeDefined();
+    expect(workflow.subagentIds).toBeDefined();
   });
 
   it("should have agentIds on skill and prompt schemas", () => {

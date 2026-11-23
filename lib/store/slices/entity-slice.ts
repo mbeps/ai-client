@@ -10,14 +10,18 @@ import { listMemories } from "@/actions/memories/list-memories";
 import { listProjects } from "@/actions/projects/list-projects";
 import { listPrompts } from "@/actions/prompts/list-prompts";
 import { listSkills } from "@/actions/skills/list-skills";
-import { listTransformAgents } from "@/actions/transform-agents/list-transform-agents";
 import { getUserSettings } from "@/actions/user-settings/get-user-settings";
+import { listWorkflows } from "@/actions/workflows/list-workflows";
 import { BUILT_IN_AGENTS } from "@/config/built-in-agents";
 import { DEFAULT_AGENT_GUARDRAILS } from "@/drizzle/schemas/agent-schema";
 import type { Agent } from "@/types/agent/agent";
 import type { AppState } from "@/types/app/app-state";
 import type { Result } from "@/types/result";
 import type { UserSettingsRow } from "@/types/user/user-settings-row";
+import {
+  DEFAULT_WORKFLOW_APPROVAL_CONFIG,
+  DEFAULT_WORKFLOW_CANVAS_CONFIG,
+} from "@/types/workflows/workflow";
 
 /**
  * Helper to generate standard CRUD loader methods (fetch -> map -> set). Centralises the logic for loading database entries into the Zustand store.
@@ -77,10 +81,10 @@ type EntitySlice = Pick<
   | "userSettings"
   | "mcpServers"
   | "publicMcpServers"
-  | "transformAgents"
+  | "workflows"
   | "mcpPrompts"
   | "loadError"
-  | "loadTransformAgents"
+  | "loadWorkflows"
   | "loadProjects"
   | "loadAgents"
   | "deleteAgent"
@@ -116,7 +120,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
   userSettings: null,
   mcpServers: [],
   publicMcpServers: [],
-  transformAgents: [],
+  workflows: [],
   mcpPrompts: [],
   loadError: null,
 
@@ -175,36 +179,28 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
     updatedAt: new Date(row.updatedAt),
   })),
 
-  loadTransformAgents: createEntityLoader(
-    set,
-    "transformAgents",
-    listTransformAgents,
-    (row) => {
-      let steps = [];
-      try {
-        steps = JSON.parse(row.steps);
-      } catch {
-        steps = [];
-      }
-      return {
-        id: row.id,
-        userId: row.userId,
-        name: row.name,
-        description: row.description ?? "",
-        globalContext: row.globalContext ?? undefined,
-        modelId: row.modelId ?? undefined,
-        tools: row.tools,
-        skillMode: row.skillMode as "dynamic" | "none" | "specific",
-        skillIds: row.skillIds ?? [],
-        knowledgeBaseIds: row.knowledgeBaseIds,
-        subagentIds: row.subagentIds ?? [],
-        requiresFileUpload: row.requiresFileUpload,
-        steps,
-        createdAt: new Date(row.createdAt),
-        updatedAt: new Date(row.updatedAt),
-      };
-    },
-  ),
+  loadWorkflows: createEntityLoader(set, "workflows", listWorkflows, (row) => ({
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description ?? "",
+    globalContext: row.globalContext ?? undefined,
+    modelId: row.modelId ?? undefined,
+    tools: row.tools ?? [],
+    skillMode: row.skillMode as "dynamic" | "none" | "specific",
+    skillIds: row.skillIds ?? [],
+    knowledgeBaseIds: row.knowledgeBaseIds ?? [],
+    subagentIds: row.subagentIds ?? [],
+    requiresFileUpload: Boolean(row.requiresFileUpload),
+    canvasConfig: row.canvasConfig ?? DEFAULT_WORKFLOW_CANVAS_CONFIG,
+    approvalConfig: row.approvalConfig ?? DEFAULT_WORKFLOW_APPROVAL_CONFIG,
+    webhookSecret: row.webhookSecret,
+    nodeCount: row.nodeCount ?? 0,
+    hasManualTrigger: Boolean(row.hasManualTrigger),
+    hasWebhookTrigger: Boolean(row.hasWebhookTrigger),
+    createdAt: new Date(row.createdAt),
+    updatedAt: new Date(row.updatedAt),
+  })),
 
   loadAgents: async () => {
     const mapAgentRow = (row: AgentRowWithUsage): Agent => {
@@ -399,7 +395,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
       memories: [],
       mcpServers: [],
       publicMcpServers: [],
-      transformAgents: [],
+      workflows: [],
       mcpPrompts: [],
       userSettings: null,
       loadError: null,

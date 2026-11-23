@@ -85,7 +85,7 @@ function makeAttachmentRow(id: string, mimeType: string): AttachmentRow {
   return {
     id,
     messageId: "msg-1",
-    transformRunId: null,
+    workflowRunId: null,
     userId: "user-1",
     name: "file",
     mimeType,

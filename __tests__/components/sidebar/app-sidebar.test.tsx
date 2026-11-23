@@ -76,7 +76,7 @@ describe("AppSidebar", () => {
     expect(runningJobsLink).toHaveAttribute("href", ROUTES.JOBS.path);
   });
 
-  it("opens Workflows dropdown with Translation and Step-by-Step Automations items", async () => {
+  it("opens Workflows dropdown with Translation and Visual Workflows items", async () => {
     const user = userEvent.setup();
     await act(async () => {
       render(
@@ -95,11 +95,11 @@ describe("AppSidebar", () => {
     expect(translationLink).toBeInTheDocument();
     expect(translationLink).toHaveAttribute("href", ROUTES.WORKFLOWS.TRANSLATION.path);
 
-    const transformLink = screen.getByRole("menuitem", {
-      name: new RegExp(ROUTES.WORKFLOWS.TRANSFORM.name, "i"),
+    const workflowsLink = screen.getByRole("menuitem", {
+      name: new RegExp(ROUTES.WORKFLOWS.AUTOMATIONS.name, "i"),
     });
-    expect(transformLink).toBeInTheDocument();
-    expect(transformLink).toHaveAttribute("href", ROUTES.WORKFLOWS.TRANSFORM.path);
+    expect(workflowsLink).toBeInTheDocument();
+    expect(workflowsLink).toHaveAttribute("href", ROUTES.WORKFLOWS.AUTOMATIONS.path);
   });
 
   it("marks the active chat with data-active=true when pathname matches its href", async () => {

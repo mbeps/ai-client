@@ -8,7 +8,7 @@ import { chat } from "@/drizzle/schemas/chat-schema";
 import { project } from "@/drizzle/schemas/project-schema";
 import { prompt } from "@/drizzle/schemas/prompt-schema";
 import { skill } from "@/drizzle/schemas/skill-schema";
-import { transformAgent } from "@/drizzle/schemas/transform-agent-schema";
+import { workflow } from "@/drizzle/schemas/workflow-schema";
 import { acquireSubagentLinkLock } from "@/lib/agents/validate-subagent-links";
 import { requireSession } from "@/lib/auth/require-session";
 import { whereOwner } from "@/lib/db/where-owner";
@@ -96,14 +96,14 @@ export const deleteAgent = defineAction(
               ),
             ),
           tx
-            .update(transformAgent)
+            .update(workflow)
             .set({
-              subagentIds: sql`array_remove(${transformAgent.subagentIds}, ${deletedId})`,
+              subagentIds: sql`array_remove(${workflow.subagentIds}, ${deletedId})`,
             })
             .where(
               and(
-                eq(transformAgent.userId, session.user.id),
-                sql`${deletedId} = ANY(${transformAgent.subagentIds})`,
+                eq(workflow.userId, session.user.id),
+                sql`${deletedId} = ANY(${workflow.subagentIds})`,
               ),
             ),
           tx

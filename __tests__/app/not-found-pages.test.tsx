@@ -11,8 +11,8 @@ import RootNotFound from "@/app/not-found";
 import PromptNotFound from "@/app/settings/prompts/[id]/not-found";
 import SkillNotFound from "@/app/settings/skills/[id]/not-found";
 import ConnectorNotFound from "@/app/settings/connectors/[id]/not-found";
-import TransformRunNotFound from "@/app/(main)/transform/[id]/[runId]/not-found";
-import TransformAgentNotFound from "@/app/(main)/transform/[id]/not-found";
+import WorkflowRunNotFound from "@/app/(main)/workflows/[id]/[runId]/not-found";
+import WorkflowNotFound from "@/app/(main)/workflows/[id]/not-found";
 import { ROUTES } from "@/config/routes";
 
 describe("Not Found Pages", () => {
@@ -93,17 +93,17 @@ describe("Not Found Pages", () => {
     expect(link).toHaveAttribute("href", ROUTES.SETTINGS.SKILLS.path);
   });
 
-  it("renders TransformAgentNotFound with link to automations", () => {
-    render(<TransformAgentNotFound />);
-    expect(screen.getByText("Automation not found")).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: /back to automations/i });
-    expect(link).toHaveAttribute("href", ROUTES.WORKFLOWS.TRANSFORM.path);
+  it("renders WorkflowNotFound with link to workflows", () => {
+    render(<WorkflowNotFound />);
+    expect(screen.getByText("Workflow not found")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /back to workflows/i });
+    expect(link).toHaveAttribute("href", ROUTES.WORKFLOWS.AUTOMATIONS.path);
   });
 
-  it("renders TransformRunNotFound with link to automations", () => {
-    render(<TransformRunNotFound />);
-    expect(screen.getByText("Automation run not found")).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: /back to automations/i });
-    expect(link).toHaveAttribute("href", ROUTES.WORKFLOWS.TRANSFORM.path);
+  it("renders WorkflowRunNotFound with link to workflows", () => {
+    render(<WorkflowRunNotFound />);
+    expect(screen.getByText("Workflow run not found")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /back to workflows/i });
+    expect(link).toHaveAttribute("href", ROUTES.WORKFLOWS.AUTOMATIONS.path);
   });
 });

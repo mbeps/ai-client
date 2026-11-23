@@ -5,6 +5,23 @@ import { manageArtifactSchema } from "@/schemas/chat/chat";
 
 const log = getLogger(["app", "chat", "tools"]);
 
+/** Unwraps accidentally 3D-nested sheet data (`[[[...]]]`) into 2D rows (`[[...]]`). */
+function normaliseSheetsData(sheets: unknown[]): unknown[] {
+  return sheets.map((sheet) => {
+    if (!sheet || typeof sheet !== "object") return sheet;
+    const record = sheet as { data?: unknown };
+    if (
+      Array.isArray(record.data) &&
+      record.data.length === 1 &&
+      Array.isArray(record.data[0]) &&
+      Array.isArray(record.data[0][0])
+    ) {
+      return { ...record, data: record.data[0] };
+    }
+    return sheet;
+  });
+}
+
 /**
  * Registers the internal manage_artifact tool for interactive artifacts.
  *
@@ -25,15 +42,22 @@ export function registerArtifactTool() {
 
           // If sheets are provided directly, use them to build the content
           if (args.sheets && Array.isArray(args.sheets)) {
-            content = JSON.stringify({ sheets: args.sheets });
+            content = JSON.stringify({
+              sheets: normaliseSheetsData(args.sheets),
+            });
           } else if (args.sheets && typeof args.sheets === "string") {
             // Some models might stringify the sheets array themselves
             try {
               const parsedSheets = JSON.parse(args.sheets);
               if (Array.isArray(parsedSheets)) {
-                content = JSON.stringify({ sheets: parsedSheets });
-              } else if (parsedSheets.sheets) {
-                content = JSON.stringify(parsedSheets);
+                content = JSON.stringify({
+                  sheets: normaliseSheetsData(parsedSheets),
+                });
+              } else if (Array.isArray(parsedSheets?.sheets)) {
+                content = JSON.stringify({
+                  ...parsedSheets,
+                  sheets: normaliseSheetsData(parsedSheets.sheets),
+                });
               }
             } catch {
               // Fallback to raw string if it's not valid JSON
