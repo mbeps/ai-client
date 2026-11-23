@@ -2750,6 +2750,42 @@ describe("generateChatResponse Inngest Function", () => {
       expect(persistedMeta.pendingApprovals[0].approvalId).toBe("app-1");
     });
 
+    it("falls back to userSettings.defaultAutoApprove when approvalMode is omitted", async () => {
+      mockGetUserSettings.mockResolvedValueOnce({
+        defaultAutoApprove: true,
+        memoryEnabled: true,
+      });
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Done." };
+        })(),
+        text: Promise.resolve("Done."),
+        usage: Promise.resolve({ inputTokens: 5, outputTokens: 2 }),
+        finishReason: Promise.resolve("stop"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/response.generate",
+          data: {
+            chatId: "chat-auto-default",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolApproval: expect.objectContaining({
+            create_skill: "not-applicable",
+          }),
+        }),
+      );
+    });
+
     it("resumes on chat/approval.respond, preserves Round 1 state, injects denial policy note, and updates DB", async () => {
       mockUpdateResponse.mockClear();
       mockPublish.mockClear();

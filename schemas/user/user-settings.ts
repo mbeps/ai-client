@@ -15,6 +15,7 @@ export const userSettingsSchema = z.object({
     .optional()
     .nullable(),
   memoryEnabled: z.boolean().optional(),
+  defaultAutoApprove: z.boolean().optional(),
 });
 
 /**

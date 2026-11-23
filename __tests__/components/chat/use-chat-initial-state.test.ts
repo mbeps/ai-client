@@ -241,4 +241,41 @@ describe("resolveInitialChatConfig", () => {
     );
     expect(fromEmptyThread.initialSubagentIds).toEqual([]);
   });
+
+  it("resolves initialApprovalMode from thread metadata, falling back to userSettings.defaultAutoApprove or ask", () => {
+    const defaultAsk = resolveInitialChatConfig(
+      [],
+      undefined,
+      undefined,
+      null,
+      baseChat,
+    );
+    expect(defaultAsk.initialApprovalMode).toBe("ask");
+
+    const defaultAuto = resolveInitialChatConfig(
+      [],
+      undefined,
+      undefined,
+      { defaultAutoApprove: true } as any,
+      baseChat,
+    );
+    expect(defaultAuto.initialApprovalMode).toBe("auto");
+
+    const threadOverrideAsk = [
+      {
+        id: "m-app-1",
+        role: "user",
+        content: "Hi",
+        metadata: JSON.stringify({ approvalMode: "ask" }),
+      },
+    ] as any;
+    const overridden = resolveInitialChatConfig(
+      threadOverrideAsk,
+      undefined,
+      undefined,
+      { defaultAutoApprove: true } as any,
+      baseChat,
+    );
+    expect(overridden.initialApprovalMode).toBe("ask");
+  });
 });

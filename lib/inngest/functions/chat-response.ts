@@ -520,7 +520,7 @@ export const generateChatResponse = inngest.createFunction(
     let subagentsEnabled: boolean | undefined = event.data.subagentsEnabled;
     let subagentModelId: string | undefined = event.data.subagentModelId;
     let subagentIds: string[] | undefined = event.data.subagentIds;
-    let approvalMode: ApprovalMode = event.data.approvalMode ?? "ask";
+    let approvalMode: ApprovalMode | undefined = event.data.approvalMode;
     const assistantMessageId: string = isApprovalResume
       ? event.data.assistantMessageId
       : crypto.randomUUID();
@@ -579,8 +579,7 @@ export const generateChatResponse = inngest.createFunction(
         subagentsEnabled = userMeta.subagentsEnabled;
         subagentModelId = userMeta.subagentModelId;
         subagentIds = userMeta.subagentIds;
-        approvalMode =
-          userMeta.approvalMode ?? parked.meta.approvalMode ?? "ask";
+        approvalMode = userMeta.approvalMode ?? parked.meta.approvalMode;
 
         accumulator.accumulatedText = parked.content;
         accumulator.accumulatedReasoning = parked.meta.reasoning ?? "";
@@ -710,6 +709,8 @@ export const generateChatResponse = inngest.createFunction(
         ctx.servers,
         ctx.subagentServers,
       );
+      const resolvedApprovalMode: ApprovalMode =
+        approvalMode ?? (userSettings?.defaultAutoApprove ? "auto" : "ask");
 
       const {
         allTools,
@@ -738,7 +739,7 @@ export const generateChatResponse = inngest.createFunction(
         wrapSubagentTools: (workerTools, targetAgent) => {
           const subagentApprovalMap = buildToolApproval(
             Object.keys(workerTools),
-            approvalMode,
+            resolvedApprovalMode,
             {
               internalToolOverrides,
               autoApprovedMcpToolsByServer,
@@ -789,7 +790,7 @@ export const generateChatResponse = inngest.createFunction(
       });
 
       const toolApproval = allTools
-        ? buildToolApproval(Object.keys(allTools), approvalMode, {
+        ? buildToolApproval(Object.keys(allTools), resolvedApprovalMode, {
             internalToolOverrides,
             autoApprovedMcpToolsByServer,
             toolServerIdMap: mcpState.toolServerIdMap,

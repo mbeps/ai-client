@@ -202,9 +202,12 @@ export function resolveInitialReasoningEffort(
 }
 
 /**
- * Resolves initial approval mode from the thread's last user message or defaults to "ask".
+ * Resolves initial approval mode from the thread's last user message or user settings default.
  */
-export function resolveInitialApprovalMode(thread: Message[]): ApprovalMode {
+export function resolveInitialApprovalMode(
+  thread: Message[],
+  userSettings?: UserSettingsRow | null,
+): ApprovalMode {
   for (let i = thread.length - 1; i >= 0; i--) {
     const msg = thread[i];
     if (msg.role === "user" && msg.metadata) {
@@ -212,7 +215,7 @@ export function resolveInitialApprovalMode(thread: Message[]): ApprovalMode {
       if (approvalMode) return approvalMode;
     }
   }
-  return "ask";
+  return userSettings?.defaultAutoApprove ? "auto" : "ask";
 }
 
 /**
@@ -276,7 +279,7 @@ export function resolveInitialChatConfig(
     initialSelectedTools,
     initialKbIds: resolveInitialKbIds(chat, currentProject, currentAssistant),
     initialSkillIds: resolveInitialSkillIds(currentAssistant, currentProject),
-    initialApprovalMode: resolveInitialApprovalMode(thread),
+    initialApprovalMode: resolveInitialApprovalMode(thread, userSettings),
   };
 }
 
