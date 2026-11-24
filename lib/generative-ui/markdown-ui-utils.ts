@@ -101,6 +101,24 @@ export function hasUnclosedGenerativeUIFence(content: string): boolean {
 }
 
 /**
+ * Returns the raw body of the trailing unclosed top-level `spec` or `ui` fence,
+ * or `null` when no such unclosed trailing fence exists.
+ */
+export function getTrailingUnclosedGenerativeUISpec(
+  content: string,
+): string | null {
+  const lines = content.split("\n");
+  const last = scanTopLevelFences(lines).at(-1);
+  if (!last || last.endLine !== null || !isGenerativeUiLang(last.lang)) {
+    return null;
+  }
+  return lines
+    .slice(last.startLine + 1)
+    .join("\n")
+    .replace(/\n$/, "");
+}
+
+/**
  * Replaces top-level `spec` and `ui` fenced blocks with `[Interactive UI omitted]`
  * so copying a chat message or Markdown artifact yields clean readable prose.
  */

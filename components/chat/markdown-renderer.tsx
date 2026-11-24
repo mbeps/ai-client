@@ -2,6 +2,7 @@
 
 import "katex/dist/katex.min.css";
 import { Check, Copy } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -12,11 +13,20 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { getTrailingUnclosedGenerativeUISpec } from "@/lib/generative-ui/markdown-ui-utils";
 import { cn } from "@/lib/utils";
 import {
   downloadFile,
   extractFilenameFromUrl,
 } from "@/lib/utils/download-file";
+
+const DynamicUIBlock = dynamic(
+  () =>
+    import("@/components/chat/generative-ui/dynamic-ui-block").then(
+      (mod) => mod.DynamicUIBlock,
+    ),
+  { ssr: false },
+);
 
 /**
  * Sanitisation schema: defaultSchema already covers GFM task-list checkboxes
@@ -221,15 +231,21 @@ function CodeBlock({ language, value }: { language?: string; value: string }) {
  *
  * @param props.content - Raw Markdown string to render with all supported extensions.
  * @param props.className - Optional additional classes for the typeset wrapper.
+ * @param props.isStreaming - Whether the content is currently streaming (enables skeleton for trailing unclosed UI fences).
  * @returns Typeset container with React Markdown, KaTeX, and Mermaid integration.
  */
 export function MarkdownRenderer({
   content,
   className,
+  isStreaming = false,
 }: {
   content: string;
   className?: string;
+  isStreaming?: boolean;
 }) {
+  const trailingUnclosedSpec = isStreaming
+    ? getTrailingUnclosedGenerativeUISpec(content)
+    : null;
   return (
     <div
       className={cn("typeset typeset-chat max-w-none break-words", className)}
@@ -356,6 +372,20 @@ export function MarkdownRenderer({
 
             if (/language-mermaid/.test(cls)) {
               return <MermaidBlock chart={rawCode} />;
+            }
+
+            if (/language-(?:spec|ui)\b/.test(cls)) {
+              const isUnclosed =
+                isStreaming &&
+                trailingUnclosedSpec !== null &&
+                rawCode === trailingUnclosedSpec;
+              return (
+                <DynamicUIBlock
+                  rawSpec={rawCode}
+                  isStreaming={isStreaming}
+                  isUnclosed={isUnclosed}
+                />
+              );
             }
 
             const match = /language-(\w+)/.exec(cls);

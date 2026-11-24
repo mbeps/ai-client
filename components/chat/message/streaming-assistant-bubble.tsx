@@ -122,6 +122,7 @@ export function StreamingAssistantBubble({
             isCanvasOpen={isCanvasOpen}
             activeArtifactId={activeArtifactId}
             onToggleArtifact={onToggleArtifact}
+            isStreaming={true}
           />
 
           <CitationsList citations={streamingCitations} />

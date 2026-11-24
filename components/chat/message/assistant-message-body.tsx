@@ -20,6 +20,7 @@ export interface AssistantMessageBodyProps {
   activeArtifactId?: string | null;
   onToggleArtifact?: (artifact: ArtifactData) => void;
   createdAt?: string | Date;
+  isStreaming?: boolean;
 }
 
 /**
@@ -37,6 +38,7 @@ export function AssistantMessageBody({
   activeArtifactId,
   onToggleArtifact,
   createdAt,
+  isStreaming = false,
 }: AssistantMessageBodyProps) {
   return (
     <>
@@ -53,7 +55,7 @@ export function AssistantMessageBody({
       {messageDownloads.map((dl) => (
         <DownloadCard key={dl.id} item={dl} createdAt={createdAt} />
       ))}
-      <MarkdownRenderer content={content} />
+      <MarkdownRenderer content={content} isStreaming={isStreaming} />
     </>
   );
 }

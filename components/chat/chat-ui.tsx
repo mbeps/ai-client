@@ -16,6 +16,7 @@ import {
   useChatInitialSelections,
   useChatScrollToBottom,
 } from "@/components/chat/chat-ui-helpers";
+import { GenerativeUIProvider } from "@/components/chat/generative-ui/generative-ui-context";
 import { MessageThread } from "@/components/chat/message-thread";
 import { StreamingSection } from "@/components/chat/streaming-section";
 import { ToolApprovalDialog } from "@/components/chat/tool-approval-dialog";
@@ -253,6 +254,45 @@ export function ChatUI({
     [effectiveApprovalMessageId, submitToolApprovals],
   );
 
+  const handleWidgetSend = useCallback(
+    async (prompt: string) => {
+      const trimmed = prompt.trim();
+      if (!trimmed || isLoading) return;
+      await handleSend(
+        trimmed,
+        [],
+        initialModelId,
+        initialServerIds,
+        initialSelectedTools,
+        undefined,
+        chat?.agentId ?? chat?.assistantId ?? undefined,
+        initialKbIds,
+        initialSkillIds,
+        initialSubagentsEnabled,
+        initialSubagentModelId,
+        initialReasoningEffort,
+        initialSubagentIds,
+        initialApprovalMode,
+      );
+    },
+    [
+      isLoading,
+      handleSend,
+      initialModelId,
+      initialServerIds,
+      initialSelectedTools,
+      chat?.agentId,
+      chat?.assistantId,
+      initialKbIds,
+      initialSkillIds,
+      initialSubagentsEnabled,
+      initialSubagentModelId,
+      initialReasoningEffort,
+      initialSubagentIds,
+      initialApprovalMode,
+    ],
+  );
+
   if (!chat) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -275,111 +315,118 @@ export function ChatUI({
   );
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      <div className="relative flex h-full min-w-0 flex-1 flex-col">
-        <AgentBar agentName={assistantName} />
+    <GenerativeUIProvider
+      sendMessage={handleWidgetSend}
+      isStreaming={isLoading}
+    >
+      <div className="relative flex h-full w-full overflow-hidden">
+        <div className="relative flex h-full min-w-0 flex-1 flex-col">
+          <AgentBar agentName={assistantName} />
 
-        <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
-          <div className="px-4 py-6 md:px-8">
-            <div className="mx-auto max-w-4xl space-y-6 pb-12">
-              <MessageThread
-                thread={thread}
-                chat={chat}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onRegenerate={handleRegenerate}
-                onNavigateBranch={handleNavigateBranch}
-                onToggleArtifact={handleToggleArtifact}
-                activeArtifactId={activeArtifactId}
-                isCanvasOpen={isArtifactOpen}
-                servers={allEnabledServers}
+          <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
+            <div className="px-4 py-6 md:px-8">
+              <div className="mx-auto max-w-4xl space-y-6 pb-12">
+                <MessageThread
+                  thread={thread}
+                  chat={chat}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onRegenerate={handleRegenerate}
+                  onNavigateBranch={handleNavigateBranch}
+                  onToggleArtifact={handleToggleArtifact}
+                  activeArtifactId={activeArtifactId}
+                  isCanvasOpen={isArtifactOpen}
+                  servers={allEnabledServers}
+                />
+
+                <StreamingSection
+                  isLoading={isLoading}
+                  streamingContent={streamingContent}
+                  streamingReasoning={streamingReasoning}
+                  isStreamingReasoning={isStreamingReasoning}
+                  activeToolCalls={activeToolCalls}
+                  streamingCitations={streamingCitations}
+                  onToggleArtifact={handleToggleArtifact}
+                  activeArtifactId={activeArtifactId}
+                  isCanvasOpen={isArtifactOpen}
+                  chatId={chatId}
+                  assistantMessageId={assistantMessageId}
+                  assistantName={assistantName}
+                />
+              </div>
+            </div>
+          </ScrollArea>
+
+          <div className="bg-background/80 shrink-0 px-4 pb-2 backdrop-blur-sm md:px-8 md:pb-4">
+            <div className="mx-auto max-w-4xl">
+              {isCompacting && (
+                <div className="mb-2 flex items-center justify-center">
+                  <div className="bg-muted/70 text-muted-foreground border-border/60 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Compacting conversation...</span>
+                  </div>
+                </div>
+              )}
+              <ToolApprovalDialog
+                pendingApprovals={effectivePendingApprovals}
+                onSubmit={handleSubmitApprovals}
+                disabled={Boolean(approvalsDisabled)}
               />
-
-              <StreamingSection
-                isLoading={isLoading}
-                streamingContent={streamingContent}
-                streamingReasoning={streamingReasoning}
-                isStreamingReasoning={isStreamingReasoning}
-                activeToolCalls={activeToolCalls}
-                streamingCitations={streamingCitations}
-                onToggleArtifact={handleToggleArtifact}
-                activeArtifactId={activeArtifactId}
-                isCanvasOpen={isArtifactOpen}
+              <ChatInput
+                key={chatId}
                 chatId={chatId}
-                assistantMessageId={assistantMessageId}
-                assistantName={assistantName}
+                onSend={handleSend}
+                onCompact={handleCompact}
+                isCompacting={isCompacting}
+                isLoading={isLoading}
+                onStop={stopStream}
+                servers={allEnabledServers}
+                activeChatAssistantId={chatAssistantId}
+                systemPrompt={assistantPrompt}
+                canMentionAssistant={canMentionAssistant}
+                initialSelectedServerIds={initialServerIds}
+                initialSelectedTools={initialSelectedTools}
+                initialSelectedKbs={initialKbIds}
+                initialSelectedSkillIds={initialSkillIds}
+                initialModelId={initialModelId}
+                initialSubagentsEnabled={initialSubagentsEnabled}
+                initialSubagentModelId={initialSubagentModelId}
+                initialSubagentIds={initialSubagentIds}
+                initialReasoningEffort={initialReasoningEffort}
+                initialApprovalMode={initialApprovalMode}
+                onKnowledgebaseChange={handleKbChange}
+                thread={thread}
+                projectId={chat?.projectId}
+                assistantId={chatAssistantId}
+                promptMode={
+                  currentProject?.promptMode || currentAssistant?.promptMode
+                }
+                promptIds={
+                  currentProject?.promptIds || currentAssistant?.promptIds
+                }
+                skillMode={
+                  currentProject?.skillMode || currentAssistant?.skillMode
+                }
+                skillIds={
+                  currentProject?.skillIds || currentAssistant?.skillIds
+                }
               />
             </div>
           </div>
-        </ScrollArea>
-
-        <div className="bg-background/80 shrink-0 px-4 pb-2 backdrop-blur-sm md:px-8 md:pb-4">
-          <div className="mx-auto max-w-4xl">
-            {isCompacting && (
-              <div className="mb-2 flex items-center justify-center">
-                <div className="bg-muted/70 text-muted-foreground border-border/60 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Compacting conversation...</span>
-                </div>
-              </div>
-            )}
-            <ToolApprovalDialog
-              pendingApprovals={effectivePendingApprovals}
-              onSubmit={handleSubmitApprovals}
-              disabled={Boolean(approvalsDisabled)}
-            />
-            <ChatInput
-              key={chatId}
-              chatId={chatId}
-              onSend={handleSend}
-              onCompact={handleCompact}
-              isCompacting={isCompacting}
-              isLoading={isLoading}
-              onStop={stopStream}
-              servers={allEnabledServers}
-              activeChatAssistantId={chatAssistantId}
-              systemPrompt={assistantPrompt}
-              canMentionAssistant={canMentionAssistant}
-              initialSelectedServerIds={initialServerIds}
-              initialSelectedTools={initialSelectedTools}
-              initialSelectedKbs={initialKbIds}
-              initialSelectedSkillIds={initialSkillIds}
-              initialModelId={initialModelId}
-              initialSubagentsEnabled={initialSubagentsEnabled}
-              initialSubagentModelId={initialSubagentModelId}
-              initialSubagentIds={initialSubagentIds}
-              initialReasoningEffort={initialReasoningEffort}
-              initialApprovalMode={initialApprovalMode}
-              onKnowledgebaseChange={handleKbChange}
-              thread={thread}
-              projectId={chat?.projectId}
-              assistantId={chatAssistantId}
-              promptMode={
-                currentProject?.promptMode || currentAssistant?.promptMode
-              }
-              promptIds={
-                currentProject?.promptIds || currentAssistant?.promptIds
-              }
-              skillMode={
-                currentProject?.skillMode || currentAssistant?.skillMode
-              }
-              skillIds={currentProject?.skillIds || currentAssistant?.skillIds}
-            />
-          </div>
         </div>
+
+        {shouldShowReopen && <CanvasReopenButton onReopen={handleReopen} />}
+
+        <ArtifactPanel
+          isOpen={isArtifactOpen}
+          artifact={activeArtifact}
+          onClose={() => setIsArtifactOpen(false)}
+          artifacts={allArtifacts}
+          currentIndex={artifactIndex}
+          onNavigate={(idx) => setArtifactIndex(idx)}
+          onUpdate={handleUpdateArtifact}
+        />
       </div>
-
-      {shouldShowReopen && <CanvasReopenButton onReopen={handleReopen} />}
-
-      <ArtifactPanel
-        isOpen={isArtifactOpen}
-        artifact={activeArtifact}
-        onClose={() => setIsArtifactOpen(false)}
-        artifacts={allArtifacts}
-        currentIndex={artifactIndex}
-        onNavigate={(idx) => setArtifactIndex(idx)}
-        onUpdate={handleUpdateArtifact}
-      />
-    </div>
+    </GenerativeUIProvider>
   );
 }
