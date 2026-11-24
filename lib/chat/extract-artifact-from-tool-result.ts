@@ -1,18 +1,7 @@
+import { ARTIFACT_TYPES, type ArtifactType } from "@/config/artifacts";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 
-const VALID_ARTIFACT_TYPES = new Set([
-  "markdown",
-  "spreadsheet",
-  "html",
-  "mermaid",
-] as const);
-
-/**
- * Represents artifact type.
- *
- * @author Maruf Bepary
- */
-type ArtifactType = "markdown" | "spreadsheet" | "html" | "mermaid";
+const VALID_ARTIFACT_TYPES: ReadonlySet<string> = new Set(ARTIFACT_TYPES);
 
 /**
  * Parses tool output payload if stringified JSON or validates object shape.

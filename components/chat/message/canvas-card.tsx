@@ -41,6 +41,7 @@ const TYPE_LABELS: Record<ArtifactData["type"], string> = {
   spreadsheet: "Spreadsheet",
   html: "Interactive HTML",
   mermaid: "Diagram",
+  ui: "Interactive UI",
 };
 
 /**

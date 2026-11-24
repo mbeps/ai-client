@@ -11,6 +11,7 @@ export const INTERNAL_TOOL_IDS = {
   MANAGE_SKILL: "internal:tool:manage_skill",
   SEARCH_KNOWLEDGE_BASE: "internal:tool:search_knowledge_base",
   DELEGATE_TASK: "internal:tool:delegate_task",
+  INTERACTIVE_UI: "internal:tool:interactive_ui",
 } as const;
 
 /**
@@ -32,6 +33,7 @@ export const DEFAULT_ENABLED_TOOLS: readonly string[] = [
   INTERNAL_TOOL_IDS.MANAGE_MEMORY,
   INTERNAL_TOOL_IDS.MANAGE_SKILL,
   INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE,
+  INTERNAL_TOOL_IDS.INTERACTIVE_UI,
 ];
 
 /**
@@ -159,6 +161,70 @@ export const INTERNAL_TOOL_CATALOGUE = [
     description:
       "Returns a temporary download URL for a file the user uploaded to the chat. Use this when you need to provide an accessible file URL to another tool or API.",
     availability: "Registered when the chat has at least one file attachment.",
+  },
+  {
+    id: INTERNAL_TOOL_IDS.INTERACTIVE_UI,
+    name: "interactive_ui",
+    displayName: "Interactive UI",
+    category: "UI",
+    defaultApproval: "auto",
+    description:
+      "Enables inline interactive Shadcn UI widgets, forms, tables, and charts rendered directly in chat messages and Canvas.",
+    availability:
+      "Active via system prompt when enabled in the chat tool picker.",
+  },
+] as const;
+
+/**
+ * Metadata for internal tools exposed as individual toggles in the chat Tool Picker.
+ *
+ * @author Maruf Bepary
+ */
+export interface PickerInternalTool {
+  id: string;
+  toolName: string;
+  title: string;
+  description: string;
+  keywords: readonly string[];
+}
+
+/**
+ * Single source of truth for internal tool toggles rendered in ToolPickerList
+ * and InternalToolsSection.
+ *
+ * @author Maruf Bepary
+ */
+export const PICKER_INTERNAL_TOOLS: readonly PickerInternalTool[] = [
+  {
+    id: INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
+    toolName: "manage_artifact",
+    title: "Artifacts / Canvas",
+    description:
+      "Allows the AI to generate interactive Markdown, Spreadsheets, HTML UI, Mermaid diagrams, and UI dashboards in a side panel.",
+    keywords: ["artifacts", "canvas", "manage_artifact"],
+  },
+  {
+    id: INTERNAL_TOOL_IDS.MANAGE_MEMORY,
+    toolName: "manage_memory",
+    title: "Memory",
+    description:
+      "Allows the AI to remember your preferences and facts across conversations.",
+    keywords: ["memory", "save_memory", "manage_memory"],
+  },
+  {
+    id: INTERNAL_TOOL_IDS.INTERACTIVE_UI,
+    toolName: "interactive_ui",
+    title: "Interactive UI",
+    description:
+      "Allows the AI to render interactive Shadcn UI widgets, forms, data tables, and charts inline in chat.",
+    keywords: [
+      "interactive",
+      "ui",
+      "widget",
+      "chart",
+      "dashboard",
+      "interactive_ui",
+    ],
   },
 ] as const;
 
