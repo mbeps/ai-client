@@ -237,4 +237,50 @@ describe("ArtifactPanel — Interactive UI & Markdown Preview/Edit", () => {
     });
     expect(mockToast.error).toHaveBeenCalledWith("Failed to copy content");
   });
+
+  it("resets markdownMode to preview when switching to a different artifact", () => {
+    const firstMd: ArtifactData = {
+      id: "art-md-1",
+      messageId: "msg-1",
+      type: "markdown",
+      title: "First Report",
+      content: "# One\n\n```spec\n{\"root\":\"c\",\"elements\":{}}\n```",
+    };
+    const secondMd: ArtifactData = {
+      id: "art-md-2",
+      messageId: "msg-2",
+      type: "markdown",
+      title: "Second Report",
+      content: "# Two\n\n```spec\n{\"root\":\"d\",\"elements\":{}}\n```",
+    };
+
+    const { rerender } = render(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={firstMd}
+          isOpen={true}
+          onClose={vi.fn()}
+          artifacts={[firstMd]}
+          currentIndex={0}
+        />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByTestId("markdown-view")).toBeInTheDocument();
+
+    rerender(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={secondMd}
+          isOpen={true}
+          onClose={vi.fn()}
+          artifacts={[secondMd]}
+          currentIndex={0}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByTestId("markdown-renderer")).toBeInTheDocument();
+  });
 });

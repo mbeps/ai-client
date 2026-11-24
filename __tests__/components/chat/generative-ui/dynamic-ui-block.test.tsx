@@ -3,10 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DynamicUIBlock } from "@/components/chat/generative-ui/dynamic-ui-block";
 import { DynamicUIErrorBoundary } from "@/components/chat/generative-ui/dynamic-ui-error-boundary";
 import { GenerativeUIProvider } from "@/components/chat/generative-ui/generative-ui-context";
-import {
-  generativeUIExecuteAction,
-  generativeUIRegistry,
-} from "@/components/chat/generative-ui/registry";
+import { generativeUIRegistry } from "@/components/chat/generative-ui/registry";
 
 describe("DynamicUIBlock", () => {
   it("renders streaming skeleton when isStreaming and isUnclosed are true", () => {
@@ -355,12 +352,6 @@ describe("DynamicUIBlock", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "NonString" }));
     expect(onSend).not.toHaveBeenCalled();
-
-    await generativeUIExecuteAction(
-      "sendChatMessage",
-      { message: "noop" },
-      vi.fn(),
-    );
   });
 
   it("renders DynamicUIErrorBoundary fallback when Renderer throws", async () => {

@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactElement } from "react";
 import {
   Area,
   AreaChart,
@@ -20,91 +19,22 @@ import {
   YAxis,
 } from "recharts";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  type BaseChartProps,
+  buildSeriesConfig,
+  CHART_COLORS,
+  ChartCardShell,
+  type ChartSeriesItem,
+  getSeriesColor,
+} from "@/components/chat/generative-ui/chart-shell";
 import {
   type ChartConfig,
-  ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-const CHART_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-] as const;
-
-export interface ChartSeriesItem {
-  key: string;
-  label: string;
-  color?: string;
-}
-
-interface BaseChartProps {
-  title?: string;
-  description?: string;
-  data: Array<Record<string, unknown>>;
-}
-
-function getSeriesColor(index: number, customColor?: string): string {
-  return customColor || CHART_COLORS[index % CHART_COLORS.length];
-}
-
-function buildSeriesConfig(series: ChartSeriesItem[]): ChartConfig {
-  const config: ChartConfig = {};
-  series.forEach((item, index) => {
-    config[item.key] = {
-      label: item.label,
-      color: getSeriesColor(index, item.color),
-    };
-  });
-  return config;
-}
-
-function ChartCardShell({
-  title,
-  description,
-  isEmpty,
-  config,
-  children,
-}: {
-  title?: string;
-  description?: string;
-  isEmpty: boolean;
-  config: ChartConfig;
-  children: ReactElement;
-}) {
-  return (
-    <Card className="w-full">
-      {(title || description) && (
-        <CardHeader className="pb-2">
-          {title && <CardTitle className="text-base">{title}</CardTitle>}
-          {description && <CardDescription>{description}</CardDescription>}
-        </CardHeader>
-      )}
-      <CardContent>
-        {isEmpty ? (
-          <div className="bg-muted/40 text-muted-foreground flex min-h-[240px] w-full items-center justify-center rounded-md border border-dashed text-sm">
-            No chart data available
-          </div>
-        ) : (
-          <ChartContainer config={config} className="min-h-[240px] w-full">
-            {children}
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+export type { ChartSeriesItem };
 
 /**
  * Shadcn/Recharts AreaChart adapter for Generative UI specs.
@@ -121,8 +51,10 @@ export function GenerativeAreaChart({
   series: ChartSeriesItem[];
   stacked?: boolean;
 }) {
-  const isEmpty = data.length === 0 || series.length === 0;
-  const config = buildSeriesConfig(series);
+  const safeData = Array.isArray(data) ? data : [];
+  const safeSeries = Array.isArray(series) ? series : [];
+  const isEmpty = safeData.length === 0 || safeSeries.length === 0;
+  const config = buildSeriesConfig(safeSeries);
 
   return (
     <ChartCardShell
@@ -131,7 +63,7 @@ export function GenerativeAreaChart({
       isEmpty={isEmpty}
       config={config}
     >
-      <AreaChart data={data} margin={{ left: 8, right: 8, top: 8 }}>
+      <AreaChart data={safeData} margin={{ left: 8, right: 8, top: 8 }}>
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey={xKey}
@@ -142,7 +74,7 @@ export function GenerativeAreaChart({
         <YAxis tickLine={false} axisLine={false} width={40} />
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
-        {series.map((item, index) => {
+        {safeSeries.map((item, index) => {
           const color = getSeriesColor(index, item.color);
           return (
             <Area
@@ -178,8 +110,10 @@ export function GenerativeBarChart({
   stacked?: boolean;
   horizontal?: boolean;
 }) {
-  const isEmpty = data.length === 0 || series.length === 0;
-  const config = buildSeriesConfig(series);
+  const safeData = Array.isArray(data) ? data : [];
+  const safeSeries = Array.isArray(series) ? series : [];
+  const isEmpty = safeData.length === 0 || safeSeries.length === 0;
+  const config = buildSeriesConfig(safeSeries);
 
   return (
     <ChartCardShell
@@ -189,7 +123,7 @@ export function GenerativeBarChart({
       config={config}
     >
       <BarChart
-        data={data}
+        data={safeData}
         layout={horizontal ? "vertical" : "horizontal"}
         margin={{ left: 8, right: 8, top: 8 }}
       >
@@ -221,7 +155,7 @@ export function GenerativeBarChart({
         )}
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
-        {series.map((item, index) => (
+        {safeSeries.map((item, index) => (
           <Bar
             key={item.key}
             dataKey={item.key}
@@ -248,8 +182,10 @@ export function GenerativeLineChart({
   xKey: string;
   series: ChartSeriesItem[];
 }) {
-  const isEmpty = data.length === 0 || series.length === 0;
-  const config = buildSeriesConfig(series);
+  const safeData = Array.isArray(data) ? data : [];
+  const safeSeries = Array.isArray(series) ? series : [];
+  const isEmpty = safeData.length === 0 || safeSeries.length === 0;
+  const config = buildSeriesConfig(safeSeries);
 
   return (
     <ChartCardShell
@@ -258,7 +194,7 @@ export function GenerativeLineChart({
       isEmpty={isEmpty}
       config={config}
     >
-      <LineChart data={data} margin={{ left: 8, right: 8, top: 8 }}>
+      <LineChart data={safeData} margin={{ left: 8, right: 8, top: 8 }}>
         <CartesianGrid vertical={false} />
         <XAxis
           dataKey={xKey}
@@ -269,7 +205,7 @@ export function GenerativeLineChart({
         <YAxis tickLine={false} axisLine={false} width={40} />
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
-        {series.map((item, index) => (
+        {safeSeries.map((item, index) => (
           <Line
             key={item.key}
             type="monotone"
@@ -299,9 +235,10 @@ export function GenerativePieChart({
   valueKey: string;
   donut?: boolean;
 }) {
-  const isEmpty = data.length === 0;
+  const safeData = Array.isArray(data) ? data : [];
+  const isEmpty = safeData.length === 0;
   const config: ChartConfig = {};
-  data.forEach((row, index) => {
+  safeData.forEach((row, index) => {
     const label = String(row[nameKey] ?? `Item ${index + 1}`);
     config[label] = {
       label,
@@ -320,14 +257,14 @@ export function GenerativePieChart({
         <ChartTooltip content={<ChartTooltipContent nameKey={nameKey} />} />
         <ChartLegend content={<ChartLegendContent nameKey={nameKey} />} />
         <Pie
-          data={data}
+          data={safeData}
           dataKey={valueKey}
           nameKey={nameKey}
           innerRadius={donut ? 48 : 0}
           outerRadius={80}
           paddingAngle={2}
         >
-          {data.map((row, index) => (
+          {safeData.map((row, index) => (
             <Cell
               key={`${String(row[nameKey] ?? index)}-${index}`}
               fill={CHART_COLORS[index % CHART_COLORS.length]}
@@ -352,8 +289,10 @@ export function GenerativeRadarChart({
   angleKey: string;
   series: ChartSeriesItem[];
 }) {
-  const isEmpty = data.length === 0 || series.length === 0;
-  const config = buildSeriesConfig(series);
+  const safeData = Array.isArray(data) ? data : [];
+  const safeSeries = Array.isArray(series) ? series : [];
+  const isEmpty = safeData.length === 0 || safeSeries.length === 0;
+  const config = buildSeriesConfig(safeSeries);
 
   return (
     <ChartCardShell
@@ -362,12 +301,12 @@ export function GenerativeRadarChart({
       isEmpty={isEmpty}
       config={config}
     >
-      <RadarChart data={data}>
+      <RadarChart data={safeData}>
         <PolarGrid />
         <PolarAngleAxis dataKey={angleKey} />
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
-        {series.map((item, index) => {
+        {safeSeries.map((item, index) => {
           const color = getSeriesColor(index, item.color);
           return (
             <Radar

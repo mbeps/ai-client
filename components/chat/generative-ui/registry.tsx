@@ -1,8 +1,8 @@
 "use client";
 
-import { defineRegistry, useBoundProp } from "@json-render/react";
+import { defineRegistry } from "@json-render/react";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
-import { Children, useId } from "react";
+import { Children } from "react";
 import {
   GenerativeAreaChart,
   GenerativeBarChart,
@@ -11,7 +11,7 @@ import {
   GenerativeRadarChart,
 } from "@/components/chat/generative-ui/chart-components";
 import { DataTableComponent } from "@/components/chat/generative-ui/data-table-component";
-import { useGenerativeUIActions } from "@/components/chat/generative-ui/generative-ui-context";
+import { generativeUIInputComponents } from "@/components/chat/generative-ui/input-components";
 import {
   Accordion,
   AccordionContent,
@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -28,22 +27,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { generativeUICatalog } from "@/lib/generative-ui/catalog";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +63,7 @@ const GRID_COL_CLASSES: Record<number, string> = {
   6: "grid-cols-1 sm:grid-cols-3 lg:grid-cols-6",
 };
 
-const { registry, executeAction } = defineRegistry(generativeUICatalog, {
+const { registry } = defineRegistry(generativeUICatalog, {
   components: {
     Stack: ({ props, children }) => (
       <div
@@ -270,163 +256,7 @@ const { registry, executeAction } = defineRegistry(generativeUICatalog, {
         </Accordion>
       );
     },
-    Button: ({ props, emit, on }) => {
-      const { sendMessage, isStreaming } = useGenerativeUIActions();
-      const isActionBound = on("press").bound;
-      const isDisabled =
-        Boolean(props.disabled) ||
-        (isActionBound && (isStreaming || !sendMessage));
-
-      return (
-        <Button
-          type="button"
-          variant={props.variant ?? "default"}
-          size={props.size ?? "default"}
-          disabled={isDisabled}
-          onClick={() => emit("press")}
-        >
-          {props.label}
-        </Button>
-      );
-    },
-    Input: ({ props, bindings }) => {
-      const id = useId();
-      const [value, setValue] = useBoundProp<string>(
-        props.value,
-        bindings?.value,
-      );
-      return (
-        <div className="space-y-1.5">
-          {props.label && <Label htmlFor={id}>{props.label}</Label>}
-          <Input
-            id={id}
-            type={props.type ?? "text"}
-            placeholder={props.placeholder}
-            value={value ?? ""}
-            onChange={(e) => setValue(e.target.value)}
-          />
-        </div>
-      );
-    },
-    Textarea: ({ props, bindings }) => {
-      const id = useId();
-      const [value, setValue] = useBoundProp<string>(
-        props.value,
-        bindings?.value,
-      );
-      return (
-        <div className="space-y-1.5">
-          {props.label && <Label htmlFor={id}>{props.label}</Label>}
-          <Textarea
-            id={id}
-            rows={props.rows ?? 3}
-            placeholder={props.placeholder}
-            value={value ?? ""}
-            onChange={(e) => setValue(e.target.value)}
-          />
-        </div>
-      );
-    },
-    Select: ({ props, bindings }) => {
-      const id = useId();
-      const [value, setValue] = useBoundProp<string>(
-        props.value,
-        bindings?.value,
-      );
-      return (
-        <div className="space-y-1.5">
-          {props.label && <Label htmlFor={id}>{props.label}</Label>}
-          <Select value={value ?? ""} onValueChange={setValue}>
-            <SelectTrigger id={id} className="w-full">
-              <SelectValue placeholder={props.placeholder ?? "Select..."} />
-            </SelectTrigger>
-            <SelectContent>
-              {props.options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      );
-    },
-    Switch: ({ props, bindings }) => {
-      const id = useId();
-      const [checked, setChecked] = useBoundProp<boolean>(
-        props.checked,
-        bindings?.checked,
-      );
-      return (
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <Label htmlFor={id}>{props.label}</Label>
-            {props.description && (
-              <p className="text-muted-foreground text-xs">
-                {props.description}
-              </p>
-            )}
-          </div>
-          <Switch
-            id={id}
-            checked={Boolean(checked)}
-            onCheckedChange={(next) => setChecked(next)}
-          />
-        </div>
-      );
-    },
-    Checkbox: ({ props, bindings }) => {
-      const id = useId();
-      const [checked, setChecked] = useBoundProp<boolean>(
-        props.checked,
-        bindings?.checked,
-      );
-      return (
-        <div className="flex items-start gap-2.5">
-          <Checkbox
-            id={id}
-            checked={Boolean(checked)}
-            onCheckedChange={(next) => setChecked(next === true)}
-          />
-          <div className="space-y-0.5 leading-none">
-            <Label htmlFor={id}>{props.label}</Label>
-            {props.description && (
-              <p className="text-muted-foreground text-xs">
-                {props.description}
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    },
-    Slider: ({ props, bindings }) => {
-      const id = useId();
-      const [value, setValue] = useBoundProp<number>(
-        props.value,
-        bindings?.value,
-      );
-      const numericValue = typeof value === "number" ? value : (props.min ?? 0);
-      return (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            {props.label ? <Label htmlFor={id}>{props.label}</Label> : <span />}
-            <span className="font-mono font-medium tabular-nums">
-              {numericValue}
-            </span>
-          </div>
-          <Slider
-            id={id}
-            min={props.min ?? 0}
-            max={props.max ?? 100}
-            step={props.step ?? 1}
-            value={numericValue}
-            onValueChange={(next) => {
-              setValue(next as number);
-            }}
-          />
-        </div>
-      );
-    },
+    ...generativeUIInputComponents,
     AreaChart: ({ props }) => <GenerativeAreaChart {...props} />,
     BarChart: ({ props }) => <GenerativeBarChart {...props} />,
     LineChart: ({ props }) => <GenerativeLineChart {...props} />,
@@ -441,4 +271,3 @@ const { registry, executeAction } = defineRegistry(generativeUICatalog, {
 });
 
 export const generativeUIRegistry = registry;
-export const generativeUIExecuteAction = executeAction;

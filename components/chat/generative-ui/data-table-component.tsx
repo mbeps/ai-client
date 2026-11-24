@@ -48,6 +48,78 @@ function compareValues(a: unknown, b: unknown): number {
   });
 }
 
+function getNextSortState(
+  sortKey: string | null,
+  sortDir: SortDirection,
+  nextKey: string,
+): { sortKey: string | null; sortDir: SortDirection } {
+  if (sortKey !== nextKey) {
+    return { sortKey: nextKey, sortDir: "asc" };
+  }
+  if (sortDir === "asc") {
+    return { sortKey: nextKey, sortDir: "desc" };
+  }
+  return { sortKey: null, sortDir: null };
+}
+
+function DataTableSearch({
+  query,
+  onChange,
+}: {
+  query: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative max-w-xs">
+      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+      <Input
+        value={query}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Search..."
+        className="h-8 pl-8 text-xs"
+      />
+    </div>
+  );
+}
+
+function DataTablePagination({
+  page,
+  totalPages,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (nextPage: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <span className="text-muted-foreground">
+        Page {page + 1} of {totalPages}
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={page === 0}
+          onClick={() => onPageChange(Math.max(0, page - 1))}
+        >
+          Previous
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={page >= totalPages - 1}
+          onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Client-side sortable, searchable, and optionally paginated table for
  * Generative UI specs, built on local Shadcn Table primitives.
@@ -58,6 +130,8 @@ export function DataTableComponent({
   searchable = false,
   pageSize,
 }: DataTableComponentProps) {
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  const safeData = Array.isArray(data) ? data : [];
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>(null);
@@ -66,14 +140,14 @@ export function DataTableComponent({
   const filteredRows = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) {
-      return data;
+      return safeData;
     }
-    return data.filter((row) =>
-      columns.some((col) =>
+    return safeData.filter((row) =>
+      safeColumns.some((col) =>
         formatCellValue(row[col.key]).toLowerCase().includes(trimmed),
       ),
     );
-  }, [columns, data, query]);
+  }, [safeColumns, safeData, query]);
 
   const sortedRows = useMemo(() => {
     if (!sortKey || !sortDir) {
@@ -97,17 +171,9 @@ export function DataTableComponent({
 
   const handleSort = (key: string) => {
     setPage(0);
-    if (sortKey !== key) {
-      setSortKey(key);
-      setSortDir("asc");
-      return;
-    }
-    if (sortDir === "asc") {
-      setSortDir("desc");
-      return;
-    }
-    setSortKey(null);
-    setSortDir(null);
+    const next = getNextSortState(sortKey, sortDir, key);
+    setSortKey(next.sortKey);
+    setSortDir(next.sortDir);
   };
 
   const renderSortIcon = (key: string) => {
@@ -124,25 +190,20 @@ export function DataTableComponent({
   return (
     <div className="space-y-3">
       {searchable && (
-        <div className="relative max-w-xs">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
-          <Input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(0);
-            }}
-            placeholder="Search..."
-            className="h-8 pl-8 text-xs"
-          />
-        </div>
+        <DataTableSearch
+          query={query}
+          onChange={(value) => {
+            setQuery(value);
+            setPage(0);
+          }}
+        />
       )}
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              {columns.map((col) => (
+              {safeColumns.map((col) => (
                 <TableHead key={col.key}>
                   {col.sortable === false ? (
                     col.label
@@ -164,16 +225,18 @@ export function DataTableComponent({
             {visibleRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={Math.max(1, columns.length)}
+                  colSpan={Math.max(1, safeColumns.length)}
                   className="text-muted-foreground h-20 text-center text-sm"
                 >
-                  {data.length === 0 ? "No data available" : "No matching rows"}
+                  {safeData.length === 0
+                    ? "No data available"
+                    : "No matching rows"}
                 </TableCell>
               </TableRow>
             ) : (
               visibleRows.map((row, rowIndex) => (
                 <TableRow key={rowIndex}>
-                  {columns.map((col) => (
+                  {safeColumns.map((col) => (
                     <TableCell key={col.key}>
                       {formatCellValue(row[col.key])}
                     </TableCell>
@@ -186,31 +249,11 @@ export function DataTableComponent({
       </div>
 
       {pageSize && totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">
-            Page {safePage + 1} of {totalPages}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={safePage === 0}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-            >
-              Previous
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages - 1}
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <DataTablePagination
+          page={safePage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
       )}
     </div>
   );

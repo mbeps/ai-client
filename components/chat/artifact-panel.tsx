@@ -123,9 +123,15 @@ export function ArtifactPanel({
   isFullWidth = false,
 }: ArtifactPanelProps) {
   const [copied, setCopied] = useState(false);
-  const [markdownMode, setMarkdownMode] = useState<"preview" | "edit">(
-    "preview",
-  );
+  const artifactKey = `${artifact?.messageId ?? ""}-${currentIndex}`;
+  const [markdownModeState, setMarkdownModeState] = useState<{
+    key: string;
+    mode: "preview" | "edit";
+  }>({ key: artifactKey, mode: "preview" });
+  const markdownMode =
+    markdownModeState.key === artifactKey ? markdownModeState.mode : "preview";
+  const setMarkdownMode = (mode: "preview" | "edit") =>
+    setMarkdownModeState({ key: artifactKey, mode });
   const isLatest =
     artifacts.length <= 1 || currentIndex === artifacts.length - 1;
 
