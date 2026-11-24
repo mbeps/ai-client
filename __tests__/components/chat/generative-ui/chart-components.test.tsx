@@ -7,6 +7,7 @@ import {
   GenerativePieChart,
   GenerativeRadarChart,
 } from "@/components/chat/generative-ui/chart-components";
+import { ChartStyle } from "@/components/ui/chart";
 
 const sampleSeries = [
   { key: "revenue", label: "Revenue" },
@@ -161,6 +162,47 @@ describe("chart-components", () => {
       );
 
       expect(screen.getByText("No chart data available")).toBeInTheDocument();
+    });
+
+    it("sanitizes malicious pie labels and unsafe ChartStyle identifiers/colors", () => {
+      const maliciousLabel = "evil:red;} body{display:none;} .x{";
+      const { container } = render(
+        <GenerativePieChart
+          data={[{ segment: maliciousLabel, share: 50 }]}
+          nameKey="segment"
+          valueKey="share"
+        />,
+      );
+
+      const styleTag = container.querySelector("style");
+      expect(styleTag).not.toBeNull();
+      expect(styleTag?.textContent).toContain("--color-slice-0:");
+      expect(styleTag?.textContent).not.toContain("body{display:none");
+      expect(styleTag?.textContent).not.toContain("evil:red");
+
+      const { container: badIdContainer } = render(
+        <ChartStyle
+          id="bad] { body { color: red; }"
+          config={{ safe: { color: "#fff" } }}
+        />,
+      );
+      expect(badIdContainer.querySelector("style")).toBeNull();
+
+      const { container: badColorContainer } = render(
+        <ChartStyle
+          id="safe-chart"
+          config={{
+            badKey: { color: "red; } body { display: none" },
+            goodKeyBadColor: { color: "red; } body { display: none" },
+            good: { color: "#123456" },
+          }}
+        />,
+      );
+      const css = badColorContainer.querySelector("style")?.textContent ?? "";
+      expect(css).toContain("--color-good: #123456;");
+      expect(css).not.toContain("badKey");
+      expect(css).not.toContain("goodKeyBadColor");
+      expect(css).not.toContain("body { display: none");
     });
   });
 

@@ -11,7 +11,10 @@ import {
   GenerativeRadarChart,
 } from "@/components/chat/generative-ui/chart-components";
 import { DataTableComponent } from "@/components/chat/generative-ui/data-table-component";
-import { generativeUIInputComponents } from "@/components/chat/generative-ui/input-components";
+import {
+  generativeUIInputComponents,
+  hasSendChatMessageAction,
+} from "@/components/chat/generative-ui/input-components";
 import {
   Accordion,
   AccordionContent,
@@ -269,5 +272,24 @@ const { registry } = defineRegistry(generativeUICatalog, {
     sendChatMessage: async () => {},
   },
 });
+
+const BaseButtonRenderer = registry.Button;
+registry.Button = (renderProps) => {
+  const dispatchesChatMessage = hasSendChatMessageAction(
+    renderProps.element.on?.press,
+  );
+  return (
+    <BaseButtonRenderer
+      {...renderProps}
+      element={{
+        ...renderProps.element,
+        props: {
+          ...renderProps.element.props,
+          dispatchesChatMessage,
+        },
+      }}
+    />
+  );
+};
 
 export const generativeUIRegistry = registry;

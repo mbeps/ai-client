@@ -2,11 +2,14 @@
 
 import { Loader2 } from "lucide-react";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AgentBar } from "@/components/chat/agent-bar";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
 import { CanvasReopenButton } from "@/components/chat/canvas-reopen-button";
-import { ChatInput } from "@/components/chat/chat-input";
+import {
+  type ChatComposerSelections,
+  ChatInput,
+} from "@/components/chat/chat-input";
 import {
   checkCanMentionAssistant,
   checkShouldShowReopen,
@@ -254,6 +257,23 @@ export function ChatUI({
     [effectiveApprovalMessageId, submitToolApprovals],
   );
 
+  const [composerSelectionsState, setComposerSelectionsState] = useState<{
+    chatId: string;
+    selections: ChatComposerSelections;
+  } | null>(null);
+
+  const handleComposerSelectionsChange = useCallback(
+    (selections: ChatComposerSelections) => {
+      setComposerSelectionsState({ chatId, selections });
+    },
+    [chatId],
+  );
+
+  const composerSelections =
+    composerSelectionsState?.chatId === chatId
+      ? composerSelectionsState.selections
+      : null;
+
   const handleWidgetSend = useCallback(
     async (prompt: string) => {
       const trimmed = prompt.trim();
@@ -261,23 +281,24 @@ export function ChatUI({
       await handleSend(
         trimmed,
         [],
-        initialModelId,
-        initialServerIds,
-        initialSelectedTools,
+        composerSelections?.modelId ?? initialModelId,
+        composerSelections?.serverIds ?? initialServerIds,
+        composerSelections?.selectedTools ?? initialSelectedTools,
         undefined,
         chat?.agentId ?? chat?.assistantId ?? undefined,
-        initialKbIds,
-        initialSkillIds,
-        initialSubagentsEnabled,
-        initialSubagentModelId,
-        initialReasoningEffort,
-        initialSubagentIds,
-        initialApprovalMode,
+        composerSelections?.kbIds ?? initialKbIds,
+        composerSelections?.skillIds ?? initialSkillIds,
+        composerSelections?.subagentsEnabled ?? initialSubagentsEnabled,
+        composerSelections?.subagentModelId ?? initialSubagentModelId,
+        composerSelections?.reasoningEffort ?? initialReasoningEffort,
+        composerSelections?.subagentIds ?? initialSubagentIds,
+        composerSelections?.approvalMode ?? initialApprovalMode,
       );
     },
     [
       isLoading,
       handleSend,
+      composerSelections,
       initialModelId,
       initialServerIds,
       initialSelectedTools,
@@ -395,6 +416,7 @@ export function ChatUI({
                 initialReasoningEffort={initialReasoningEffort}
                 initialApprovalMode={initialApprovalMode}
                 onKnowledgebaseChange={handleKbChange}
+                onSelectionsChange={handleComposerSelectionsChange}
                 thread={thread}
                 projectId={chat?.projectId}
                 assistantId={chatAssistantId}

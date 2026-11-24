@@ -581,4 +581,127 @@ describe("DynamicUIBlock", () => {
       consoleErrorSpy.mockRestore();
     }
   });
+
+  it("resets DynamicUIErrorBoundary when rawSpec changes from failing to valid", async () => {
+    vi.resetModules();
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    vi.doMock("@json-render/react", async () => {
+      const actual =
+        await vi.importActual<typeof import("@json-render/react")>(
+          "@json-render/react",
+        );
+      return {
+        ...actual,
+        Renderer: (props: Parameters<typeof actual.Renderer>[0]) => {
+          if (props.spec?.root === "broken") {
+            throw new Error("Transient renderer failure");
+          }
+          return actual.Renderer(props);
+        },
+      };
+    });
+
+    try {
+      const { DynamicUIBlock: MockedBlock } = await import(
+        "@/components/chat/generative-ui/dynamic-ui-block"
+      );
+      const brokenSpec = JSON.stringify({
+        root: "broken",
+        elements: { broken: { type: "Card", props: { title: "Bad" } } },
+      });
+      const validSpec = JSON.stringify({
+        root: "text",
+        elements: {
+          text: { type: "Text", props: { content: "Recovered UI" } },
+        },
+      });
+
+      const { rerender } = render(<MockedBlock rawSpec={brokenSpec} />);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Transient renderer failure",
+      );
+
+      rerender(<MockedBlock rawSpec={validSpec} />);
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getByText("Recovered UI")).toBeInTheDocument();
+    } finally {
+      vi.doUnmock("@json-render/react");
+      vi.resetModules();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it("keeps local setState buttons enabled during streaming and outside provider while disabling chat actions", () => {
+    const spec = JSON.stringify({
+      root: "stack",
+      state: { count: 2 },
+      elements: {
+        stack: {
+          type: "Stack",
+          props: { direction: "vertical" },
+          children: ["input", "resetBtn", "chatBtn", "chainedBtn"],
+        },
+        input: {
+          type: "Input",
+          props: { label: "Count", value: { $bindState: "/count" } },
+        },
+        resetBtn: {
+          type: "Button",
+          props: { label: "Reset Local" },
+          on: {
+            press: {
+              action: "setState",
+              params: { statePath: "/count", value: 0 },
+            },
+          },
+        },
+        chatBtn: {
+          type: "Button",
+          props: { label: "Send Chat" },
+          on: {
+            press: {
+              action: "sendChatMessage",
+              params: { message: "Next" },
+            },
+          },
+        },
+        chainedBtn: {
+          type: "Button",
+          props: { label: "Chained Chat" },
+          on: {
+            press: {
+              action: "setState",
+              params: { statePath: "/count", value: 1 },
+              onSuccess: {
+                action: "sendChatMessage",
+                params: { message: "After set" },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const { rerender } = render(
+      <GenerativeUIProvider sendMessage={vi.fn()} isStreaming>
+        <DynamicUIBlock rawSpec={spec} />
+      </GenerativeUIProvider>,
+    );
+
+    const resetBtn = screen.getByRole("button", { name: "Reset Local" });
+    expect(resetBtn).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send Chat" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Chained Chat" })).toBeDisabled();
+
+    fireEvent.click(resetBtn);
+    expect((screen.getByLabelText("Count") as HTMLInputElement).value).toBe("0");
+
+    // Outside GenerativeUIProvider (sendMessage undefined): local setState remains enabled
+    rerender(<DynamicUIBlock rawSpec={spec} />);
+    expect(screen.getByRole("button", { name: "Reset Local" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send Chat" })).toBeDisabled();
+  });
 });

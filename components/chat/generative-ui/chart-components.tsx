@@ -238,11 +238,16 @@ export function GenerativePieChart({
   const safeData = Array.isArray(data) ? data : [];
   const isEmpty = safeData.length === 0;
   const config: ChartConfig = {};
-  safeData.forEach((row, index) => {
+  const chartData = safeData.map((row, index) => {
     const label = String(row[nameKey] ?? `Item ${index + 1}`);
-    config[label] = {
+    const configKey = `slice-${index}`;
+    config[configKey] = {
       label,
       color: CHART_COLORS[index % CHART_COLORS.length],
+    };
+    return {
+      ...row,
+      __pieConfigKey: configKey,
     };
   });
 
@@ -254,19 +259,23 @@ export function GenerativePieChart({
       config={config}
     >
       <PieChart>
-        <ChartTooltip content={<ChartTooltipContent nameKey={nameKey} />} />
-        <ChartLegend content={<ChartLegendContent nameKey={nameKey} />} />
+        <ChartTooltip
+          content={<ChartTooltipContent nameKey="__pieConfigKey" />}
+        />
+        <ChartLegend
+          content={<ChartLegendContent nameKey="__pieConfigKey" />}
+        />
         <Pie
-          data={safeData}
+          data={chartData}
           dataKey={valueKey}
-          nameKey={nameKey}
+          nameKey="__pieConfigKey"
           innerRadius={donut ? 48 : 0}
           outerRadius={80}
           paddingAngle={2}
         >
-          {safeData.map((row, index) => (
+          {chartData.map((row, index) => (
             <Cell
-              key={`${String(row[nameKey] ?? index)}-${index}`}
+              key={row.__pieConfigKey}
               fill={CHART_COLORS[index % CHART_COLORS.length]}
             />
           ))}

@@ -6,6 +6,12 @@ import { createSpecStreamCompiler, type Spec } from "@json-render/core";
  */
 export const MAX_UI_ELEMENTS = 150;
 
+/**
+ * Maximum total rendered node instances permitted when expanding shared DAG references,
+ * preventing exponential blowup from multi-layer shared references.
+ */
+export const MAX_EXPANDED_UI_NODES = 1000;
+
 export type ParseSpecResult =
   | { ok: true; spec: Spec }
   | { ok: false; error: string };
@@ -36,7 +42,49 @@ function compileJsonlSpec(trimmed: string): Spec {
   return compiler.getResult();
 }
 
-function hasCyclicChildren(elements: Record<string, unknown>): boolean {
+function appendStringRefs(raw: unknown, out: string[]): boolean {
+  if (!Array.isArray(raw)) {
+    return false;
+  }
+  for (const childId of raw) {
+    if (typeof childId !== "string") {
+      return false;
+    }
+    out.push(childId);
+  }
+  return true;
+}
+
+function buildChildRefMap(
+  elements: Record<string, unknown>,
+): Map<string, string[]> | null {
+  const refMap = new Map<string, string[]>();
+
+  for (const [id, el] of Object.entries(elements)) {
+    if (!isPlainRecord(el)) {
+      return null;
+    }
+    const refs: string[] = [];
+    if (el.children !== undefined && !appendStringRefs(el.children, refs)) {
+      return null;
+    }
+    if (el.slots !== undefined) {
+      if (!isPlainRecord(el.slots)) {
+        return null;
+      }
+      for (const slotChildren of Object.values(el.slots)) {
+        if (!appendStringRefs(slotChildren, refs)) {
+          return null;
+        }
+      }
+    }
+    refMap.set(id, refs);
+  }
+
+  return refMap;
+}
+
+function hasCyclicChildren(refMap: Map<string, string[]>): boolean {
   const visiting = new Set<string>();
   const visited = new Set<string>();
 
@@ -49,10 +97,10 @@ function hasCyclicChildren(elements: Record<string, unknown>): boolean {
     }
     visiting.add(id);
 
-    const el = elements[id];
-    if (isPlainRecord(el) && Array.isArray(el.children)) {
-      for (const childId of el.children) {
-        if (typeof childId === "string" && visit(childId)) {
+    const refs = refMap.get(id);
+    if (refs) {
+      for (const childId of refs) {
+        if (visit(childId)) {
           return true;
         }
       }
@@ -63,7 +111,7 @@ function hasCyclicChildren(elements: Record<string, unknown>): boolean {
     return false;
   }
 
-  for (const id of Object.keys(elements)) {
+  for (const id of refMap.keys()) {
     if (visit(id)) {
       return true;
     }
@@ -71,9 +119,37 @@ function hasCyclicChildren(elements: Record<string, unknown>): boolean {
   return false;
 }
 
+function exceedsExpandedNodeBudget(
+  rootId: string,
+  refMap: Map<string, string[]>,
+  budget: number,
+): boolean {
+  let count = 0;
+  const stack: string[] = [rootId];
+
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    const refs = refMap.get(id);
+    if (!refs) {
+      continue;
+    }
+
+    count += 1;
+    if (count > budget) {
+      return true;
+    }
+
+    for (const childId of refs) {
+      stack.push(childId);
+    }
+  }
+
+  return false;
+}
+
 /**
  * Parses either a JSONL RFC 6902 patch stream or a standalone `{ root, elements, state? }`
- * JSON object into a validated `Spec`, enforcing element count and acyclicity bounds.
+ * JSON object into a validated `Spec`, enforcing element count, expanded node budget, and acyclicity bounds.
  */
 export function parseGenerativeUISpec(raw: string): ParseSpecResult {
   const trimmed = raw.trim();
@@ -81,8 +157,20 @@ export function parseGenerativeUISpec(raw: string): ParseSpecResult {
     return { ok: false, error: "Empty UI spec" };
   }
 
-  const candidate =
-    tryParseStandaloneSpec(trimmed) ?? compileJsonlSpec(trimmed);
+  let candidate: Spec;
+  const standalone = tryParseStandaloneSpec(trimmed);
+  if (standalone !== null) {
+    candidate = standalone;
+  } else {
+    try {
+      candidate = compileJsonlSpec(trimmed);
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Failed to compile UI spec",
+      };
+    }
+  }
 
   if (
     !isPlainRecord(candidate) ||
@@ -112,10 +200,27 @@ export function parseGenerativeUISpec(raw: string): ParseSpecResult {
     };
   }
 
-  if (hasCyclicChildren(candidate.elements)) {
+  const refMap = buildChildRefMap(candidate.elements);
+  if (!refMap) {
+    return {
+      ok: false,
+      error: "Invalid UI spec: child references must be arrays of strings",
+    };
+  }
+
+  if (hasCyclicChildren(refMap)) {
     return {
       ok: false,
       error: "UI spec contains cyclic element references",
+    };
+  }
+
+  if (
+    exceedsExpandedNodeBudget(candidate.root, refMap, MAX_EXPANDED_UI_NODES)
+  ) {
+    return {
+      ok: false,
+      error: `UI spec exceeds maximum of ${MAX_EXPANDED_UI_NODES} rendered nodes`,
     };
   }
 

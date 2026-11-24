@@ -188,4 +188,61 @@ describe("Default Active Tools", () => {
     const selectedToolsPassed = handleSend.mock.calls[0][4];
     expect(selectedToolsPassed).toEqual([]);
   });
+
+  it("reports current selections via onSelectionsChange and suppresses tools when model lacks tool support", () => {
+    const onSelectionsChange = vi.fn();
+    mockUserModels = [
+      {
+        id: "m-1",
+        modelId: "gpt-4o",
+        name: "GPT-4o",
+        capTools: true,
+        capVision: true,
+      },
+      {
+        id: "m-2",
+        modelId: "simple-llm",
+        name: "Simple LLM",
+        capTools: false,
+        capVision: false,
+      },
+    ];
+
+    const { rerender } = render(
+      <TooltipProvider>
+        <ChatInput
+          onSend={vi.fn()}
+          initialModelId="gpt-4o"
+          onSelectionsChange={onSelectionsChange}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(onSelectionsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        modelId: "gpt-4o",
+        selectedTools: DEFAULT_ENABLED_TOOLS,
+        serverIds: [],
+      }),
+    );
+
+    rerender(
+      <TooltipProvider>
+        <ChatInput
+          key="simple-llm"
+          onSend={vi.fn()}
+          initialModelId="simple-llm"
+          onSelectionsChange={onSelectionsChange}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(onSelectionsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        modelId: "simple-llm",
+        selectedTools: [],
+        serverIds: [],
+      }),
+    );
+  });
 });

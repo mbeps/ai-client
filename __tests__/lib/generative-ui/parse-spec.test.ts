@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  MAX_EXPANDED_UI_NODES,
   MAX_UI_ELEMENTS,
   parseGenerativeUISpec,
 } from "@/lib/generative-ui/parse-spec";
@@ -131,19 +132,179 @@ describe("parseGenerativeUISpec", () => {
     }
   });
 
-  it("handles shared DAG children (diamond) and ignores non-string child IDs without false-positive cycle error", () => {
+  it("handles shared DAG children (diamond) with string IDs and dangling child refs", () => {
     const result = parseGenerativeUISpec(
       JSON.stringify({
         root: "root",
         elements: {
-          root: { type: "Stack", props: {}, children: ["a", "b", 123] },
+          root: { type: "Stack", props: {}, children: ["a", "b", "missing-id"] },
           a: { type: "Stack", props: {}, children: ["leaf"] },
           b: { type: "Stack", props: {}, children: ["leaf"] },
           leaf: { type: "Text", props: { content: "Shared" } },
         },
-      })
+      }),
     );
     expect(result.ok).toBe(true);
+  });
+
+  it("rejects numeric and non-string child IDs that could bypass cycle detection", () => {
+    const numericCycle = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "a",
+        elements: {
+          a: { type: "Stack", props: {}, children: [1] },
+          "1": { type: "Stack", props: {}, children: ["a"] },
+        },
+      }),
+    );
+    expect(numericCycle.ok).toBe(false);
+    if (!numericCycle.ok) {
+      expect(numericCycle.error).toContain("strings");
+    }
+
+    const nonArrayChildren = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "a",
+        elements: {
+          a: { type: "Stack", props: {}, children: {} },
+        },
+      }),
+    );
+    expect(nonArrayChildren.ok).toBe(false);
+
+    const nonObjectElement = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "a",
+        elements: {
+          a: null,
+        },
+      }),
+    );
+    expect(nonObjectElement.ok).toBe(false);
+  });
+
+  it("validates slots references for non-string IDs, invalid shapes, and cycles", () => {
+    const nonObjectSlots = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "a",
+        elements: {
+          a: { type: "Card", props: {}, slots: "bad" },
+        },
+      }),
+    );
+    expect(nonObjectSlots.ok).toBe(false);
+
+    const nonArraySlot = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "a",
+        elements: {
+          a: { type: "Card", props: {}, slots: { default: "b" } },
+        },
+      }),
+    );
+    expect(nonArraySlot.ok).toBe(false);
+
+    const nonStringSlotRef = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "a",
+        elements: {
+          a: { type: "Card", props: {}, slots: { default: [42] } },
+        },
+      }),
+    );
+    expect(nonStringSlotRef.ok).toBe(false);
+
+    const cyclicSlot = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "a",
+        elements: {
+          a: { type: "Card", props: {}, slots: { default: ["b"] } },
+          b: { type: "Card", props: {}, slots: { default: ["a"] } },
+        },
+      }),
+    );
+    expect(cyclicSlot.ok).toBe(false);
+    if (!cyclicSlot.ok) {
+      expect(cyclicSlot.error).toContain("cyclic");
+    }
+
+    const validSlot = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "a",
+        elements: {
+          a: { type: "Card", props: {}, slots: { default: ["b"] } },
+          b: { type: "Text", props: { content: "Hi" } },
+        },
+      }),
+    );
+    expect(validSlot.ok).toBe(true);
+  });
+
+  it("rejects exponential DAG specs exceeding MAX_EXPANDED_UI_NODES", () => {
+    const elements: Record<string, unknown> = {};
+    const layers = 12; // 2^12 = 4096 leaves > MAX_EXPANDED_UI_NODES (1000) with only 25 elements
+    for (let i = 0; i < layers; i++) {
+      const nextA = `n-${i + 1}-a`;
+      const nextB = `n-${i + 1}-b`;
+      elements[`n-${i}-a`] = {
+        type: "Stack",
+        props: {},
+        children: [nextA, nextB],
+      };
+      if (i > 0) {
+        elements[`n-${i}-b`] = {
+          type: "Stack",
+          props: {},
+          children: [nextA, nextB],
+        };
+      }
+    }
+    elements[`n-${layers}-a`] = { type: "Text", props: { content: "A" } };
+    elements[`n-${layers}-b`] = { type: "Text", props: { content: "B" } };
+
+    const result = parseGenerativeUISpec(
+      JSON.stringify({ root: "n-0-a", elements }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain(String(MAX_EXPANDED_UI_NODES));
+    }
+  });
+
+  it("converts JSONL compiler exceptions (e.g. failed RFC 6902 test op) into parse failures", () => {
+    const jsonl = [
+      '{"op":"replace","path":"/root","value":"a"}',
+      '{"op":"test","path":"/root","value":"b"}',
+    ].join("\n");
+
+    const result = parseGenerativeUISpec(jsonl);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain("Test operation failed");
+    }
+  });
+
+  it("handles non-Error compiler throws gracefully", async () => {
+    vi.resetModules();
+    vi.doMock("@json-render/core", () => ({
+      createSpecStreamCompiler: () => ({
+        push: () => {
+          throw "non-error-string";
+        },
+        getResult: () => ({}),
+      }),
+    }));
+
+    try {
+      const { parseGenerativeUISpec: mockedParse } = await import(
+        "@/lib/generative-ui/parse-spec"
+      );
+      const result = mockedParse('{"op":"replace","path":"/root","value":"a"}');
+      expect(result).toEqual({ ok: false, error: "Failed to compile UI spec" });
+    } finally {
+      vi.doUnmock("@json-render/core");
+      vi.resetModules();
+    }
   });
 
   it("handles JSONL stream that yields no valid spec patches", () => {

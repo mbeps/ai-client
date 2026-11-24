@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getTrailingUnclosedGenerativeUIFence,
   hasGenerativeUIBlocks,
   hasUnclosedGenerativeUIFence,
   prepareMarkdownForCopy,
@@ -104,6 +105,26 @@ describe("markdown-ui-utils", () => {
     expect(prepareMarkdownForCopy(md)).toEqual({
       text: md,
       hadInteractiveUI: false,
+    });
+  });
+
+  it("accepts trailing tabs on closing fences per CommonMark", () => {
+    const md = "Intro\n```ui\n{}\n```\t\nKeep this";
+    expect(hasUnclosedGenerativeUIFence(md)).toBe(false);
+    expect(prepareMarkdownForCopy(md)).toEqual({
+      text: "Intro\n[Interactive UI omitted]\nKeep this",
+      hadInteractiveUI: true,
+    });
+  });
+
+  it("returns 1-based startLine and body for trailing unclosed UI fence", () => {
+    expect(getTrailingUnclosedGenerativeUIFence("Intro\n```spec\n{}\n```")).toBeNull();
+    expect(getTrailingUnclosedGenerativeUIFence("Intro\n```ts\nconst a = 1;")).toBeNull();
+
+    const md = "Intro\n\n```spec\n{\"root\":\"a\"}\n```\n\n```ui\n{\"root\":\"b\"\n";
+    expect(getTrailingUnclosedGenerativeUIFence(md)).toEqual({
+      startLine: 7,
+      body: "{\"root\":\"b\"",
     });
   });
 });

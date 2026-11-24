@@ -80,9 +80,17 @@ function ChartContainer({
   );
 }
 
+const SAFE_CSS_IDENT_RE = /^[a-zA-Z0-9_-]+$/;
+const SAFE_CSS_COLOR_RE = /^[#a-zA-Z0-9_(),.%\s-]+$/;
+
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+  if (!SAFE_CSS_IDENT_RE.test(id)) {
+    return null;
+  }
+
   const colorConfig = Object.entries(config).filter(
-    ([, config]) => config.theme ?? config.color,
+    ([key, config]) =>
+      SAFE_CSS_IDENT_RE.test(key) && (config.theme ?? config.color),
   );
 
   if (!colorConfig.length) {
@@ -100,8 +108,11 @@ ${colorConfig
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ??
       itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    return color && SAFE_CSS_COLOR_RE.test(color)
+      ? `  --color-${key}: ${color};`
+      : null;
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `,

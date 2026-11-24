@@ -27,6 +27,23 @@ import type { Message } from "@/types/message/message";
 import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
+ * Snapshot of the composer's live model and tool selections, reported to parent
+ * containers so widget follow-ups mirror the active composer state.
+ */
+export interface ChatComposerSelections {
+  modelId: string;
+  serverIds: string[];
+  selectedTools: string[];
+  kbIds: string[];
+  skillIds: string[];
+  subagentsEnabled: boolean;
+  subagentModelId?: string;
+  subagentIds: string[];
+  reasoningEffort: ReasoningEffort;
+  approvalMode: ApprovalMode;
+}
+
+/**
  * Props for the ChatInput component.
  * Defines behavior callbacks and UI configuration for message input.
  */
@@ -161,6 +178,9 @@ export interface ChatInputProps {
 
   /** Optional accessible label for the textarea. */
   textareaAriaLabel?: string;
+
+  /** Callback invoked when composer model, tool, KB, skill, or subagent selections change. */
+  onSelectionsChange?: (selections: ChatComposerSelections) => void;
 }
 
 const EMPTY_MESSAGES: Message[] = [];
@@ -317,6 +337,40 @@ export function ChatInput(props: ChatInputProps) {
     canMentionAssistant: defaults.canMentionAssistant,
     reasoningEffort,
   });
+
+  const { onSelectionsChange } = props;
+  useEffect(() => {
+    if (!onSelectionsChange) return;
+    onSelectionsChange({
+      modelId: services.modelId,
+      serverIds: services.supportsTools
+        ? Array.from(interaction.selections.selectedServerIds)
+        : [],
+      selectedTools: services.supportsTools
+        ? Array.from(interaction.selections.selectedTools)
+        : [],
+      kbIds: Array.from(interaction.selections.selectedKbs),
+      skillIds: Array.from(interaction.selections.selectedSkills),
+      subagentsEnabled: interaction.selections.subagentsEnabled,
+      subagentModelId: interaction.selections.subagentModelId,
+      subagentIds: interaction.selections.selectedSubagentIds,
+      reasoningEffort,
+      approvalMode: interaction.selections.approvalMode,
+    });
+  }, [
+    onSelectionsChange,
+    services.supportsTools,
+    services.modelId,
+    interaction.selections.selectedServerIds,
+    interaction.selections.selectedTools,
+    interaction.selections.selectedKbs,
+    interaction.selections.selectedSkills,
+    interaction.selections.subagentsEnabled,
+    interaction.selections.subagentModelId,
+    interaction.selections.selectedSubagentIds,
+    reasoningEffort,
+    interaction.selections.approvalMode,
+  ]);
 
   const defaultServers = useMemo(
     () => filterEnabledMcpServers(services.mcpServers),

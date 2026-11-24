@@ -94,6 +94,7 @@ export function DynamicUIBlock({
   return (
     <div className={cn("not-typeset my-3 w-full", className)}>
       <DynamicUIErrorBoundary
+        key={rawSpec}
         fallback={(err) => (
           <SpecFallback
             message={err.message || "Unexpected render error"}

@@ -14,7 +14,7 @@ interface ActiveFence {
 }
 
 const OPEN_FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
-const CLOSE_FENCE_RE = /^ {0,3}(`{3,}|~{3,}) *$/;
+const CLOSE_FENCE_RE = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
 
 function isGenerativeUiLang(lang: string): boolean {
   return GENERATIVE_UI_LANGS.has(lang);
@@ -100,22 +100,31 @@ export function hasUnclosedGenerativeUIFence(content: string): boolean {
   );
 }
 
+export interface TrailingUnclosedGenerativeUIFence {
+  /** 1-based line number of the opening fence, matching mdast/hast `node.position.start.line`. */
+  startLine: number;
+  body: string;
+}
+
 /**
- * Returns the raw body of the trailing unclosed top-level `spec` or `ui` fence,
- * or `null` when no such unclosed trailing fence exists.
+ * Returns the 1-based opening line and raw body of the trailing unclosed top-level
+ * `spec` or `ui` fence, or `null` when no such unclosed trailing fence exists.
  */
-export function getTrailingUnclosedGenerativeUISpec(
+export function getTrailingUnclosedGenerativeUIFence(
   content: string,
-): string | null {
+): TrailingUnclosedGenerativeUIFence | null {
   const lines = content.split("\n");
   const last = scanTopLevelFences(lines).at(-1);
   if (!last || last.endLine !== null || !isGenerativeUiLang(last.lang)) {
     return null;
   }
-  return lines
-    .slice(last.startLine + 1)
-    .join("\n")
-    .replace(/\n$/, "");
+  return {
+    startLine: last.startLine + 1,
+    body: lines
+      .slice(last.startLine + 1)
+      .join("\n")
+      .replace(/\n$/, ""),
+  };
 }
 
 /**

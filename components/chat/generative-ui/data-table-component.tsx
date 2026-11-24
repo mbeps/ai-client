@@ -138,6 +138,9 @@ export function DataTableComponent({
   const [page, setPage] = useState(0);
 
   const filteredRows = useMemo(() => {
+    if (!searchable) {
+      return safeData;
+    }
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) {
       return safeData;
@@ -147,7 +150,7 @@ export function DataTableComponent({
         formatCellValue(row[col.key]).toLowerCase().includes(trimmed),
       ),
     );
-  }, [safeColumns, safeData, query]);
+  }, [searchable, safeColumns, safeData, query]);
 
   const sortedRows = useMemo(() => {
     if (!sortKey || !sortDir) {

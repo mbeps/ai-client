@@ -46,6 +46,26 @@ describe("DataTableComponent", () => {
     expect(screen.getByText("No matching rows")).toBeInTheDocument();
   });
 
+  it("bypasses saved search query when searchable changes to false", () => {
+    const { rerender } = render(
+      <DataTableComponent columns={columns} data={rows} searchable />,
+    );
+
+    const searchInput = screen.getByPlaceholderText("Search...");
+    fireEvent.change(searchInput, { target: { value: "alice" } });
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+
+    rerender(
+      <DataTableComponent columns={columns} data={rows} searchable={false} />,
+    );
+
+    expect(screen.queryByPlaceholderText("Search...")).toBeNull();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText("Bob")).toBeInTheDocument();
+    expect(screen.getByText("Charlie")).toBeInTheDocument();
+  });
+
   it("sorts sortable columns ascending, descending, and resets on third click", () => {
     render(<DataTableComponent columns={columns} data={rows} />);
 

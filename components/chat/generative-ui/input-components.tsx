@@ -35,6 +35,35 @@ function FieldWrapper({
   );
 }
 
+interface ActionBindingLike {
+  action?: string;
+  onSuccess?: unknown;
+  onError?: unknown;
+}
+
+function isActionBindingLike(value: unknown): value is ActionBindingLike {
+  return typeof value === "object" && value !== null && "action" in value;
+}
+
+/**
+ * Returns true if an event binding (or any chained `onSuccess`/`onError` action)
+ * dispatches the chat follow-up action `sendChatMessage`.
+ */
+export function hasSendChatMessageAction(binding: unknown): boolean {
+  if (!binding) return false;
+  const list = Array.isArray(binding) ? binding : [binding];
+  return list.some((entry) => {
+    if (!isActionBindingLike(entry)) return false;
+    if (entry.action === "sendChatMessage") return true;
+    return (
+      (isActionBindingLike(entry.onSuccess) &&
+        hasSendChatMessageAction(entry.onSuccess)) ||
+      (isActionBindingLike(entry.onError) &&
+        hasSendChatMessageAction(entry.onError))
+    );
+  });
+}
+
 /**
  * Interactive form and action components for the Generative UI registry,
  * wired to local Shadcn primitives and `@json-render/react` state bindings.
@@ -43,22 +72,21 @@ export const generativeUIInputComponents = {
   Button: ({
     props,
     emit,
-    on,
   }: {
     props: {
       label: string;
       variant?: "default" | "secondary" | "destructive" | "outline" | "ghost";
       size?: "default" | "sm" | "lg";
       disabled?: boolean;
+      dispatchesChatMessage?: boolean;
     };
     emit: (event: string) => void;
-    on: (event: string) => { bound: boolean };
   }) => {
     const { sendMessage, isStreaming } = useGenerativeUIActions();
-    const isActionBound = on("press").bound;
+    const dispatchesChatMessage = Boolean(props.dispatchesChatMessage);
     const isDisabled =
       Boolean(props.disabled) ||
-      (isActionBound && (isStreaming || !sendMessage));
+      (dispatchesChatMessage && (isStreaming || !sendMessage));
 
     return (
       <Button

@@ -10,8 +10,9 @@ import {
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
+import type { MarkdownViewFlushFn } from "@/components/chat/artifacts/markdown-view";
 import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -123,6 +124,7 @@ export function ArtifactPanel({
   isFullWidth = false,
 }: ArtifactPanelProps) {
   const [copied, setCopied] = useState(false);
+  const markdownFlushRef = useRef<MarkdownViewFlushFn | null>(null);
   const artifactKey = `${artifact?.messageId ?? ""}-${currentIndex}`;
   const [markdownModeState, setMarkdownModeState] = useState<{
     key: string;
@@ -158,6 +160,14 @@ export function ArtifactPanel({
 
   const handleDownload = () => {
     downloadArtifact(artifact);
+  };
+
+  const handleSwitchToPreview = async () => {
+    const pending = markdownFlushRef.current?.();
+    if (pending) {
+      await pending;
+    }
+    setMarkdownMode("preview");
   };
 
   return (
@@ -316,7 +326,7 @@ export function ArtifactPanel({
                         markdownMode === "preview" ? "secondary" : "ghost"
                       }
                       className="h-7 px-2.5 text-xs"
-                      onClick={() => setMarkdownMode("preview")}
+                      onClick={handleSwitchToPreview}
                     >
                       Preview
                     </Button>
@@ -341,6 +351,7 @@ export function ArtifactPanel({
                       id={`${artifact.messageId}-${currentIndex}`}
                       content={artifact.content}
                       onUpdate={onUpdate}
+                      flushRef={markdownFlushRef}
                     />
                   </div>
                 )}
@@ -382,7 +393,10 @@ export function ArtifactPanel({
             value="ui"
             className="m-0 h-full w-full border-none p-0 outline-none"
           >
-            <UiView content={artifact.content} />
+            <UiView
+              key={`${artifact.id}-${artifactKey}`}
+              content={artifact.content}
+            />
           </TabsContent>
         </Tabs>
       </div>

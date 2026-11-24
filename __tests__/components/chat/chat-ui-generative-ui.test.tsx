@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ChatComposerSelections } from "@/components/chat/chat-input";
 import { ChatUI } from "@/components/chat/chat-ui";
 import { useGenerativeUIActions } from "@/components/chat/generative-ui/generative-ui-context";
 import type { Chat } from "@/types/chat/chat";
@@ -32,8 +33,19 @@ vi.mock("@/components/chat/streaming-section", () => ({
   StreamingSection: () => null,
 }));
 
+const capturedChatInput = vi.hoisted(() => ({
+  onSelectionsChange: undefined as
+    | ((selections: ChatComposerSelections) => void)
+    | undefined,
+}));
+
 vi.mock("@/components/chat/chat-input", () => ({
-  ChatInput: () => null,
+  ChatInput: (props: {
+    onSelectionsChange?: (selections: ChatComposerSelections) => void;
+  }) => {
+    capturedChatInput.onSelectionsChange = props.onSelectionsChange;
+    return null;
+  },
 }));
 
 vi.mock("@/components/ui/scroll-area", () => ({
@@ -179,5 +191,47 @@ describe("ChatUI GenerativeUIProvider", () => {
       fireEvent.click(screen.getByRole("button", { name: "Send Follow Up" }));
     });
     expect(mockStreamResponse).not.toHaveBeenCalled();
+  });
+
+  it("dispatches widget follow-ups using the composer's live model and tool selections", async () => {
+    render(<ChatUI chatId="chat-1" initialChat={baseChat} />);
+
+    act(() => {
+      capturedChatInput.onSelectionsChange?.({
+        modelId: "model-override",
+        serverIds: ["srv-2"],
+        selectedTools: ["srv-2:tool:search"],
+        kbIds: ["kb-9"],
+        skillIds: ["skill-3"],
+        subagentsEnabled: true,
+        subagentModelId: "sub-model",
+        subagentIds: ["researcher"],
+        reasoningEffort: "high",
+        approvalMode: "auto",
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Send Follow Up" }));
+    });
+
+    expect(mockStreamResponse).toHaveBeenCalledWith(
+      expect.any(String),
+      "Follow up prompt",
+      null,
+      [],
+      "model-override",
+      ["srv-2"],
+      ["srv-2:tool:search"],
+      undefined,
+      undefined,
+      ["kb-9"],
+      ["skill-3"],
+      true,
+      "sub-model",
+      "high",
+      ["researcher"],
+      "auto",
+    );
   });
 });

@@ -1,7 +1,9 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { type MutableRefObject, useEffect, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
+import type { MarkdownViewFlushFn } from "@/components/chat/artifacts/markdown-view";
 
 const mockToast = vi.hoisted(() => ({
   success: vi.fn(),
@@ -10,6 +12,8 @@ const mockToast = vi.hoisted(() => ({
 }));
 
 const mockDownloadArtifact = vi.hoisted(() => vi.fn());
+const uiViewMountCounter = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }));
+const pendingMarkdownRef = vi.hoisted(() => ({ value: null as string | null }));
 
 vi.mock("sonner", () => ({
   toast: mockToast,
@@ -26,11 +30,39 @@ vi.mock("next/dynamic", () => ({
     const src = loader.toString();
     if (src.includes("ui-view")) {
       return function MockUiView({ content }: { content: string }) {
+        useEffect(() => {
+          uiViewMountCounter.mounts += 1;
+          return () => {
+            uiViewMountCounter.unmounts += 1;
+          };
+        }, []);
         return <div data-testid="ui-view">{content}</div>;
       };
     }
     if (src.includes("markdown-view")) {
-      return function MockMarkdownView({ content }: { content: string }) {
+      return function MockMarkdownView({
+        content,
+        onUpdate,
+        flushRef,
+      }: {
+        content: string;
+        onUpdate?: (c: string) => void;
+        flushRef?: MutableRefObject<MarkdownViewFlushFn | null>;
+      }) {
+        useEffect(() => {
+          if (!flushRef) return;
+          flushRef.current = () => {
+            if (pendingMarkdownRef.value === null) return null;
+            const next = pendingMarkdownRef.value;
+            pendingMarkdownRef.value = null;
+            return Promise.resolve().then(() => {
+              onUpdate?.(next);
+            });
+          };
+          return () => {
+            flushRef.current = null;
+          };
+        }, [flushRef, onUpdate]);
         return <div data-testid="markdown-view">{content}</div>;
       };
     }
@@ -58,6 +90,9 @@ describe("ArtifactPanel — Interactive UI & Markdown Preview/Edit", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    uiViewMountCounter.mounts = 0;
+    uiViewMountCounter.unmounts = 0;
+    pendingMarkdownRef.value = null;
     writeTextMock.mockResolvedValue(undefined);
     Object.assign(navigator, {
       clipboard: {
@@ -282,5 +317,94 @@ describe("ArtifactPanel — Interactive UI & Markdown Preview/Edit", () => {
     );
 
     expect(screen.getByTestId("markdown-renderer")).toBeInTheDocument();
+  });
+
+  it("flushes pending MarkdownView edits before switching to Preview", async () => {
+    const initialContent = "# Draft\n\n```spec\n{\"root\":\"c\",\"elements\":{}}\n```";
+    const editedContent = "# Edited Draft\n\n```spec\n{\"root\":\"c\",\"elements\":{}}\n```";
+
+    function StatefulPanelHarness() {
+      const [content, setContent] = useState(initialContent);
+      const artifact: ArtifactData = {
+        id: "art-md-flush",
+        messageId: "msg-1",
+        type: "markdown",
+        title: "Flushable",
+        content,
+      };
+      return (
+        <TooltipProvider>
+          <ArtifactPanel
+            artifact={artifact}
+            isOpen={true}
+            onClose={vi.fn()}
+            artifacts={[artifact]}
+            currentIndex={0}
+            onUpdate={setContent}
+          />
+        </TooltipProvider>
+      );
+    }
+
+    render(<StatefulPanelHarness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByTestId("markdown-view")).toBeInTheDocument();
+
+    pendingMarkdownRef.value = editedContent;
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    });
+
+    expect(screen.getByTestId("markdown-renderer")).toHaveTextContent(
+      "# Edited Draft",
+    );
+  });
+
+  it("remounts UiView when switching to a different UI artifact", () => {
+    const firstUi: ArtifactData = {
+      id: "art-ui-1",
+      messageId: "msg-1",
+      type: "ui",
+      title: "First UI",
+      content: '{"root":"a","elements":{}}',
+    };
+    const secondUi: ArtifactData = {
+      id: "art-ui-2",
+      messageId: "msg-2",
+      type: "ui",
+      title: "Second UI",
+      content: '{"root":"b","elements":{}}',
+    };
+
+    const { rerender } = render(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={firstUi}
+          isOpen={true}
+          onClose={vi.fn()}
+          artifacts={[firstUi, secondUi]}
+          currentIndex={0}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(uiViewMountCounter.mounts).toBe(1);
+    expect(uiViewMountCounter.unmounts).toBe(0);
+
+    rerender(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={secondUi}
+          isOpen={true}
+          onClose={vi.fn()}
+          artifacts={[firstUi, secondUi]}
+          currentIndex={1}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(uiViewMountCounter.mounts).toBe(2);
+    expect(uiViewMountCounter.unmounts).toBe(1);
   });
 });

@@ -4,8 +4,8 @@ import "katex/dist/katex.min.css";
 import { Check, Copy } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
@@ -13,7 +13,10 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getTrailingUnclosedGenerativeUISpec } from "@/lib/generative-ui/markdown-ui-utils";
+import {
+  getTrailingUnclosedGenerativeUIFence,
+  type TrailingUnclosedGenerativeUIFence,
+} from "@/lib/generative-ui/markdown-ui-utils";
 import { cn } from "@/lib/utils";
 import {
   downloadFile,
@@ -223,6 +226,222 @@ function CodeBlock({ language, value }: { language?: string; value: string }) {
   );
 }
 
+interface MarkdownStreamingContextValue {
+  isStreaming: boolean;
+  trailingUnclosedFence: TrailingUnclosedGenerativeUIFence | null;
+}
+
+const MarkdownStreamingContext = createContext<MarkdownStreamingContextValue>({
+  isStreaming: false,
+  trailingUnclosedFence: null,
+});
+
+function MarkdownPre({ node, children }: any) {
+  const { isStreaming, trailingUnclosedFence } = useContext(
+    MarkdownStreamingContext,
+  );
+  const codeEl = Array.isArray(children) ? children[0] : children;
+  const cls: string = codeEl?.props?.className ?? "";
+  const rawCode = String(codeEl?.props?.children ?? "").replace(/\n$/, "");
+
+  if (/language-mermaid/.test(cls)) {
+    return <MermaidBlock chart={rawCode} />;
+  }
+
+  if (/language-(?:spec|ui)\b/.test(cls)) {
+    const isUnclosed =
+      isStreaming &&
+      trailingUnclosedFence !== null &&
+      node?.position?.start?.line === trailingUnclosedFence.startLine;
+    return (
+      <DynamicUIBlock
+        rawSpec={rawCode}
+        isStreaming={isStreaming}
+        isUnclosed={isUnclosed}
+      />
+    );
+  }
+
+  const match = /language-(\w+)/.exec(cls);
+  const language = match ? match[1] : undefined;
+
+  return <CodeBlock language={language} value={rawCode} />;
+}
+
+const REMARK_PLUGINS = [remarkGfm, remarkMath];
+const REHYPE_PLUGINS: any[] = [
+  rehypeRaw,
+  [rehypeSanitize, sanitizeSchema],
+  rehypeKatex,
+];
+
+// Defined at module scope so React-Markdown keeps stable element identities across renders.
+const MARKDOWN_COMPONENTS: Components = {
+  h1: ({ node: _node, ...props }) => (
+    <h1
+      className="border-border text-foreground mt-6 mb-3 border-b pb-1 text-2xl font-bold tracking-tight first:mt-0"
+      {...props}
+    />
+  ),
+  h2: ({ node: _node, ...props }) => (
+    <h2
+      className="border-border/50 text-foreground mt-5 mb-2.5 border-b pb-1 text-xl font-semibold tracking-tight first:mt-0"
+      {...props}
+    />
+  ),
+  h3: ({ node: _node, ...props }) => (
+    <h3
+      className="text-foreground mt-4 mb-2 text-lg font-semibold tracking-tight first:mt-0"
+      {...props}
+    />
+  ),
+  h4: ({ node: _node, ...props }) => (
+    <h4
+      className="text-foreground mt-3 mb-1.5 text-base font-semibold first:mt-0"
+      {...props}
+    />
+  ),
+  h5: ({ node: _node, ...props }) => (
+    <h5
+      className="text-muted-foreground mt-2 mb-1 text-sm font-semibold tracking-wider uppercase first:mt-0"
+      {...props}
+    />
+  ),
+  h6: ({ node: _node, ...props }) => (
+    <h6
+      className="text-muted-foreground mt-2 mb-1 text-xs font-semibold tracking-wider uppercase first:mt-0"
+      {...props}
+    />
+  ),
+  p: ({ node: _node, ...props }) => (
+    <p
+      className="text-foreground my-3 leading-7 first:mt-0 last:mb-0"
+      {...props}
+    />
+  ),
+  ul: ({ node: _node, ...props }) => (
+    <ul
+      className="text-foreground my-3 list-disc space-y-1 pl-6 [&>li>ol]:my-1 [&>li>ul]:my-1"
+      {...props}
+    />
+  ),
+  ol: ({ node: _node, ...props }) => (
+    <ol
+      className="text-foreground my-3 list-decimal space-y-1 pl-6 [&>li>ol]:my-1 [&>li>ul]:my-1"
+      {...props}
+    />
+  ),
+  li: ({ node: _node, ...props }) => (
+    <li
+      className="marker:text-muted-foreground my-0.5 leading-relaxed"
+      {...props}
+    />
+  ),
+  blockquote: ({ node: _node, ...props }) => (
+    <blockquote
+      className="border-primary/40 bg-muted/20 text-muted-foreground my-3 rounded-r-md border-l-4 py-1.5 pl-4 italic"
+      {...props}
+    />
+  ),
+  hr: ({ node: _node, ...props }) => (
+    <hr className="border-border my-6" {...props} />
+  ),
+  strong: ({ node: _node, ...props }) => (
+    <strong className="text-foreground font-semibold" {...props} />
+  ),
+  em: ({ node: _node, ...props }) => <em className="italic" {...props} />,
+  del: ({ node: _node, ...props }) => (
+    <del className="text-muted-foreground line-through" {...props} />
+  ),
+  input: ({ node: _node, type, checked, ...props }: any) => {
+    if (type === "checkbox") {
+      return (
+        <Checkbox
+          checked={Boolean(checked)}
+          disabled
+          className="mr-2 inline-flex align-middle"
+          aria-label="Task item"
+        />
+      );
+    }
+    return <input type={type} {...props} />;
+  },
+  code({ node: _node, className: codeCls, children, ...props }: any) {
+    return (
+      <code
+        className={
+          "border-border/50 bg-muted text-foreground rounded-md border px-1.5 py-0.5 font-mono text-xs font-medium" +
+          (codeCls ?? "")
+        }
+        {...props}
+      >
+        {children}
+      </code>
+    );
+  },
+  pre: MarkdownPre,
+  table: ({ node: _node, ...props }) => (
+    <div className="typeset-scroll border-border my-4 overflow-x-auto rounded-lg border">
+      <table className="w-full border-collapse text-left text-sm" {...props} />
+    </div>
+  ),
+  thead: ({ node: _node, ...props }) => (
+    <thead
+      className="border-border bg-muted/50 text-foreground border-b font-semibold"
+      {...props}
+    />
+  ),
+  tbody: ({ node: _node, ...props }) => (
+    <tbody className="divide-border divide-y" {...props} />
+  ),
+  tr: ({ node: _node, ...props }) => (
+    <tr className="hover:bg-muted/30 transition-colors" {...props} />
+  ),
+  th: ({ node: _node, ...props }) => (
+    <th
+      className="border-border border-r p-2.5 text-left font-semibold last:border-r-0"
+      {...props}
+    />
+  ),
+  td: ({ node: _node, ...props }) => (
+    <td
+      className="border-border text-foreground border-r p-2.5 last:border-r-0"
+      {...props}
+    />
+  ),
+  a: ({ node: _node, href, ...props }: any) => {
+    const isDownloadable = Boolean(
+      href &&
+        /\.(xlsx|xls|xlsm|csv|tsv|pdf|docx|zip|tar\.gz|gz|parquet|json)$/i.test(
+          String(href).split("?")[0],
+        ),
+    );
+    return (
+      <a
+        className="text-primary hover:text-primary/80 font-medium underline underline-offset-4 transition-colors"
+        target="_blank"
+        rel="noopener noreferrer"
+        href={href}
+        download={isDownloadable ? true : undefined}
+        {...props}
+        onClick={
+          isDownloadable
+            ? (e) => {
+                e.preventDefault();
+                downloadFile(
+                  String(href),
+                  extractFilenameFromUrl(String(href)),
+                ).catch(() =>
+                  toast.error("Failed to download file. Please try again."),
+                );
+              }
+            : props.onClick
+        }
+      />
+    );
+  },
+};
+
 /**
  * Renders assistant and user message content or preview text as rich Markdown.
  * Uses Shadcn Typeset (`typeset typeset-chat`) for container-aware typography,
@@ -243,225 +462,28 @@ export function MarkdownRenderer({
   className?: string;
   isStreaming?: boolean;
 }) {
-  const trailingUnclosedSpec = isStreaming
-    ? getTrailingUnclosedGenerativeUISpec(content)
-    : null;
+  const trailingUnclosedFence = useMemo(
+    () => (isStreaming ? getTrailingUnclosedGenerativeUIFence(content) : null),
+    [isStreaming, content],
+  );
+  const streamingContext = useMemo(
+    () => ({ isStreaming, trailingUnclosedFence }),
+    [isStreaming, trailingUnclosedFence],
+  );
+
   return (
-    <div
-      className={cn("typeset typeset-chat max-w-none break-words", className)}
-    >
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[
-          rehypeRaw,
-          [rehypeSanitize, sanitizeSchema],
-          rehypeKatex,
-        ]}
-        components={{
-          h1: ({ node: _node, ...props }) => (
-            <h1
-              className="border-border text-foreground mt-6 mb-3 border-b pb-1 text-2xl font-bold tracking-tight first:mt-0"
-              {...props}
-            />
-          ),
-          h2: ({ node: _node, ...props }) => (
-            <h2
-              className="border-border/50 text-foreground mt-5 mb-2.5 border-b pb-1 text-xl font-semibold tracking-tight first:mt-0"
-              {...props}
-            />
-          ),
-          h3: ({ node: _node, ...props }) => (
-            <h3
-              className="text-foreground mt-4 mb-2 text-lg font-semibold tracking-tight first:mt-0"
-              {...props}
-            />
-          ),
-          h4: ({ node: _node, ...props }) => (
-            <h4
-              className="text-foreground mt-3 mb-1.5 text-base font-semibold first:mt-0"
-              {...props}
-            />
-          ),
-          h5: ({ node: _node, ...props }) => (
-            <h5
-              className="text-muted-foreground mt-2 mb-1 text-sm font-semibold tracking-wider uppercase first:mt-0"
-              {...props}
-            />
-          ),
-          h6: ({ node: _node, ...props }) => (
-            <h6
-              className="text-muted-foreground mt-2 mb-1 text-xs font-semibold tracking-wider uppercase first:mt-0"
-              {...props}
-            />
-          ),
-          p: ({ node: _node, ...props }) => (
-            <p
-              className="text-foreground my-3 leading-7 first:mt-0 last:mb-0"
-              {...props}
-            />
-          ),
-          ul: ({ node: _node, ...props }) => (
-            <ul
-              className="text-foreground my-3 list-disc space-y-1 pl-6 [&>li>ol]:my-1 [&>li>ul]:my-1"
-              {...props}
-            />
-          ),
-          ol: ({ node: _node, ...props }) => (
-            <ol
-              className="text-foreground my-3 list-decimal space-y-1 pl-6 [&>li>ol]:my-1 [&>li>ul]:my-1"
-              {...props}
-            />
-          ),
-          li: ({ node: _node, ...props }) => (
-            <li
-              className="marker:text-muted-foreground my-0.5 leading-relaxed"
-              {...props}
-            />
-          ),
-          blockquote: ({ node: _node, ...props }) => (
-            <blockquote
-              className="border-primary/40 bg-muted/20 text-muted-foreground my-3 rounded-r-md border-l-4 py-1.5 pl-4 italic"
-              {...props}
-            />
-          ),
-          hr: ({ node: _node, ...props }) => (
-            <hr className="border-border my-6" {...props} />
-          ),
-          strong: ({ node: _node, ...props }) => (
-            <strong className="text-foreground font-semibold" {...props} />
-          ),
-          em: ({ node: _node, ...props }) => (
-            <em className="italic" {...props} />
-          ),
-          del: ({ node: _node, ...props }) => (
-            <del className="text-muted-foreground line-through" {...props} />
-          ),
-          input: ({ node: _node, type, checked, ...props }: any) => {
-            if (type === "checkbox") {
-              return (
-                <Checkbox
-                  checked={Boolean(checked)}
-                  disabled
-                  className="mr-2 inline-flex align-middle"
-                  aria-label="Task item"
-                />
-              );
-            }
-            return <input type={type} {...props} />;
-          },
-          code({ node: _node, className: codeCls, children, ...props }: any) {
-            return (
-              <code
-                className={
-                  "border-border/50 bg-muted text-foreground rounded-md border px-1.5 py-0.5 font-mono text-xs font-medium" +
-                  (codeCls ?? "")
-                }
-                {...props}
-              >
-                {children}
-              </code>
-            );
-          },
-          pre({ children }: any) {
-            const codeEl = Array.isArray(children) ? children[0] : children;
-            const cls: string = codeEl?.props?.className ?? "";
-            const rawCode = String(codeEl?.props?.children ?? "").replace(
-              /\n$/,
-              "",
-            );
-
-            if (/language-mermaid/.test(cls)) {
-              return <MermaidBlock chart={rawCode} />;
-            }
-
-            if (/language-(?:spec|ui)\b/.test(cls)) {
-              const isUnclosed =
-                isStreaming &&
-                trailingUnclosedSpec !== null &&
-                rawCode === trailingUnclosedSpec;
-              return (
-                <DynamicUIBlock
-                  rawSpec={rawCode}
-                  isStreaming={isStreaming}
-                  isUnclosed={isUnclosed}
-                />
-              );
-            }
-
-            const match = /language-(\w+)/.exec(cls);
-            const language = match ? match[1] : undefined;
-
-            return <CodeBlock language={language} value={rawCode} />;
-          },
-          table: ({ node: _node, ...props }) => (
-            <div className="typeset-scroll border-border my-4 overflow-x-auto rounded-lg border">
-              <table
-                className="w-full border-collapse text-left text-sm"
-                {...props}
-              />
-            </div>
-          ),
-          thead: ({ node: _node, ...props }) => (
-            <thead
-              className="border-border bg-muted/50 text-foreground border-b font-semibold"
-              {...props}
-            />
-          ),
-          tbody: ({ node: _node, ...props }) => (
-            <tbody className="divide-border divide-y" {...props} />
-          ),
-          tr: ({ node: _node, ...props }) => (
-            <tr className="hover:bg-muted/30 transition-colors" {...props} />
-          ),
-          th: ({ node: _node, ...props }) => (
-            <th
-              className="border-border border-r p-2.5 text-left font-semibold last:border-r-0"
-              {...props}
-            />
-          ),
-          td: ({ node: _node, ...props }) => (
-            <td
-              className="border-border text-foreground border-r p-2.5 last:border-r-0"
-              {...props}
-            />
-          ),
-          a: ({ node: _node, href, ...props }: any) => {
-            const isDownloadable = Boolean(
-              href &&
-                /\.(xlsx|xls|xlsm|csv|tsv|pdf|docx|zip|tar\.gz|gz|parquet|json)$/i.test(
-                  String(href).split("?")[0],
-                ),
-            );
-            return (
-              <a
-                className="text-primary hover:text-primary/80 font-medium underline underline-offset-4 transition-colors"
-                target="_blank"
-                rel="noopener noreferrer"
-                href={href}
-                download={isDownloadable ? true : undefined}
-                {...props}
-                onClick={
-                  isDownloadable
-                    ? (e) => {
-                        e.preventDefault();
-                        downloadFile(
-                          String(href),
-                          extractFilenameFromUrl(String(href)),
-                        ).catch(() =>
-                          toast.error(
-                            "Failed to download file. Please try again.",
-                          ),
-                        );
-                      }
-                    : props.onClick
-                }
-              />
-            );
-          },
-        }}
+    <MarkdownStreamingContext.Provider value={streamingContext}>
+      <div
+        className={cn("typeset typeset-chat max-w-none break-words", className)}
       >
-        {content}
-      </ReactMarkdown>
-    </div>
+        <ReactMarkdown
+          remarkPlugins={REMARK_PLUGINS}
+          rehypePlugins={REHYPE_PLUGINS}
+          components={MARKDOWN_COMPONENTS}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+    </MarkdownStreamingContext.Provider>
   );
 }
