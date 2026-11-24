@@ -51,5 +51,9 @@ describe("generativeUICatalog", () => {
     expect(first).toContain("Card");
     expect(first).toContain("AreaChart");
     expect(first).toContain("sendChatMessage");
+    expect(first).toContain("/elements/");
+    expect(first).toContain('"$then"');
+    expect(first).toContain('"$else"');
+    expect(first).toContain("Element objects ONLY have top-level keys");
   });
 });

@@ -1,4 +1,8 @@
-import { createSpecStreamCompiler, type Spec } from "@json-render/core";
+import {
+  autoFixSpec,
+  createSpecStreamCompiler,
+  type Spec,
+} from "@json-render/core";
 
 /**
  * Maximum number of UI elements permitted in a single spec to prevent
@@ -16,8 +20,151 @@ export type ParseSpecResult =
   | { ok: true; spec: Spec }
   | { ok: false; error: string };
 
+const MAX_COND_DEPTH = 32;
+
+const RESERVED_ELEMENT_KEYS = new Set([
+  "type",
+  "props",
+  "children",
+  "slots",
+  "visible",
+  "on",
+  "repeat",
+  "watch",
+]);
+
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeCondNode(
+  obj: Record<string, unknown>,
+  depth: number,
+): Record<string, unknown> {
+  let cleanCond: unknown = obj.$cond;
+  let innerThen: unknown;
+  let innerElse: unknown;
+
+  if (isPlainRecord(obj.$cond)) {
+    const {
+      then: rawThen,
+      else: rawElse,
+      $then: dollarThen,
+      $else: dollarElse,
+      ...restCond
+    } = obj.$cond;
+    cleanCond = restCond;
+    innerThen = dollarThen ?? rawThen;
+    innerElse = dollarElse ?? rawElse;
+  }
+
+  const thenBranch = obj.$then ?? obj.then ?? innerThen;
+  const elseBranch = obj.$else ?? obj.else ?? innerElse;
+  const out: Record<string, unknown> = { $cond: cleanCond };
+
+  for (const [k, v] of Object.entries(obj)) {
+    if (
+      k !== "$cond" &&
+      k !== "$then" &&
+      k !== "$else" &&
+      k !== "then" &&
+      k !== "else"
+    ) {
+      out[k] = normalizeCondExpressions(v, depth + 1);
+    }
+  }
+  if (thenBranch !== undefined) {
+    out.$then = normalizeCondExpressions(thenBranch, depth + 1);
+  }
+  if (elseBranch !== undefined) {
+    out.$else = normalizeCondExpressions(elseBranch, depth + 1);
+  }
+  return out;
+}
+
+function normalizeCondExpressions(value: unknown, depth = 0): unknown {
+  if (depth > MAX_COND_DEPTH || value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeCondExpressions(item, depth + 1));
+  }
+
+  const obj = value as Record<string, unknown>;
+  if ("$cond" in obj) {
+    return normalizeCondNode(obj, depth);
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = normalizeCondExpressions(v, depth + 1);
+  }
+  return out;
+}
+
+function normalizeElementRecord(
+  el: Record<string, unknown>,
+): Record<string, unknown> {
+  const nextProps: Record<string, unknown> = isPlainRecord(el.props)
+    ? { ...el.props }
+    : {};
+  const nextEl: Record<string, unknown> = {};
+
+  for (const field of ["children", "slots"] as const) {
+    if (el[field] === undefined && nextProps[field] !== undefined) {
+      nextEl[field] = nextProps[field];
+      delete nextProps[field];
+    }
+  }
+
+  for (const [key, val] of Object.entries(el)) {
+    if (RESERVED_ELEMENT_KEYS.has(key)) {
+      if (key !== "props") {
+        nextEl[key] = val;
+      }
+    } else if (!(key in nextProps)) {
+      nextProps[key] = val;
+    }
+  }
+
+  nextEl.props = normalizeCondExpressions(nextProps);
+  return nextEl;
+}
+
+function resolveUniqueTreeRoot(refMap: Map<string, string[]>): string | null {
+  if (refMap.size <= 1) {
+    return null;
+  }
+
+  const referenced = new Set<string>();
+  for (const refs of refMap.values()) {
+    for (const childId of refs) {
+      referenced.add(childId);
+    }
+  }
+
+  const unreferenced = [...refMap.keys()].filter((id) => !referenced.has(id));
+  if (unreferenced.length !== 1) {
+    return null;
+  }
+
+  const rootCandidate = unreferenced[0];
+  const visited = new Set<string>();
+  const stack = [rootCandidate];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (visited.has(id)) {
+      continue;
+    }
+    visited.add(id);
+    for (const childId of refMap.get(id)!) {
+      if (refMap.has(childId)) {
+        stack.push(childId);
+      }
+    }
+  }
+
+  return visited.size === refMap.size ? rootCandidate : null;
 }
 
 function tryParseStandaloneSpec(trimmed: string): Spec | null {
@@ -61,18 +208,19 @@ function buildChildRefMap(
   const refMap = new Map<string, string[]>();
 
   for (const [id, el] of Object.entries(elements)) {
-    if (!isPlainRecord(el)) {
-      return null;
-    }
+    const elRecord = el as Record<string, unknown>;
     const refs: string[] = [];
-    if (el.children !== undefined && !appendStringRefs(el.children, refs)) {
+    if (
+      elRecord.children !== undefined &&
+      !appendStringRefs(elRecord.children, refs)
+    ) {
       return null;
     }
-    if (el.slots !== undefined) {
-      if (!isPlainRecord(el.slots)) {
+    if (elRecord.slots !== undefined) {
+      if (!isPlainRecord(elRecord.slots)) {
         return null;
       }
-      for (const slotChildren of Object.values(el.slots)) {
+      for (const slotChildren of Object.values(elRecord.slots)) {
         if (!appendStringRefs(slotChildren, refs)) {
           return null;
         }
@@ -193,19 +341,39 @@ export function parseGenerativeUISpec(raw: string): ParseSpecResult {
     };
   }
 
-  if (!(candidate.root in candidate.elements)) {
-    return {
-      ok: false,
-      error: `Missing root element "${candidate.root}"`,
-    };
+  const normalizedElements: Record<string, unknown> = {};
+  for (const [id, el] of Object.entries(candidate.elements)) {
+    if (!isPlainRecord(el)) {
+      return {
+        ok: false,
+        error: "Invalid UI spec: child references must be arrays of strings",
+      };
+    }
+    normalizedElements[id] = normalizeElementRecord(el);
   }
 
-  const refMap = buildChildRefMap(candidate.elements);
+  let normalizedSpec = autoFixSpec(
+    { ...candidate, elements: normalizedElements } as Spec,
+    { lossy: false },
+  ).spec;
+
+  const refMap = buildChildRefMap(normalizedSpec.elements);
   if (!refMap) {
     return {
       ok: false,
       error: "Invalid UI spec: child references must be arrays of strings",
     };
+  }
+
+  if (!(normalizedSpec.root in normalizedSpec.elements)) {
+    const recoveredRoot = resolveUniqueTreeRoot(refMap);
+    if (!recoveredRoot) {
+      return {
+        ok: false,
+        error: `Missing root element "${normalizedSpec.root}"`,
+      };
+    }
+    normalizedSpec = { ...normalizedSpec, root: recoveredRoot };
   }
 
   if (hasCyclicChildren(refMap)) {
@@ -216,7 +384,11 @@ export function parseGenerativeUISpec(raw: string): ParseSpecResult {
   }
 
   if (
-    exceedsExpandedNodeBudget(candidate.root, refMap, MAX_EXPANDED_UI_NODES)
+    exceedsExpandedNodeBudget(
+      normalizedSpec.root,
+      refMap,
+      MAX_EXPANDED_UI_NODES,
+    )
   ) {
     return {
       ok: false,
@@ -224,5 +396,5 @@ export function parseGenerativeUISpec(raw: string): ParseSpecResult {
     };
   }
 
-  return { ok: true, spec: candidate };
+  return { ok: true, spec: normalizedSpec };
 }

@@ -704,4 +704,28 @@ describe("DynamicUIBlock", () => {
     expect(screen.getByRole("button", { name: "Reset Local" })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: "Send Chat" })).toBeDisabled();
   });
+
+  it("renders slider + conditional badge spec even with mismatched root, stray props, and $cond then/else", () => {
+    const jsonl = [
+      '{"op":"add","path":"/root","value":"app"}',
+      '{"op":"add","path":"/elements/stackContainer","value":{"type":"Stack","props":{},"children":["intensitySlider","stepBadge"],"direction":"vertical","gap":"md"}}',
+      '{"op":"add","path":"/elements/intensitySlider","value":{"type":"Slider","props":{"label":"Select intensity level","min":0,"max":2,"step":1,"value":{"$bindState":"/sliderValue"}},"children":[]}}',
+      '{"op":"add","path":"/elements/stepBadge","value":{"type":"Badge","props":{"label":{"$cond":{"$state":"/sliderValue","eq":0,"then":"Low","else":{"$cond":{"$state":"/sliderValue","eq":1,"then":"Medium","else":"High"}}}},"children":[]}}}',
+      '{"op":"add","path":"/state/sliderValue","value":1}',
+    ].join("\n");
+
+    render(<DynamicUIBlock rawSpec={jsonl} />);
+
+    expect(screen.getByText("Select intensity level")).toBeInTheDocument();
+    expect(screen.getByText("Medium")).toBeInTheDocument();
+
+    const sliderInput = document.querySelector(
+      'input[type="range"]',
+    ) as HTMLInputElement;
+    fireEvent.change(sliderInput, { target: { value: "0" } });
+    expect(screen.getByText("Low")).toBeInTheDocument();
+
+    fireEvent.change(sliderInput, { target: { value: "2" } });
+    expect(screen.getByText("High")).toBeInTheDocument();
+  });
 });

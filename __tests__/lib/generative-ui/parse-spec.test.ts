@@ -293,6 +293,7 @@ describe("parseGenerativeUISpec", () => {
         },
         getResult: () => ({}),
       }),
+      autoFixSpec: (spec: unknown) => ({ spec, fixes: [], fixDetails: [] }),
     }));
 
     try {
@@ -310,5 +311,179 @@ describe("parseGenerativeUISpec", () => {
   it("handles JSONL stream that yields no valid spec patches", () => {
     const result = parseGenerativeUISpec("just plain text without json");
     expect(result.ok).toBe(false);
+  });
+
+  it("normalizes mismatched root, top-level element props, props.children, and $cond then/else", () => {
+    const jsonl = [
+      '{"op":"add","path":"/root","value":"app"}',
+      '{"op":"add","path":"/elements/stackContainer","value":{"type":"Stack","props":{},"children":["intensitySlider","stepBadge"],"direction":"vertical","gap":"md"}}',
+      '{"op":"add","path":"/elements/intensitySlider","value":{"type":"Slider","props":{"label":"Select intensity level","min":0,"max":2,"step":1,"value":{"$bindState":"/sliderValue"}},"children":[]}}',
+      '{"op":"add","path":"/elements/stepBadge","value":{"type":"Badge","props":{"label":{"$cond":{"$state":"/sliderValue","eq":0,"then":"Low","else":{"$cond":{"$state":"/sliderValue","eq":1,"then":"Medium","else":"High"}}}},"children":[]}}}',
+      '{"op":"add","path":"/state/sliderValue","value":1}',
+    ].join("\n");
+
+    const result = parseGenerativeUISpec(jsonl);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.spec.root).toBe("stackContainer");
+      expect(result.spec.elements.stackContainer?.props).toEqual({
+        direction: "vertical",
+        gap: "md",
+      });
+      expect(result.spec.elements.stepBadge?.children).toEqual([]);
+      expect(result.spec.elements.stepBadge?.props).toEqual({
+        label: {
+          $cond: { $state: "/sliderValue", eq: 0 },
+          $then: "Low",
+          $else: {
+            $cond: { $state: "/sliderValue", eq: 1 },
+            $then: "Medium",
+            $else: "High",
+          },
+        },
+      });
+    }
+  });
+
+  it("normalizes sibling then/else on $cond, preserves explicit props over stray keys, and relocates slots", () => {
+    const spec = JSON.stringify({
+      root: "card",
+      elements: {
+        card: {
+          type: "Card",
+          props: { title: "Explicit", slots: { default: ["badge"] } },
+          title: "Stray",
+          visible: { $state: "/show" },
+        },
+        badge: {
+          type: "Badge",
+          props: {
+            tags: [
+              {
+                $cond: { $state: "/flag", eq: true },
+                then: "Active",
+                else: {
+                  $cond: { $state: "/other", eq: true },
+                  $then: "Pending",
+                  $else: "Off",
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const result = parseGenerativeUISpec(spec);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.spec.elements.card?.props.title).toBe("Explicit");
+      expect(result.spec.elements.card?.slots).toEqual({ default: ["badge"] });
+      expect(result.spec.elements.badge?.props.tags).toEqual([
+        {
+          $cond: { $state: "/flag", eq: true },
+          $then: "Active",
+          $else: {
+            $cond: { $state: "/other", eq: true },
+            $then: "Pending",
+            $else: "Off",
+          },
+        },
+      ]);
+    }
+  });
+
+  it("rejects ambiguous multi-root specs when root key is missing", () => {
+    const ambiguous = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "missing",
+        elements: {
+          a: { type: "Text", props: { content: "A" }, children: [] },
+          b: { type: "Text", props: { content: "B" }, children: [] },
+        },
+      }),
+    );
+    expect(ambiguous).toEqual({
+      ok: false,
+      error: 'Missing root element "missing"',
+    });
+
+    const disconnected = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "missing",
+        elements: {
+          a: { type: "Stack", props: {}, children: ["b"] },
+          b: { type: "Text", props: { content: "B" }, children: [] },
+          c: { type: "Text", props: { content: "C" }, children: [] },
+        },
+      }),
+    );
+    expect(disconnected).toEqual({
+      ok: false,
+      error: 'Missing root element "missing"',
+    });
+
+    const unreachableCycle = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "missing",
+        elements: {
+          a: { type: "Separator" },
+          b: { type: "Stack", props: {}, children: ["c"] },
+          c: { type: "Stack", props: {}, children: ["b"] },
+        },
+      }),
+    );
+    expect(unreachableCycle).toEqual({
+      ok: false,
+      error: 'Missing root element "missing"',
+    });
+  });
+
+  it("stops recursive $cond normalization cleanly past depth limit", () => {
+    let deep: Record<string, unknown> = { leaf: "ok" };
+    for (let i = 0; i < 40; i++) {
+      deep = { nested: deep };
+    }
+    const result = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "text",
+        elements: {
+          text: { type: "Text", props: { content: "Hi", extra: deep } },
+        },
+      }),
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("recovers missing root for diamond DAG with dangling ref and handles partial $cond", () => {
+    const result = parseGenerativeUISpec(
+      JSON.stringify({
+        root: "wrong-root",
+        elements: {
+          container: {
+            type: "Stack",
+            props: {},
+            children: ["left", "right", "dangling"],
+          },
+          left: { type: "Stack", props: {}, children: ["shared"] },
+          right: { type: "Stack", props: {}, children: ["shared"] },
+          shared: {
+            type: "Badge",
+            props: {
+              label: { $cond: true, extra: "preserved" },
+              onlyElse: { $cond: { $state: "/x" }, $else: "fallback" },
+            },
+          },
+        },
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.spec.root).toBe("container");
+      expect(result.spec.elements.shared?.props.label).toEqual({
+        $cond: true,
+        extra: "preserved",
+      });
+    }
   });
 });

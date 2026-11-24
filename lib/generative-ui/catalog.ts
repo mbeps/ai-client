@@ -295,6 +295,9 @@ export function getInteractiveUiSystemPrompt(): string {
       "Wrap inline UI specs in a fenced ```spec block alongside your Markdown prose.",
       "For large standalone dashboards, calculators, or multi-section tools, prefer calling manage_artifact with type 'ui' instead of an inline fence.",
       "Keep UI specs concise and under 150 elements.",
+      'The value of /root MUST exactly match an element key defined under /elements/<rootKey> (e.g. if /root is "app", define /elements/app).',
+      'Element objects ONLY have top-level keys: type, props, children, slots, visible, on, repeat, watch. Place all component props (direction, gap, label, min, max, value, etc.) inside "props", and place "children" at the element top level (never inside "props").',
+      'In conditional $cond expressions, ALWAYS use "$then" and "$else" as siblings of "$cond" (with leading $), never "then" or "else".',
     ],
   });
 
