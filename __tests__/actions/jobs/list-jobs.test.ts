@@ -863,6 +863,19 @@ describe("listJobs Server Action", () => {
             endedAt: null,
             entityId: "chat-1",
           },
+          {
+            id: "inngest-chat-2",
+            functionId: "chat-response",
+            functionName: "Chat Runner",
+            eventName: "chat/response.generate",
+            type: "chat",
+            title: "Chat Response No Approval",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00Z",
+            startedAt: "2026-09-28T10:00:01Z",
+            endedAt: null,
+            entityId: "chat-2",
+          },
         ],
         offline: false,
       });
@@ -873,6 +886,12 @@ describe("listJobs Server Action", () => {
           title: "Ops Chat",
           projectId: null,
           currentLeafId: "msg-leaf-1",
+        },
+        {
+          id: "chat-2",
+          title: "Plain Chat",
+          projectId: null,
+          currentLeafId: "msg-leaf-2",
         },
       ];
       mockDbData.messages = [
@@ -890,11 +909,16 @@ describe("listJobs Server Action", () => {
             ],
           }),
         },
+        {
+          id: "msg-leaf-2",
+          metadata: JSON.stringify({ pendingApprovals: [] }),
+        },
       ];
 
       const res = await listJobs();
       expect(res.ok).toBe(true);
       const job = (res as any).value.jobs[0];
+      expect((res as any).value.jobs[1].approval).toBeUndefined();
       expect(job.approval).toEqual({
         kind: "chat-tool",
         assistantMessageId: "msg-leaf-1",
@@ -908,6 +932,99 @@ describe("listJobs Server Action", () => {
           },
         ],
       });
+    });
+
+    it("enriches workflow job awaiting_tool_approval with pendingToolApprovals and returns undefined when none", async () => {
+      mockFetchUserInngestRuns.mockResolvedValueOnce({
+        jobs: [
+          {
+            id: "inngest-wf-tool-1",
+            functionId: "workflow-run",
+            functionName: "Workflow Runner",
+            eventName: "workflows/execute.run",
+            type: "workflow",
+            title: "Tool Approval Flow",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00Z",
+            startedAt: "2026-09-28T10:00:01Z",
+            endedAt: null,
+            entityId: "run-tool-1",
+          },
+          {
+            id: "inngest-wf-tool-2",
+            functionId: "workflow-run",
+            functionName: "Workflow Runner",
+            eventName: "workflows/execute.run",
+            type: "workflow",
+            title: "Empty Tool Approval Flow",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00Z",
+            startedAt: "2026-09-28T10:00:01Z",
+            endedAt: null,
+            entityId: "run-tool-2",
+          },
+        ],
+        offline: false,
+      });
+
+      mockDbData.workflowRuns = [
+        {
+          id: "run-tool-1",
+          workflowId: "wf-1",
+          workflowName: "Tool Flow",
+          status: "awaiting_tool_approval",
+          currentNodeId: "node-tool-1",
+          nodeStates: {
+            "node-tool-1": {
+              gateId: "gate-tool-1",
+              pendingToolApprovals: [
+                {
+                  approvalId: "app-wf-1",
+                  toolCallId: "tc-wf-1",
+                  toolName: "send_email",
+                  args: { to: "a@b.com" },
+                  signature: "sig-wf-1",
+                },
+              ],
+            },
+          },
+        },
+        {
+          id: "run-tool-2",
+          workflowId: "wf-2",
+          workflowName: "Empty Tool Flow",
+          status: "awaiting_tool_approval",
+          currentNodeId: "node-tool-2",
+          nodeStates: {
+            "node-tool-2": {
+              gateId: "gate-tool-2",
+              pendingToolApprovals: [],
+            },
+          },
+        },
+      ];
+      mockDbData.workflowNodes = [{ id: "node-tool-1", name: "Send Email Node" }];
+
+      const res = await listJobs();
+      expect(res.ok).toBe(true);
+      const jobs = (res as any).value.jobs;
+      expect(jobs[0].approval).toEqual({
+        kind: "workflow-tool",
+        runId: "run-tool-1",
+        nodeId: "node-tool-1",
+        nodeName: "Send Email Node",
+        gateId: "gate-tool-1",
+        pendingApprovals: [
+          {
+            approvalId: "app-wf-1",
+            toolCallId: "tc-wf-1",
+            toolName: "send_email",
+            args: { to: "a@b.com" },
+            signature: "sig-wf-1",
+          },
+        ],
+      });
+      expect(jobs[1].approval).toBeUndefined();
     });
   });
 });

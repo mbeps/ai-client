@@ -63,7 +63,7 @@ function JobsHeader({
 interface JobsListProps {
   jobs: JobItem[];
   onCancel: (job: JobItem) => void;
-  approvingJobId: string | null;
+  approvingJobIds: Set<string>;
   onApproveWorkflowReview: (
     jobId: string,
     approval: Extract<JobApprovalInfo, { kind: "workflow-review" }>,
@@ -84,7 +84,7 @@ interface JobsListProps {
 function JobsList({
   jobs,
   onCancel,
-  approvingJobId,
+  approvingJobIds,
   onApproveWorkflowReview,
   onSubmitToolDecisions,
 }: JobsListProps) {
@@ -97,7 +97,7 @@ function JobsList({
           key={job.id}
           job={job}
           onCancel={onCancel}
-          isApproving={approvingJobId === job.id}
+          isApproving={approvingJobIds.has(job.id)}
           onApproveWorkflowReview={(approval, approved, feedback) =>
             onApproveWorkflowReview(job.id, approval, approved, feedback)
           }
@@ -130,7 +130,9 @@ export function JobsView() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [cancelTarget, setCancelTarget] = useState<JobItem | null>(null);
-  const [approvingJobId, setApprovingJobId] = useState<string | null>(null);
+  const [approvingJobIds, setApprovingJobIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [isPending, startTransition] = useTransition();
 
   // URL state persistence via nuqs
@@ -217,14 +219,32 @@ export function JobsView() {
     });
   };
 
-  const handleApproveWorkflowReview = async (
+  const withJobApproval = async (
+    jobId: string,
+    errorFallback: string,
+    task: () => Promise<void>,
+  ) => {
+    setApprovingJobIds((prev) => new Set(prev).add(jobId));
+    try {
+      await task();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : errorFallback);
+    } finally {
+      setApprovingJobIds((prev) => {
+        const next = new Set(prev);
+        next.delete(jobId);
+        return next;
+      });
+    }
+  };
+
+  const handleApproveWorkflowReview = (
     jobId: string,
     approval: Extract<JobApprovalInfo, { kind: "workflow-review" }>,
     approved: boolean,
     feedback?: string,
-  ) => {
-    setApprovingJobId(jobId);
-    try {
+  ) =>
+    withJobApproval(jobId, "Failed to submit approval", async () => {
       const res = await approveWorkflowRunAction({
         runId: approval.runId,
         nodeId: approval.nodeId,
@@ -242,23 +262,15 @@ export function JobsView() {
           : "Run rejected and stopped",
       );
       await loadJobs(false);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to submit approval",
-      );
-    } finally {
-      setApprovingJobId(null);
-    }
-  };
+    });
 
-  const handleSubmitToolDecisions = async (
+  const handleSubmitToolDecisions = (
     jobId: string,
     approval: Extract<JobApprovalInfo, { kind: "workflow-tool" | "chat-tool" }>,
     approved: boolean,
     decisions: ApprovalDecision[],
-  ) => {
-    setApprovingJobId(jobId);
-    try {
+  ) =>
+    withJobApproval(jobId, "Failed to submit tool approval", async () => {
       const res =
         approval.kind === "workflow-tool"
           ? await approveWorkflowRunAction({
@@ -283,14 +295,7 @@ export function JobsView() {
           : "Tool execution denied",
       );
       await loadJobs(false);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to submit tool approval",
-      );
-    } finally {
-      setApprovingJobId(null);
-    }
-  };
+    });
 
   const statCounts = computeStatCounts(jobs);
   const awaitingApprovalCount = jobs.filter((j) => Boolean(j.approval)).length;
@@ -332,7 +337,7 @@ export function JobsView() {
       <JobsList
         jobs={filteredJobs}
         onCancel={setCancelTarget}
-        approvingJobId={approvingJobId}
+        approvingJobIds={approvingJobIds}
         onApproveWorkflowReview={handleApproveWorkflowReview}
         onSubmitToolDecisions={handleSubmitToolDecisions}
       />

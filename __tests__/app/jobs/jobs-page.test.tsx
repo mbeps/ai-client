@@ -815,4 +815,111 @@ describe("Running Jobs Page & JobsView Component", () => {
       expect(toast.success).toHaveBeenCalledWith("Tool execution denied");
     });
   });
+
+  it("tracks pending approval submissions independently per job on success and failure", async () => {
+    const user = userEvent.setup();
+    let resolveJobA!: (value: { ok: true; value: { status: string } }) => void;
+    let rejectJobB!: (reason?: unknown) => void;
+
+    mockApproveWorkflowRunAction
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveJobA = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectJobB = reject;
+          }),
+      );
+
+    mockListJobs.mockResolvedValue({
+      ok: true,
+      value: {
+        jobs: [
+          {
+            id: "job-a",
+            functionId: "workflow-run",
+            functionName: "Workflow Runner",
+            eventName: "workflows/execute.run",
+            type: "workflow",
+            title: "Job A",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00.000Z",
+            startedAt: "2026-09-28T10:00:01.000Z",
+            endedAt: null,
+            url: "/workflows/wf-a/run-a",
+            entityId: "run-a",
+            approval: {
+              kind: "workflow-review",
+              runId: "run-a",
+              nodeId: "node-a",
+              nodeName: "Step A",
+              gateId: "gate-a",
+              reviewPhase: "before",
+            },
+          },
+          {
+            id: "job-b",
+            functionId: "workflow-run",
+            functionName: "Workflow Runner",
+            eventName: "workflows/execute.run",
+            type: "workflow",
+            title: "Job B",
+            status: "RUNNING",
+            queuedAt: "2026-09-28T10:00:00.000Z",
+            startedAt: "2026-09-28T10:00:01.000Z",
+            endedAt: null,
+            url: "/workflows/wf-b/run-b",
+            entityId: "run-b",
+            approval: {
+              kind: "workflow-review",
+              runId: "run-b",
+              nodeId: "node-b",
+              nodeName: "Step B",
+              gateId: "gate-b",
+              reviewPhase: "before",
+            },
+          },
+        ],
+        offline: false,
+      },
+    });
+
+    render(<JobsView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Job A")).toBeInTheDocument();
+      expect(screen.getByText("Job B")).toBeInTheDocument();
+    });
+
+    const approveButtons = screen.getAllByRole("button", { name: /^approve$/i });
+    expect(approveButtons).toHaveLength(2);
+
+    // Start approval on Job A
+    await user.click(approveButtons[0]);
+    expect(approveButtons[0]).toBeDisabled();
+    expect(approveButtons[1]).toBeEnabled();
+
+    // Start approval on Job B while Job A is still pending — both must stay disabled
+    await user.click(approveButtons[1]);
+    expect(approveButtons[0]).toBeDisabled();
+    expect(approveButtons[1]).toBeDisabled();
+
+    // Resolve Job A — Job A re-enables, Job B must remain disabled
+    resolveJobA({ ok: true, value: { status: "resumed" } });
+    await waitFor(() => {
+      expect(approveButtons[0]).toBeEnabled();
+    });
+    expect(approveButtons[1]).toBeDisabled();
+
+    // Reject Job B — Job B cleans up and re-enables on failure
+    rejectJobB(new Error("Network error"));
+    await waitFor(() => {
+      expect(approveButtons[1]).toBeEnabled();
+    });
+    expect(toast.error).toHaveBeenCalledWith("Network error");
+  });
 });
