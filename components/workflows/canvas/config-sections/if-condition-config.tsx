@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import { ModelReasoningEffortCard } from "@/components/chat/input/reasoning-effort-selector";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -219,11 +220,19 @@ export function IfConditionConfig({ data, onChange }: IfConditionConfigProps) {
             <ModelSelector
               value={data.modelId ?? ""}
               onValueChange={(value) =>
-                onChange({ modelId: value || undefined })
+                onChange({
+                  modelId: value || undefined,
+                  ...(value ? {} : { reasoningEffort: undefined }),
+                })
               }
               allowClear
               placeholder="Inherit workflow default"
               className="bg-card h-9 w-full border px-3"
+            />
+            <ModelReasoningEffortCard
+              modelId={data.modelId}
+              value={data.reasoningEffort}
+              onChange={(reasoningEffort) => onChange({ reasoningEffort })}
             />
           </div>
         </div>

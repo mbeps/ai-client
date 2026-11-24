@@ -17,6 +17,7 @@ import {
   SidebarTabsTrigger,
 } from "@/components/shared/sidebar-tabs";
 import { Badge } from "@/components/ui/badge";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { Agent } from "@/types/agent/agent";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
@@ -86,6 +87,8 @@ export interface WorkflowEditorTabsProps {
   onDescriptionChange: (desc: string) => void;
   modelId: string;
   onModelIdChange: (modelId: string) => void;
+  reasoningEffort?: ReasoningEffort | null;
+  onReasoningEffortChange?: (effort: ReasoningEffort | null) => void;
   requiresFileUpload: boolean;
   onRequiresFileUploadChange: (requires: boolean) => void;
   onDelete: () => Promise<void> | void;

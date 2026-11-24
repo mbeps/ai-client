@@ -39,6 +39,8 @@ function buildWorkflowUpdateValues(
   if (validated.globalContext !== undefined)
     values.globalContext = validated.globalContext;
   if (validated.modelId !== undefined) values.modelId = validated.modelId;
+  if (validated.reasoningEffort !== undefined)
+    values.reasoningEffort = validated.reasoningEffort;
   if (validated.tools !== undefined) values.tools = validated.tools;
   if (validated.skillMode !== undefined) values.skillMode = validated.skillMode;
   if (validated.skillIds !== undefined) values.skillIds = validated.skillIds;

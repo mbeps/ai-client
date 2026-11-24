@@ -1,10 +1,12 @@
 "use client";
 
 import { Loader2, Save, X } from "lucide-react";
+import { ModelReasoningEffortCard } from "@/components/chat/input/reasoning-effort-selector";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 
 /**
  * Props for the AgentSettingsTab component.
@@ -16,6 +18,8 @@ export interface AgentSettingsTabProps {
   onDescriptionChange: (value: string) => void;
   modelId: string | null;
   onModelIdChange: (value: string | null) => void;
+  reasoningEffort?: ReasoningEffort | null;
+  onReasoningEffortChange?: (value: ReasoningEffort | null) => void;
   onSave: () => Promise<void> | void;
   isSaving?: boolean;
   saveLabel?: string;
@@ -32,6 +36,8 @@ export function AgentSettingsTab({
   onDescriptionChange,
   modelId,
   onModelIdChange,
+  reasoningEffort,
+  onReasoningEffortChange,
   onSave,
   isSaving = false,
   saveLabel = "Save Details",
@@ -82,12 +88,22 @@ export function AgentSettingsTab({
                 variant="ghost"
                 size="icon"
                 aria-label="Clear default model"
-                onClick={() => onModelIdChange(null)}
+                onClick={() => {
+                  onModelIdChange(null);
+                  onReasoningEffortChange?.(null);
+                }}
               >
                 <X className="h-4 w-4" />
               </Button>
             )}
           </div>
+          <ModelReasoningEffortCard
+            modelId={modelId}
+            value={reasoningEffort}
+            onChange={(effort) => onReasoningEffortChange?.(effort)}
+            disabled={disabled}
+            className="max-w-sm"
+          />
           <p className="text-muted-foreground text-xs">
             When unset, falls back to the active chat or worker model.
           </p>

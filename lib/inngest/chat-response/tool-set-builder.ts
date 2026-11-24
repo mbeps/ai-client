@@ -163,10 +163,14 @@ function buildSubagentDispatchTools(params: {
       maxSteps: env.CHAT_MAX_STEPS,
       scratchpadContext: params.scratchpadContext,
       allowedSubagents: params.allowedSubagents,
-      resolveModelById: async (modelId: string) => {
+      resolveModelById: async (
+        modelId: string,
+        reasoningEffort?: string | null,
+      ) => {
         const targetResolved = await resolveProvider(
           params.userId,
           modelId,
+          (reasoningEffort as any) ?? undefined,
         ).catch(() => null);
         return targetResolved
           ? targetResolved.sdkProvider.chat(targetResolved.modelId)

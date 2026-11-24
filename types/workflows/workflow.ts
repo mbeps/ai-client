@@ -1,3 +1,4 @@
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { PendingApproval } from "@/types/tool/approval";
@@ -87,6 +88,7 @@ export interface AiStepNodeData {
   variableName: string;
   prompt: string;
   modelId?: string;
+  reasoningEffort?: ReasoningEffort;
   mcpServerIds: string[];
   toolIds: string[];
   knowledgeBaseIds?: string[];
@@ -136,6 +138,7 @@ export interface IfConditionNodeData {
   rules: IfConditionRule[];
   llmConditionPrompt?: string;
   modelId?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 
 /**
@@ -246,6 +249,7 @@ export interface WorkflowItem {
   description: string;
   globalContext?: string;
   modelId?: string;
+  reasoningEffort?: ReasoningEffort | null;
   tools: string[];
   skillMode: SkillMode;
   skillIds: string[];

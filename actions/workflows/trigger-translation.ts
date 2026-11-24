@@ -41,6 +41,7 @@ export const triggerTranslation = defineAction(
       sourceLanguage,
       targetLanguage,
       modelId,
+      reasoningEffort,
       attachment,
     } = parsed.data;
 
@@ -71,6 +72,7 @@ export const triggerTranslation = defineAction(
         targetLanguage,
         sourceText,
         modelId: modelId || undefined,
+        reasoningEffort,
         isImage,
         attachmentDataUrl: isImage ? attachment?.dataUrl : undefined,
         attachmentMimeType: isImage ? attachment?.mimeType : undefined,

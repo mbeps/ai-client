@@ -3,21 +3,33 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { ROUTES } from "@/config/routes";
 import { db } from "@/drizzle/db";
-import { chat } from "@/drizzle/schemas/chat-schema";
+import { chat, message } from "@/drizzle/schemas/chat-schema";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
 import {
   workflow,
+  workflowNode,
   workflowRun,
   workflowTranslation,
 } from "@/drizzle/schemas/workflow-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { defineAction } from "@/lib/factories/define-action";
 import { fetchUserInngestRuns } from "@/lib/inngest/run-service";
 import { ok } from "@/lib/result/ok";
 import type { CommonError } from "@/types/error/common-error";
-import type { JobItem, JobStatus, ListJobsResult } from "@/types/jobs";
+import type {
+  JobApprovalInfo,
+  JobItem,
+  JobStatus,
+  ListJobsResult,
+} from "@/types/jobs";
 import type { Result } from "@/types/result";
+import type { PendingApproval } from "@/types/tool/approval";
+import type {
+  WorkflowNodeRunState,
+  WorkflowRunStatus,
+} from "@/types/workflows/workflow";
 
 /**
  * Filter and pagination options for querying running Inngest jobs.
@@ -51,6 +63,7 @@ interface ChatEntity {
   id: string;
   title: string;
   projectId: string | null;
+  currentLeafId?: string | null;
 }
 
 /**
@@ -62,6 +75,9 @@ interface WorkflowEntity {
   id: string;
   workflowId: string;
   workflowName: string | null;
+  status?: WorkflowRunStatus;
+  currentNodeId?: string | null;
+  nodeStates?: Record<string, WorkflowNodeRunState>;
 }
 
 /**
@@ -107,6 +123,8 @@ interface EntityMaps {
   translationMap: Map<string, TranslationEntity>;
   kbDocMap: Map<string, KbDocEntity>;
   kbMap: Map<string, KbEntity>;
+  workflowNodeNameMap: Map<string, string>;
+  chatApprovalMap: Map<string, PendingApproval[]>;
 }
 
 function collectEntityIds(jobs: readonly JobItem[]): EntityIdBuckets {
@@ -155,6 +173,7 @@ function collectEntityIds(jobs: readonly JobItem[]): EntityIdBuckets {
 async function fetchEntityMaps(
   userId: string,
   buckets: EntityIdBuckets,
+  jobs: readonly JobItem[],
 ): Promise<EntityMaps> {
   const [chatRows, workflowRows, translationRows, kbDocRows, kbRows] =
     await Promise.all([
@@ -164,6 +183,7 @@ async function fetchEntityMaps(
               id: chat.id,
               title: chat.title,
               projectId: chat.projectId,
+              currentLeafId: chat.currentLeafId,
             })
             .from(chat)
             .where(
@@ -180,6 +200,9 @@ async function fetchEntityMaps(
               id: workflowRun.id,
               workflowId: workflowRun.workflowId,
               workflowName: workflow.name,
+              status: workflowRun.status,
+              currentNodeId: workflowRun.currentNodeId,
+              nodeStates: workflowRun.nodeStates,
             })
             .from(workflowRun)
             .leftJoin(workflow, eq(workflowRun.workflowId, workflow.id))
@@ -239,12 +262,52 @@ async function fetchEntityMaps(
         : Promise.resolve([]),
     ]);
 
+  const chatMap = new Map(chatRows.map((row) => [row.id, row]));
+  const awaitingNodeIds = workflowRows
+    .filter(
+      (r) =>
+        (r.status === "awaiting_review" ||
+          r.status === "awaiting_tool_approval") &&
+        Boolean(r.currentNodeId),
+    )
+    .map((r) => r.currentNodeId as string);
+
+  const runningChatLeafIds = jobs
+    .filter((j) => j.type === "chat" && j.status === "RUNNING" && j.entityId)
+    .map((j) => chatMap.get(j.entityId as string)?.currentLeafId)
+    .filter((id): id is string => Boolean(id));
+
+  const [nodeRows, leafMessageRows] = await Promise.all([
+    awaitingNodeIds.length > 0
+      ? db
+          .select({ id: workflowNode.id, name: workflowNode.name })
+          .from(workflowNode)
+          .where(inArray(workflowNode.id, awaitingNodeIds))
+      : Promise.resolve([]),
+    runningChatLeafIds.length > 0
+      ? db
+          .select({ id: message.id, metadata: message.metadata })
+          .from(message)
+          .where(inArray(message.id, runningChatLeafIds))
+      : Promise.resolve([]),
+  ]);
+
+  const chatApprovalMap = new Map<string, PendingApproval[]>();
+  for (const msgRow of leafMessageRows) {
+    const meta = parseMessageMetadata(msgRow.metadata);
+    if (meta.pendingApprovals.length > 0) {
+      chatApprovalMap.set(msgRow.id, meta.pendingApprovals);
+    }
+  }
+
   return {
-    chatMap: new Map(chatRows.map((row) => [row.id, row])),
+    chatMap,
     workflowMap: new Map(workflowRows.map((row) => [row.id, row])),
     translationMap: new Map(translationRows.map((row) => [row.id, row])),
     kbDocMap: new Map(kbDocRows.map((row) => [row.id, row])),
     kbMap: new Map(kbRows.map((row) => [row.id, row])),
+    workflowNodeNameMap: new Map(nodeRows.map((row) => [row.id, row.name])),
+    chatApprovalMap,
   };
 }
 
@@ -256,7 +319,11 @@ async function fetchEntityMaps(
  * @returns Enriched job item
  * @author Maruf Bepary
  */
-function enrichChatJob(job: JobItem, entity?: ChatEntity): JobItem {
+function enrichChatJob(
+  job: JobItem,
+  entity?: ChatEntity,
+  chatApprovalMap?: Map<string, PendingApproval[]>,
+): JobItem {
   if (!entity) {
     return {
       ...job,
@@ -265,6 +332,21 @@ function enrichChatJob(job: JobItem, entity?: ChatEntity): JobItem {
       url: undefined,
     };
   }
+
+  const pendingApprovals =
+    job.status === "RUNNING" && entity.currentLeafId
+      ? chatApprovalMap?.get(entity.currentLeafId)
+      : undefined;
+
+  const approval: JobApprovalInfo | undefined =
+    pendingApprovals && pendingApprovals.length > 0 && entity.currentLeafId
+      ? {
+          kind: "chat-tool",
+          assistantMessageId: entity.currentLeafId,
+          pendingApprovals,
+        }
+      : undefined;
+
   return {
     ...job,
     entityDeleted: false,
@@ -272,7 +354,48 @@ function enrichChatJob(job: JobItem, entity?: ChatEntity): JobItem {
     url: entity.projectId
       ? ROUTES.PROJECTS.chat(entity.projectId, entity.id)
       : ROUTES.CHATS.detail(entity.id),
+    ...(approval ? { approval } : {}),
   };
+}
+
+/**
+ * Resolves pending approval metadata for a paused workflow run if applicable.
+ */
+function resolveWorkflowJobApproval(
+  entity: WorkflowEntity,
+  workflowNodeNameMap?: Map<string, string>,
+): JobApprovalInfo | undefined {
+  if (!entity.currentNodeId) return undefined;
+  const nodeState = entity.nodeStates?.[entity.currentNodeId];
+  const nodeName = workflowNodeNameMap?.get(entity.currentNodeId);
+
+  if (entity.status === "awaiting_review") {
+    return {
+      kind: "workflow-review",
+      runId: entity.id,
+      nodeId: entity.currentNodeId,
+      nodeName,
+      gateId: nodeState?.gateId,
+      reviewPhase: nodeState?.reviewPhase,
+    };
+  }
+
+  if (
+    entity.status === "awaiting_tool_approval" &&
+    nodeState?.pendingToolApprovals &&
+    nodeState.pendingToolApprovals.length > 0
+  ) {
+    return {
+      kind: "workflow-tool",
+      runId: entity.id,
+      nodeId: entity.currentNodeId,
+      nodeName,
+      gateId: nodeState.gateId,
+      pendingApprovals: nodeState.pendingToolApprovals,
+    };
+  }
+
+  return undefined;
 }
 
 /**
@@ -280,10 +403,15 @@ function enrichChatJob(job: JobItem, entity?: ChatEntity): JobItem {
  *
  * @param job - Raw job item
  * @param entity - Pre-fetched transformation entity if still existing
+ * @param workflowNodeNameMap - Optional map of node IDs to node names
  * @returns Enriched job item
  * @author Maruf Bepary
  */
-function enrichWorkflowJob(job: JobItem, entity?: WorkflowEntity): JobItem {
+function enrichWorkflowJob(
+  job: JobItem,
+  entity?: WorkflowEntity,
+  workflowNodeNameMap?: Map<string, string>,
+): JobItem {
   if (!entity) {
     return {
       ...job,
@@ -292,11 +420,15 @@ function enrichWorkflowJob(job: JobItem, entity?: WorkflowEntity): JobItem {
       url: undefined,
     };
   }
+
+  const approval = resolveWorkflowJobApproval(entity, workflowNodeNameMap);
+
   return {
     ...job,
     entityDeleted: false,
     title: entity.workflowName || job.title,
     url: ROUTES.WORKFLOWS.AUTOMATIONS.runs(entity.workflowId, entity.id),
+    ...(approval ? { approval } : {}),
   };
 }
 
@@ -393,9 +525,17 @@ function enrichJobItem(job: JobItem, maps: EntityMaps): JobItem {
 
   switch (job.type) {
     case "chat":
-      return enrichChatJob(job, maps.chatMap.get(job.entityId));
+      return enrichChatJob(
+        job,
+        maps.chatMap.get(job.entityId),
+        maps.chatApprovalMap,
+      );
     case "workflow":
-      return enrichWorkflowJob(job, maps.workflowMap.get(job.entityId));
+      return enrichWorkflowJob(
+        job,
+        maps.workflowMap.get(job.entityId),
+        maps.workflowNodeNameMap,
+      );
     case "translation":
       return enrichTranslationJob(job, maps.translationMap.get(job.entityId));
     case "kb-ingest":
@@ -440,7 +580,7 @@ export const listJobs = defineAction(
     }
 
     const buckets = collectEntityIds(result.jobs);
-    const maps = await fetchEntityMaps(userId, buckets);
+    const maps = await fetchEntityMaps(userId, buckets, result.jobs);
     const enrichedJobs = result.jobs.map((job) => enrichJobItem(job, maps));
 
     return ok({

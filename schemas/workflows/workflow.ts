@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { subagentTargetIdField } from "@/schemas/agent/agent";
+import { reasoningEffortSchema } from "@/schemas/providers/provider-registry";
 import {
   descriptionField,
   nameField,
@@ -99,6 +100,7 @@ const aiStepNodeDataSchema = z.object({
   variableName: variableNameField,
   prompt: z.string().max(8000),
   modelId: z.string().max(100).optional(),
+  reasoningEffort: reasoningEffortSchema.optional(),
   mcpServerIds: z.array(z.string()),
   toolIds: z.array(z.string()),
   knowledgeBaseIds: z.array(z.string()).optional(),
@@ -121,6 +123,7 @@ const ifConditionNodeDataSchema = z.object({
   rules: z.array(ifConditionRuleSchema),
   llmConditionPrompt: z.string().max(4000).optional(),
   modelId: z.string().max(100).optional(),
+  reasoningEffort: reasoningEffortSchema.optional(),
 });
 
 const httpRequestNodeDataSchema = z.object({
@@ -215,6 +218,7 @@ const baseWorkflowSchema = z.object({
   description: descriptionField,
   globalContext: z.string().max(4000).optional(),
   modelId: z.string().max(100).optional(),
+  reasoningEffort: reasoningEffortSchema.nullable().optional(),
   tools: z.array(z.string()).optional().default([]),
   skillMode: skillModeSchema.optional(),
   skillIds: skillIdsSchema.optional(),

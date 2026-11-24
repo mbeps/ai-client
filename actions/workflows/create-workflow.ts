@@ -137,6 +137,7 @@ export const createWorkflow = defineAction(
           description: validated.description ?? null,
           globalContext: validated.globalContext ?? null,
           modelId: validated.modelId ?? null,
+          reasoningEffort: validated.reasoningEffort ?? null,
           tools: validated.tools,
           skillMode: validated.skillMode,
           skillIds: validated.skillIds,

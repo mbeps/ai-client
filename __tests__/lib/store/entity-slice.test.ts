@@ -219,6 +219,7 @@ describe("EntitySlice — Agents", () => {
     it("merges custom agents from server action with BUILT_IN_AGENTS", async () => {
       vi.mocked(listAgentsAction).mockResolvedValueOnce([
         makeAgentRow("a1", "My Bot", {
+          reasoningEffort: "high",
           subagentIds: ["builtin:researcher"],
           usedByCount: 0,
         }),
@@ -227,6 +228,7 @@ describe("EntitySlice — Agents", () => {
       const agents = useAppStore.getState().agents;
       expect(agents).toHaveLength(1 + BUILT_IN_AGENTS.length);
       expect(agents[0].name).toBe("My Bot");
+      expect(agents[0].reasoningEffort).toBe("high");
       expect(agents[0].isOrchestrator).toBe(true);
       expect(agents[0].isBuiltIn).toBe(false);
       expect(agents.some((a) => a.id === "builtin:researcher" && a.isBuiltIn)).toBe(
@@ -754,6 +756,7 @@ describe("T5.4 resetEntityState clears entity state", () => {
       .getState()
       .agents.find((a) => a.id === "agent-defaults");
     expect(defaulted?.usedByCount).toBe(0);
+    expect(defaulted?.reasoningEffort).toBeNull();
     expect(defaulted?.guardrails).toEqual(DEFAULT_AGENT_GUARDRAILS);
 
     vi.mocked(listAgentsAction).mockResolvedValueOnce({

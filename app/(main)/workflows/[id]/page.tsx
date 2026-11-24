@@ -111,6 +111,8 @@ export default function WorkflowEditorPage() {
         onDescriptionChange={editor.setDescription}
         modelId={editor.modelId}
         onModelIdChange={editor.setModelId}
+        reasoningEffort={editor.reasoningEffort}
+        onReasoningEffortChange={editor.setReasoningEffort}
         requiresFileUpload={editor.requiresFileUpload}
         onRequiresFileUploadChange={editor.setRequiresFileUpload}
         onDelete={editor.handleDelete}

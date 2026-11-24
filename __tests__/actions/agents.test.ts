@@ -290,6 +290,7 @@ describe("updateAgent", () => {
       prompt: "Prompt",
       subagentPrompt: "Sub",
       modelId: "gpt-4o",
+      reasoningEffort: "high",
       knowledgebaseIds: [SUBAGENT_ID],
       tools: ["search_knowledge_base"],
       skillMode: "specific",

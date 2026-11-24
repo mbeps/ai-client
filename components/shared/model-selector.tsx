@@ -71,14 +71,15 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   const { models, isLoading } = useUserModels(type);
   const isEmpty = !isLoading && models.length === 0;
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
-    null,
-  );
+  const [portalContainer, setPortalContainer] = useState<
+    HTMLElement | undefined
+  >(undefined);
 
   // Portal inside the nearest dialog/sheet so Radix modal focus-trap doesn't block pointer/input events.
+  // Use `undefined` (not `null`) outside dialogs so Base UI's FloatingPortal falls back to document.body.
   const triggerRef = useCallback((el: HTMLElement | null) => {
     const dialog =
-      (el?.closest('[role="dialog"]') as HTMLElement | null) ?? null;
+      (el?.closest('[role="dialog"]') as HTMLElement | null) ?? undefined;
     setPortalContainer((prev) => (prev === dialog ? prev : dialog));
   }, []);
 

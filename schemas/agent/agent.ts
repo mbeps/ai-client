@@ -4,6 +4,7 @@ import {
   LINKABLE_BUILT_IN_AGENT_IDS,
 } from "@/config/built-in-agents";
 import { promptIdsSchema, promptModeSchema } from "@/schemas/prompt/prompt";
+import { reasoningEffortSchema } from "@/schemas/providers/provider-registry";
 import {
   contentField,
   dateField,
@@ -50,6 +51,7 @@ export const createAgentSchema = z.object({
   prompt: contentField.optional(),
   subagentPrompt: contentField.optional(),
   modelId: z.string().max(100).nullable().optional(),
+  reasoningEffort: reasoningEffortSchema.nullable().optional(),
   knowledgebaseIds: z.array(idField).optional(),
   tools: z.array(z.string()).optional(),
   skillMode: skillModeSchema.optional(),
@@ -104,6 +106,7 @@ export const agentEntitySchema = z.object({
   prompt: z.string(),
   subagentPrompt: z.string(),
   modelId: z.string().nullable(),
+  reasoningEffort: reasoningEffortSchema.nullable().optional(),
   knowledgebaseIds: z.array(z.string()),
   tools: z.array(z.string()),
   skillMode: skillModeSchema,

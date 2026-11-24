@@ -52,4 +52,26 @@ describe("resolveProvider", () => {
 
     await expect(resolveProvider("user-1", uuid)).rejects.toThrow("Database disconnected");
   });
+
+  it("forwards reasoningEffort when provided for UUID and slug", async () => {
+    const uuid = "12345678-1234-1234-1234-1234567890ab";
+    const resolved = { modelId: "o3-mini" };
+    fetchProviderWithModelMock.mockResolvedValue(resolved);
+
+    await resolveProvider("user-1", uuid, "high");
+    expect(fetchProviderWithModelMock).toHaveBeenCalledWith(
+      "user-1",
+      { recordId: uuid },
+      [],
+      "high",
+    );
+
+    await resolveProvider("user-1", "openai/o3-mini", "low");
+    expect(fetchProviderWithModelMock).toHaveBeenCalledWith(
+      "user-1",
+      { modelId: "openai/o3-mini" },
+      [],
+      "low",
+    );
+  });
 });

@@ -1,4 +1,5 @@
 import type { AgentGuardrails } from "@/drizzle/schemas/agent-schema";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 
 /**
@@ -18,6 +19,7 @@ export interface Agent {
   prompt: string;
   subagentPrompt: string;
   modelId: string | null;
+  reasoningEffort?: ReasoningEffort | null;
   knowledgebaseIds: string[];
   tools: string[];
   skillMode: SkillMode;

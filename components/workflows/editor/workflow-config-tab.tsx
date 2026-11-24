@@ -1,10 +1,12 @@
 "use client";
 
+import { ModelReasoningEffortCard } from "@/components/chat/input/reasoning-effort-selector";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 
 /** Props for {@link WorkflowConfigTab}. */
 export interface WorkflowConfigTabProps {
@@ -14,6 +16,8 @@ export interface WorkflowConfigTabProps {
   onDescriptionChange: (value: string) => void;
   modelId: string;
   onModelIdChange: (modelId: string) => void;
+  reasoningEffort?: ReasoningEffort | null;
+  onReasoningEffortChange?: (effort: ReasoningEffort | null) => void;
   requiresFileUpload: boolean;
   onRequiresFileUploadChange: (requires: boolean) => void;
 }
@@ -28,6 +32,8 @@ export function WorkflowConfigTab({
   onDescriptionChange,
   modelId,
   onModelIdChange,
+  reasoningEffort,
+  onReasoningEffortChange,
   requiresFileUpload,
   onRequiresFileUploadChange,
 }: WorkflowConfigTabProps) {
@@ -68,6 +74,11 @@ export function WorkflowConfigTab({
             value={modelId}
             onValueChange={onModelIdChange}
             className="bg-card h-10 w-full border px-3"
+          />
+          <ModelReasoningEffortCard
+            modelId={modelId}
+            value={reasoningEffort}
+            onChange={(effort) => onReasoningEffortChange?.(effort)}
           />
         </div>
 

@@ -7,6 +7,7 @@ import {
   DEFAULT_TARGET_LANGUAGE,
   LANGUAGES,
 } from "@/config/languages";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 
 /**
@@ -22,6 +23,8 @@ export function useTranslationFormState() {
     DEFAULT_TARGET_LANGUAGE,
   );
   const [modelId, setModelId] = useState("");
+  const [reasoningEffort, setReasoningEffort] =
+    useState<ReasoningEffort>("medium");
   const [isCopied, setIsCopied] = useState(false);
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -66,6 +69,8 @@ export function useTranslationFormState() {
     setTargetLangValue,
     modelId,
     setModelId,
+    reasoningEffort,
+    setReasoningEffort,
     isCopied,
     attachment,
     setAttachment,

@@ -8,6 +8,7 @@ import {
   DEFAULT_AGENT_GUARDRAILS,
 } from "@/drizzle/schemas/agent-schema";
 import { useAppStore } from "@/lib/store/use-app-store";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { SkillMode } from "@/schemas/skill/skill-config";
 import type { Agent } from "@/types/agent/agent";
 
@@ -15,6 +16,7 @@ export type AgentFormState = {
   name: string;
   description: string;
   modelId: string | null;
+  reasoningEffort: ReasoningEffort | null;
   prompt: string;
   subagentPrompt: string;
   selectedKbIds: string[];
@@ -36,6 +38,7 @@ export function buildInitialAgentForm(agent?: Agent): AgentFormState {
       name: "",
       description: "",
       modelId: null,
+      reasoningEffort: null,
       prompt: "",
       subagentPrompt: "",
       selectedKbIds: [],
@@ -53,6 +56,7 @@ export function buildInitialAgentForm(agent?: Agent): AgentFormState {
     name: agent.name,
     description: agent.description ?? "",
     modelId: agent.modelId ?? null,
+    reasoningEffort: agent.reasoningEffort ?? null,
     prompt: agent.prompt ?? "",
     subagentPrompt: agent.subagentPrompt ?? "",
     selectedKbIds: agent.knowledgebaseIds ?? [],
@@ -113,6 +117,7 @@ export function useAgentEditor(agentId: string, agent?: Agent) {
           name: form.name.trim(),
           description: form.description.trim(),
           modelId: form.modelId,
+          reasoningEffort: form.modelId ? form.reasoningEffort : null,
         },
         "Agent details saved",
       );

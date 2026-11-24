@@ -13,6 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useUserModels } from "@/hooks/use-user-models";
 import { cn } from "@/lib/utils";
 import {
   REASONING_EFFORTS,
@@ -202,5 +203,60 @@ export function ReasoningEffortSelector({
         />
       </PopoverContent>
     </Popover>
+  );
+}
+
+/**
+ * Props for the ModelReasoningEffortCard component.
+ */
+export interface ModelReasoningEffortCardProps {
+  /** Selected model ID or slug; card is hidden when unset or model lacks reasoning effort support. */
+  modelId?: string | null;
+  /** Currently selected reasoning effort level (defaults to `"medium"`). */
+  value?: ReasoningEffort | null;
+  /** Callback fired when user selects a different reasoning effort. */
+  onChange: (value: ReasoningEffort) => void;
+  /** Whether slider interaction is disabled. */
+  disabled?: boolean;
+  /** Optional custom class name applied to the card wrapper. */
+  className?: string;
+}
+
+/**
+ * Bordered card wrapping {@link ReasoningEffortSlider} that renders only when the
+ * selected chat model supports reasoning effort configuration.
+ *
+ * @param props - Component props
+ * @returns The rendered JSX element, or `null` when unsupported
+ */
+export function ModelReasoningEffortCard({
+  modelId,
+  value,
+  onChange,
+  disabled = false,
+  className,
+}: ModelReasoningEffortCardProps) {
+  const { models } = useUserModels("chat");
+  const selectedModel = modelId
+    ? models.find((m) => m.id === modelId || m.modelId === modelId)
+    : undefined;
+  const supportsReasoningEffort =
+    Boolean(selectedModel?.reasoningEffortFormat) &&
+    selectedModel?.reasoningEffortFormat !== "none";
+
+  if (!supportsReasoningEffort) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn("border-border bg-card rounded-lg border p-3", className)}
+    >
+      <ReasoningEffortSlider
+        value={value ?? "medium"}
+        onChange={onChange}
+        disabled={disabled}
+      />
+    </div>
   );
 }

@@ -34,6 +34,8 @@ function buildAgentUpdateValues(
   if (data.subagentPrompt !== undefined)
     values.subagentPrompt = data.subagentPrompt;
   if (data.modelId !== undefined) values.modelId = data.modelId;
+  if (data.reasoningEffort !== undefined)
+    values.reasoningEffort = data.reasoningEffort;
   if (data.knowledgebaseIds !== undefined)
     values.knowledgebaseIds = data.knowledgebaseIds;
   if (data.tools !== undefined) values.tools = data.tools;

@@ -92,6 +92,7 @@ export default function NewAgentPage() {
         prompt: form.prompt.trim() || undefined,
         subagentPrompt: form.subagentPrompt.trim() || undefined,
         modelId: form.modelId,
+        reasoningEffort: form.modelId ? form.reasoningEffort : null,
         knowledgebaseIds: form.selectedKbIds,
         tools: Array.from(form.selectedTools),
         skillMode: form.skillMode,
@@ -204,6 +205,10 @@ export default function NewAgentPage() {
             }
             modelId={form.modelId}
             onModelIdChange={(modelId) => setForm((p) => ({ ...p, modelId }))}
+            reasoningEffort={form.reasoningEffort}
+            onReasoningEffortChange={(reasoningEffort) =>
+              setForm((p) => ({ ...p, reasoningEffort }))
+            }
             onSave={handleCreate}
             isSaving={isCreating}
             saveLabel="Create Agent"

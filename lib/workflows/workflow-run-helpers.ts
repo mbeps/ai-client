@@ -202,8 +202,14 @@ export async function executeSingleWorkflowNode(params: {
     let model: any;
     if (node.data.evaluationMode !== "deterministic") {
       const targetModelId = node.data.modelId || workflowRow.modelId;
+      const targetEffort =
+        (node.data.modelId
+          ? node.data.reasoningEffort
+          : workflowRow.reasoningEffort) ?? undefined;
       const resolved = targetModelId
-        ? await resolveProvider(userId, targetModelId).catch(() => null)
+        ? await resolveProvider(userId, targetModelId, targetEffort).catch(
+            () => null,
+          )
         : (await loadWorkflowContext({ userId, workflowRow, nodes: allNodes }))
             .resolvedProvider;
       if (resolved?.sdkProvider?.chat && resolved.modelId) {
@@ -251,6 +257,7 @@ export async function executeSingleWorkflowNode(params: {
     nodes: allNodes,
     modelOverride: node.data.modelId ?? null,
     nodeOverride: {
+      reasoningEffort: node.data.reasoningEffort,
       knowledgeBaseIds: node.data.knowledgeBaseIds,
       skillMode: node.data.skillMode,
       skillIds: node.data.skillIds,

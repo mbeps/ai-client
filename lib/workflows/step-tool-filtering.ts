@@ -231,10 +231,15 @@ export function filterStepTools(params: FilterStepToolsParams): {
       defaultModel: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
       availableTools: { ...filteredTools },
       allowedSubagents: linkedSubagents,
-      resolveModelById: async (modelId: string) => {
-        const targetResolved = await resolveProvider(userId, modelId).catch(
-          () => null,
-        );
+      resolveModelById: async (
+        modelId: string,
+        reasoningEffort?: string | null,
+      ) => {
+        const targetResolved = await resolveProvider(
+          userId,
+          modelId,
+          (reasoningEffort as any) ?? undefined,
+        ).catch(() => null);
         return targetResolved
           ? targetResolved.sdkProvider.chat(targetResolved.modelId)
           : undefined;

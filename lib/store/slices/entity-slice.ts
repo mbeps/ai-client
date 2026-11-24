@@ -213,6 +213,7 @@ export const createEntitySlice: StateCreator<AppState, [], [], EntitySlice> = (
         prompt: row.prompt ?? "",
         subagentPrompt: row.subagentPrompt ?? "",
         modelId: row.modelId ?? null,
+        reasoningEffort: row.reasoningEffort ?? null,
         knowledgebaseIds: row.knowledgebaseIds ?? [],
         tools: row.tools ?? [],
         skillMode: row.skillMode as "dynamic" | "none" | "specific",

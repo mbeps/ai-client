@@ -250,6 +250,7 @@ describe("Workflow Server Actions", () => {
 
     // Update empty nodes list & empty knowledgeBaseIds
     const emptyNodesUpd = await updateWorkflow(WF_ID, {
+      reasoningEffort: "high",
       nodes: [],
       knowledgeBaseIds: [],
     });

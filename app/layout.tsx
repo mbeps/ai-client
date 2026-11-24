@@ -20,6 +20,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: SITE_CONFIG.NAME,
   description: SITE_CONFIG.DESCRIPTION,
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+  },
 };
 
 import { NuqsAdapter } from "nuqs/adapters/next/app";

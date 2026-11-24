@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { reasoningEffortSchema } from "@/schemas/providers/provider-registry";
 
 /**
  * Validates a translation request.
@@ -11,6 +12,7 @@ export const translateRequestSchema = z
     sourceLanguage: z.string().min(1).max(50),
     targetLanguage: z.string().min(1).max(50),
     modelId: z.string().min(1).max(100).optional(),
+    reasoningEffort: reasoningEffortSchema.optional(),
     attachment: z
       .object({
         name: z.string(),

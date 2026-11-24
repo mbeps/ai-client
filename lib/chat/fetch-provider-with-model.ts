@@ -5,6 +5,7 @@ import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { buildResolvedProvider } from "@/lib/chat/build-resolved-provider";
 import { ProviderNotConfiguredError } from "@/lib/error/provider-not-configured-error";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { ResolvedProvider } from "@/types/provider/resolved-provider";
 
 /**
@@ -22,6 +23,7 @@ export async function fetchProviderWithModel(
   userId: string,
   criteria: { recordId?: string; modelId?: string },
   additionalFilters: SQL[] = [],
+  reasoningEffort?: ReasoningEffort,
 ): Promise<ResolvedProvider> {
   const whereClause: SQL[] = [eq(aiModel.userId, userId), ...additionalFilters];
 
@@ -67,5 +69,7 @@ export async function fetchProviderWithModel(
   }
 
   // 3. Transformation
-  return buildResolvedProvider(row, userId);
+  return reasoningEffort
+    ? buildResolvedProvider(row, userId, reasoningEffort)
+    : buildResolvedProvider(row, userId);
 }

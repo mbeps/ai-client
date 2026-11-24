@@ -49,7 +49,10 @@ export interface CreateSubagentDispatchToolParams {
   maxSteps?: number;
   scratchpadContext?: { chatId: string; messageId: string };
   allowedSubagents?: readonly Agent[];
-  resolveModelById?: (modelId: string) => Promise<any> | any;
+  resolveModelById?: (
+    modelId: string,
+    reasoningEffort?: string | null,
+  ) => Promise<any> | any;
   buildIsolatedTools?: (
     agent: Agent,
   ) => Promise<Record<string, any>> | Record<string, any>;
@@ -346,7 +349,12 @@ export function createSubagentDispatchTool(
 
       const selectedModel =
         (targetAgent.modelId &&
-          (await resolveModelById?.(targetAgent.modelId))) ||
+          (await (targetAgent.reasoningEffort
+            ? resolveModelById?.(
+                targetAgent.modelId,
+                targetAgent.reasoningEffort,
+              )
+            : resolveModelById?.(targetAgent.modelId)))) ||
         customWorkerModel ||
         defaultModel;
 

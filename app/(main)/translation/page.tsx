@@ -1,6 +1,7 @@
 "use client";
 
 import { Languages, Loader2 } from "lucide-react";
+import { ReasoningEffortSelector } from "@/components/chat/input/reasoning-effort-selector";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { NoModelsAlertBanner } from "@/components/shared/no-models-alert-banner";
 import { PageContainer } from "@/components/shared/page-container";
@@ -42,6 +43,13 @@ export default function TranslationWorkflowPage() {
             onValueChange={workflow.setModelId}
             className="w-[140px]"
           />
+          {workflow.supportsReasoningEffort && (
+            <ReasoningEffortSelector
+              value={workflow.reasoningEffort}
+              onChange={workflow.setReasoningEffort}
+              disabled={workflow.isLoading}
+            />
+          )}
         </div>
       </div>
 

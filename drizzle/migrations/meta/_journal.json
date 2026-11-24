@@ -393,6 +393,13 @@
       "when": 1794300000000,
       "tag": "0055_unified_agents",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1794386400000,
+      "tag": "0056_agent_workflow_reasoning_effort",
+      "breakpoints": true
     }
   ]
 }
