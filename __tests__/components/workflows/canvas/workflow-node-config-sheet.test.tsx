@@ -414,7 +414,11 @@ describe("WorkflowNodeConfigSheet", () => {
       "n2",
       expect.objectContaining({
         data: expect.objectContaining({
-          toolIds: ["internal:tool:manage_artifact", "internal:tool:manage_memory"],
+          toolIds: [
+            "internal:tool:manage_artifact",
+            "internal:tool:manage_memory",
+            "internal:tool:interactive_ui",
+          ],
         }),
       }),
     );

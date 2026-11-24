@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { PICKER_INTERNAL_TOOLS, type PickerInternalTool } from "@/config/tools";
 
 /**
  * Represents internal tools section props.
@@ -58,8 +58,18 @@ function InternalToolItem({
   );
 }
 
+function matchesPickerTool(tool: PickerInternalTool, query: string): boolean {
+  const lowerQuery = query.toLowerCase();
+  return (
+    tool.title.toLowerCase().includes(lowerQuery) ||
+    tool.description.toLowerCase().includes(lowerQuery) ||
+    tool.toolName.toLowerCase().includes(lowerQuery) ||
+    tool.keywords.some((kw) => kw.toLowerCase().includes(lowerQuery))
+  );
+}
+
 /**
- * Collapsible section for toggling internal platform tools (artifacts, memory).
+ * Collapsible section for toggling internal platform tools (artifacts, memory, interactive UI).
  *
  * @author Maruf Bepary
  */
@@ -71,21 +81,21 @@ export function InternalToolsSection({
   onToggleTool,
   onBulkSelect,
 }: InternalToolsSectionProps) {
-  if (
-    search &&
-    !"artifacts canvas manage_artifact memory save_memory".includes(
-      search.toLowerCase(),
-    )
-  ) {
+  const matchingTools = search
+    ? PICKER_INTERNAL_TOOLS.filter((tool) => matchesPickerTool(tool, search))
+    : PICKER_INTERNAL_TOOLS;
+
+  if (matchingTools.length === 0) {
     return null;
   }
 
-  const isArtifactSelected = selectedTools.has(
-    INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
+  const count = PICKER_INTERNAL_TOOLS.filter((tool) =>
+    selectedTools.has(tool.id),
+  ).length;
+  const isAllInternalSelected = count === PICKER_INTERNAL_TOOLS.length;
+  const allInternalToolNames = PICKER_INTERNAL_TOOLS.map(
+    (tool) => tool.toolName,
   );
-  const isMemorySelected = selectedTools.has(INTERNAL_TOOL_IDS.MANAGE_MEMORY);
-  const count = (isArtifactSelected ? 1 : 0) + (isMemorySelected ? 1 : 0);
-  const isAllInternalSelected = isArtifactSelected && isMemorySelected;
 
   return (
     <div className="border-primary/20 flex flex-col overflow-hidden rounded-lg border">
@@ -113,7 +123,7 @@ export function InternalToolsSection({
               e.stopPropagation();
               onBulkSelect(
                 "internal",
-                ["manage_artifact", "manage_memory"],
+                allInternalToolNames,
                 !isAllInternalSelected,
               );
             }}
@@ -132,18 +142,15 @@ export function InternalToolsSection({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex flex-col gap-1">
-                <InternalToolItem
-                  checked={isArtifactSelected}
-                  onToggle={() => onToggleTool("internal", "manage_artifact")}
-                  title="Artifacts / Canvas"
-                  description="Allows the AI to generate interactive Markdown, Spreadsheets, HTML UI, and Mermaid diagrams in a side panel."
-                />
-                <InternalToolItem
-                  checked={isMemorySelected}
-                  onToggle={() => onToggleTool("internal", "manage_memory")}
-                  title="Memory"
-                  description="Allows the AI to remember your preferences and facts across conversations."
-                />
+                {matchingTools.map((tool) => (
+                  <InternalToolItem
+                    key={tool.id}
+                    checked={selectedTools.has(tool.id)}
+                    onToggle={() => onToggleTool("internal", tool.toolName)}
+                    title={tool.title}
+                    description={tool.description}
+                  />
+                ))}
               </div>
             </div>
           </div>

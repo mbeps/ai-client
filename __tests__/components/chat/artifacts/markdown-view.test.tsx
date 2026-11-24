@@ -60,8 +60,13 @@ vi.mock("next-themes", () => ({
   useTheme: () => mockUseTheme(),
 }));
 
-import { logger } from "@/lib/logger";
-import { MarkdownView } from "@/components/chat/artifacts/markdown-view";
+import {
+  logger,
+} from "@/lib/logger";
+import {
+  MarkdownView,
+  type MarkdownViewFlushFn,
+} from "@/components/chat/artifacts/markdown-view";
 import { useCreateBlockNote } from "@blocknote/react";
 
 beforeAll(() => {
@@ -358,5 +363,48 @@ describe("MarkdownView — editor remount prevention and lifecycle", () => {
       serializeError,
     );
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("flushes pending debounced edits immediately via flushRef and cancels timer", async () => {
+    vi.useFakeTimers();
+    const onUpdate = vi.fn();
+    const flushRef: { current: MarkdownViewFlushFn | null } = { current: null };
+
+    await act(async () => {
+      render(
+        <MarkdownView
+          id="art-flush"
+          content="# Initial"
+          onUpdate={onUpdate}
+          flushRef={flushRef}
+        />,
+      );
+    });
+    await vi.waitFor(() => expect(flushRef.current).not.toBeNull());
+
+    // No pending edit yet -> flush returns null synchronously
+    expect(flushRef.current?.()).toBeNull();
+
+    const onChange = capturedProps[capturedProps.length - 1]
+      .onChange as () => void;
+    act(() => {
+      onChange();
+    });
+
+    // Flush immediately before 1000ms timer expires
+    await act(async () => {
+      const pending = flushRef.current?.();
+      expect(pending).not.toBeNull();
+      await pending;
+    });
+
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledWith("# Updated Markdown");
+
+    // Advancing timers should NOT trigger a duplicate onUpdate
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(onUpdate).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ARTIFACT_TYPES } from "@/config/artifacts";
 import { PROMPTS } from "@/config/prompts";
 import {
   agentIdOrBuiltInField,
@@ -204,7 +205,7 @@ export const chatRequestSchema = z
  */
 const manageArtifactBaseFields = {
   type: z
-    .enum(["markdown", "spreadsheet", "html", "mermaid"])
+    .enum(ARTIFACT_TYPES)
     .describe(PROMPTS.SCHEMA.MANAGE_ARTIFACT.TYPE_DESCRIPTION),
   id: z.string().optional().describe("Unique identifier for the artifact."),
   title: z

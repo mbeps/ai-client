@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useUserModels } from "@/hooks/use-user-models";
+import { prepareMarkdownForCopy } from "@/lib/generative-ui/markdown-ui-utils";
 import type { Message } from "@/types/message/message";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 
@@ -79,9 +80,14 @@ export function MessageActions({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(contentToCopy);
+      const { text, hadInteractiveUI } = prepareMarkdownForCopy(contentToCopy);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success("Copied to clipboard");
+      if (hadInteractiveUI) {
+        toast.info("Copied text — interactive UI blocks were omitted");
+      } else {
+        toast.success("Copied to clipboard");
+      }
       setTimeout(() => setCopied(false), 2000);
     } catch (_err) {
       toast.error("Failed to copy text");

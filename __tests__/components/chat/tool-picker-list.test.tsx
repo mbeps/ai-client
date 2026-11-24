@@ -119,7 +119,7 @@ describe("ToolPickerList", () => {
 
     expect(handleBulkSelect).toHaveBeenCalledWith(
       "internal",
-      ["manage_artifact", "manage_memory"],
+      ["manage_artifact", "manage_memory", "interactive_ui"],
       true,
     );
   });
@@ -143,7 +143,7 @@ describe("ToolPickerList", () => {
       [
         {
           serverId: "internal",
-          toolNames: ["manage_artifact", "manage_memory"],
+          toolNames: ["manage_artifact", "manage_memory", "interactive_ui"],
         },
         {
           serverId: "srv-1",
@@ -173,7 +173,7 @@ describe("ToolPickerList", () => {
 
     expect(handleBulkSelect).toHaveBeenCalledWith(
       "internal",
-      ["manage_artifact", "manage_memory"],
+      ["manage_artifact", "manage_memory", "interactive_ui"],
       true,
     );
   });
@@ -196,7 +196,7 @@ describe("ToolPickerDialog", () => {
     expect(screen.getByText("Manage Tools")).toBeDefined();
     expect(
       screen.getByText((_content, element) => {
-        return element?.textContent === "1/2 selected tools";
+        return element?.textContent === "1/3 selected tools";
       }),
     ).toBeDefined();
   });

@@ -5,6 +5,7 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  LayoutDashboard,
   PanelRightClose,
   PanelRightOpen,
   Workflow,
@@ -41,6 +42,7 @@ const TYPE_LABELS: Record<ArtifactData["type"], string> = {
   spreadsheet: "Spreadsheet",
   html: "Interactive HTML",
   mermaid: "Diagram",
+  ui: "Interactive UI",
 };
 
 /**
@@ -108,6 +110,8 @@ export function CanvasCard({
         return <Code2 className="size-5 text-amber-500" />;
       case "mermaid":
         return <Workflow className="size-5 text-sky-500" />;
+      case "ui":
+        return <LayoutDashboard className="size-5 text-violet-500" />;
       default:
         return <FileText className="text-primary size-5" />;
     }

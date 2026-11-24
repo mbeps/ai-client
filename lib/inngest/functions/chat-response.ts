@@ -5,6 +5,7 @@ import {
   buildToolApproval,
   parseInternalToolApprovals,
 } from "@/config/tool-approval";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { db } from "@/drizzle/db";
 import { message } from "@/drizzle/schemas/chat-schema";
 import { assembleModelMessages } from "@/lib/chat/assemble-model-messages";
@@ -863,6 +864,9 @@ export const generateChatResponse = inngest.createFunction(
       );
 
       const canvasArtifacts = extractThreadCanvasArtifacts(thread);
+      const isInteractiveUiEnabled =
+        selectedTools === undefined ||
+        selectedTools.includes(INTERNAL_TOOL_IDS.INTERACTIVE_UI);
 
       const baseSystemPrompt = buildSystemPrompt(
         userSettings?.globalSystemPrompt,
@@ -880,6 +884,7 @@ export const generateChatResponse = inngest.createFunction(
           availableSubagents: ctx.linkedSubagents,
           canvasArtifacts,
           compactionSummary,
+          isInteractiveUiEnabled,
         },
       );
 

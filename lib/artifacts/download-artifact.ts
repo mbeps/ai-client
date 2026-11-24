@@ -10,6 +10,7 @@ const log = getLogger(["app", "artifacts", "download"]);
  * - Markdown: exported as `.md` file
  * - HTML: exported as `.html` file
  * - Mermaid: exported as `.mmd` diagram
+ * - UI: exported as `.ui.json` spec file
  *
  * @param artifact - The artifact data to export.
  * @author Maruf Bepary
@@ -57,7 +58,7 @@ export function downloadArtifact(artifact: ArtifactData): void {
     return;
   }
 
-  // Text-based artifact exports (markdown, html, mermaid, plain text)
+  // Text-based artifact exports (markdown, html, mermaid, ui, plain text)
   const extension =
     artifact.type === "markdown"
       ? "md"
@@ -65,12 +66,16 @@ export function downloadArtifact(artifact: ArtifactData): void {
         ? "html"
         : artifact.type === "mermaid"
           ? "mmd"
-          : "txt";
+          : artifact.type === "ui"
+            ? "ui.json"
+            : "txt";
 
   const mimeType =
     artifact.type === "html"
       ? "text/html;charset=utf-8"
-      : "text/plain;charset=utf-8";
+      : artifact.type === "ui"
+        ? "application/json;charset=utf-8"
+        : "text/plain;charset=utf-8";
 
   const blob = new Blob([artifact.content], { type: mimeType });
   const objectUrl = window.URL.createObjectURL(blob);

@@ -8,7 +8,15 @@ import "@blocknote/mantine/style.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+export type MarkdownViewFlushFn = () => Promise<void> | null;
 
 /**
  * Props for MarkdownView artifact component.
@@ -23,6 +31,8 @@ interface MarkdownViewProps {
   content: string;
   /** Optional callback fired 1000ms after content changes (debounced). Returns updated markdown. */
   onUpdate?: (content: string) => void;
+  /** Optional ref populated with a flush function that immediately serializes pending edits. */
+  flushRef?: MutableRefObject<MarkdownViewFlushFn | null>;
 }
 
 /**
@@ -51,9 +61,11 @@ async function parseMarkdownToBlocks(content: string): Promise<Block[]> {
 function BlockNoteEditor({
   blocks,
   onUpdate,
+  flushRef,
 }: {
   blocks: Block[];
   onUpdate?: (content: string) => void;
+  flushRef?: MutableRefObject<MarkdownViewFlushFn | null>;
 }) {
   const editor = useCreateBlockNote({
     initialContent: blocks.length > 0 ? blocks : undefined,
@@ -61,6 +73,31 @@ function BlockNoteEditor({
 
   const { resolvedTheme } = useTheme();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const flushPending = useCallback((): Promise<void> | null => {
+    if (!timerRef.current) return null;
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+    if (!onUpdate) return null;
+    return (async () => {
+      try {
+        const markdown = await editor.blocksToMarkdownLossy(editor.document);
+        onUpdate(markdown);
+      } catch (e) {
+        logger.error("Failed to serialize markdown blocks", e);
+      }
+    })();
+  }, [editor, onUpdate]);
+
+  useEffect(() => {
+    if (!flushRef) return;
+    flushRef.current = flushPending;
+    return () => {
+      if (flushRef.current === flushPending) {
+        flushRef.current = null;
+      }
+    };
+  }, [flushRef, flushPending]);
 
   useEffect(() => {
     return () => {
@@ -107,7 +144,12 @@ function BlockNoteEditor({
  * @returns BlockNote editor UI or loading spinner while parsing
  * @author Maruf Bepary
  */
-export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
+export function MarkdownView({
+  id,
+  content,
+  onUpdate,
+  flushRef,
+}: MarkdownViewProps) {
   const [parsedBlocks, setParsedBlocks] = useState<Block[] | null>(null);
   const [editorRevision, setEditorRevision] = useState(0);
   const lastEmittedContentRef = useRef<string | null>(null);
@@ -172,6 +214,7 @@ export function MarkdownView({ id, content, onUpdate }: MarkdownViewProps) {
       key={`${id ?? "static"}-${editorRevision}`}
       blocks={parsedBlocks}
       onUpdate={handleUpdate}
+      flushRef={flushRef}
     />
   );
 }
