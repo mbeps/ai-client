@@ -5,6 +5,7 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  LayoutDashboard,
   PanelRightClose,
   PanelRightOpen,
   Workflow,
@@ -109,6 +110,8 @@ export function CanvasCard({
         return <Code2 className="size-5 text-amber-500" />;
       case "mermaid":
         return <Workflow className="size-5 text-sky-500" />;
+      case "ui":
+        return <LayoutDashboard className="size-5 text-violet-500" />;
       default:
         return <FileText className="text-primary size-5" />;
     }

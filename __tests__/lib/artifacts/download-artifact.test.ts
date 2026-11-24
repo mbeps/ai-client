@@ -206,6 +206,29 @@ describe("downloadArtifact", () => {
     expect(anchor.download).toBe("architecture_flow.mmd");
   });
 
+  it("exports UI artifact as .ui.json file with application/json mimeType", () => {
+    const appendSpy = vi.spyOn(document.body, "appendChild");
+    vi.spyOn(document.body, "removeChild").mockImplementation(() => null as any);
+    const createObjectUrlSpy = vi
+      .spyOn(window.URL, "createObjectURL")
+      .mockReturnValue("blob:mock-ui-url");
+    vi.spyOn(window.URL, "revokeObjectURL").mockImplementation(() => {});
+
+    const uiArtifact: ArtifactData = {
+      id: "art-ui",
+      title: "Revenue Dashboard",
+      type: "ui",
+      content: '{"root":"card","elements":{}}',
+    };
+
+    downloadArtifact(uiArtifact);
+
+    const blobArg = createObjectUrlSpy.mock.calls[0][0] as Blob;
+    expect(blobArg.type).toBe("application/json;charset=utf-8");
+    const anchor = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
+    expect(anchor.download).toBe("revenue_dashboard.ui.json");
+  });
+
   it("exports unknown/other artifact type as .txt file", () => {
     const appendSpy = vi.spyOn(document.body, "appendChild");
     vi.spyOn(document.body, "removeChild").mockImplementation(() => null as any);

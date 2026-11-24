@@ -109,6 +109,29 @@ describe("CanvasCard", () => {
     expect(screen.getByText(/Spreadsheet/i)).toBeInTheDocument();
   });
 
+  it("renders Interactive UI label and LayoutDashboard icon for ui artifacts", () => {
+    const uiArtifact: ArtifactData = {
+      id: "art-ui",
+      type: "ui",
+      title: "Metrics Overview",
+      content: '{"root":"card","elements":{}}',
+    };
+
+    const { container } = render(
+      <CanvasCard
+        artifact={uiArtifact}
+        isOpen={false}
+        onToggle={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Metrics Overview")).toBeInTheDocument();
+    expect(screen.getByText("Interactive UI")).toBeInTheDocument();
+    expect(
+      container.querySelector("svg.lucide-layout-dashboard"),
+    ).not.toBeNull();
+  });
+
   it("renders Download button and invokes onDownload when clicked", async () => {
     const user = userEvent.setup();
     const onDownload = vi.fn();

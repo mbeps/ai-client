@@ -21,6 +21,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { downloadArtifact } from "@/lib/artifacts/download-artifact";
+import {
+  hasGenerativeUIBlocks,
+  prepareMarkdownForCopy,
+} from "@/lib/generative-ui/markdown-ui-utils";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 
 const MarkdownView = dynamic(
@@ -36,6 +40,33 @@ const HtmlView = dynamic(
   () => import("./artifacts/html-view").then((mod) => mod.HtmlView),
   { ssr: false },
 );
+const UiView = dynamic(
+  () => import("./artifacts/ui-view").then((mod) => mod.UiView),
+  { ssr: false },
+);
+
+function resolveCopyPayload(artifact: ArtifactData): {
+  text: string;
+  infoMessage: string | null;
+} {
+  if (artifact.type === "ui") {
+    return {
+      text: artifact.content,
+      infoMessage:
+        "Copied UI spec JSON — rendered UI cannot be copied directly",
+    };
+  }
+  if (artifact.type === "markdown") {
+    const { text, hadInteractiveUI } = prepareMarkdownForCopy(artifact.content);
+    return {
+      text,
+      infoMessage: hadInteractiveUI
+        ? "Copied text — interactive UI blocks were omitted"
+        : null,
+    };
+  }
+  return { text: artifact.content, infoMessage: null };
+}
 
 /**
  * Props for the ArtifactPanel component.
@@ -92,16 +123,27 @@ export function ArtifactPanel({
   isFullWidth = false,
 }: ArtifactPanelProps) {
   const [copied, setCopied] = useState(false);
+  const [markdownMode, setMarkdownMode] = useState<"preview" | "edit">(
+    "preview",
+  );
   const isLatest =
     artifacts.length <= 1 || currentIndex === artifacts.length - 1;
 
   if (!isOpen || !artifact) return null;
 
+  const hasUiBlocks =
+    artifact.type === "markdown" && hasGenerativeUIBlocks(artifact.content);
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(artifact.content);
+      const { text, infoMessage } = resolveCopyPayload(artifact);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
-      toast.success("Copied to clipboard");
+      if (infoMessage) {
+        toast.info(infoMessage);
+      } else {
+        toast.success("Copied to clipboard");
+      }
       setTimeout(() => setCopied(false), 2000);
     } catch (_err) {
       toast.error("Failed to copy content");
@@ -250,18 +292,53 @@ export function ArtifactPanel({
             <TabsTrigger value="spreadsheet">Spreadsheet</TabsTrigger>
             <TabsTrigger value="html">HTML</TabsTrigger>
             <TabsTrigger value="mermaid">Mermaid</TabsTrigger>
+            <TabsTrigger value="ui">Interactive UI</TabsTrigger>
           </TabsList>
 
           <TabsContent
             value="markdown"
-            className="m-0 h-full w-full border-none p-0 outline-none"
+            className="m-0 flex h-full w-full flex-col border-none p-0 outline-none"
           >
             {isLatest ? (
-              <MarkdownView
-                id={`${artifact.messageId}-${currentIndex}`}
-                content={artifact.content}
-                onUpdate={onUpdate}
-              />
+              <>
+                {hasUiBlocks && (
+                  <div className="bg-muted/20 flex shrink-0 items-center justify-end gap-1 border-b px-3 py-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={
+                        markdownMode === "preview" ? "secondary" : "ghost"
+                      }
+                      className="h-7 px-2.5 text-xs"
+                      onClick={() => setMarkdownMode("preview")}
+                    >
+                      Preview
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={markdownMode === "edit" ? "secondary" : "ghost"}
+                      className="h-7 px-2.5 text-xs"
+                      onClick={() => setMarkdownMode("edit")}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                )}
+                {hasUiBlocks && markdownMode === "preview" ? (
+                  <div className="custom-scrollbar bg-background min-h-0 flex-1 overflow-y-auto p-6">
+                    <MarkdownRenderer content={artifact.content} />
+                  </div>
+                ) : (
+                  <div className="min-h-0 flex-1">
+                    <MarkdownView
+                      id={`${artifact.messageId}-${currentIndex}`}
+                      content={artifact.content}
+                      onUpdate={onUpdate}
+                    />
+                  </div>
+                )}
+              </>
             ) : (
               <div className="custom-scrollbar bg-background h-full w-full overflow-y-auto p-6">
                 <MarkdownRenderer content={artifact.content} />
@@ -293,6 +370,13 @@ export function ArtifactPanel({
             <MarkdownRenderer
               content={`\`\`\`mermaid\n${artifact.content}\n\`\`\``}
             />
+          </TabsContent>
+
+          <TabsContent
+            value="ui"
+            className="m-0 h-full w-full border-none p-0 outline-none"
+          >
+            <UiView content={artifact.content} />
           </TabsContent>
         </Tabs>
       </div>
