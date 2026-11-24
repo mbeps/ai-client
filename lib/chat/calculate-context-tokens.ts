@@ -1,8 +1,10 @@
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import type { UserModelOption } from "@/hooks/use-user-models";
 import { estimateAttachmentTokens } from "@/lib/chat/estimate-attachment-tokens";
 import { estimateTokens } from "@/lib/chat/estimate-tokens";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { sliceThreadFromLatestCompaction } from "@/lib/chat/slice-thread-from-compaction";
+import { getInteractiveUiSystemPrompt } from "@/lib/generative-ui/catalog";
 import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
@@ -206,13 +208,24 @@ export function calculateContextUsage(
   const maxTokens = selectedModel?.contextWindow || 128_000;
 
   // 2. System Instructions
-  // Base instructions + assistant/global system prompts
+  // Base instructions + assistant/global system prompts + interactive UI catalog prompt (if enabled)
+  const isInteractiveUiEnabled =
+    toolNames.includes(INTERNAL_TOOL_IDS.INTERACTIVE_UI) ||
+    toolNames.includes("interactive_ui");
+  const interactiveUiPromptTokens = isInteractiveUiEnabled
+    ? estimateTokens(getInteractiveUiSystemPrompt())
+    : 0;
   const baseSystemTokens = estimateTokens(systemPrompt) || 120; // Default baseline prompt overhead
-  const systemInstructions = baseSystemTokens;
+  const systemInstructions = baseSystemTokens + interactiveUiPromptTokens;
 
   // 3. Tool Definitions
-  // Each active tool schema averages ~150-250 tokens in JSON schema definition
-  const toolSchemaTokens = toolNames.length * 180;
+  // Each active tool schema averages ~150-250 tokens in JSON schema definition.
+  // Exclude interactive_ui since it injects system prompt instructions rather than a tool schema.
+  const schemaToolNames = toolNames.filter(
+    (name) =>
+      name !== INTERNAL_TOOL_IDS.INTERACTIVE_UI && name !== "interactive_ui",
+  );
+  const toolSchemaTokens = schemaToolNames.length * 180;
   const serverOverheadTokens = mcpServerCount * 50;
   const toolDefinitions = toolSchemaTokens + serverOverheadTokens;
 

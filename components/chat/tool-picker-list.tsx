@@ -9,6 +9,7 @@ import {
 } from "@/components/chat/tool-picker/server-tools-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PICKER_INTERNAL_TOOLS } from "@/config/tools";
 import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
 import { cn } from "@/lib/utils";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -44,8 +45,13 @@ export interface ToolPickerListProps {
  * @author Maruf Bepary
  */
 function matchesInternalToolsSearch(search: string): boolean {
-  return "artifacts canvas manage_artifact memory save_memory".includes(
-    search.toLowerCase(),
+  const lowerSearch = search.toLowerCase();
+  return PICKER_INTERNAL_TOOLS.some(
+    (tool) =>
+      tool.title.toLowerCase().includes(lowerSearch) ||
+      tool.description.toLowerCase().includes(lowerSearch) ||
+      tool.toolName.toLowerCase().includes(lowerSearch) ||
+      tool.keywords.some((kw) => kw.toLowerCase().includes(lowerSearch)),
   );
 }
 
@@ -219,8 +225,10 @@ export function ToolPickerList({
       })),
     );
     return [
-      { serverId: "internal", toolName: "manage_artifact" },
-      { serverId: "internal", toolName: "manage_memory" },
+      ...PICKER_INTERNAL_TOOLS.map((tool) => ({
+        serverId: "internal",
+        toolName: tool.toolName,
+      })),
       ...mcpTools,
     ];
   }, [enabledServers, serverContent]);
@@ -250,7 +258,7 @@ export function ToolPickerList({
     const groups = [
       {
         serverId: "internal",
-        toolNames: ["manage_artifact", "manage_memory"],
+        toolNames: PICKER_INTERNAL_TOOLS.map((tool) => tool.toolName),
       },
       ...enabledServers
         .filter((s) => Boolean(serverContent[s.id]?.tools))

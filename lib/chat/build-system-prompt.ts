@@ -1,4 +1,5 @@
 import { PROMPTS } from "@/config/prompts";
+import { getInteractiveUiSystemPrompt } from "@/lib/generative-ui/catalog";
 import { formatActiveSkill } from "@/lib/skills/format-active-skill";
 import { formatSkillCatalog } from "@/lib/skills/format-skill-catalog";
 import { formatSubagentManifest } from "@/lib/subagents/format-subagent-manifest";
@@ -21,6 +22,7 @@ export interface SystemPromptOptions {
   availableSubagents?: readonly Agent[];
   canvasArtifacts?: ArtifactData[];
   compactionSummary?: string;
+  isInteractiveUiEnabled?: boolean;
 }
 
 /**
@@ -155,6 +157,11 @@ export function buildSystemPrompt(
     if (options.availableSubagents && options.availableSubagents.length > 0) {
       systemParts.push(formatSubagentManifest(options.availableSubagents));
     }
+  }
+
+  // Interactive UI catalog instructions (works for any model regardless of tool support)
+  if (options.isInteractiveUiEnabled) {
+    systemParts.push(getInteractiveUiSystemPrompt());
   }
 
   if (systemParts.length === 0) {

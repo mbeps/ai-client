@@ -45,7 +45,8 @@ export const PROMPTS = {
         "- 'markdown': Use for text, reports, emails, or code. Supports GitHub Flavored Markdown (tables, lists, etc). Use this by default.\n" +
         '- \'spreadsheet\': Use for rich tabular data. Pass the full multi-sheet JSON via the `sheets` argument: [{ "name": "SheetName", "data": [[values]] }]. Values can be primitives or objects { "v": value, "s": { "bold": boolean, "italic": boolean, "textAlign": \'left\'|\'center\'|\'right\', "backgroundColor": string, "color": string } }.\n' +
         "- 'html': Use for interactive designs, custom layouts, or web-like dashboards. Provide standalone HTML snippets.\n" +
-        "- 'mermaid': Strictly for diagrams (flowcharts, sequence, etc). Provide raw Mermaid.js markup.\n\n" +
+        "- 'mermaid': Strictly for diagrams (flowcharts, sequence, etc). Provide raw Mermaid.js markup.\n" +
+        "- 'ui': Use for standalone interactive Shadcn UI dashboards, forms, data tables, and charts (rendered natively without an iframe). Provide a valid UI JSON/JSONL spec using the Interactive UI component catalog.\n\n" +
         "SPREADSHEET UPDATES — IMPORTANT:\n" +
         "There is NO 'update' action and NO partial-update mechanism. To add, remove, or modify sheets, you MUST call this tool again with the COMPLETE set of all sheets (existing + new/modified). Do NOT use action='update', artifact_id, or updates fields — they are not supported and will be ignored. Always re-emit the full spreadsheet.\n\n" +
         "CONSTRAINTS:\n" +
@@ -78,10 +79,10 @@ export const PROMPTS = {
   SCHEMA: {
     MANAGE_ARTIFACT: {
       TYPE_DESCRIPTION:
-        "The type of artifact. Must be one of: 'markdown', 'spreadsheet', 'html', or 'mermaid'. Any other value will be rejected.",
+        "The type of artifact. Must be one of: 'markdown', 'spreadsheet', 'html', 'mermaid', or 'ui'. Any other value will be rejected.",
       TITLE_DESCRIPTION: "The title of the artifact",
       CONTENT_DESCRIPTION:
-        "The content of the artifact. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide diagram code. For spreadsheet, pass structured data via the top-level 'sheets' argument or JSON string here.",
+        "The content of the artifact. For HTML, provide raw HTML. For markdown, provide markdown text. For mermaid, provide diagram code. For ui, provide a JSON/JSONL Interactive UI spec. For spreadsheet, pass structured data via the top-level 'sheets' argument or JSON string here.",
     },
   },
   COMPOSITION: {

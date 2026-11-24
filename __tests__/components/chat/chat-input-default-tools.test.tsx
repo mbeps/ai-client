@@ -85,11 +85,15 @@ describe("Default Active Tools", () => {
     expect(INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE).toBe(
       "internal:tool:search_knowledge_base",
     );
+    expect(INTERNAL_TOOL_IDS.INTERACTIVE_UI).toBe(
+      "internal:tool:interactive_ui",
+    );
     expect(DEFAULT_ENABLED_TOOLS).toEqual([
       "internal:tool:manage_artifact",
       "internal:tool:manage_memory",
       "internal:tool:manage_skill",
       "internal:tool:search_knowledge_base",
+      "internal:tool:interactive_ui",
     ]);
   });
 
