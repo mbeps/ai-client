@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReasoningEffortFormat } from "@/schemas/providers/provider-registry";
 
 /**
@@ -23,6 +23,7 @@ export interface ModelCapabilityItem {
  * @param chatModels - Target chat models
  * @param currentModelId - Target current model id
  * @param initialModelId - Target initial model id
+ * @param preferInitialModel - Whether newly hydrated initialModelId should take precedence over fallback selection
  * @returns The resolved result
  * @author Maruf Bepary
  */
@@ -30,7 +31,14 @@ function resolveInitialModelSelection(
   chatModels: Array<{ id?: string; modelId: string }>,
   currentModelId: string,
   initialModelId?: string,
+  preferInitialModel = false,
 ): string {
+  if (preferInitialModel && initialModelId) {
+    const match = chatModels.find(
+      (m) => m.modelId === initialModelId || m.id === initialModelId,
+    );
+    if (match) return match.modelId;
+  }
   if (currentModelId && chatModels.some((m) => m.modelId === currentModelId)) {
     return currentModelId;
   }
@@ -58,7 +66,14 @@ export function useChatModelSelection(
   initialModelId?: string,
 ) {
   const [modelId, setModelId] = useState<string>(initialModelId ?? "");
+  const hasManualSelectionRef = useRef(false);
+  const lastInitialModelIdRef = useRef<string | undefined>(initialModelId);
   const hasNoModels = chatModels.length === 0 && !isModelsLoading;
+
+  const selectModel = useCallback((nextModelId: string) => {
+    hasManualSelectionRef.current = true;
+    setModelId(nextModelId);
+  }, []);
 
   const selectedModelObj = useMemo(
     () => chatModels.find((model) => model.modelId === modelId) ?? null,
@@ -75,16 +90,25 @@ export function useChatModelSelection(
   useEffect(() => {
     if (chatModels.length === 0 || isModelsLoading) return;
 
+    const initialChanged = lastInitialModelIdRef.current !== initialModelId;
+    lastInitialModelIdRef.current = initialModelId;
+    const preferInitial = initialChanged && !hasManualSelectionRef.current;
+
     Promise.resolve().then(() => {
       setModelId((current) =>
-        resolveInitialModelSelection(chatModels, current, initialModelId),
+        resolveInitialModelSelection(
+          chatModels,
+          current,
+          initialModelId,
+          preferInitial,
+        ),
       );
     });
   }, [chatModels, initialModelId, isModelsLoading]);
 
   return {
     modelId,
-    setModelId,
+    setModelId: selectModel,
     selectedModelObj,
     supportsVision,
     supportsTools,

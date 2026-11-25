@@ -16,6 +16,9 @@ import {
   NEW_CHAT_TOOLS_KEY,
   useChatToolsStore,
 } from "@/lib/store/use-chat-tools-store";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.
@@ -29,6 +32,7 @@ export default function HomePage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const createChatDb = useAppStore((state) => state.createChatDb);
+  const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const userSettings = useAppStore((state) => state.userSettings);
   const { models: chatModels, isLoading: isModelsLoading } =
@@ -36,9 +40,12 @@ export default function HomePage() {
 
   useResourceHydration([
     "mcpServers",
+    "publicMcpServers",
     "agents",
+    "projects",
     "prompts",
     "skills",
+    "mcpPrompts",
     "userSettings",
   ]);
 
@@ -46,9 +53,22 @@ export default function HomePage() {
     return mcpServers.filter((s) => s.enabled);
   }, [mcpServers]);
 
-  const handleStart = async (content: string) => {
-    if (!content.trim()) return;
-
+  const handleStart = async (
+    content: string,
+    attachments: Attachment[] = [],
+    model = "",
+    selectedServerIds: string[] = [],
+    selectedTools: string[] = [],
+    selectedPromptId?: string | string[],
+    selectedAssistantId?: string,
+    selectedKnowledgebases: string[] = [],
+    selectedSkillIds: string[] = [],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
+    approvalMode?: ApprovalMode,
+  ) => {
     if (isModelsLoading) return;
 
     if (chatModels.length === 0) {
@@ -61,11 +81,30 @@ export default function HomePage() {
       return;
     }
 
-    const chatId = await createChatDb(content.slice(0, 60));
-    useChatToolsStore.getState().transferChatTools(NEW_CHAT_TOOLS_KEY, chatId);
-    router.push(
-      `${ROUTES.CHATS.detail(chatId)}?msg=${encodeURIComponent(content)}`,
-    );
+    const title = content.trim().slice(0, 60) || "New Chat";
+    const chatId = await createChatDb(title);
+    if (selectedKnowledgebases.length > 0) {
+      await setKnowledgebaseDb(chatId, selectedKnowledgebases[0]);
+    }
+    const toolsStore = useChatToolsStore.getState();
+    toolsStore.transferChatTools(NEW_CHAT_TOOLS_KEY, chatId);
+    toolsStore.setPendingLaunch(chatId, {
+      content,
+      attachments,
+      model,
+      selectedServerIds,
+      selectedTools,
+      selectedPromptId,
+      selectedAssistantId,
+      selectedKnowledgebases,
+      selectedSkillIds,
+      subagentsEnabled,
+      subagentModelId,
+      reasoningEffort,
+      subagentIds,
+      approvalMode,
+    });
+    router.push(ROUTES.CHATS.detail(chatId));
   };
 
   const quickActions = [
@@ -142,6 +181,7 @@ export default function HomePage() {
             chatId={NEW_CHAT_TOOLS_KEY}
             onSend={handleStart}
             servers={enabledServers}
+            initialModelId={userSettings?.defaultChatModelId || undefined}
             initialApprovalMode={
               userSettings?.defaultAutoApprove ? "auto" : "ask"
             }
