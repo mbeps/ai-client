@@ -1,3 +1,4 @@
+import { INTERNAL_TOOL_NAMES } from "@/config/tool-approval";
 import { registerArtifactTool } from "@/lib/chat/register-artifact-tool";
 import {
   type KnowledgebaseSubagentConfig,
@@ -119,6 +120,7 @@ async function loadScopedMcpTools(
       filtered.tools,
       filtered.toolSourceMap,
       filtered.toolServerIdMap,
+      INTERNAL_TOOL_NAMES,
     );
     return {
       tools: sanitised.tools,

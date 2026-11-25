@@ -1,11 +1,11 @@
 import { env } from "@/config/env";
 import { isInternalToolBlocked } from "@/config/tool-approval";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { registerAppTools } from "@/lib/app-tools/register-app-tools";
 import { registerArtifactTool } from "@/lib/chat/register-artifact-tool";
 import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
 import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
 import { registerMemoryTool } from "@/lib/chat/register-memory-tool";
-import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import type {
@@ -299,15 +299,14 @@ export function buildOrchestratorToolSet(
         })
       : {};
 
-  const skillAuthoringTools = isInternalToolAllowed(
-    INTERNAL_TOOL_IDS.MANAGE_SKILL,
-    selectedTools,
-  )
-    ? filterBlockedInternalTools(
-        registerSkillAuthoringTools(userId),
-        internalToolOverrides,
-      )
-    : {};
+  const appTools = registerAppTools(userId, {
+    internalToolOverrides,
+    preUnlockedToolNames: params.preUnlockedToolNames,
+    includeManageSkill: isInternalToolAllowed(
+      INTERNAL_TOOL_IDS.MANAGE_SKILL,
+      selectedTools,
+    ),
+  });
 
   const isSubagentDelegationEnabled =
     !isInternalToolBlocked("delegate_task", internalToolOverrides) &&
@@ -335,7 +334,7 @@ export function buildOrchestratorToolSet(
     memoryTools,
     kbTools,
     skillTools,
-    skillAuthoringTools,
+    appTools,
     fileUrlTools,
     scratchpadTools,
   );

@@ -86,14 +86,17 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
     vi.clearAllMocks();
     chainable.select.mockReturnValue(chainable);
     chainable.from.mockReturnValue(chainable);
+    chainable.update.mockReturnValue(chainable);
+    chainable.set.mockReturnValue(chainable);
     chainable.delete.mockReturnValue(chainable);
     // call 1: s3Key select (awaited); call 2: delete path → object with
-    // returning() so db.delete().where().returning() resolves
+    // returning() so db.delete().where().returning() resolves; call 3: project update
     let whereCall = 0;
     chainable.where.mockImplementation(() => {
       whereCall++;
       if (whereCall === 1) return Promise.resolve(selectResult);
-      return { returning: chainable.returning };
+      if (whereCall === 2) return { returning: chainable.returning };
+      return Promise.resolve([]);
     });
     chainable.returning.mockResolvedValue([{ id: "kb-1" }]);
     vi.mocked(requireSession).mockResolvedValue({
@@ -226,5 +229,15 @@ describe("deleteKnowledgebase — S3 cleanup (T2.4)", () => {
         code: "NOT_FOUND",
       }),
     });
+  });
+
+  it("clears project.knowledgebaseId for deleted knowledgebases", async () => {
+    selectResult = [];
+    await deleteKnowledgebase("kb-1");
+
+    expect(chainable.update).toHaveBeenCalled();
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({ knowledgebaseId: null }),
+    );
   });
 });

@@ -17,7 +17,9 @@ describe("tool approval policy", () => {
         "search_knowledge_base",
         "get_file_url",
         "load_skill",
-        "read_skill_file",
+        "app_help",
+        "search_app_tools",
+        "inspect_workspace",
         "delegate_task",
         "scratchpad_write",
         "scratchpad_read",
@@ -31,12 +33,13 @@ describe("tool approval policy", () => {
       }
     });
 
-    it("includes gated skill mutation tools in INTERNAL_TOOL_NAMES but not auto-approved", () => {
+    it("includes gated manage_* tools in INTERNAL_TOOL_NAMES but not auto-approved", () => {
       const gated = [
-        "create_skill",
-        "update_skill",
-        "write_skill_file",
-        "delete_skill_file",
+        "manage_skill",
+        "manage_project",
+        "manage_agent",
+        "manage_prompt",
+        "manage_workflow",
       ];
 
       for (const name of gated) {
@@ -122,19 +125,22 @@ describe("tool approval policy", () => {
       "search_knowledge_base",
       "get_file_url",
       "load_skill",
-      "read_skill_file",
+      "app_help",
+      "search_app_tools",
+      "inspect_workspace",
       "delegate_task",
       "scratchpad_write",
       "scratchpad_read",
       "scratchpad_list",
-      "create_skill",
-      "update_skill",
-      "write_skill_file",
-      "delete_skill_file",
+      "manage_skill",
+      "manage_project",
+      "manage_agent",
+      "manage_prompt",
+      "manage_workflow",
       "unknown_mcp_tool",
     ];
 
-    it("auto-approves read/utility internal tools and gates skill-mutation and unknown MCP tools in 'ask' mode", () => {
+    it("auto-approves read/utility internal tools and gates manage_* and unknown MCP tools in 'ask' mode", () => {
       const result = buildToolApproval(sampleTools, "ask");
 
       expect(result).toEqual({
@@ -143,15 +149,18 @@ describe("tool approval policy", () => {
         search_knowledge_base: "not-applicable",
         get_file_url: "not-applicable",
         load_skill: "not-applicable",
-        read_skill_file: "not-applicable",
+        app_help: "not-applicable",
+        search_app_tools: "not-applicable",
+        inspect_workspace: "not-applicable",
         delegate_task: "not-applicable",
         scratchpad_write: "not-applicable",
         scratchpad_read: "not-applicable",
         scratchpad_list: "not-applicable",
-        create_skill: "user-approval",
-        update_skill: "user-approval",
-        write_skill_file: "user-approval",
-        delete_skill_file: "user-approval",
+        manage_skill: "user-approval",
+        manage_project: "user-approval",
+        manage_agent: "user-approval",
+        manage_prompt: "user-approval",
+        manage_workflow: "user-approval",
         unknown_mcp_tool: "user-approval",
       });
     });
@@ -166,18 +175,20 @@ describe("tool approval policy", () => {
 
     it("respects per-user internalToolOverrides in 'ask' mode", () => {
       const result = buildToolApproval(
-        ["create_skill", "save_memory"],
+        ["manage_skill", "manage_project", "save_memory"],
         "ask",
         {
           internalToolOverrides: {
-            create_skill: "auto",
+            manage_skill: "auto",
+            manage_project: "block",
             save_memory: "ask",
           },
         },
       );
 
       expect(result).toEqual({
-        create_skill: "not-applicable",
+        manage_skill: "not-applicable",
+        manage_project: "user-approval",
         save_memory: "user-approval",
       });
     });

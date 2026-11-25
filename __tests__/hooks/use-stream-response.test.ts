@@ -90,6 +90,11 @@ const mockStoreState = vi.hoisted(() => ({
   updateMessageAttachments: vi.fn(),
   upsertChat: vi.fn(),
   loadSkills: vi.fn(),
+  loadProjects: vi.fn(),
+  loadAgents: vi.fn(),
+  loadPrompts: vi.fn(),
+  loadWorkflows: vi.fn(),
+  loadMemories: vi.fn(),
   prompts: [],
   chats: {} as Record<string, any>,
 }));
@@ -624,6 +629,49 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
     });
 
     expect(mockStoreState.loadSkills).not.toHaveBeenCalled();
+  });
+
+  it("reloads matching workspace stores when manage_project, manage_agent, manage_prompt, manage_workflow, and save_memory succeed", async () => {
+    const { result, rerender } = renderHook(() =>
+      useStreamResponse("chat-1"),
+    );
+
+    await act(async () => {
+      await result.current.streamResponse("user-msg-1", "create workspace items", null);
+    });
+
+    mockStoreState.loadProjects.mockClear();
+    mockStoreState.loadAgents.mockClear();
+    mockStoreState.loadPrompts.mockClear();
+    mockStoreState.loadWorkflows.mockClear();
+    mockStoreState.loadMemories.mockClear();
+
+    await act(async () => {
+      realtimeState.messages = {
+        ...realtimeState.messages,
+        delta: [
+          { data: { type: "start", messageId: "server-assistant-id" } },
+          { data: { type: "tool-call", toolCallId: "t1", toolName: "manage_project", args: {} } },
+          { data: { type: "tool-result", toolCallId: "t1", toolName: "manage_project", result: { success: true, id: "p1" } } },
+          { data: { type: "tool-call", toolCallId: "t2", toolName: "manage_agent", args: {} } },
+          { data: { type: "tool-result", toolCallId: "t2", toolName: "manage_agent", result: { success: true, id: "a1" } } },
+          { data: { type: "tool-call", toolCallId: "t3", toolName: "manage_prompt", args: {} } },
+          { data: { type: "tool-result", toolCallId: "t3", toolName: "manage_prompt", result: { success: true, id: "pr1" } } },
+          { data: { type: "tool-call", toolCallId: "t4", toolName: "manage_workflow", args: {} } },
+          { data: { type: "tool-result", toolCallId: "t4", toolName: "manage_workflow", result: { success: true, id: "w1" } } },
+          { data: { type: "tool-call", toolCallId: "t5", toolName: "save_memory", args: {} } },
+          { data: { type: "tool-result", toolCallId: "t5", toolName: "save_memory", result: { success: true, id: "m1" } } },
+          { data: { type: "finish", finishReason: "stop" } },
+        ],
+      };
+      rerender();
+    });
+
+    expect(mockStoreState.loadProjects).toHaveBeenCalledTimes(1);
+    expect(mockStoreState.loadAgents).toHaveBeenCalledTimes(1);
+    expect(mockStoreState.loadPrompts).toHaveBeenCalledTimes(1);
+    expect(mockStoreState.loadWorkflows).toHaveBeenCalledTimes(1);
+    expect(mockStoreState.loadMemories).toHaveBeenCalledTimes(1);
   });
 
   it("skips syncing when the assistant produced no content", async () => {

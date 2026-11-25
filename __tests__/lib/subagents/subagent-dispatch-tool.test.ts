@@ -62,13 +62,22 @@ describe("subagent-dispatch-tool", () => {
       expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.MANAGE_ARTIFACT);
     });
 
-    it("strictly strips skill mutation tools while preserving read-only and other tools", () => {
+    it("strictly strips app tools and skill mutation tools while preserving read-only and other tools", () => {
       const mockTools = {
         create_skill: { description: "create" },
         update_skill: { description: "update" },
         write_skill_file: { description: "write file" },
         delete_skill_file: { description: "delete file" },
         [INTERNAL_TOOL_IDS.MANAGE_SKILL]: { description: "manage skill" },
+        [INTERNAL_TOOL_IDS.APP_TOOLS]: { description: "app tools" },
+        app_help: { description: "help" },
+        search_app_tools: { description: "search" },
+        inspect_workspace: { description: "inspect" },
+        manage_skill: { description: "manage skill" },
+        manage_project: { description: "manage project" },
+        manage_agent: { description: "manage agent" },
+        manage_prompt: { description: "manage prompt" },
+        manage_workflow: { description: "manage workflow" },
         read_skill_file: { description: "read file" },
         load_skill: { description: "load skill" },
         custom_tool: { description: "custom" },
@@ -84,6 +93,15 @@ describe("subagent-dispatch-tool", () => {
       expect(result).not.toHaveProperty("write_skill_file");
       expect(result).not.toHaveProperty("delete_skill_file");
       expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.MANAGE_SKILL);
+      expect(result).not.toHaveProperty(INTERNAL_TOOL_IDS.APP_TOOLS);
+      expect(result).not.toHaveProperty("app_help");
+      expect(result).not.toHaveProperty("search_app_tools");
+      expect(result).not.toHaveProperty("inspect_workspace");
+      expect(result).not.toHaveProperty("manage_skill");
+      expect(result).not.toHaveProperty("manage_project");
+      expect(result).not.toHaveProperty("manage_agent");
+      expect(result).not.toHaveProperty("manage_prompt");
+      expect(result).not.toHaveProperty("manage_workflow");
     });
   });
 

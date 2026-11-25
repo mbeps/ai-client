@@ -192,6 +192,25 @@ describe("calculate-context-tokens utility", () => {
       );
     });
 
+    it("prices app_help (120) and search_app_tools (130) and treats deferred tools as 0 step-0 tokens", () => {
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        toolNames: [
+          "app_help",
+          "search_app_tools",
+          "inspect_workspace",
+          "manage_skill",
+          "manage_project",
+          "manage_agent",
+          "manage_prompt",
+          "manage_workflow",
+          "internal:tool:manage_skill",
+        ],
+      });
+
+      expect(result.breakdown.toolDefinitions).toBe(120 + 130);
+    });
+
     it("handles delegate_task and manage_artifact tool results properly", () => {
       const messages: Message[] = [
         {
@@ -522,6 +541,22 @@ describe("calculate-context-tokens utility", () => {
       });
 
       expect(result.breakdown.messages).toBeGreaterThan(0);
+    });
+
+    it("uses own-property lookup for LIGHTWEIGHT_TOOL_TOKEN_WEIGHTS so Object.prototype keys like toString fall back to 180", () => {
+      const baseline = calculateContextUsage({
+        selectedModel: mockModel,
+        toolNames: [],
+      });
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        toolNames: ["toString"],
+      });
+
+      expect(Number.isNaN(result.percentage)).toBe(false);
+      expect(result.breakdown.toolDefinitions).toBe(
+        baseline.breakdown.toolDefinitions + 180,
+      );
     });
   });
 });

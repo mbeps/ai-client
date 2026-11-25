@@ -1,10 +1,10 @@
-import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { DEFERRED_APP_TOOL_NAMES, INTERNAL_TOOL_IDS } from "@/config/tools";
 
 /**
  * Filter tools to guarantee the 2-layer architectural boundary:
  * 1. `delegate_task` is strictly omitted to prevent subagents from calling subagents.
  * 2. `manage_artifact` is strictly omitted to protect the user canvas from partial worker drafts.
- * 3. Skill authoring/mutation tools are strictly omitted to prevent subagents from mutating user skills.
+ * 3. App self-knowledge and workspace mutation/inspection tools are strictly omitted.
  *
  * @param availableTools - Target available tools
  * @returns The resolved result
@@ -23,6 +23,10 @@ export function getSubagentTools(
     "write_skill_file",
     "delete_skill_file",
     INTERNAL_TOOL_IDS.MANAGE_SKILL,
+    INTERNAL_TOOL_IDS.APP_TOOLS,
+    "app_help",
+    "search_app_tools",
+    ...DEFERRED_APP_TOOL_NAMES,
   ]);
 
   const sanitized: Record<string, any> = {};

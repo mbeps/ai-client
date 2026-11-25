@@ -83,6 +83,7 @@ vi.mock("ai", () => ({
   streamText: mockStreamText,
   isStepCount: mockIsStepCount,
   tool: vi.fn((def) => def),
+  toolSearch: vi.fn((opts) => ({ ...opts, type: "tool-search" })),
 }));
 
 const mockMcpCleanup = vi.hoisted(() => vi.fn(async () => {}));
@@ -1387,7 +1388,8 @@ describe("generateChatResponse Inngest Function", () => {
       const tools = mockStreamText.mock.calls[0][0].tools;
       expect(tools.get_file_url).toBeUndefined();
       expect(tools.load_skill).toBeUndefined();
-      expect(Object.keys(tools)).toContain("create_skill");
+      expect(Object.keys(tools)).toContain("app_help");
+      expect(Object.keys(tools)).toContain("manage_skill");
       expect(mockPersistResponse).toHaveBeenCalledWith(
         expect.objectContaining({ chatId: "chat-no-attachments" }),
       );
@@ -1421,12 +1423,15 @@ describe("generateChatResponse Inngest Function", () => {
       expect(tools.get_file_url).toBeUndefined();
       expect(tools.load_skill).toBeUndefined();
       expect(Object.keys(tools).sort()).toEqual([
-        "create_skill",
-        "delete_skill_file",
+        "app_help",
+        "inspect_workspace",
+        "manage_agent",
         "manage_artifact",
-        "read_skill_file",
-        "update_skill",
-        "write_skill_file",
+        "manage_project",
+        "manage_prompt",
+        "manage_skill",
+        "manage_workflow",
+        "search_app_tools",
       ]);
     });
 
@@ -1532,7 +1537,8 @@ describe("generateChatResponse Inngest Function", () => {
       });
 
       const call = mockStreamText.mock.calls[0][0];
-      expect(Object.keys(call.tools)).toContain("create_skill");
+      expect(Object.keys(call.tools)).toContain("app_help");
+      expect(Object.keys(call.tools)).toContain("manage_skill");
       // The multi-step limit is produced by `isStepCount(env.CHAT_MAX_STEPS)`.
       expect(call.stopWhen).toBe(mockIsStepCount.mock.results[0].value);
       expect(mockIsStepCount).toHaveBeenCalled();
@@ -2030,6 +2036,17 @@ describe("generateChatResponse Inngest Function", () => {
     });
 
     it("sets allTools to undefined when hasAnyTools is false", async () => {
+      mockGetUserSettings.mockResolvedValueOnce({
+        memoryEnabled: false,
+        internalToolApprovals: JSON.stringify({
+          app_help: "block",
+          inspect_workspace: "block",
+          manage_project: "block",
+          manage_agent: "block",
+          manage_prompt: "block",
+          manage_workflow: "block",
+        }),
+      });
       mockLoadChatContext.mockResolvedValueOnce({
         servers: [],
         activeKbId: null,
@@ -2715,7 +2732,7 @@ describe("generateChatResponse Inngest Function", () => {
       expect(mockStreamText).toHaveBeenCalledWith(
         expect.objectContaining({
           toolApproval: expect.objectContaining({
-            create_skill: "user-approval",
+            manage_skill: "user-approval",
           }),
           experimental_toolApprovalSecret: expect.any(String),
         }),
@@ -2819,7 +2836,7 @@ describe("generateChatResponse Inngest Function", () => {
       expect(mockStreamText).toHaveBeenCalledWith(
         expect.objectContaining({
           toolApproval: expect.objectContaining({
-            create_skill: "not-applicable",
+            manage_skill: "not-applicable",
           }),
         }),
       );
@@ -3007,6 +3024,60 @@ describe("generateChatResponse Inngest Function", () => {
       const meta = JSON.parse(mockUpdateResponse.mock.calls[0][0].metadata);
       expect(meta.approvalRound).toBe(2);
       expect(meta.pendingApprovals[0].approvalId).toBe("app-2");
+    });
+
+    it("pre-unlocks parked and completed deferred tools with deferLoading: false on approval resume", async () => {
+      mockStreamText.mockReset();
+      mockDbSelectLimit
+        .mockResolvedValueOnce([
+          {
+            content: "",
+            parentId: "u-1",
+            metadata: JSON.stringify({
+              model: "gpt-4o",
+              approvalRound: 1,
+              parentUserMessageId: "u-1",
+              toolCalls: [{ toolCallId: "tc-prev", toolName: "manage_project", args: {} }],
+              toolResults: [{ toolCallId: "tc-prev", toolName: "manage_project", result: { success: true } }],
+              pendingApprovals: [
+                {
+                  approvalId: "app-wf",
+                  toolCallId: "tc-wf",
+                  toolName: "manage_workflow",
+                  args: {},
+                  signature: "sig-wf",
+                },
+              ],
+            }),
+          },
+        ])
+        .mockResolvedValueOnce([{ metadata: JSON.stringify({ model: "gpt-4o" }) }]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Done" };
+        })(),
+        usage: Promise.resolve({}),
+        finishReason: Promise.resolve("stop"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-preunlock",
+            userId: "user-1",
+            assistantMessageId: "asst-preunlock",
+            decisions: [{ approvalId: "app-wf", approved: true }],
+          },
+        },
+      });
+
+      const tools = mockStreamText.mock.calls[0][0].tools;
+      expect(tools.manage_workflow.deferLoading).toBe(false);
+      expect(tools.manage_project.deferLoading).toBe(false);
+      expect(tools.manage_agent.deferLoading).toBe(true);
     });
 
     it("covers parked null content, missing userMessageId, missing model fallback, server autoApprovedTools, and wrapSubagentTools persistence", async () => {
@@ -3321,6 +3392,91 @@ describe("generateChatResponse Inngest Function", () => {
           serverName: "Internal",
         },
       ]);
+    });
+
+    it("restores unused search_app_tools matches in preUnlockedToolNames on approval resume", async () => {
+      mockUpdateResponse.mockClear();
+      mockStreamText.mockReset();
+
+      const { buildOrchestratorToolSet } = await import(
+        "@/lib/inngest/chat-response/tool-set-builder"
+      );
+
+      mockDbSelectLimit
+        .mockResolvedValueOnce([
+          {
+            content: "",
+            parentId: "u-search-1",
+            metadata: JSON.stringify({
+              model: "gpt-4o",
+              approvalRound: 1,
+              parentUserMessageId: "u-search-1",
+              toolCalls: [
+                {
+                  toolCallId: "tc-search-1",
+                  toolName: "search_app_tools",
+                  args: { query: "manage" },
+                },
+                {
+                  toolCallId: "tc-search-2",
+                  toolName: "search_app_tools",
+                  args: { query: "empty" },
+                },
+              ],
+              toolResults: [
+                {
+                  toolCallId: "tc-search-1",
+                  toolName: "search_app_tools",
+                  result: {
+                    tools: [{ name: "manage_agent" }, { name: 123 }],
+                  },
+                },
+                {
+                  toolCallId: "tc-search-2",
+                  toolName: "search_app_tools",
+                  result: { error: "none" },
+                },
+              ],
+              pendingApprovals: [
+                {
+                  approvalId: "app-search-1",
+                  toolCallId: "tc-proj-1",
+                  toolName: "manage_project",
+                  serverName: "Internal",
+                  args: { action: "create" },
+                  signature: "sig-search-1",
+                },
+              ],
+            }),
+          },
+        ])
+        .mockResolvedValueOnce([{ metadata: JSON.stringify({ model: "gpt-4o" }) }]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Resumed" };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+        finishReason: Promise.resolve("stop"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-res-search",
+            userId: "user-1",
+            assistantMessageId: "asst-res-search",
+            decisions: [{ approvalId: "app-search-1", approved: true }],
+          },
+        },
+      });
+
+      const lastCall = vi.mocked(buildOrchestratorToolSet).mock.calls.at(-1)?.[0];
+      expect(lastCall?.preUnlockedToolNames?.has("manage_project")).toBe(true);
+      expect(lastCall?.preUnlockedToolNames?.has("search_app_tools")).toBe(true);
+      expect(lastCall?.preUnlockedToolNames?.has("manage_agent")).toBe(true);
     });
 
     it("updates existing assistant row on completion when subagent persistPendingApprovals created it on a first turn", async () => {

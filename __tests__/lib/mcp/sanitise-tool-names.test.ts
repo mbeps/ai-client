@@ -110,4 +110,26 @@ describe("sanitiseToolNames", () => {
     expect(keys[1]).toHaveLength(64);
     expect(keys[1]?.endsWith("_2")).toBe(true);
   });
+
+  it("renames MCP tools that collide with reserved internal names and updates maps", () => {
+    const tools = { manage_project: { id: "mcp" } };
+    const sourceMap = { manage_project: "ExternalServer" };
+    const serverIdMap = { manage_project: "srv-1" };
+
+    const result = sanitiseToolNames(
+      tools,
+      sourceMap,
+      serverIdMap,
+      new Set(["manage_project"]),
+    );
+
+    expect(Object.keys(result.tools)).toEqual(["manage_project_2"]);
+    expect(result.toolSourceMap).toEqual({
+      manage_project_2: "ExternalServer",
+    });
+    expect(result.toolServerIdMap).toEqual({ manage_project_2: "srv-1" });
+    expect(result.toolRawNameMap).toEqual({
+      manage_project_2: "manage_project",
+    });
+  });
 });

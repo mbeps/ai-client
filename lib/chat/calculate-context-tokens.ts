@@ -1,4 +1,4 @@
-import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { DEFERRED_APP_TOOL_NAMES, INTERNAL_TOOL_IDS } from "@/config/tools";
 import type { UserModelOption } from "@/hooks/use-user-models";
 import { estimateAttachmentTokens } from "@/lib/chat/estimate-attachment-tokens";
 import { estimateTokens } from "@/lib/chat/estimate-tokens";
@@ -8,6 +8,18 @@ import { getInteractiveUiSystemPrompt } from "@/lib/generative-ui/catalog";
 import { sanitizeSubagentOutput } from "@/lib/subagents/subagent-dispatch-tool";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Message } from "@/types/message/message";
+
+const ZERO_STEP0_SCHEMA_TOOLS = new Set<string>([
+  INTERNAL_TOOL_IDS.INTERACTIVE_UI,
+  "interactive_ui",
+  INTERNAL_TOOL_IDS.MANAGE_SKILL,
+  ...DEFERRED_APP_TOOL_NAMES,
+]);
+
+const LIGHTWEIGHT_TOOL_TOKEN_WEIGHTS: Record<string, number | undefined> = {
+  app_help: 120,
+  search_app_tools: 130,
+};
 
 /**
  * Represents context category breakdown.
@@ -220,12 +232,15 @@ export function calculateContextUsage(
 
   // 3. Tool Definitions
   // Each active tool schema averages ~150-250 tokens in JSON schema definition.
-  // Exclude interactive_ui since it injects system prompt instructions rather than a tool schema.
-  const schemaToolNames = toolNames.filter(
-    (name) =>
-      name !== INTERNAL_TOOL_IDS.INTERACTIVE_UI && name !== "interactive_ui",
-  );
-  const toolSchemaTokens = schemaToolNames.length * 180;
+  // Exclude interactive_ui (prompt-based) and deferred workspace tools (0 step-0 tokens).
+  let toolSchemaTokens = 0;
+  for (const name of toolNames) {
+    if (ZERO_STEP0_SCHEMA_TOOLS.has(name)) continue;
+    const weight = Object.hasOwn(LIGHTWEIGHT_TOOL_TOKEN_WEIGHTS, name)
+      ? LIGHTWEIGHT_TOOL_TOKEN_WEIGHTS[name]
+      : undefined;
+    toolSchemaTokens += weight ?? 180;
+  }
   const serverOverheadTokens = mcpServerCount * 50;
   const toolDefinitions = toolSchemaTokens + serverOverheadTokens;
 

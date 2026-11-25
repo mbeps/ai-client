@@ -1,6 +1,6 @@
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { registerManageSkillTool } from "@/lib/app-tools/register-manage-skill-tool";
 import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
-import { registerSkillAuthoringTools } from "@/lib/chat/register-skill-authoring-tools";
 import { registerSkillTool } from "@/lib/chat/register-skill-tool";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import { checkVisionSupport } from "@/lib/chat/vision-guard";
@@ -215,7 +215,10 @@ export function filterStepTools(params: FilterStepToolsParams): {
     Object.assign(filteredTools, registerSkillTool(userId));
   }
   if (allowedToolIds.has(INTERNAL_TOOL_IDS.MANAGE_SKILL)) {
-    Object.assign(filteredTools, registerSkillAuthoringTools(userId));
+    Object.assign(
+      filteredTools,
+      registerManageSkillTool(userId, { deferLoading: false }),
+    );
   }
 
   const hasStepSubagents = Boolean(

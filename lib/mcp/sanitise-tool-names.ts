@@ -36,6 +36,7 @@ export function sanitiseToolNames<T>(
   tools: Record<string, T>,
   toolSourceMap?: Record<string, string>,
   toolServerIdMap?: Record<string, string>,
+  reservedNames?: ReadonlySet<string>,
 ): {
   tools: Record<string, T>;
   toolSourceMap: Record<string, string>;
@@ -47,7 +48,7 @@ export function sanitiseToolNames<T>(
   const resultServerIdMap: Record<string, string> = {};
   const resultRawNameMap: Record<string, string> = {};
 
-  const usedNames = new Set<string>();
+  const usedNames = new Set<string>(reservedNames);
 
   for (const [originalName, tool] of Object.entries(tools)) {
     const baseCleaned = sanitiseToolName(originalName);
