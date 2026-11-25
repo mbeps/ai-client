@@ -72,7 +72,7 @@ export interface ChatInputProps {
     reasoningEffort?: ReasoningEffort,
     subagentIds?: string[],
     approvalMode?: ApprovalMode,
-  ) => void;
+  ) => unknown;
 
   /** Optional callback for cancellation (e.g., when used as an edit form). */
   onCancel?: () => void;

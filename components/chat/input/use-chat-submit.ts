@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { resolvePromptPayload } from "@/components/chat/input/resolve-prompt-payload";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
@@ -26,7 +26,7 @@ export interface UseChatSubmitOptions {
     reasoningEffort?: ReasoningEffort,
     subagentIds?: string[],
     approvalMode?: ApprovalMode,
-  ) => void;
+  ) => unknown;
   isLoading?: boolean;
   isSendDisabled: boolean;
   supportsTools: boolean;
@@ -87,36 +87,47 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     handleCommandKeyDown,
   } = options;
 
-  const handleSend = useCallback(() => {
-    if (isLoading || isSendDisabled) return;
+  const isSubmittingRef = useRef(false);
 
+  const handleSend = useCallback(async () => {
+    if (isLoading || isSendDisabled || isSubmittingRef.current) return;
+
+    isSubmittingRef.current = true;
     const effectiveTools = supportsTools ? Array.from(selectedTools) : [];
     const effectiveServerIds = supportsTools
       ? Array.from(selectedServerIds)
       : [];
     const promptPayload = resolvePromptPayload(promptList.map((p) => p.id));
 
-    onSend(
-      input,
-      attachments,
-      modelId,
-      effectiveServerIds,
-      effectiveTools,
-      promptPayload,
-      selectedAssistant?.id,
-      Array.from(selectedKbs),
-      Array.from(selectedSkills),
-      subagentsEnabled,
-      subagentModelId,
-      reasoningEffort,
-      selectedSubagentIds,
-      approvalMode,
-    );
-    setInput("");
-    clearAttachments();
-    handleClearPrompts();
-    setSelectedAssistant(null);
-    clearSelectedSkills();
+    try {
+      const result = await onSend(
+        input,
+        attachments,
+        modelId,
+        effectiveServerIds,
+        effectiveTools,
+        promptPayload,
+        selectedAssistant?.id,
+        Array.from(selectedKbs),
+        Array.from(selectedSkills),
+        subagentsEnabled,
+        subagentModelId,
+        reasoningEffort,
+        selectedSubagentIds,
+        approvalMode,
+      );
+      if (result === false) return;
+
+      setInput("");
+      clearAttachments();
+      handleClearPrompts();
+      setSelectedAssistant(null);
+      clearSelectedSkills();
+    } catch {
+      // Preserve composer draft and selections when submission fails.
+    } finally {
+      isSubmittingRef.current = false;
+    }
   }, [
     isLoading,
     isSendDisabled,
@@ -150,7 +161,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
 
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        handleSend();
+        void handleSend();
       }
     },
     [handleCommandKeyDown, handleSend],

@@ -70,8 +70,8 @@ export default function HomePage() {
     reasoningEffort?: ReasoningEffort,
     subagentIds?: string[],
     approvalMode?: ApprovalMode,
-  ) => {
-    if (isStarting || isModelsLoading) return;
+  ): Promise<boolean> => {
+    if (isStarting || isModelsLoading) return false;
 
     if (chatModels.length === 0) {
       toast.error("No AI models configured. Please set up a provider first.", {
@@ -80,7 +80,7 @@ export default function HomePage() {
           onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
         },
       });
-      return;
+      return false;
     }
 
     setIsStarting(true);
@@ -109,11 +109,13 @@ export default function HomePage() {
         approvalMode,
       });
       router.push(ROUTES.CHATS.detail(chatId));
+      return true;
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to start chat",
       );
       setIsStarting(false);
+      return false;
     }
   };
 

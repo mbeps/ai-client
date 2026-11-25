@@ -67,7 +67,7 @@ export function useChatModelSelection(
 ) {
   const [modelId, setModelId] = useState<string>(initialModelId ?? "");
   const hasManualSelectionRef = useRef(false);
-  const lastInitialModelIdRef = useRef<string | undefined>(initialModelId);
+  const lastInitialModelIdRef = useRef<string | undefined>(undefined);
   const hasNoModels = chatModels.length === 0 && !isModelsLoading;
 
   const selectModel = useCallback((nextModelId: string) => {
@@ -91,7 +91,14 @@ export function useChatModelSelection(
     if (chatModels.length === 0 || isModelsLoading) return;
 
     const initialChanged = lastInitialModelIdRef.current !== initialModelId;
-    lastInitialModelIdRef.current = initialModelId;
+    const isInitialAvailable =
+      !initialModelId ||
+      chatModels.some(
+        (m) => m.modelId === initialModelId || m.id === initialModelId,
+      );
+    if (isInitialAvailable) {
+      lastInitialModelIdRef.current = initialModelId;
+    }
     const preferInitial = initialChanged && !hasManualSelectionRef.current;
 
     Promise.resolve().then(() => {

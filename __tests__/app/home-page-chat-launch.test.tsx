@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/config/routes";
 import {
@@ -10,8 +16,17 @@ const mockPush = vi.fn();
 const mockCreateChatDb = vi.fn();
 const mockSetKnowledgebaseDb = vi.fn();
 const mockHydrationCalls: string[][] = [];
+const mockToastError = vi.fn();
+let mockUserModels: Array<{ id: string; modelId: string; name: string }> = [];
+let mockIsModelsLoading = false;
 let lastChatInputProps: Record<string, any> | null = null;
 let mockStoreState: Record<string, any> = {};
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: (...args: any[]) => mockToastError(...args),
+  },
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -24,10 +39,14 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+let mockSession: { user: { id: string; name?: string } } | null = {
+  user: { id: "user-1", name: "Maruf Bepary" },
+};
+
 vi.mock("@/lib/auth/auth-client", () => ({
   authClient: {
     useSession: () => ({
-      data: { user: { id: "user-1", name: "Maruf Bepary" } },
+      data: mockSession,
     }),
   },
 }));
@@ -41,15 +60,8 @@ vi.mock("@/hooks/use-resource-hydration", () => ({
 
 vi.mock("@/hooks/use-user-models", () => ({
   useUserModels: () => ({
-    models: [
-      { id: "m-1", modelId: "openrouter/free", name: "Auto" },
-      {
-        id: "m-2",
-        modelId: "nvidia/nemotron-3.5-lightning:free",
-        name: "Nemotron",
-      },
-    ],
-    isLoading: false,
+    models: mockUserModels,
+    isLoading: mockIsModelsLoading,
   }),
 }));
 
@@ -131,6 +143,16 @@ describe("HomePage chat launch parity", () => {
     vi.clearAllMocks();
     mockHydrationCalls.length = 0;
     lastChatInputProps = null;
+    mockIsModelsLoading = false;
+    mockSession = { user: { id: "user-1", name: "Maruf Bepary" } };
+    mockUserModels = [
+      { id: "m-1", modelId: "openrouter/free", name: "Auto" },
+      {
+        id: "m-2",
+        modelId: "nvidia/nemotron-3.5-lightning:free",
+        name: "Nemotron",
+      },
+    ];
     useChatToolsStore.getState().clearAll();
     mockCreateChatDb.mockResolvedValue("chat-new-123");
     mockSetKnowledgebaseDb.mockResolvedValue(undefined);
@@ -261,5 +283,89 @@ describe("HomePage chat launch parity", () => {
     await waitFor(() => {
       expect(lastChatInputProps?.isLoading).toBe(false);
     });
+  });
+
+  it("returns true on launch success and false on creation or KB failure so ChatInput preserves draft", async () => {
+    const { unmount } = render(<HomePage />);
+    let successResult: boolean | undefined;
+    await act(async () => {
+      successResult = await lastChatInputProps?.onSend("Hello");
+    });
+    expect(successResult).toBe(true);
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.CHATS.detail("chat-new-123"));
+    unmount();
+
+    mockPush.mockClear();
+    render(<HomePage />);
+    mockCreateChatDb.mockRejectedValueOnce(new Error("Create failed"));
+    let createFailResult: boolean | undefined;
+    await act(async () => {
+      createFailResult = await lastChatInputProps?.onSend("Keep this draft");
+    });
+    expect(createFailResult).toBe(false);
+    expect(mockToastError).toHaveBeenCalledWith("Create failed");
+    expect(mockPush).not.toHaveBeenCalled();
+
+    mockSetKnowledgebaseDb.mockRejectedValueOnce("non-error failure");
+    let kbFailResult: boolean | undefined;
+    await act(async () => {
+      kbFailResult = await lastChatInputProps?.onSend(
+        "Draft with KB",
+        [],
+        "openrouter/free",
+        [],
+        [],
+        undefined,
+        undefined,
+        ["kb-1"],
+      );
+    });
+    expect(kbFailResult).toBe(false);
+    expect(mockToastError).toHaveBeenCalledWith("Failed to start chat");
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("returns false when models are loading or no models are configured", async () => {
+    mockIsModelsLoading = true;
+    const { rerender } = render(<HomePage />);
+    let loadingResult: boolean | undefined;
+    await act(async () => {
+      loadingResult = await lastChatInputProps?.onSend("Wait");
+    });
+    expect(loadingResult).toBe(false);
+    expect(mockCreateChatDb).not.toHaveBeenCalled();
+
+    mockIsModelsLoading = false;
+    mockSession = { user: { id: "user-1", name: "Maruf Bepary" } };
+    mockUserModels = [];
+    rerender(<HomePage />);
+    let noModelsResult: boolean | undefined;
+    await act(async () => {
+      noModelsResult = await lastChatInputProps?.onSend("No models");
+    });
+    expect(noModelsResult).toBe(false);
+    expect(mockToastError).toHaveBeenCalledWith(
+      "No AI models configured. Please set up a provider first.",
+      expect.objectContaining({
+        action: expect.objectContaining({ label: "Settings" }),
+      }),
+    );
+    const toastAction = mockToastError.mock.calls[0][1].action;
+    toastAction.onClick();
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.SETTINGS.PROVIDERS.path);
+  });
+
+  it("renders fallback greeting and default input props when session name and userSettings are absent", () => {
+    mockSession = null;
+    mockStoreState = {
+      ...mockStoreState,
+      userSettings: null,
+    };
+
+    render(<HomePage />);
+
+    expect(screen.getByText("Hello, there")).toBeInTheDocument();
+    expect(lastChatInputProps?.initialModelId).toBeUndefined();
+    expect(lastChatInputProps?.initialApprovalMode).toBe("ask");
   });
 });
