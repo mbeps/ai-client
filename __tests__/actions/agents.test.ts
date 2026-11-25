@@ -17,6 +17,9 @@ vi.mock("@/config/env", () => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/headers", () => ({ headers: vi.fn().mockResolvedValue({}) }));
+vi.mock("@/lib/knowledgebases/filter-owned-kb-ids", () => ({
+  filterOwnedKbIds: vi.fn(async (_userId: string, kbIds: string[]) => kbIds),
+}));
 
 const chainable = vi.hoisted(() => {
   const c = {} as Record<string, ReturnType<typeof vi.fn>>;

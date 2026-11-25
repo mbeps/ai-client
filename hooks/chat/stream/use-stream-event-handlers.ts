@@ -15,7 +15,7 @@ import type {
   StreamDeltaSetters,
   StreamRefsObject,
 } from "@/hooks/chat/stream/use-stream-types";
-import { extractSkillChangesFromToolResults } from "@/lib/chat/extract-skill-changes-from-tool-results";
+import { extractWorkspaceChangesFromToolResults } from "@/lib/chat/extract-workspace-changes";
 import { buildChatFromRows } from "@/lib/chat/message-tree-utils";
 import {
   accumulateReasoningDelta,
@@ -163,8 +163,15 @@ function executeStandardFinish(params: {
   const resolvedAssistantId = params.assistantId || crypto.randomUUID();
   const durationMs = Date.now() - params.pending.startTime;
 
-  if (extractSkillChangesFromToolResults(completedTools).length > 0) {
-    void useAppStore.getState().loadSkills();
+  const changedDomains = extractWorkspaceChangesFromToolResults(completedTools);
+  if (changedDomains.size > 0) {
+    const store = useAppStore.getState();
+    if (changedDomains.has("skills")) void store.loadSkills();
+    if (changedDomains.has("projects")) void store.loadProjects();
+    if (changedDomains.has("agents")) void store.loadAgents();
+    if (changedDomains.has("prompts")) void store.loadPrompts();
+    if (changedDomains.has("workflows")) void store.loadWorkflows();
+    if (changedDomains.has("memories")) void store.loadMemories();
   }
 
   const metadata = buildAssistantFinishMetadata({

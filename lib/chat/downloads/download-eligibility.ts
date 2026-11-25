@@ -1,3 +1,4 @@
+import { INTERNAL_TOOL_NAMES } from "@/config/tool-approval";
 import { getExtension } from "@/lib/chat/downloads/download-type-inference";
 import {
   isFileProducerOrMutationTool,
@@ -17,21 +18,12 @@ const STORAGE_URL_SUBSTRINGS = [
 ];
 
 const INTERNAL_EXCLUDED_TOOLS = new Set([
-  "get_file_url",
-  "manage_artifact",
-  "search_knowledge_base",
-  "delegate_task",
-  "save_memory",
-  "manage_memory",
-  "load_skill",
+  ...INTERNAL_TOOL_NAMES,
   "create_skill",
   "update_skill",
   "write_skill_file",
   "read_skill_file",
   "delete_skill_file",
-  "scratchpad_write",
-  "scratchpad_read",
-  "scratchpad_list",
 ]);
 
 const WEB_SEARCH_TOOL_REGEX =

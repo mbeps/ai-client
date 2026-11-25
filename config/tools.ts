@@ -9,10 +9,25 @@ export const INTERNAL_TOOL_IDS = {
   MANAGE_ARTIFACT: "internal:tool:manage_artifact",
   MANAGE_MEMORY: "internal:tool:manage_memory",
   MANAGE_SKILL: "internal:tool:manage_skill",
+  APP_TOOLS: "internal:tool:app_tools",
   SEARCH_KNOWLEDGE_BASE: "internal:tool:search_knowledge_base",
   DELEGATE_TASK: "internal:tool:delegate_task",
   INTERACTIVE_UI: "internal:tool:interactive_ui",
 } as const;
+
+/**
+ * Deferred workspace tools registered with `deferLoading: true` and discovered
+ * on-demand via `search_app_tools`. Single source of truth for deferral,
+ * subagent isolation, and step-0 context meter pricing.
+ */
+export const DEFERRED_APP_TOOL_NAMES: readonly string[] = [
+  "inspect_workspace",
+  "manage_skill",
+  "manage_project",
+  "manage_agent",
+  "manage_prompt",
+  "manage_workflow",
+] as const;
 
 /**
  * Default tool IDs enabled for new chats and unconfigured sessions.
@@ -93,6 +108,82 @@ export const INTERNAL_TOOL_CATALOGUE = [
       "Registered when a knowledge base is attached and indexing has finished.",
   },
   {
+    id: "app_help",
+    name: "app_help",
+    displayName: "App Help",
+    category: "App",
+    defaultApproval: "auto",
+    description:
+      "Provides on-demand documentation, navigation routes, and configuration guides for features in this app (connectors, providers, agents, workflows, skills, knowledge bases, memory, tools, and settings).",
+    availability: "Always registered for tool-calling models unless blocked.",
+  },
+  {
+    id: "search_app_tools",
+    name: "search_app_tools",
+    displayName: "Search App Tools",
+    category: "App",
+    defaultApproval: "auto",
+    description:
+      "Searches and unlocks deferred workspace inspection and authoring tools on demand without inflating the initial context window.",
+    availability:
+      "Registered for tool-calling models when at least one deferred workspace tool is active.",
+  },
+  {
+    id: "inspect_workspace",
+    name: "inspect_workspace",
+    displayName: "Inspect Workspace",
+    category: "App",
+    defaultApproval: "auto",
+    description:
+      "Lists or inspects the user's workspace resources (skills, projects, agents, prompts, workflows, memories, models, knowledge bases, and connectors) without exposing secrets.",
+    availability:
+      "Deferred tool unlocked on demand via search_app_tools for tool-calling models.",
+  },
+  {
+    id: "manage_project",
+    name: "manage_project",
+    displayName: "Manage Project",
+    category: "App",
+    defaultApproval: "ask",
+    description:
+      "Creates or updates a Project owned by the user, including system prompt, tools, skills, knowledge base, and subagent configuration.",
+    availability:
+      "Deferred tool unlocked on demand via search_app_tools for tool-calling models.",
+  },
+  {
+    id: "manage_agent",
+    name: "manage_agent",
+    displayName: "Manage Agent",
+    category: "App",
+    defaultApproval: "ask",
+    description:
+      "Creates or updates a custom Agent owned by the user with prompt, model, tools, knowledge bases, guardrails, and subagent links.",
+    availability:
+      "Deferred tool unlocked on demand via search_app_tools for tool-calling models.",
+  },
+  {
+    id: "manage_prompt",
+    name: "manage_prompt",
+    displayName: "Manage Prompt",
+    category: "App",
+    defaultApproval: "ask",
+    description:
+      "Creates or updates a reusable slash-command Prompt shortcut owned by the user.",
+    availability:
+      "Deferred tool unlocked on demand via search_app_tools for tool-calling models.",
+  },
+  {
+    id: "manage_workflow",
+    name: "manage_workflow",
+    displayName: "Manage Workflow",
+    category: "App",
+    defaultApproval: "ask",
+    description:
+      "Creates or updates a visual DAG Workflow owned by the user, including validated nodes and directed edges.",
+    availability:
+      "Deferred tool unlocked on demand via search_app_tools for tool-calling models.",
+  },
+  {
     id: "load_skill",
     name: "load_skill",
     displayName: "Load Skill",
@@ -103,54 +194,15 @@ export const INTERNAL_TOOL_CATALOGUE = [
     availability: "Registered when the chat has at least one skill available.",
   },
   {
-    id: "create_skill",
-    name: "create_skill",
-    displayName: "Create Skill",
+    id: INTERNAL_TOOL_IDS.MANAGE_SKILL,
+    name: "manage_skill",
+    displayName: "Manage Skill",
     category: "Skills",
     defaultApproval: "ask",
     description:
-      "Creates a new skill owned by the user, with its name, description, and SKILL.md instruction body. Use this to define and persist a new reusable capability or workflow.",
-    availability: "Always registered for tool-calling models.",
-  },
-  {
-    id: "update_skill",
-    name: "update_skill",
-    displayName: "Update Skill",
-    category: "Skills",
-    defaultApproval: "ask",
-    description:
-      "Updates a skill's display name, description, or enabled flag. Use this when you need to modify skill metadata or toggle its active state.",
-    availability: "Always registered for tool-calling models.",
-  },
-  {
-    id: "write_skill_file",
-    name: "write_skill_file",
-    displayName: "Write Skill File",
-    category: "Skills",
-    defaultApproval: "ask",
-    description:
-      "Writes one file inside an existing skill, creating it or replacing its content. Use this to add or update reference files and instruction bodies within a skill.",
-    availability: "Always registered for tool-calling models.",
-  },
-  {
-    id: "read_skill_file",
-    name: "read_skill_file",
-    displayName: "Read Skill File",
-    category: "Skills",
-    defaultApproval: "auto",
-    description:
-      "Lists every file in a skill, or reads the full content of one file. Use this to inspect skill contents before modifying or referencing them.",
-    availability: "Always registered for tool-calling models.",
-  },
-  {
-    id: "delete_skill_file",
-    name: "delete_skill_file",
-    displayName: "Delete Skill File",
-    category: "Skills",
-    defaultApproval: "ask",
-    description:
-      "Removes a bundled reference file from a skill. Use this to clean up outdated or unused files within a skill package.",
-    availability: "Always registered for tool-calling models.",
+      "Creates or updates a user-owned Agent Skill and writes or deletes bundled files inside the skill package.",
+    availability:
+      "Deferred tool unlocked on demand via search_app_tools for tool-calling models.",
   },
   {
     id: "get_file_url",
@@ -228,9 +280,14 @@ export const PICKER_INTERNAL_TOOLS: readonly PickerInternalTool[] = [
   },
 ] as const;
 
-/** Map of optional alias tool names to internal display names. */
+/** Map of optional alias and retired legacy tool names to internal display names. */
 const TOOL_NAME_ALIASES: Record<string, string> = {
   manage_memory: "Save Memory",
+  create_skill: "Create Skill",
+  update_skill: "Update Skill",
+  write_skill_file: "Write Skill File",
+  read_skill_file: "Read Skill File",
+  delete_skill_file: "Delete Skill File",
 };
 
 /**

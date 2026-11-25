@@ -22,9 +22,13 @@ vi.mock("@/lib/subagents/create-subagent-dispatch-tool", async (importOriginal) 
     createSubagentDispatchTool: (opts: any) => mockCreateSubagentDispatchTool(opts),
   };
 });
+vi.mock("@/lib/app-tools/register-manage-skill-tool", () => ({
+  registerManageSkillTool: vi.fn((_uid: string, opts?: { deferLoading?: boolean }) => ({
+    manage_skill: { execute: vi.fn(), deferLoading: opts?.deferLoading ?? true },
+  })),
+}));
 vi.mock("@/lib/skills/register-skill-tool", () => ({
   registerSkillTool: vi.fn(() => ({ activate_skill: { execute: vi.fn() } })),
-  registerSkillAuthoringTools: vi.fn(() => ({ manage_skill: { execute: vi.fn() } })),
 }));
 vi.mock("@/lib/chat/register-knowledgebase-tool", () => ({
   registerKnowledgebaseTool: vi.fn(() => ({ search_knowledge_base: { execute: vi.fn() } })),

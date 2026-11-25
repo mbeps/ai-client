@@ -41,6 +41,10 @@ const chainable = vi.hoisted(() => {
 
 vi.mock("@/drizzle/db", () => ({ db: chainable }));
 
+vi.mock("@/lib/knowledgebases/filter-owned-kb-ids", () => ({
+  filterOwnedKbIds: vi.fn(async (_userId: string, kbIds: string[]) => kbIds),
+}));
+
 vi.mock("@/lib/auth/require-session", () => ({
   requireSession: vi.fn().mockResolvedValue({
     user: { id: "user-1", name: "Test User", email: "test@example.com" },

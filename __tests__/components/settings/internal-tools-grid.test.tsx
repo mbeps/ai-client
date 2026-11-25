@@ -53,7 +53,7 @@ describe("InternalToolsGrid", () => {
 
   it("applies overrides from userSettings and updates approval on toggle", async () => {
     mockUserSettings = {
-      internalToolApprovals: JSON.stringify({ create_skill: "auto" }),
+      internalToolApprovals: JSON.stringify({ manage_skill: "auto" }),
     };
     mockUpdateInternalToolApproval.mockResolvedValue({
       ok: true,
@@ -64,12 +64,12 @@ describe("InternalToolsGrid", () => {
 
     expect(mockLoadUserSettings).not.toHaveBeenCalled();
 
-    // create_skill is overridden to auto, so clicking Require approval toggles it back to ask
+    // manage_skill is overridden to auto, so clicking Require approval toggles it back to ask
     const autoRadio = screen.getByRole("radio", {
-      name: "Auto-approve Create Skill",
+      name: "Auto-approve Manage Skill",
     });
     const askRadio = screen.getByRole("radio", {
-      name: "Require approval for Create Skill",
+      name: "Require approval for Manage Skill",
     });
     expect(autoRadio).toHaveAttribute("aria-checked", "true");
 
@@ -77,7 +77,7 @@ describe("InternalToolsGrid", () => {
 
     await waitFor(() => {
       expect(mockUpdateInternalToolApproval).toHaveBeenCalledWith({
-        toolName: "create_skill",
+        toolName: "manage_skill",
         approval: "ask",
       });
     });
@@ -93,13 +93,13 @@ describe("InternalToolsGrid", () => {
     mockUserSettings = { internalToolApprovals: null };
     mockUpdateInternalToolApproval.mockResolvedValueOnce({
       ok: true,
-      value: { internalToolApprovals: JSON.stringify({ create_skill: "auto" }) },
+      value: { internalToolApprovals: JSON.stringify({ manage_skill: "auto" }) },
     });
 
     render(<InternalToolsGrid groups={groups} />);
 
     const autoRadio = screen.getByRole("radio", {
-      name: "Auto-approve Create Skill",
+      name: "Auto-approve Manage Skill",
     });
     fireEvent.click(autoRadio);
 
@@ -110,12 +110,12 @@ describe("InternalToolsGrid", () => {
     mockUpdateInternalToolApproval.mockResolvedValueOnce({
       ok: true,
       value: {
-        internalToolApprovals: JSON.stringify({ create_skill: "block" }),
+        internalToolApprovals: JSON.stringify({ manage_skill: "block" }),
       },
     });
 
     const blockRadio = screen.getByRole("radio", {
-      name: "Block Create Skill",
+      name: "Block Manage Skill",
     });
     fireEvent.click(blockRadio);
 

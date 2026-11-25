@@ -53,6 +53,7 @@ export interface BuildOrchestratorToolSetParams {
   resolvedModelId: string;
   workerResolved: any;
   internalToolOverrides?: Record<string, ToolPermissionMode | undefined>;
+  preUnlockedToolNames?: ReadonlySet<string>;
   wrapSubagentTools?: (
     workerTools: Record<string, any>,
     targetAgent: Agent,

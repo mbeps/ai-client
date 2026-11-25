@@ -192,6 +192,25 @@ describe("calculate-context-tokens utility", () => {
       );
     });
 
+    it("prices app_help (120) and search_app_tools (130) and treats deferred tools as 0 step-0 tokens", () => {
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        toolNames: [
+          "app_help",
+          "search_app_tools",
+          "inspect_workspace",
+          "manage_skill",
+          "manage_project",
+          "manage_agent",
+          "manage_prompt",
+          "manage_workflow",
+          "internal:tool:manage_skill",
+        ],
+      });
+
+      expect(result.breakdown.toolDefinitions).toBe(120 + 130);
+    });
+
     it("handles delegate_task and manage_artifact tool results properly", () => {
       const messages: Message[] = [
         {

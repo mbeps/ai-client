@@ -115,13 +115,13 @@ describe("updateInternalToolApproval", () => {
       userId,
       internalToolApprovals: JSON.stringify({
         save_memory: "ask",
-        create_skill: "auto",
+        manage_skill: "auto",
       }),
     };
     mockUpdateReturning.mockResolvedValueOnce([updatedRow]);
 
     const result = await updateInternalToolApproval({
-      toolName: "create_skill",
+      toolName: "manage_skill",
       approval: "auto",
     });
 
@@ -130,7 +130,7 @@ describe("updateInternalToolApproval", () => {
       expect.objectContaining({
         internalToolApprovals: JSON.stringify({
           save_memory: "ask",
-          create_skill: "auto",
+          manage_skill: "auto",
         }),
         updatedAt: expect.any(Date),
       }),
@@ -143,7 +143,7 @@ describe("updateInternalToolApproval", () => {
     mockSelectFor.mockResolvedValueOnce([
       {
         internalToolApprovals: JSON.stringify({
-          create_skill: "auto",
+          manage_skill: "auto",
           save_memory: "ask",
         }),
       },
@@ -156,8 +156,8 @@ describe("updateInternalToolApproval", () => {
     mockUpdateReturning.mockResolvedValueOnce([updatedRow]);
 
     const result = await updateInternalToolApproval({
-      toolName: "create_skill",
-      approval: "ask", // defaultApproval for create_skill is "ask"
+      toolName: "manage_skill",
+      approval: "ask", // defaultApproval for manage_skill is "ask"
     });
 
     expect(mockUpdateSet).toHaveBeenCalledWith(
@@ -192,7 +192,7 @@ describe("updateInternalToolApproval", () => {
 
   it("stores null when all overrides are pruned back to defaults", async () => {
     mockSelectFor.mockResolvedValueOnce([
-      { internalToolApprovals: JSON.stringify({ create_skill: "auto" }) },
+      { internalToolApprovals: JSON.stringify({ manage_skill: "auto" }) },
     ]);
     const updatedRow = {
       id: "settings-1",
@@ -202,7 +202,7 @@ describe("updateInternalToolApproval", () => {
     mockUpdateReturning.mockResolvedValueOnce([updatedRow]);
 
     const result = await updateInternalToolApproval({
-      toolName: "create_skill",
+      toolName: "manage_skill",
       approval: "ask",
     });
 
@@ -281,14 +281,14 @@ describe("updateInternalToolApproval", () => {
 
     const [res1, res2] = await Promise.all([
       updateInternalToolApproval({ toolName: "save_memory", approval: "block" }),
-      updateInternalToolApproval({ toolName: "create_skill", approval: "auto" }),
+      updateInternalToolApproval({ toolName: "manage_skill", approval: "auto" }),
     ]);
 
     expect(res1.ok).toBe(true);
     expect(res2.ok).toBe(true);
     expect(JSON.parse(storedRow!.internalToolApprovals!)).toEqual({
       save_memory: "block",
-      create_skill: "auto",
+      manage_skill: "auto",
     });
   });
 });

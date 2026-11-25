@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { INTERNAL_TOOL_NAMES } from "@/config/tool-approval";
 import { getLogger } from "@/lib/logger";
 import { isSpreadsheetMutationTool } from "@/lib/workflows/is-spreadsheet-mutation-tool";
 import type { CompletedToolRecord } from "@/types/tool/completed-tool-record";
@@ -72,13 +73,7 @@ const STAGING_TOOL_PATTERNS = new Set([
 ]);
 
 const INTERNAL_NON_PRODUCER_TOOLS = new Set([
-  "get_file_url",
-  "manage_artifact",
-  "search_knowledge_base",
-  "delegate_task",
-  "save_memory",
-  "manage_memory",
-  "load_skill",
+  ...INTERNAL_TOOL_NAMES,
   "create_skill",
   "update_skill",
   "write_skill_file",

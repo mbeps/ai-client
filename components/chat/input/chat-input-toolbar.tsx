@@ -25,7 +25,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { parseInternalToolApprovals } from "@/config/tool-approval";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
+import { resolveActiveContextToolNames } from "@/lib/chat/resolve-active-context-tools";
+import { useAppStore } from "@/lib/store/use-app-store";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
@@ -354,8 +357,6 @@ function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
   );
 }
 
-const EMPTY_STRING_ARRAY: string[] = [];
-
 /**
  * Represents chat input toolbar props.
  *
@@ -421,9 +422,17 @@ export interface ChatInputToolbarProps {
  * @author Maruf Bepary
  */
 export function ChatInputToolbar(props: ChatInputToolbarProps) {
-  const activeToolNames = props.supportsTools
-    ? Array.from(props.selectedTools)
-    : EMPTY_STRING_ARRAY;
+  const rawInternalToolApprovals = useAppStore(
+    (s) => s.userSettings?.internalToolApprovals,
+  );
+  const internalToolOverrides = parseInternalToolApprovals(
+    rawInternalToolApprovals,
+  );
+  const activeToolNames = resolveActiveContextToolNames({
+    selectedTools: props.selectedTools,
+    supportsTools: props.supportsTools,
+    internalToolOverrides,
+  });
   const selectedServerCount = props.supportsTools
     ? props.selectedServerIds.size
     : 0;

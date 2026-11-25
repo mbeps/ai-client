@@ -765,6 +765,13 @@ export const generateChatResponse = inngest.createFunction(
       const resolvedApprovalMode: ApprovalMode =
         approvalMode ?? (userSettings?.defaultAutoApprove ? "auto" : "ask");
 
+      const preUnlockedToolNames = isApprovalResume
+        ? new Set([
+            ...parkedApprovals.map((a) => a.toolName),
+            ...accumulator.completedTools.map((t) => t.toolName),
+          ])
+        : undefined;
+
       const {
         allTools,
         hasAnyTools,
@@ -790,6 +797,7 @@ export const generateChatResponse = inngest.createFunction(
         resolvedModelId,
         workerResolved,
         internalToolOverrides,
+        preUnlockedToolNames,
         wrapSubagentTools: (workerTools, targetAgent) => {
           const subagentApprovalMap = buildToolApproval(
             Object.keys(workerTools),

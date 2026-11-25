@@ -20,7 +20,7 @@ const mockFilterToolsForAgent = vi.hoisted(() =>
 const mockResolveProvider = vi.hoisted(() => vi.fn());
 const mockRegisterMemoryTool = vi.hoisted(() => vi.fn(() => ({})));
 const mockRegisterSkillTool = vi.hoisted(() => vi.fn(() => ({})));
-const mockRegisterSkillAuthoringTools = vi.hoisted(() => vi.fn(() => ({})));
+const mockRegisterAppTools = vi.hoisted(() => vi.fn(() => ({})));
 
 vi.mock("@/lib/chat/resolve-provider", () => ({
   resolveProvider: mockResolveProvider,
@@ -34,8 +34,8 @@ vi.mock("@/lib/chat/register-skill-tool", () => ({
   registerSkillTool: mockRegisterSkillTool,
 }));
 
-vi.mock("@/lib/chat/register-skill-authoring-tools", () => ({
-  registerSkillAuthoringTools: mockRegisterSkillAuthoringTools,
+vi.mock("@/lib/app-tools/register-app-tools", () => ({
+  registerAppTools: mockRegisterAppTools,
 }));
 
 vi.mock("@/lib/subagents/create-subagent-dispatch-tool", () => ({
@@ -48,6 +48,7 @@ vi.mock("@/lib/subagents/register-subagent-tools", () => ({
 }));
 
 import { buildOrchestratorToolSet } from "@/lib/inngest/chat-response/tool-set-builder";
+import { registerScratchpadTools } from "@/lib/subagents/register-subagent-tools";
 
 describe("buildOrchestratorToolSet", () => {
   beforeEach(() => {
@@ -303,24 +304,26 @@ describe("buildOrchestratorToolSet", () => {
     expect(res.subagentDispatchTools).not.toHaveProperty("delegate_task");
   });
 
-  it("filters blocked individual skill authoring tools and blocks subagent KB/skill tools", () => {
+  it("forwards internalToolOverrides, preUnlockedToolNames, and includeManageSkill to registerAppTools and keeps them out of isolatedToolPool", () => {
     mockRegisterMemoryTool.mockReturnValue({ save_memory: { description: "mem" } });
     mockRegisterSkillTool.mockReturnValue({ load_skill: { description: "skill" } });
-    mockRegisterSkillAuthoringTools.mockReturnValue({
-      create_skill: { description: "create" },
-      delete_skill_file: { description: "delete" },
+    mockRegisterAppTools.mockReturnValue({
+      app_help: { description: "help" },
+      manage_project: { deferLoading: false },
     });
     mockRegisterKnowledgebaseTool.mockReturnValue({
       search_knowledge_base: { description: "kb" },
     });
 
+    const preUnlocked = new Set(["manage_project"]);
     const res = buildOrchestratorToolSet({
       ...baseParams,
       subagentsEnabled: true,
+      preUnlockedToolNames: preUnlocked,
       internalToolOverrides: {
         search_knowledge_base: "block",
         load_skill: "block",
-        delete_skill_file: "block",
+        manage_workflow: "block",
       },
       ctx: {
         activeKbIds: [],
@@ -330,8 +333,17 @@ describe("buildOrchestratorToolSet", () => {
       },
     });
 
-    expect(res.orchestratorActiveTools).toHaveProperty("create_skill");
-    expect(res.orchestratorActiveTools).not.toHaveProperty("delete_skill_file");
+    expect(mockRegisterAppTools).toHaveBeenCalledWith("user-1", {
+      internalToolOverrides: {
+        search_knowledge_base: "block",
+        load_skill: "block",
+        manage_workflow: "block",
+      },
+      preUnlockedToolNames: preUnlocked,
+      includeManageSkill: true,
+    });
+    expect(res.orchestratorActiveTools).toHaveProperty("app_help");
+    expect(res.orchestratorActiveTools).toHaveProperty("manage_project");
 
     const dispatchConfig = mockCreateSubagentDispatchTool.mock.calls[0][0];
     const isolated = dispatchConfig.buildIsolatedTools({
@@ -342,8 +354,29 @@ describe("buildOrchestratorToolSet", () => {
       skillIds: ["sk-1"],
     });
     expect(isolated).not.toHaveProperty("load_skill");
+    expect(isolated).not.toHaveProperty("app_help");
+    expect(isolated).not.toHaveProperty("manage_project");
 
     const kbTools = dispatchConfig.buildKnowledgebaseTools(["kb-sub"]);
     expect(kbTools).toEqual({});
+  });
+
+  it("filters blocked scratchpad tools from orchestratorActiveTools", () => {
+    vi.mocked(registerScratchpadTools).mockReturnValueOnce({
+      scratchpad_write: { description: "write" },
+      scratchpad_read: { description: "read" },
+    });
+    mockRegisterAppTools.mockReturnValueOnce({});
+
+    const res = buildOrchestratorToolSet({
+      ...baseParams,
+      subagentsEnabled: true,
+      internalToolOverrides: {
+        scratchpad_write: "block",
+      },
+    });
+
+    expect(res.orchestratorActiveTools).not.toHaveProperty("scratchpad_write");
+    expect(res.orchestratorActiveTools).toHaveProperty("scratchpad_read");
   });
 });
