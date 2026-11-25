@@ -12,7 +12,10 @@ import {
   resolveSyncTargetParentId,
 } from "@/hooks/chat/stream/use-stream-db-sync";
 import { executeStreamResponse } from "@/hooks/chat/stream/use-stream-dispatch";
-import { useStreamEventHandlers } from "@/hooks/chat/stream/use-stream-event-handlers";
+import {
+  dispatchWorkspaceStoreReloads,
+  useStreamEventHandlers,
+} from "@/hooks/chat/stream/use-stream-event-handlers";
 import { useStreamRealtimeChannel } from "@/hooks/chat/stream/use-stream-realtime";
 import {
   useStreamMountRejoin,
@@ -136,6 +139,8 @@ export function useStreamResponse(
           upsertChat,
           options ? options.onDone : undefined,
         );
+        const syncedMeta = parseMessageMetadata(assistantMsg.metadata);
+        dispatchWorkspaceStoreReloads(syncedMeta.toolData?.toolResults);
         resetStreamingState();
         return true;
       }

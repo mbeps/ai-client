@@ -5,6 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { kbDocument } from "@/drizzle/schemas/kb-document-schema";
 import { knowledgebase } from "@/drizzle/schemas/knowledgebase-schema";
+import { project } from "@/drizzle/schemas/project-schema";
 import { requireSession } from "@/lib/auth/require-session";
 import { defineAction } from "@/lib/factories/define-action";
 import { deleteEntityFactory } from "@/lib/factories/delete-entity-factory";
@@ -68,6 +69,16 @@ export const deleteKnowledgebase = defineAction(
     if (!result.ok) {
       return result;
     }
+
+    await db
+      .update(project)
+      .set({ knowledgebaseId: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(project.userId, session.user.id),
+          inArray(project.knowledgebaseId, ids),
+        ),
+      );
 
     try {
       await deletePointsByKbIds(ids);

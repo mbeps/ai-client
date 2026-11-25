@@ -288,5 +288,46 @@ describe("inspect-workspace-queries", () => {
         expect.objectContaining({ id: UUID, files: [] }),
       );
     });
+
+    it("strips userinfo and query secrets from connector URLs in list and detail", async () => {
+      mockSelectQueue.push(
+        [
+          {
+            id: UUID,
+            name: "Secret Conn",
+            url: "https://user:pass@mcp.example/mcp?api_key=secret#frag",
+            enabled: true,
+            authType: "none",
+            isPublic: false,
+          },
+        ],
+        [
+          {
+            id: UUID,
+            name: "Malformed Conn",
+            url: "not-a-valid-url?token=abc#sec",
+            enabled: true,
+            authType: "none",
+            isPublic: false,
+          },
+        ],
+      );
+
+      const list = await listWorkspaceResource(USER_ID, "connectors");
+      expect(list[0]).toEqual(
+        expect.objectContaining({
+          id: UUID,
+          url: "https://mcp.example/mcp",
+        }),
+      );
+
+      const detail = await getWorkspaceResource(USER_ID, "connectors", UUID);
+      expect(detail).toEqual(
+        expect.objectContaining({
+          id: UUID,
+          url: "not-a-valid-url",
+        }),
+      );
+    });
   });
 });

@@ -138,6 +138,25 @@ async function executeRejoinFinish(
 }
 
 /**
+ * Dispatches background store reloads for any workspace domains mutated by completed tools.
+ *
+ * @param toolResults - Completed tool calls/results array
+ * @author Maruf Bepary
+ */
+export function dispatchWorkspaceStoreReloads(toolResults: unknown): void {
+  const changedDomains = extractWorkspaceChangesFromToolResults(toolResults);
+  if (changedDomains.size === 0) return;
+
+  const store = useAppStore.getState();
+  if (changedDomains.has("skills")) void store.loadSkills();
+  if (changedDomains.has("projects")) void store.loadProjects();
+  if (changedDomains.has("agents")) void store.loadAgents();
+  if (changedDomains.has("prompts")) void store.loadPrompts();
+  if (changedDomains.has("workflows")) void store.loadWorkflows();
+  if (changedDomains.has("memories")) void store.loadMemories();
+}
+
+/**
  * Builds assistant message with metadata, adds to store, and calls onDone callback.
  *
  * @param params - Finish execution properties including text, reasoning, tool calls, and callbacks
@@ -163,16 +182,7 @@ function executeStandardFinish(params: {
   const resolvedAssistantId = params.assistantId || crypto.randomUUID();
   const durationMs = Date.now() - params.pending.startTime;
 
-  const changedDomains = extractWorkspaceChangesFromToolResults(completedTools);
-  if (changedDomains.size > 0) {
-    const store = useAppStore.getState();
-    if (changedDomains.has("skills")) void store.loadSkills();
-    if (changedDomains.has("projects")) void store.loadProjects();
-    if (changedDomains.has("agents")) void store.loadAgents();
-    if (changedDomains.has("prompts")) void store.loadPrompts();
-    if (changedDomains.has("workflows")) void store.loadWorkflows();
-    if (changedDomains.has("memories")) void store.loadMemories();
-  }
+  dispatchWorkspaceStoreReloads(completedTools);
 
   const metadata = buildAssistantFinishMetadata({
     model: params.pending.model,

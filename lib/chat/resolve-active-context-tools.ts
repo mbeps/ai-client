@@ -9,6 +9,7 @@ const INTERNAL_ID_TO_RUNTIME_NAME: Record<string, string | undefined> = {
   [INTERNAL_TOOL_IDS.MANAGE_MEMORY]: "save_memory",
   [INTERNAL_TOOL_IDS.DELEGATE_TASK]: "delegate_task",
   [INTERNAL_TOOL_IDS.SEARCH_KNOWLEDGE_BASE]: "search_knowledge_base",
+  [INTERNAL_TOOL_IDS.INTERACTIVE_UI]: "interactive_ui",
 };
 
 /**

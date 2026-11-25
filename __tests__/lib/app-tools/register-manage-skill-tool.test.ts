@@ -291,4 +291,35 @@ describe("registerManageSkillTool", () => {
       route: ROUTES.SKILLS.detail("sk-1"),
     });
   });
+
+  it("rejects empty displayName or description in update inputSchema while allowing omitted fields", () => {
+    const { manage_skill } = registerManageSkillTool("user-1");
+    const schema = manage_skill.inputSchema as {
+      safeParse: (v: unknown) => { success: boolean };
+    };
+
+    expect(
+      schema.safeParse({
+        action: "update",
+        skillName: "clean-code",
+        displayName: "",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      schema.safeParse({
+        action: "update",
+        skillName: "clean-code",
+        description: "",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      schema.safeParse({
+        action: "update",
+        skillName: "clean-code",
+        enabled: false,
+      }).success,
+    ).toBe(true);
+  });
 });

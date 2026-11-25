@@ -19,6 +19,40 @@ export type McpAuthType = z.infer<typeof mcpAuthTypeSchema>;
  * @see {@link lib/mcp/}} for MCP server creation/update actions
  * @author Maruf Bepary
  */
+const SENSITIVE_QUERY_PARAM_NAMES = new Set([
+  "api_key",
+  "apikey",
+  "token",
+  "access_token",
+  "secret",
+  "password",
+  "passwd",
+  "auth",
+  "key",
+  "client_secret",
+  "bearer",
+]);
+
+/**
+ * Checks whether a URL carries embedded userinfo or sensitive query parameters.
+ */
+function hasUrlCredentials(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.username || parsed.password) {
+      return true;
+    }
+    for (const paramKey of parsed.searchParams.keys()) {
+      if (SENSITIVE_QUERY_PARAM_NAMES.has(paramKey.toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 const baseObject = z.object({
   name: z.string().min(1, "Name is required").max(100),
   url: z
@@ -27,6 +61,10 @@ const baseObject = z.object({
     .max(1024)
     .refine((val) => !isBlockedUrlSync(val), {
       message: "URL points to a blocked or internal address",
+    })
+    .refine((val) => !hasUrlCredentials(val), {
+      message:
+        "URL must not contain embedded credentials or secret query parameters; use Headers or OAuth instead",
     }),
   authType: mcpAuthTypeSchema.default("none"),
   headers: jsonObjectSchema.or(z.literal("")).optional(),

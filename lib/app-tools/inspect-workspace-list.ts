@@ -16,6 +16,23 @@ import type { InspectableResource } from "@/lib/app-tools/inspect-workspace-quer
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 100;
 
+/**
+ * Strips embedded userinfo, query parameters, and fragments from a connector URL
+ * before returning it in workspace inspection projections.
+ *
+ * @param rawUrl - Raw connector URL from database
+ * @returns Sanitized origin + pathname string
+ */
+export function sanitizeConnectorUrl(rawUrl: string): string {
+  if (typeof rawUrl !== "string") return rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return rawUrl.split(/[?#]/)[0];
+  }
+}
+
 function clampLimit(limit?: number): number {
   return Math.min(
     Math.max(Math.trunc(limit ?? DEFAULT_LIST_LIMIT), 1),
@@ -163,8 +180,8 @@ export async function listWorkspaceResourceItems(
         .orderBy(desc(knowledgebase.updatedAt))
         .limit(safeLimit);
 
-    case "connectors":
-      return db
+    case "connectors": {
+      const rows = await db
         .select({
           id: mcpServer.id,
           name: mcpServer.name,
@@ -177,5 +194,10 @@ export async function listWorkspaceResourceItems(
         .where(eq(mcpServer.userId, userId))
         .orderBy(desc(mcpServer.updatedAt))
         .limit(safeLimit);
+      return rows.map((row) => ({
+        ...row,
+        url: sanitizeConnectorUrl(row.url),
+      }));
+    }
   }
 }

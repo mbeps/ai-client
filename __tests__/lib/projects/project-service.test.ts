@@ -238,5 +238,30 @@ describe("project-service", () => {
       });
       expect(okRes).toEqual({ ok: true, value: updated });
     });
+
+    it("normalizes empty string knowledgebaseId to null on create and update", async () => {
+      mockInsertReturning.mockResolvedValueOnce([
+        { ...SAMPLE_PROJECT, knowledgebaseId: null },
+      ]);
+
+      const created = await createProjectForUser(USER_ID, {
+        name: "Empty KB Project",
+        knowledgebaseId: "",
+      });
+      expect(created.ok).toBe(true);
+      expect(mockInsertValues).toHaveBeenCalledWith(
+        expect.objectContaining({ knowledgebaseId: null }),
+      );
+      expect(mockFilterOwnedKbIds).not.toHaveBeenCalled();
+
+      mockUpdateReturning.mockResolvedValueOnce([
+        { ...SAMPLE_PROJECT, knowledgebaseId: null },
+      ]);
+      const updated = await updateProjectForUser(USER_ID, PROJECT_ID, {
+        knowledgebaseId: "",
+      });
+      expect(updated.ok).toBe(true);
+      expect(mockFilterOwnedKbIds).not.toHaveBeenCalled();
+    });
   });
 });

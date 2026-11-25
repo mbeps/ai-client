@@ -236,7 +236,10 @@ export function calculateContextUsage(
   let toolSchemaTokens = 0;
   for (const name of toolNames) {
     if (ZERO_STEP0_SCHEMA_TOOLS.has(name)) continue;
-    toolSchemaTokens += LIGHTWEIGHT_TOOL_TOKEN_WEIGHTS[name] ?? 180;
+    const weight = Object.hasOwn(LIGHTWEIGHT_TOOL_TOKEN_WEIGHTS, name)
+      ? LIGHTWEIGHT_TOOL_TOKEN_WEIGHTS[name]
+      : undefined;
+    toolSchemaTokens += weight ?? 180;
   }
   const serverOverheadTokens = mcpServerCount * 50;
   const toolDefinitions = toolSchemaTokens + serverOverheadTokens;

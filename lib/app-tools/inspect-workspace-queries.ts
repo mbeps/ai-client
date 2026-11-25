@@ -15,7 +15,10 @@ import {
   workflowEdge,
   workflowNode,
 } from "@/drizzle/schemas/workflow-schema";
-import { listWorkspaceResourceItems } from "@/lib/app-tools/inspect-workspace-list";
+import {
+  listWorkspaceResourceItems,
+  sanitizeConnectorUrl,
+} from "@/lib/app-tools/inspect-workspace-list";
 import { readSkillFileForUser } from "@/lib/skills/read-skill-file";
 
 /** All workspace resource types supported by `inspect_workspace`. */
@@ -282,7 +285,7 @@ export async function getWorkspaceResource(
         })
         .from(mcpServer)
         .where(and(eq(mcpServer.id, identifier), eq(mcpServer.userId, userId)));
-      return row ?? null;
+      return row ? { ...row, url: sanitizeConnectorUrl(row.url) } : null;
     }
   }
 }

@@ -46,11 +46,11 @@ describe("resolveActiveContextToolNames", () => {
         save_memory: "block",
         delegate_task: "block",
         search_knowledge_base: "block",
+        interactive_ui: "block",
       },
     });
 
     expect(result).toEqual([
-      INTERNAL_TOOL_IDS.INTERACTIVE_UI,
       "app_help",
       "search_app_tools",
     ]);

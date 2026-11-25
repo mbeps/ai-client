@@ -48,8 +48,8 @@ const manageSkillInputSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("update"),
     skillName: skillNameSchema,
-    displayName: z.string().optional(),
-    description: z.string().optional(),
+    displayName: z.string().min(1).max(100).optional(),
+    description: z.string().min(1).max(500).optional(),
     enabled: z.boolean().optional(),
   }),
   z.object({

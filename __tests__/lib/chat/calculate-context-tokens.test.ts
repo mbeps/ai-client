@@ -542,5 +542,21 @@ describe("calculate-context-tokens utility", () => {
 
       expect(result.breakdown.messages).toBeGreaterThan(0);
     });
+
+    it("uses own-property lookup for LIGHTWEIGHT_TOOL_TOKEN_WEIGHTS so Object.prototype keys like toString fall back to 180", () => {
+      const baseline = calculateContextUsage({
+        selectedModel: mockModel,
+        toolNames: [],
+      });
+      const result = calculateContextUsage({
+        selectedModel: mockModel,
+        toolNames: ["toString"],
+      });
+
+      expect(Number.isNaN(result.percentage)).toBe(false);
+      expect(result.breakdown.toolDefinitions).toBe(
+        baseline.breakdown.toolDefinitions + 180,
+      );
+    });
   });
 });

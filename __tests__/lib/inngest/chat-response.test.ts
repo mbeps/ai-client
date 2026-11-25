@@ -3394,6 +3394,91 @@ describe("generateChatResponse Inngest Function", () => {
       ]);
     });
 
+    it("restores unused search_app_tools matches in preUnlockedToolNames on approval resume", async () => {
+      mockUpdateResponse.mockClear();
+      mockStreamText.mockReset();
+
+      const { buildOrchestratorToolSet } = await import(
+        "@/lib/inngest/chat-response/tool-set-builder"
+      );
+
+      mockDbSelectLimit
+        .mockResolvedValueOnce([
+          {
+            content: "",
+            parentId: "u-search-1",
+            metadata: JSON.stringify({
+              model: "gpt-4o",
+              approvalRound: 1,
+              parentUserMessageId: "u-search-1",
+              toolCalls: [
+                {
+                  toolCallId: "tc-search-1",
+                  toolName: "search_app_tools",
+                  args: { query: "manage" },
+                },
+                {
+                  toolCallId: "tc-search-2",
+                  toolName: "search_app_tools",
+                  args: { query: "empty" },
+                },
+              ],
+              toolResults: [
+                {
+                  toolCallId: "tc-search-1",
+                  toolName: "search_app_tools",
+                  result: {
+                    tools: [{ name: "manage_agent" }, { name: 123 }],
+                  },
+                },
+                {
+                  toolCallId: "tc-search-2",
+                  toolName: "search_app_tools",
+                  result: { error: "none" },
+                },
+              ],
+              pendingApprovals: [
+                {
+                  approvalId: "app-search-1",
+                  toolCallId: "tc-proj-1",
+                  toolName: "manage_project",
+                  serverName: "Internal",
+                  args: { action: "create" },
+                  signature: "sig-search-1",
+                },
+              ],
+            }),
+          },
+        ])
+        .mockResolvedValueOnce([{ metadata: JSON.stringify({ model: "gpt-4o" }) }]);
+
+      mockStreamText.mockReturnValueOnce({
+        fullStream: (async function* () {
+          yield { type: "text-delta", text: "Resumed" };
+        })(),
+        usage: Promise.resolve({ inputTokens: 10, outputTokens: 5 }),
+        finishReason: Promise.resolve("stop"),
+      });
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          name: "chat/approval.respond",
+          data: {
+            chatId: "chat-res-search",
+            userId: "user-1",
+            assistantMessageId: "asst-res-search",
+            decisions: [{ approvalId: "app-search-1", approved: true }],
+          },
+        },
+      });
+
+      const lastCall = vi.mocked(buildOrchestratorToolSet).mock.calls.at(-1)?.[0];
+      expect(lastCall?.preUnlockedToolNames?.has("manage_project")).toBe(true);
+      expect(lastCall?.preUnlockedToolNames?.has("search_app_tools")).toBe(true);
+      expect(lastCall?.preUnlockedToolNames?.has("manage_agent")).toBe(true);
+    });
+
     it("updates existing assistant row on completion when subagent persistPendingApprovals created it on a first turn", async () => {
       mockUpdateResponse.mockReset();
       mockPersistResponse.mockReset();

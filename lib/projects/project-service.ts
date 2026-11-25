@@ -29,6 +29,12 @@ function formatIssues(error: z.ZodError): string[] {
   );
 }
 
+function normalizeKnowledgebaseId(
+  value: string | null | undefined,
+): string | null | undefined {
+  return value === "" ? null : value;
+}
+
 function buildProjectUpdateValues(
   data: z.infer<typeof updateProjectSchema>,
 ): Record<string, unknown> {
@@ -43,7 +49,8 @@ function buildProjectUpdateValues(
   if (data.promptIds !== undefined) values.promptIds = data.promptIds;
   if (data.subagentIds !== undefined) values.subagentIds = data.subagentIds;
   if (data.knowledgebaseId !== undefined)
-    values.knowledgebaseId = data.knowledgebaseId ?? null;
+    values.knowledgebaseId =
+      normalizeKnowledgebaseId(data.knowledgebaseId) ?? null;
   return values;
 }
 
@@ -86,10 +93,8 @@ export async function createProjectForUser(
   }
 
   const validated = parsed.data;
-  const kbCheck = await verifyOwnedKnowledgebase(
-    userId,
-    validated.knowledgebaseId,
-  );
+  const normalizedKbId = normalizeKnowledgebaseId(validated.knowledgebaseId);
+  const kbCheck = await verifyOwnedKnowledgebase(userId, normalizedKbId);
   if (!kbCheck.ok) {
     return kbCheck;
   }
@@ -108,7 +113,7 @@ export async function createProjectForUser(
         promptMode: validated.promptMode,
         promptIds: validated.promptIds,
         subagentIds,
-        knowledgebaseId: validated.knowledgebaseId ?? null,
+        knowledgebaseId: normalizedKbId ?? null,
         userId,
       })
       .returning();
@@ -181,7 +186,7 @@ export async function updateProjectForUser(
 
   const kbCheck = await verifyOwnedKnowledgebase(
     userId,
-    validatedData.knowledgebaseId,
+    normalizeKnowledgebaseId(validatedData.knowledgebaseId),
   );
   if (!kbCheck.ok) {
     return kbCheck;

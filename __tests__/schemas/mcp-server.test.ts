@@ -176,4 +176,27 @@ describe("updateMcpServerSchema", () => {
     const nonObject = createMcpServerSchema.safeParse(null);
     expect(nonObject.success).toBe(false);
   });
+
+  it("rejects URLs with embedded userinfo or sensitive query parameters", () => {
+    const withUserInfo = createMcpServerSchema.safeParse({
+      name: "Userinfo",
+      url: "https://user:secret@mcp.example.com/mcp",
+      isPublic: false,
+    });
+    expect(withUserInfo.success).toBe(false);
+
+    const withApiKey = createMcpServerSchema.safeParse({
+      name: "Query Secret",
+      url: "https://mcp.example.com/mcp?api_key=secret",
+      isPublic: false,
+    });
+    expect(withApiKey.success).toBe(false);
+
+    const withSafeQuery = createMcpServerSchema.safeParse({
+      name: "Safe Query",
+      url: "https://mcp.example.com/mcp?version=2",
+      isPublic: false,
+    });
+    expect(withSafeQuery.success).toBe(true);
+  });
 });
