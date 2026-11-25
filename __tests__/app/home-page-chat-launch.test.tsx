@@ -240,4 +240,26 @@ describe("HomePage chat launch parity", () => {
       model: "nvidia/nemotron-3.5-lightning:free",
     });
   });
+
+  it("prevents duplicate chat creation while a launch is in-flight and recovers on error", async () => {
+    let rejectCreate!: (err: Error) => void;
+    mockCreateChatDb.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectCreate = reject;
+        }),
+    );
+
+    render(<HomePage />);
+    fireEvent.click(screen.getByTestId("send-full"));
+    fireEvent.click(screen.getByTestId("send-full"));
+
+    expect(mockCreateChatDb).toHaveBeenCalledTimes(1);
+    expect(lastChatInputProps?.isLoading).toBe(true);
+
+    rejectCreate(new Error("DB error"));
+    await waitFor(() => {
+      expect(lastChatInputProps?.isLoading).toBe(false);
+    });
+  });
 });

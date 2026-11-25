@@ -3,7 +3,7 @@
 import { ArrowRight, Bot, Database, FolderOpen, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ChatInput } from "@/components/chat/chat-input";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,8 @@ export default function HomePage() {
     "userSettings",
   ]);
 
+  const [isStarting, setIsStarting] = useState(false);
+
   const enabledServers = useMemo(() => {
     return mcpServers.filter((s) => s.enabled);
   }, [mcpServers]);
@@ -69,7 +71,7 @@ export default function HomePage() {
     subagentIds?: string[],
     approvalMode?: ApprovalMode,
   ) => {
-    if (isModelsLoading) return;
+    if (isStarting || isModelsLoading) return;
 
     if (chatModels.length === 0) {
       toast.error("No AI models configured. Please set up a provider first.", {
@@ -81,30 +83,38 @@ export default function HomePage() {
       return;
     }
 
-    const title = content.trim().slice(0, 60) || "New Chat";
-    const chatId = await createChatDb(title);
-    if (selectedKnowledgebases.length > 0) {
-      await setKnowledgebaseDb(chatId, selectedKnowledgebases[0]);
+    setIsStarting(true);
+    try {
+      const title = content.trim().slice(0, 60) || "New Chat";
+      const chatId = await createChatDb(title);
+      if (selectedKnowledgebases.length > 0) {
+        await setKnowledgebaseDb(chatId, selectedKnowledgebases[0]);
+      }
+      const toolsStore = useChatToolsStore.getState();
+      toolsStore.transferChatTools(NEW_CHAT_TOOLS_KEY, chatId);
+      toolsStore.setPendingLaunch(chatId, {
+        content,
+        attachments,
+        model,
+        selectedServerIds,
+        selectedTools,
+        selectedPromptId,
+        selectedAssistantId,
+        selectedKnowledgebases,
+        selectedSkillIds,
+        subagentsEnabled,
+        subagentModelId,
+        reasoningEffort,
+        subagentIds,
+        approvalMode,
+      });
+      router.push(ROUTES.CHATS.detail(chatId));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to start chat",
+      );
+      setIsStarting(false);
     }
-    const toolsStore = useChatToolsStore.getState();
-    toolsStore.transferChatTools(NEW_CHAT_TOOLS_KEY, chatId);
-    toolsStore.setPendingLaunch(chatId, {
-      content,
-      attachments,
-      model,
-      selectedServerIds,
-      selectedTools,
-      selectedPromptId,
-      selectedAssistantId,
-      selectedKnowledgebases,
-      selectedSkillIds,
-      subagentsEnabled,
-      subagentModelId,
-      reasoningEffort,
-      subagentIds,
-      approvalMode,
-    });
-    router.push(ROUTES.CHATS.detail(chatId));
   };
 
   const quickActions = [
@@ -180,6 +190,7 @@ export default function HomePage() {
           <ChatInput
             chatId={NEW_CHAT_TOOLS_KEY}
             onSend={handleStart}
+            isLoading={isStarting}
             servers={enabledServers}
             initialModelId={userSettings?.defaultChatModelId || undefined}
             initialApprovalMode={
