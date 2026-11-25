@@ -33,6 +33,8 @@ describe("useInitialChatAutoSend", () => {
           undefined,
           initialSubagentIds,
           isReady,
+          "high",
+          "auto",
         ),
       {
         initialProps: {
@@ -66,8 +68,9 @@ describe("useInitialChatAutoSend", () => {
       [],
       true,
       undefined,
-      undefined,
+      "high",
       ["sub-custom-1"],
+      "auto",
     );
 
     rerender({

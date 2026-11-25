@@ -3,6 +3,7 @@ import type { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { extractCitations } from "@/lib/chat/extract-citations";
 import { resolveRegeneratePayload } from "@/lib/chat/extract-regenerate-payload";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
+import type { PendingChatLaunch } from "@/lib/store/use-chat-tools-store";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
@@ -260,6 +261,7 @@ export function useInitialChatAutoSend(
     subagentModelId?: string,
     reasoningEffort?: ReasoningEffort,
     subagentIds?: string[],
+    approvalMode?: ApprovalMode,
   ) => void,
   initialModelId: string | undefined,
   initialServerIds: string[],
@@ -270,16 +272,47 @@ export function useInitialChatAutoSend(
   initialSubagentModelId?: string,
   initialSubagentIds?: string[],
   isReady = true,
+  initialReasoningEffort?: ReasoningEffort,
+  initialApprovalMode?: ApprovalMode,
+  pendingLaunch?: PendingChatLaunch,
+  onConsumePendingLaunch?: () => void,
 ) {
   const sentInitial = useRef(false);
 
   useEffect(() => {
-    if (!initialMessage || !chat || !isReady || sentInitial.current) return;
+    const hasLaunch = Boolean(pendingLaunch || initialMessage);
+    if (!hasLaunch || !chat || !isReady || sentInitial.current) return;
     sentInitial.current = true;
     onInitialMessageSent?.();
+    onConsumePendingLaunch?.();
     clearMsgQueryParamFromUrl();
 
     if (Object.keys(chat.messages).length > 0) return;
+
+    if (pendingLaunch) {
+      handleSend(
+        pendingLaunch.content,
+        pendingLaunch.attachments,
+        pendingLaunch.model,
+        pendingLaunch.selectedServerIds,
+        pendingLaunch.selectedTools,
+        pendingLaunch.selectedPromptId,
+        pendingLaunch.selectedAssistantId ??
+          chat.agentId ??
+          chat.assistantId ??
+          undefined,
+        pendingLaunch.selectedKnowledgebases ?? [],
+        pendingLaunch.selectedSkillIds ?? [],
+        pendingLaunch.subagentsEnabled,
+        pendingLaunch.subagentModelId,
+        pendingLaunch.reasoningEffort,
+        pendingLaunch.subagentIds,
+        pendingLaunch.approvalMode,
+      );
+      return;
+    }
+
+    if (!initialMessage) return;
 
     handleSend(
       initialMessage,
@@ -293,8 +326,9 @@ export function useInitialChatAutoSend(
       initialSkillIds ?? [],
       initialSubagentsEnabled,
       initialSubagentModelId,
-      undefined,
+      initialReasoningEffort,
       initialSubagentIds,
+      initialApprovalMode,
     );
   }, [
     chat,
@@ -310,6 +344,10 @@ export function useInitialChatAutoSend(
     initialSubagentModelId,
     initialSubagentIds,
     isReady,
+    initialReasoningEffort,
+    initialApprovalMode,
+    pendingLaunch,
+    onConsumePendingLaunch,
   ]);
 }
 

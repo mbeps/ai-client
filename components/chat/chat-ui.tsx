@@ -39,8 +39,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCompactChat } from "@/hooks/chat/use-compact-chat";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
+import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { hydratedResources } from "@/lib/store/hydrated-resources";
+import {
+  type PendingChatLaunch,
+  useChatToolsStore,
+} from "@/lib/store/use-chat-tools-store";
 import type { Chat } from "@/types/chat/chat";
 import type { ApprovalDecision } from "@/types/tool/approval";
 
@@ -110,6 +115,32 @@ export function ChatUI({
     [chat?.currentLeafId, chat?.messages],
   );
 
+  const persistedTools = useChatToolsStore((s) => s.toolsByChat[chatId]);
+  const persistedApprovalMode = useChatToolsStore(
+    (s) => s.approvalModeByChat[chatId],
+  );
+  const storePendingLaunch = useChatToolsStore(
+    (s) => s.pendingLaunchByChat[chatId],
+  );
+  const [capturedLaunchState, setCapturedLaunchState] = useState<{
+    chatId: string;
+    launch: PendingChatLaunch | undefined;
+  }>(() => ({
+    chatId,
+    launch: useChatToolsStore.getState().pendingLaunchByChat[chatId],
+  }));
+
+  if (capturedLaunchState.chatId !== chatId) {
+    setCapturedLaunchState({ chatId, launch: storePendingLaunch });
+  } else if (!capturedLaunchState.launch && storePendingLaunch) {
+    setCapturedLaunchState({ chatId, launch: storePendingLaunch });
+  }
+
+  const capturedPendingLaunch =
+    capturedLaunchState.chatId === chatId
+      ? capturedLaunchState.launch
+      : undefined;
+
   const {
     initialModelId,
     initialSubagentsEnabled,
@@ -128,6 +159,35 @@ export function ChatUI({
     userSettings,
     chat,
   );
+
+  const effectiveInitialModelId =
+    capturedPendingLaunch?.model || initialModelId;
+  const effectiveInitialServerIds = useMemo(() => {
+    if (capturedPendingLaunch) return capturedPendingLaunch.selectedServerIds;
+    if (persistedTools !== undefined) {
+      return extractServerIdsFromTools(persistedTools);
+    }
+    return initialServerIds;
+  }, [capturedPendingLaunch, persistedTools, initialServerIds]);
+  const effectiveInitialSelectedTools = useMemo(() => {
+    if (capturedPendingLaunch) return capturedPendingLaunch.selectedTools;
+    if (persistedTools !== undefined) return persistedTools;
+    return initialSelectedTools;
+  }, [capturedPendingLaunch, persistedTools, initialSelectedTools]);
+  const effectiveInitialKbIds =
+    capturedPendingLaunch?.selectedKnowledgebases ?? initialKbIds;
+  const effectiveInitialSubagentsEnabled =
+    capturedPendingLaunch?.subagentsEnabled ?? initialSubagentsEnabled;
+  const effectiveInitialSubagentModelId =
+    capturedPendingLaunch?.subagentModelId ?? initialSubagentModelId;
+  const effectiveInitialSubagentIds =
+    capturedPendingLaunch?.subagentIds ?? initialSubagentIds;
+  const effectiveInitialReasoningEffort =
+    capturedPendingLaunch?.reasoningEffort ?? initialReasoningEffort;
+  const effectiveInitialApprovalMode =
+    capturedPendingLaunch?.approvalMode ??
+    persistedApprovalMode ??
+    initialApprovalMode;
 
   const allEnabledServers = useMemo(
     () => filterEnabledMcpServers(mcpServers),
@@ -208,20 +268,28 @@ export function ChatUI({
   const isInitialContextReady =
     !hydration?.isLoading && isAgentsReady && isProjectsReady;
 
+  const consumePendingLaunch = useCallback(() => {
+    useChatToolsStore.getState().clearPendingLaunch(chatId);
+  }, [chatId]);
+
   useInitialChatAutoSend(
     chat,
     initialMessage,
     onInitialMessageSent,
     handleSend,
-    initialModelId,
-    initialServerIds,
-    initialSelectedTools,
-    initialKbIds,
+    effectiveInitialModelId,
+    effectiveInitialServerIds,
+    effectiveInitialSelectedTools,
+    effectiveInitialKbIds,
     initialSkillIds,
-    initialSubagentsEnabled,
-    initialSubagentModelId,
-    initialSubagentIds,
+    effectiveInitialSubagentsEnabled,
+    effectiveInitialSubagentModelId,
+    effectiveInitialSubagentIds,
     isInitialContextReady,
+    effectiveInitialReasoningEffort,
+    effectiveInitialApprovalMode,
+    capturedPendingLaunch,
+    consumePendingLaunch,
   );
 
   const parkedPending = useMemo(() => {
@@ -281,36 +349,37 @@ export function ChatUI({
       await handleSend(
         trimmed,
         [],
-        composerSelections?.modelId ?? initialModelId,
-        composerSelections?.serverIds ?? initialServerIds,
-        composerSelections?.selectedTools ?? initialSelectedTools,
+        composerSelections?.modelId ?? effectiveInitialModelId,
+        composerSelections?.serverIds ?? effectiveInitialServerIds,
+        composerSelections?.selectedTools ?? effectiveInitialSelectedTools,
         undefined,
         chat?.agentId ?? chat?.assistantId ?? undefined,
-        composerSelections?.kbIds ?? initialKbIds,
+        composerSelections?.kbIds ?? effectiveInitialKbIds,
         composerSelections?.skillIds ?? initialSkillIds,
-        composerSelections?.subagentsEnabled ?? initialSubagentsEnabled,
-        composerSelections?.subagentModelId ?? initialSubagentModelId,
-        composerSelections?.reasoningEffort ?? initialReasoningEffort,
-        composerSelections?.subagentIds ?? initialSubagentIds,
-        composerSelections?.approvalMode ?? initialApprovalMode,
+        composerSelections?.subagentsEnabled ??
+          effectiveInitialSubagentsEnabled,
+        composerSelections?.subagentModelId ?? effectiveInitialSubagentModelId,
+        composerSelections?.reasoningEffort ?? effectiveInitialReasoningEffort,
+        composerSelections?.subagentIds ?? effectiveInitialSubagentIds,
+        composerSelections?.approvalMode ?? effectiveInitialApprovalMode,
       );
     },
     [
       isLoading,
       handleSend,
       composerSelections,
-      initialModelId,
-      initialServerIds,
-      initialSelectedTools,
+      effectiveInitialModelId,
+      effectiveInitialServerIds,
+      effectiveInitialSelectedTools,
       chat?.agentId,
       chat?.assistantId,
-      initialKbIds,
+      effectiveInitialKbIds,
       initialSkillIds,
-      initialSubagentsEnabled,
-      initialSubagentModelId,
-      initialReasoningEffort,
-      initialSubagentIds,
-      initialApprovalMode,
+      effectiveInitialSubagentsEnabled,
+      effectiveInitialSubagentModelId,
+      effectiveInitialReasoningEffort,
+      effectiveInitialSubagentIds,
+      effectiveInitialApprovalMode,
     ],
   );
 
@@ -405,16 +474,16 @@ export function ChatUI({
                 activeChatAssistantId={chatAssistantId}
                 systemPrompt={assistantPrompt}
                 canMentionAssistant={canMentionAssistant}
-                initialSelectedServerIds={initialServerIds}
-                initialSelectedTools={initialSelectedTools}
-                initialSelectedKbs={initialKbIds}
+                initialSelectedServerIds={effectiveInitialServerIds}
+                initialSelectedTools={effectiveInitialSelectedTools}
+                initialSelectedKbs={effectiveInitialKbIds}
                 initialSelectedSkillIds={initialSkillIds}
-                initialModelId={initialModelId}
-                initialSubagentsEnabled={initialSubagentsEnabled}
-                initialSubagentModelId={initialSubagentModelId}
-                initialSubagentIds={initialSubagentIds}
-                initialReasoningEffort={initialReasoningEffort}
-                initialApprovalMode={initialApprovalMode}
+                initialModelId={effectiveInitialModelId}
+                initialSubagentsEnabled={effectiveInitialSubagentsEnabled}
+                initialSubagentModelId={effectiveInitialSubagentModelId}
+                initialSubagentIds={effectiveInitialSubagentIds}
+                initialReasoningEffort={effectiveInitialReasoningEffort}
+                initialApprovalMode={effectiveInitialApprovalMode}
                 onKnowledgebaseChange={handleKbChange}
                 onSelectionsChange={handleComposerSelectionsChange}
                 thread={thread}

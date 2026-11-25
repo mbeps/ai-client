@@ -259,9 +259,9 @@ describe("ChatUI - entity skill configuration reaches the composer", () => {
       ["sk-1"],
       true,
       undefined,
-      undefined,
+      "medium",
       ["sub-1"],
-      undefined,
+      "ask",
     );
   });
 });

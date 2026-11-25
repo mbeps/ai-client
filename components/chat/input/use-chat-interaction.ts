@@ -43,7 +43,7 @@ export interface ChatInteractionProps {
     reasoningEffort?: ReasoningEffort,
     subagentIds?: string[],
     approvalMode?: ApprovalMode,
-  ) => void;
+  ) => unknown;
   isLoading?: boolean;
   servers?: (McpServer | PublicMcpServer)[];
   initialAttachments?: Attachment[];

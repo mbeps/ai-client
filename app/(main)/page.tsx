@@ -3,7 +3,7 @@
 import { ArrowRight, Bot, Database, FolderOpen, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ChatInput } from "@/components/chat/chat-input";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import {
   NEW_CHAT_TOOLS_KEY,
   useChatToolsStore,
 } from "@/lib/store/use-chat-tools-store";
+import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
+import type { Attachment } from "@/types/attachment/attachment";
+import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
  * Dashboard home page with user greeting, quick-action shortcuts, and inline chat launcher.
@@ -29,6 +32,7 @@ export default function HomePage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const createChatDb = useAppStore((state) => state.createChatDb);
+  const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);
   const mcpServers = useAppStore((state) => state.mcpServers);
   const userSettings = useAppStore((state) => state.userSettings);
   const { models: chatModels, isLoading: isModelsLoading } =
@@ -36,20 +40,38 @@ export default function HomePage() {
 
   useResourceHydration([
     "mcpServers",
+    "publicMcpServers",
     "agents",
+    "projects",
     "prompts",
     "skills",
+    "mcpPrompts",
     "userSettings",
   ]);
+
+  const [isStarting, setIsStarting] = useState(false);
 
   const enabledServers = useMemo(() => {
     return mcpServers.filter((s) => s.enabled);
   }, [mcpServers]);
 
-  const handleStart = async (content: string) => {
-    if (!content.trim()) return;
-
-    if (isModelsLoading) return;
+  const handleStart = async (
+    content: string,
+    attachments: Attachment[] = [],
+    model = "",
+    selectedServerIds: string[] = [],
+    selectedTools: string[] = [],
+    selectedPromptId?: string | string[],
+    selectedAssistantId?: string,
+    selectedKnowledgebases: string[] = [],
+    selectedSkillIds: string[] = [],
+    subagentsEnabled?: boolean,
+    subagentModelId?: string,
+    reasoningEffort?: ReasoningEffort,
+    subagentIds?: string[],
+    approvalMode?: ApprovalMode,
+  ): Promise<boolean> => {
+    if (isStarting || isModelsLoading) return false;
 
     if (chatModels.length === 0) {
       toast.error("No AI models configured. Please set up a provider first.", {
@@ -58,14 +80,43 @@ export default function HomePage() {
           onClick: () => router.push(ROUTES.SETTINGS.PROVIDERS.path),
         },
       });
-      return;
+      return false;
     }
 
-    const chatId = await createChatDb(content.slice(0, 60));
-    useChatToolsStore.getState().transferChatTools(NEW_CHAT_TOOLS_KEY, chatId);
-    router.push(
-      `${ROUTES.CHATS.detail(chatId)}?msg=${encodeURIComponent(content)}`,
-    );
+    setIsStarting(true);
+    try {
+      const title = content.trim().slice(0, 60) || "New Chat";
+      const chatId = await createChatDb(title);
+      if (selectedKnowledgebases.length > 0) {
+        await setKnowledgebaseDb(chatId, selectedKnowledgebases[0]);
+      }
+      const toolsStore = useChatToolsStore.getState();
+      toolsStore.transferChatTools(NEW_CHAT_TOOLS_KEY, chatId);
+      toolsStore.setPendingLaunch(chatId, {
+        content,
+        attachments,
+        model,
+        selectedServerIds,
+        selectedTools,
+        selectedPromptId,
+        selectedAssistantId,
+        selectedKnowledgebases,
+        selectedSkillIds,
+        subagentsEnabled,
+        subagentModelId,
+        reasoningEffort,
+        subagentIds,
+        approvalMode,
+      });
+      router.push(ROUTES.CHATS.detail(chatId));
+      return true;
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to start chat",
+      );
+      setIsStarting(false);
+      return false;
+    }
   };
 
   const quickActions = [
@@ -141,7 +192,9 @@ export default function HomePage() {
           <ChatInput
             chatId={NEW_CHAT_TOOLS_KEY}
             onSend={handleStart}
+            isLoading={isStarting}
             servers={enabledServers}
+            initialModelId={userSettings?.defaultChatModelId || undefined}
             initialApprovalMode={
               userSettings?.defaultAutoApprove ? "auto" : "ask"
             }
