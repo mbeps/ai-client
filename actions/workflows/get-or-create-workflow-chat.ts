@@ -29,6 +29,27 @@ async function findOwnedWorkflow(
 }
 
 /**
+ * Inserts a new workflow builder chat row using `txOrDb`.
+ */
+async function insertWorkflowBuilderChat(
+  txOrDb: Pick<typeof db, "insert">,
+  userId: string,
+  workflowId: string,
+  workflowName: string,
+): Promise<ChatRow> {
+  const [created] = await txOrDb
+    .insert(chat)
+    .values({
+      id: crypto.randomUUID(),
+      title: `Builder: ${workflowName}`,
+      userId,
+      workflowId,
+    })
+    .returning();
+  return created;
+}
+
+/**
  * Returns the existing builder chat for `workflowId`, or creates one if none exists.
  * Enforces workflow ownership via session check.
  *
@@ -56,15 +77,12 @@ export const getOrCreateWorkflowChat = defineAction(
       return ok(existing);
     }
 
-    const [created] = await db
-      .insert(chat)
-      .values({
-        id: crypto.randomUUID(),
-        title: `Builder: ${owned.name}`,
-        userId: session.user.id,
-        workflowId,
-      })
-      .returning();
+    const created = await insertWorkflowBuilderChat(
+      db,
+      session.user.id,
+      workflowId,
+      owned.name,
+    );
 
     return ok(created);
   },
@@ -88,21 +106,23 @@ export const resetWorkflowChat = defineAction(
       });
     }
 
-    await db
-      .delete(chat)
-      .where(
-        and(eq(chat.workflowId, workflowId), eq(chat.userId, session.user.id)),
-      );
+    const created = await db.transaction(async (tx) => {
+      await tx
+        .delete(chat)
+        .where(
+          and(
+            eq(chat.workflowId, workflowId),
+            eq(chat.userId, session.user.id),
+          ),
+        );
 
-    const [created] = await db
-      .insert(chat)
-      .values({
-        id: crypto.randomUUID(),
-        title: `Builder: ${owned.name}`,
-        userId: session.user.id,
+      return insertWorkflowBuilderChat(
+        tx,
+        session.user.id,
         workflowId,
-      })
-      .returning();
+        owned.name,
+      );
+    });
 
     return ok(created);
   },

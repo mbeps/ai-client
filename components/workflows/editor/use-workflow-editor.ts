@@ -139,10 +139,10 @@ export function useWorkflowEditor({
     toast.success("Webhook secret regenerated");
   };
 
-  const handleSave = async (redirectQuery?: string) => {
+  const validateAndBuildPayload = () => {
     if (!form.name.trim()) {
       toast.error("Please enter a workflow name");
-      return;
+      return null;
     }
 
     try {
@@ -154,29 +154,34 @@ export function useWorkflowEditor({
           ? err.message
           : "Workflow graph contains invalid connections or cycles",
       );
-      return;
+      return null;
     }
+
+    return buildWorkflowPayload({
+      name: form.name,
+      description: form.description,
+      globalContext: form.globalContext,
+      modelId: form.modelId,
+      reasoningEffort: form.reasoningEffort,
+      tools: form.tools,
+      skillMode: form.skillMode,
+      skillIds: form.skillIds,
+      knowledgeBaseIds: form.knowledgeBaseIds,
+      subagentIds: form.subagentIds,
+      requiresFileUpload,
+      canvasConfig: form.canvasConfig,
+      approvalConfig: form.approvalConfig,
+      nodes: form.nodes,
+      edges: form.edges,
+    });
+  };
+
+  const handleSave = async (redirectQuery?: string) => {
+    const payload = validateAndBuildPayload();
+    if (!payload) return;
 
     setIsSaving(true);
     try {
-      const payload = buildWorkflowPayload({
-        name: form.name,
-        description: form.description,
-        globalContext: form.globalContext,
-        modelId: form.modelId,
-        reasoningEffort: form.reasoningEffort,
-        tools: form.tools,
-        skillMode: form.skillMode,
-        skillIds: form.skillIds,
-        knowledgeBaseIds: form.knowledgeBaseIds,
-        subagentIds: form.subagentIds,
-        requiresFileUpload,
-        canvasConfig: form.canvasConfig,
-        approvalConfig: form.approvalConfig,
-        nodes: form.nodes,
-        edges: form.edges,
-      });
-
       if (isNew) {
         const res = await createWorkflow(payload);
         if (!res.ok) {
@@ -204,38 +209,8 @@ export function useWorkflowEditor({
 
   const handleSaveForBuilderChat = async (): Promise<boolean> => {
     if (isNew) return false;
-    if (!form.name.trim()) {
-      toast.error("Please enter a workflow name");
-      return false;
-    }
-    try {
-      validateAndSortWorkflowGraph(form.nodes, form.edges);
-    } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Workflow graph contains invalid connections or cycles",
-      );
-      return false;
-    }
-
-    const payload = buildWorkflowPayload({
-      name: form.name,
-      description: form.description,
-      globalContext: form.globalContext,
-      modelId: form.modelId,
-      reasoningEffort: form.reasoningEffort,
-      tools: form.tools,
-      skillMode: form.skillMode,
-      skillIds: form.skillIds,
-      knowledgeBaseIds: form.knowledgeBaseIds,
-      subagentIds: form.subagentIds,
-      requiresFileUpload,
-      canvasConfig: form.canvasConfig,
-      approvalConfig: form.approvalConfig,
-      nodes: form.nodes,
-      edges: form.edges,
-    });
+    const payload = validateAndBuildPayload();
+    if (!payload) return false;
 
     const res = await updateWorkflow(id, payload);
     if (!res.ok) {

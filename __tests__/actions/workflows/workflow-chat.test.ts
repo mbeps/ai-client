@@ -13,8 +13,8 @@ const mockInsertValues = vi.hoisted(() =>
 );
 const mockDeleteWhere = vi.hoisted(() => vi.fn());
 
-vi.mock("@/drizzle/db", () => ({
-  db: {
+vi.mock("@/drizzle/db", () => {
+  const mockDb = {
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: mockSelectWhere,
@@ -26,8 +26,16 @@ vi.mock("@/drizzle/db", () => ({
     delete: vi.fn(() => ({
       where: mockDeleteWhere,
     })),
-  },
-}));
+  };
+  return {
+    db: {
+      ...mockDb,
+      transaction: vi.fn(async (fn: (tx: typeof mockDb) => Promise<unknown>) =>
+        fn(mockDb),
+      ),
+    },
+  };
+});
 
 import {
   getOrCreateWorkflowChat,

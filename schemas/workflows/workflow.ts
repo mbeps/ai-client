@@ -13,6 +13,7 @@ import { skillIdsSchema, skillModeSchema } from "@/schemas/skill/skill-config";
 import {
   DEFAULT_WORKFLOW_APPROVAL_CONFIG,
   DEFAULT_WORKFLOW_CANVAS_CONFIG,
+  RESERVED_STRUCTURED_OUTPUT_FIELDS,
 } from "@/types/workflows/workflow";
 
 /**
@@ -28,7 +29,7 @@ export const variableNameField = z
 /**
  * Supported Artifact Canvas output format types.
  */
-export const artifactCanvasTypeSchema = z.enum([
+const artifactCanvasTypeSchema = z.enum([
   "markdown",
   "spreadsheet",
   "html",
@@ -53,7 +54,7 @@ export const workflowApprovalConfigSchema = z.object({
 /**
  * Supported deterministic comparison operators for `If` condition rules.
  */
-export const ifConditionOperatorSchema = z.enum([
+const ifConditionOperatorSchema = z.enum([
   "equals",
   "not_equals",
   "contains",
@@ -70,7 +71,7 @@ export const ifConditionOperatorSchema = z.enum([
 /**
  * Single deterministic rule evaluated inside an `if_condition` node.
  */
-export const ifConditionRuleSchema = z.object({
+const ifConditionRuleSchema = z.object({
   id: z.string().min(1),
   leftTemplate: z.string().max(1000),
   operator: ifConditionOperatorSchema,
@@ -98,13 +99,6 @@ const webhookTriggerNodeDataSchema = z.object({
   samplePayload: z.string().max(20000).optional(),
 });
 
-const RESERVED_OUTPUT_FIELD_NAMES = new Set([
-  "text",
-  "data",
-  "artifact",
-  "outputAttachmentId",
-]);
-
 const outputFieldNameSchema = z
   .string()
   .trim()
@@ -115,7 +109,7 @@ const outputFieldNameSchema = z
     "Field name must start with a letter or underscore and contain only letters, digits, and underscores",
   )
   .refine(
-    (name) => !RESERVED_OUTPUT_FIELD_NAMES.has(name),
+    (name) => !RESERVED_STRUCTURED_OUTPUT_FIELDS.has(name),
     "Field name is reserved (cannot be text, data, artifact, or outputAttachmentId)",
   );
 
@@ -270,7 +264,7 @@ const loopNodeDataSchema = z.object({
 /**
  * Discriminated union schema for all 7 workflow node payloads.
  */
-export const workflowNodeDataSchema = z.discriminatedUnion("kind", [
+const workflowNodeDataSchema = z.discriminatedUnion("kind", [
   manualTriggerNodeDataSchema,
   webhookTriggerNodeDataSchema,
   aiStepNodeDataSchema,
