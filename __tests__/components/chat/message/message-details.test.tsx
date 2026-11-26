@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MessageDetails } from "@/components/chat/message/message-details";
@@ -105,5 +105,46 @@ describe("MessageDetails component", () => {
       />,
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it("formats sub-second and multi-minute durations", () => {
+    const { rerender } = render(
+      <MessageDetails
+        createdAt={new Date("2026-01-01T00:00:00Z")}
+        metadata={{
+          promptMeta: null,
+          toolData: null,
+          modelId: "gpt-4o",
+          selectedServerIds: null,
+          selectedTools: null,
+          selectedKbIds: null,
+          reasoning: undefined,
+          usage: null,
+          finishReason: null,
+          durationMs: 450,
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+    expect(screen.getByText("450ms")).toBeTruthy();
+
+    rerender(
+      <MessageDetails
+        createdAt={new Date("2026-01-01T00:00:00Z")}
+        metadata={{
+          promptMeta: null,
+          toolData: null,
+          modelId: "gpt-4o",
+          selectedServerIds: null,
+          selectedTools: null,
+          selectedKbIds: null,
+          reasoning: undefined,
+          usage: null,
+          finishReason: null,
+          durationMs: 65000,
+        }}
+      />,
+    );
+    expect(screen.getByText("1m 5.0s")).toBeTruthy();
   });
 });

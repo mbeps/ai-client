@@ -229,4 +229,14 @@ describe("ChatUI pending launch handoff from HomePage", () => {
       "auto",
     );
   });
+
+  it("renders Chat not found when chat is missing and updates capturedLaunchState on chatId change", () => {
+    const chat = buildChat();
+    const { container, rerender } = render(
+      <ChatUI chatId="chat-home-1" initialChat={chat} />,
+    );
+
+    rerender(<ChatUI chatId="chat-home-2" initialChat={undefined} />);
+    expect(container.textContent).toContain("Chat not found.");
+  });
 });

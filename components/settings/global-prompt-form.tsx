@@ -56,7 +56,7 @@ export function GlobalPromptForm({ initialSettings }: GlobalPromptFormProps) {
                 <FormLabel>Global System Prompt</FormLabel>
                 <FormControl>
                   <MarkdownTabEditor
-                    value={field.value ?? ""}
+                    value={field.value}
                     onChange={field.onChange}
                     placeholder="Enter your global system prompt..."
                     minHeight="min-h-[160px]"

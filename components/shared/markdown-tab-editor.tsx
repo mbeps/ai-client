@@ -72,18 +72,14 @@ function InnerBlockNoteEditor({
   const { resolvedTheme } = useTheme();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const latestMarkdownRef = useRef<string | null>(content);
-  const pendingChangeRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
-      if (pendingChangeRef.current !== null) {
-        onChange(pendingChangeRef.current);
-      }
     };
-  }, [onChange]);
+  }, []);
 
   // Synchronize external markdown updates into the active BlockNote document
   useEffect(() => {
@@ -132,7 +128,6 @@ function InnerBlockNoteEditor({
                 editor.document,
               );
               latestMarkdownRef.current = markdown;
-              pendingChangeRef.current = null;
               onChange(markdown);
             } catch (err) {
               logger.error(

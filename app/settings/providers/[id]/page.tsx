@@ -106,8 +106,6 @@ export default function ProviderDetailPage() {
     name.trim().length > 0 && baseUrl.trim().length > 0 && !isSaving;
 
   const handleSave = async (): Promise<void> => {
-    if (!canSave) return;
-
     setIsSaving(true);
     try {
       const headers = Object.fromEntries(

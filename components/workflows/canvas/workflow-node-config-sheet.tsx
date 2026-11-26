@@ -151,15 +151,13 @@ export function WorkflowNodeConfigSheet({
       const separator = node.data.prompt ? " " : "";
       updateData({ prompt: `${node.data.prompt}${separator}${token}` });
     } else if (node.data.kind === "if_condition") {
-      if (node.data.evaluationMode === "llm") {
-        updateData({
-          llmConditionPrompt:
-            `${node.data.llmConditionPrompt ?? ""} ${token}`.trim(),
-        });
-      }
-    } else if (node.data.kind === "http_request") {
       updateData({
-        body: `${node.data.body ?? ""} ${token}`.trim(),
+        llmConditionPrompt:
+          `${node.data.llmConditionPrompt ?? ""} ${token}`.trim(),
+      });
+    } else {
+      updateData({
+        body: `${(node.data as { body?: string }).body ?? ""} ${token}`.trim(),
       });
     }
   };
@@ -167,8 +165,7 @@ export function WorkflowNodeConfigSheet({
   const getSectionBadge = (
     sectionId: AiStepSection,
   ): string | number | null => {
-    if (node.data.kind !== "ai_step") return null;
-    if (sectionId === "tools" && node.data.toolIds.length > 0) {
+    if (sectionId === "tools" && node.data.kind === "ai_step" && node.data.toolIds.length > 0) {
       return node.data.toolIds.length;
     }
     if (

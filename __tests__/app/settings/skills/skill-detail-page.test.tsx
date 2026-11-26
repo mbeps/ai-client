@@ -80,6 +80,7 @@ vi.mock("@/actions/skills/export-skill", () => ({
 }));
 
 import { deleteSkill } from "@/actions/skills/delete-skill";
+import { exportSkillZip } from "@/actions/skills/export-skill";
 import { updateSkill } from "@/actions/skills/update-skill";
 import SkillDetailPage from "@/app/settings/skills/[id]/page";
 import { useAppStore } from "@/lib/store/use-app-store";
@@ -234,11 +235,13 @@ describe("SkillDetailPage", () => {
     const user = userEvent.setup();
     currentQueryTab = "export";
     const { exportSkillZip } = await import("@/actions/skills/export-skill");
+    window.URL.createObjectURL = vi.fn(() => "blob:1");
+    window.URL.revokeObjectURL = vi.fn();
     vi.mocked(exportSkillZip).mockResolvedValueOnce({
       ok: true,
       value: {
         filename: "ai-sdk-nextjs.zip",
-        base64: "UEsDBBQAAAAIA==...",
+        base64: "UEsDBBQAAAAIA==",
       },
     });
 
@@ -274,5 +277,67 @@ describe("SkillDetailPage", () => {
       expect(deleteSkill).toHaveBeenCalledWith("skill-1");
       expect(mockPush).toHaveBeenCalledWith("/settings/skills");
     });
+  });
+
+  it("handles export failures, save validation/errors, delete errors, and notFound", async () => {
+    const user = userEvent.setup();
+    currentQueryTab = "export";
+    vi.mocked(exportSkillZip).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Export failed" },
+    } as any);
+    const { rerender } = render(<SkillDetailPage />);
+    await user.click(screen.getByRole("button", { name: /download zip bundle/i }));
+    await waitFor(() => {
+      expect(exportSkillZip).toHaveBeenCalledWith("skill-1");
+    });
+
+    vi.mocked(exportSkillZip).mockRejectedValueOnce(new Error("Network"));
+    await user.click(screen.getByRole("button", { name: /download zip bundle/i }));
+
+    currentQueryTab = "details";
+    rerender(<SkillDetailPage />);
+    const nameInput = screen.getByDisplayValue("ai-sdk-nextjs");
+    await user.clear(nameInput);
+    await user.click(screen.getAllByRole("button", { name: /save changes/i })[0]);
+
+    await user.type(nameInput, "Invalid Name!");
+    await user.click(screen.getAllByRole("button", { name: /save changes/i })[0]);
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "valid-slug");
+    vi.mocked(updateSkill).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Update failed" },
+    } as any);
+    await user.click(screen.getAllByRole("button", { name: /save changes/i })[0]);
+
+    vi.mocked(updateSkill).mockRejectedValueOnce(new Error("Save err"));
+    await user.click(screen.getAllByRole("button", { name: /save changes/i })[0]);
+
+    currentQueryTab = "danger";
+    rerender(<SkillDetailPage />);
+    vi.mocked(deleteSkill).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Delete failed" },
+    } as any);
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    let confirmBtns = screen.getAllByRole("button", { name: "Delete" });
+    await user.click(confirmBtns[confirmBtns.length - 1]);
+
+    vi.mocked(deleteSkill).mockRejectedValueOnce(new Error("Del err"));
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    confirmBtns = screen.getAllByRole("button", { name: "Delete" });
+    await user.click(confirmBtns[confirmBtns.length - 1]);
+
+    currentParamId = "missing-skill";
+    expect(() => render(<SkillDetailPage />)).toThrow("NEXT_NOT_FOUND");
+  }, 15000);
+
+  it("renders files tab and interacts with file tree", async () => {
+    currentParamId = "skill-1";
+    currentQueryTab = "editor";
+    render(<SkillDetailPage />);
+    expect(screen.getAllByText("SKILL.md").length).toBeGreaterThanOrEqual(1);
   });
 });

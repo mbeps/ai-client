@@ -321,4 +321,65 @@ describe("MarkdownRenderer Mermaid diagrams", () => {
     renderSpy.mockRestore();
     initSpy.mockRestore();
   });
+
+  it("renders h4, h5, h6, em, and del", () => {
+    const { container } = render(
+      <MarkdownRenderer
+        content={"#### H4\n##### H5\n###### H6\n\n*em* ~~del~~"}
+      />,
+    );
+    expect(container.querySelector("h4")).toHaveTextContent("H4");
+    expect(container.querySelector("h5")).toHaveTextContent("H5");
+    expect(container.querySelector("h6")).toHaveTextContent("H6");
+    expect(container.querySelector("em")).toHaveTextContent("em");
+    expect(container.querySelector("del")).toHaveTextContent("del");
+  });
+
+  it("shows toast error when downloadFile rejects", async () => {
+    mockDownloadFile.mockRejectedValueOnce(new Error("network fail"));
+    const { toast } = await import("sonner");
+    const toastSpy = vi.spyOn(toast, "error").mockImplementation(() => "" as any);
+
+    render(
+      <MarkdownRenderer content="[Download PDF](https://example.com/file.pdf)" />,
+    );
+    fireEvent.click(screen.getByRole("link", { name: "Download PDF" }));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(toastSpy).toHaveBeenCalledWith(
+      "Failed to download file. Please try again.",
+    );
+    toastSpy.mockRestore();
+  });
+
+  it("handles mermaid error without message and empty cleaned message", async () => {
+    const mermaidModule = await import("mermaid");
+    const renderSpy = vi
+      .spyOn(mermaidModule.default, "render")
+      .mockRejectedValueOnce("raw-string-error")
+      .mockRejectedValueOnce(new Error("Syntax error in text"));
+
+    const { rerender } = render(
+      <MarkdownRenderer content={"```mermaid\ngraph TD\nA-->B\n```"} />,
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(
+      screen.getByText(/Failed to render diagram: Failed to render mermaid chart/),
+    ).toBeInTheDocument();
+
+    rerender(<MarkdownRenderer content={"```mermaid\ngraph TD\nC-->D\n```"} />);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(
+      screen.getByText(/Failed to render diagram: Syntax error in text/),
+    ).toBeInTheDocument();
+
+    renderSpy.mockRestore();
+  });
 });

@@ -176,4 +176,28 @@ describe("NewKnowledgebasePage", () => {
       ),
     ).not.toBeInTheDocument();
   });
+
+  it("displays fallback error toast when server action returns empty error message", async () => {
+    const user = userEvent.setup();
+    mockCreateKnowledgebase.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "" },
+    });
+
+    render(<NewKnowledgebasePage />);
+
+    await user.type(
+      screen.getByPlaceholderText("My Knowledgebase"),
+      "Project Docs",
+    );
+    await user.click(
+      screen.getByRole("button", { name: /create knowledgebase/i }),
+    );
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to create knowledgebase",
+      );
+    });
+  });
 });

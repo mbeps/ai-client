@@ -155,5 +155,43 @@ describe("AttachmentGallery", () => {
       "report.pdf",
     );
   });
+
+  it("handles getAttachmentUrl failure, rejection, unmount cancellation, and downloadFile error", async () => {
+    mockGetAttachmentUrl
+      .mockResolvedValueOnce({ ok: false, error: "Not found" })
+      .mockRejectedValueOnce(new Error("Network"));
+
+    const atts: Attachment[] = [
+      { id: "a1", type: "image", name: "a1.png", mimeType: "image/png", sizeBytes: 10, key: "k1" },
+      { id: "a2", type: "image", name: "a2.png", mimeType: "image/png", sizeBytes: 10, key: "k2" },
+    ];
+    render(<AttachmentGallery attachments={atts} />);
+    await waitFor(() => expect(mockGetAttachmentUrl).toHaveBeenCalledTimes(2));
+
+    // Unmount before resolution
+    let resolveUrl!: (v: unknown) => void;
+    mockGetAttachmentUrl.mockImplementationOnce(() => new Promise((r) => { resolveUrl = r; }));
+    const { unmount } = render(
+      <AttachmentGallery
+        attachments={[{ id: "a3", type: "image", name: "a3.png", mimeType: "image/png", sizeBytes: 10, key: "k3" }]}
+      />,
+    );
+    unmount();
+    await act(async () => {
+      resolveUrl({ ok: true, value: { url: "https://s3.example.com/a3.png" } });
+    });
+
+    // downloadFile error
+    mockDownloadFile.mockRejectedValueOnce(new Error("dl fail"));
+    render(
+      <AttachmentGallery
+        attachments={[{ id: "a4", type: "document", name: "f.pdf", mimeType: "application/pdf", sizeBytes: 10, url: "https://s3.example.com/f.pdf" }]}
+      />,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("link", { name: /f\.pdf/i }));
+    });
+    expect(mockDownloadFile).toHaveBeenCalled();
+  });
 });
 

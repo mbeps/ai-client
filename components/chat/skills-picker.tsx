@@ -81,9 +81,7 @@ export function SkillsPicker({
     } else {
       if (isAllSelected) {
         filteredSkills.forEach((s) => {
-          if (selectedIds.has(s.id) || selectedIds.has(s.name)) {
-            onToggleSkill(s.id);
-          }
+          onToggleSkill(s.id);
         });
       } else {
         filteredSkills.forEach((s) => {

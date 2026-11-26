@@ -178,4 +178,26 @@ describe("DELETE /api/chat/stop", () => {
     expect(runtime).toBe("nodejs");
     expect(dynamic).toBe("force-dynamic");
   });
+
+  it("returns 500 when a non-Error or Error without stack is thrown", async () => {
+    vi.mocked(auth.api.getSession).mockRejectedValueOnce("string error");
+    const res1 = await DELETE(
+      new Request("http://localhost:3000/api/chat/stop", {
+        method: "DELETE",
+        body: JSON.stringify({ chatId: "c1" }),
+      }),
+    );
+    expect(res1.status).toBe(500);
+
+    const errNoStack = new Error("no stack");
+    errNoStack.stack = undefined;
+    vi.mocked(auth.api.getSession).mockRejectedValueOnce(errNoStack);
+    const res2 = await DELETE(
+      new Request("http://localhost:3000/api/chat/stop", {
+        method: "DELETE",
+        body: JSON.stringify({ chatId: "c1" }),
+      }),
+    );
+    expect(res2.status).toBe(500);
+  });
 });

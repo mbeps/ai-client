@@ -85,4 +85,42 @@ describe("AgentOptions", () => {
     expect(screen.queryByText("Rename Agent")).not.toBeInTheDocument();
     expect(screen.queryByText("Delete Agent")).not.toBeInTheDocument();
   });
+
+  it("triggers New Chat, Rename Agent, and Delete Agent actions", async () => {
+    const user = userEvent.setup();
+    const { renameAgent } = await import("@/actions/agents/rename-agent");
+    const { deleteAgent } = await import("@/actions/agents/delete-agent");
+
+    render(<AgentOptions agent={customAgent} />);
+    await user.click(screen.getByRole("button"));
+    await user.click(screen.getByText("New Chat"));
+    expect(mockCreateNewChat).toHaveBeenCalledWith("New Chat", undefined, "agent-1");
+
+    await user.click(screen.getByRole("button"));
+    await user.click(screen.getByText("Rename Agent"));
+    const input = screen.getByDisplayValue("Custom Agent");
+    await user.clear(input);
+    await user.type(input, "Renamed Agent");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    expect(renameAgent).toHaveBeenCalledWith("agent-1", "Renamed Agent");
+
+    await user.click(screen.getByRole("button"));
+    await user.click(screen.getByText("Delete Agent"));
+    await user.click(screen.getByRole("button", { name: /delete/i }));
+    expect(deleteAgent).toHaveBeenCalledWith("agent-1");
+    expect(mockDeleteAgentFromStore).toHaveBeenCalledWith("agent-1");
+  });
+
+  it("does not delete from store when deleteAgent returns ok: false", async () => {
+    const user = userEvent.setup();
+    const { deleteAgent } = await import("@/actions/agents/delete-agent");
+    vi.mocked(deleteAgent).mockResolvedValueOnce({ ok: false, error: "fail" });
+
+    render(<AgentOptions agent={customAgent} />);
+    await user.click(screen.getByRole("button"));
+    await user.click(screen.getByText("Delete Agent"));
+    await user.click(screen.getByRole("button", { name: /delete/i }));
+    expect(deleteAgent).toHaveBeenCalledWith("agent-1");
+    expect(mockDeleteAgentFromStore).not.toHaveBeenCalled();
+  });
 });

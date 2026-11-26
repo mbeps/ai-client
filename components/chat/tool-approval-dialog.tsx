@@ -34,7 +34,7 @@ export interface ToolApprovalDialogProps {
  */
 function formatToolArgs(args: unknown): string {
   try {
-    return JSON.stringify(args ?? {}, null, 2) ?? "{}";
+    return JSON.stringify(args ?? {}, null, 2);
   } catch {
     return String(args);
   }

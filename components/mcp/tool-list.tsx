@@ -77,7 +77,7 @@ function renderToolContent(tool: DiscoveredTool) {
             </h4>
             <div className="grid gap-2">
               {Object.entries(
-                (tool.inputSchema.properties as Record<string, any>) || {},
+                tool.inputSchema.properties as Record<string, any>,
               ).map(([propName, prop]: [string, any]) => (
                 <div
                   key={propName}

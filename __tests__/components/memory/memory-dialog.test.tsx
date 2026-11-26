@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -106,5 +106,60 @@ describe("MemoryDialog", () => {
       content: "Prefers TypeScript and Rust",
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("ignores whitespace-only submit, handles Cancel, action errors, and thrown errors", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    render(<MemoryDialog open={true} onOpenChange={onOpenChange} />);
+
+    // Cancel button
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    // Whitespace-only submit
+    const textarea = screen.getByRole("textbox");
+    await user.type(textarea, "   ");
+    fireEvent.submit(textarea.closest("form")!);
+    expect(mockCreateMemory).not.toHaveBeenCalled();
+
+    // Create error with message and without message
+    await user.clear(textarea);
+    await user.type(textarea, "Valid memory");
+    const form = textarea.closest("form")!;
+    mockCreateMemory.mockResolvedValueOnce({ ok: false, error: { message: "Create failed" } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(mockCreateMemory).toHaveBeenCalledTimes(1));
+
+    mockCreateMemory.mockResolvedValueOnce({ ok: false, error: { message: "" } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(mockCreateMemory).toHaveBeenCalledTimes(2));
+
+    // Thrown Error and non-Error
+    mockCreateMemory.mockRejectedValueOnce(new Error("Boom"));
+    fireEvent.submit(form);
+    await waitFor(() => expect(mockCreateMemory).toHaveBeenCalledTimes(3));
+
+    mockCreateMemory.mockRejectedValueOnce("string error");
+    fireEvent.submit(form);
+    await waitFor(() => expect(mockCreateMemory).toHaveBeenCalledTimes(4));
+
+    // Update error with message and without message
+    const existing: Memory = {
+      id: "mem-1",
+      userId: "u1",
+      content: "Old",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    render(<MemoryDialog open={true} onOpenChange={onOpenChange} memory={existing} />);
+    mockUpdateMemory.mockResolvedValueOnce({ ok: false, error: { message: "Update failed" } });
+    const saveBtns = screen.getAllByRole("button", { name: /save/i });
+    await user.click(saveBtns[saveBtns.length - 1]);
+    await waitFor(() => expect(mockUpdateMemory).toHaveBeenCalledTimes(1));
+
+    mockUpdateMemory.mockResolvedValueOnce({ ok: false, error: { message: "" } });
+    await user.click(saveBtns[saveBtns.length - 1]);
+    await waitFor(() => expect(mockUpdateMemory).toHaveBeenCalledTimes(2));
   });
 });

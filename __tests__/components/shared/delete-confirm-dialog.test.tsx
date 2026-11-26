@@ -86,4 +86,21 @@ describe("DeleteConfirmDialog", () => {
       expect(onCloseMock).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("renders custom confirmIcon and cancelIcon when provided", () => {
+    render(
+      <DeleteConfirmDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        title="Confirm"
+        description="Desc"
+        confirmIcon={<span data-testid="custom-confirm-icon" />}
+        cancelIcon={<span data-testid="custom-cancel-icon" />}
+      />,
+    );
+
+    expect(screen.getByTestId("custom-confirm-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("custom-cancel-icon")).toBeInTheDocument();
+  });
 });

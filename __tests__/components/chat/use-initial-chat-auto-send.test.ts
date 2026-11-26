@@ -80,4 +80,70 @@ describe("useInitialChatAutoSend", () => {
     });
     expect(handleSend).toHaveBeenCalledTimes(1);
   });
+
+  it("does not send when initialMessage is undefined", () => {
+    const onInitialMessageSent = vi.fn();
+    const handleSend = vi.fn();
+
+    renderHook(() =>
+      useInitialChatAutoSend(
+        baseChat,
+        undefined,
+        onInitialMessageSent,
+        handleSend,
+        "gpt-4o",
+        [],
+        [],
+        [],
+        undefined,
+        false,
+        undefined,
+        [],
+        true,
+      ),
+    );
+
+    expect(onInitialMessageSent).not.toHaveBeenCalled();
+    expect(handleSend).not.toHaveBeenCalled();
+  });
+
+  it("defaults initialSkillIds to empty array when undefined", () => {
+    const onInitialMessageSent = vi.fn();
+    const handleSend = vi.fn();
+
+    renderHook(() =>
+      useInitialChatAutoSend(
+        baseChat,
+        "Hello",
+        onInitialMessageSent,
+        handleSend,
+        "gpt-4o",
+        [],
+        [],
+        [],
+        undefined,
+        false,
+        undefined,
+        [],
+        true,
+      ),
+    );
+
+    expect(handleSend).toHaveBeenCalledWith(
+      "Hello",
+      [],
+      "gpt-4o",
+      [],
+      [],
+      undefined,
+      undefined,
+      [],
+      [],
+      false,
+      undefined,
+      undefined,
+      [],
+      undefined,
+    );
+  });
 });

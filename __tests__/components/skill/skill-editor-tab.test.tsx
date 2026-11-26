@@ -64,4 +64,41 @@ describe("SkillEditorTab", () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  it("supports rename, move, and delete when editing a non-SKILL.md file", async () => {
+    const user = userEvent.setup();
+    const onRenameFile = vi.fn();
+    const onDeleteFile = vi.fn();
+    const promptSpy = vi
+      .spyOn(window, "prompt")
+      .mockReturnValueOnce("references/renamed.md")
+      .mockReturnValueOnce(null);
+
+    render(
+      <SkillEditorTab
+        {...defaultProps}
+        isSkillMd={false}
+        selectedFilePath="references/guide.md"
+        activeContent="Guide content"
+        onRenameFile={onRenameFile}
+        onDeleteFile={onDeleteFile}
+        onClearFileToMove={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /rename/i }));
+    expect(onRenameFile).toHaveBeenCalledWith(
+      "references/guide.md",
+      "references/renamed.md",
+    );
+
+    await user.click(screen.getByRole("button", { name: /rename/i }));
+    expect(onRenameFile).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole("button", { name: /move/i }));
+    await user.click(screen.getByRole("button", { name: /delete/i }));
+    expect(onDeleteFile).toHaveBeenCalledWith("references/guide.md");
+
+    promptSpy.mockRestore();
+  });
 });

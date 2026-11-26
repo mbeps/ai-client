@@ -214,4 +214,94 @@ describe("PromptDetailPage", () => {
       expect(mockPush).toHaveBeenCalledWith("/settings/prompts");
     });
   });
+
+  it("handles save and delete failures and exceptions", async () => {
+    const user = userEvent.setup();
+    currentQueryTab = "details";
+
+    const { rerender } = render(<PromptDetailPage />);
+
+    vi.mocked(updatePrompt).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Save failed" },
+    } as any);
+    await user.click(screen.getAllByRole("button", { name: /save changes/i })[0]);
+
+    vi.mocked(updatePrompt).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    } as any);
+    await user.click(screen.getAllByRole("button", { name: /save changes/i })[0]);
+
+    vi.mocked(updatePrompt).mockRejectedValueOnce(new Error("Net error"));
+    await user.click(screen.getAllByRole("button", { name: /save changes/i })[0]);
+
+    currentQueryTab = "danger";
+    rerender(<PromptDetailPage />);
+
+    vi.mocked(deletePrompt).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Delete failed" },
+    } as any);
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    let confirmBtns = screen.getAllByRole("button", { name: "Delete" });
+    await user.click(confirmBtns[confirmBtns.length - 1]);
+
+    vi.mocked(deletePrompt).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    } as any);
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    confirmBtns = screen.getAllByRole("button", { name: "Delete" });
+    await user.click(confirmBtns[confirmBtns.length - 1]);
+
+    vi.mocked(deletePrompt).mockRejectedValueOnce(new Error("Net error"));
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    confirmBtns = screen.getAllByRole("button", { name: "Delete" });
+    await user.click(confirmBtns[confirmBtns.length - 1]);
+  });
+
+  it("loads prompts when empty and calls notFound when prompt is missing", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    useAppStore.setState({ prompts: [] });
+    const mockLoadPrompts = vi.fn().mockResolvedValue(undefined);
+    useAppStore.setState({ loadPrompts: mockLoadPrompts } as any);
+
+    const { Component } = await import("react");
+    class EB extends Component<{ children: React.ReactNode }, { err: boolean }> {
+      state = { err: false };
+      static getDerivedStateFromError() {
+        return { err: true };
+      }
+      render() {
+        return this.state.err ? null : this.props.children;
+      }
+    }
+
+    render(
+      <EB>
+        <PromptDetailPage />
+      </EB>,
+    );
+    expect(mockLoadPrompts).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(mockNotFound).toHaveBeenCalled();
+    });
+    consoleSpy.mockRestore();
+  });
+
+  it("handles prompt with undefined projectIds and assistantIds", () => {
+    useAppStore.setState({
+      prompts: [
+        {
+          ...mockPrompt,
+          projectIds: undefined,
+          assistantIds: undefined,
+        } as any,
+      ],
+    });
+    render(<PromptDetailPage />);
+    expect(screen.getByDisplayValue("Markdown Converter")).toBeInTheDocument();
+  });
 });

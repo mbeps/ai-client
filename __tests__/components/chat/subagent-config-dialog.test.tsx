@@ -236,4 +236,22 @@ describe("SubagentConfigDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "High" }));
     expect(onEffortChange).toHaveBeenCalledWith("high");
   });
+
+  it("uses noop toggle when onToggleSubagentId is omitted", () => {
+    render(
+      <SubagentConfigDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        subagentsEnabled={true}
+        onToggleSubagents={vi.fn()}
+        onSubagentModelChange={vi.fn()}
+        agents={[makeLeafAgent("leaf-1", "Custom Leaf")]}
+        selectedSubagentIds={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Custom Agents"));
+    fireEvent.click(screen.getByText("Custom Leaf"));
+    expect(screen.getByText("Custom Leaf")).toBeInTheDocument();
+  });
 });

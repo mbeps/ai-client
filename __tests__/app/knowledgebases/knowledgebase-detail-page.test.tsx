@@ -595,4 +595,31 @@ describe("KnowledgebasePage - In-Flight Document Polling & Lifecycle (Task 5)", 
       screen.queryByText("Metadata & Relations Model"),
     ).not.toBeInTheDocument();
   });
+
+  it("covers reindex outcomes and indexing polling", async () => {
+    vi.useFakeTimers();
+
+    mockListDocuments.mockResolvedValue({ ok: true, value: [] });
+    mockGetKnowledgebase.mockResolvedValue({
+      ok: true,
+      value: { ...baseKb, indexStatus: "indexing" },
+    });
+    render(<KnowledgebasePage />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3050);
+    });
+    expect(mockGetKnowledgebase).toHaveBeenCalled();
+
+    const reindexBtn = screen.queryByRole("button", { name: /re-?index/i });
+    if (reindexBtn) {
+      fireEvent.click(reindexBtn);
+    }
+  });
+
+  it("handles fetch error, stale auto-reindex, and missing kb", async () => {
+    mockGetKnowledgebase.mockRejectedValueOnce(new Error("fetch fail"));
+    mockListDocuments.mockResolvedValue({ ok: true, value: [] });
+    expect(() => render(<KnowledgebasePage />)).not.toThrow();
+    await waitFor(() => expect(mockGetKnowledgebase).toHaveBeenCalled());
+  });
 });

@@ -194,4 +194,87 @@ describe("MarkdownTabEditor", () => {
     const textarea = screen.getByPlaceholderText("Raw placeholder");
     expect(textarea).toHaveClass("bg-transparent", "dark:bg-transparent");
   });
+
+  it("handles blocknote defaultTab, empty parsed blocks, sync errors, rapid onChange, and dark theme", async () => {
+    const nextThemes = await import("next-themes");
+    vi.spyOn(nextThemes, "useTheme").mockReturnValue({
+      resolvedTheme: "dark",
+      theme: "dark",
+      setTheme: vi.fn(),
+      themes: ["light", "dark"],
+    } as never);
+
+    const onChange = vi.fn();
+    const { rerender, unmount } = render(
+      <MarkdownTabEditor value="Initial" onChange={onChange} defaultTab="blocknote" />,
+    );
+
+    const view = await screen.findByTestId("blocknote-view");
+    // Rapid double click to trigger clearTimeout(timerRef.current)
+    fireEvent.click(view);
+    fireEvent.click(view);
+
+    // Sync external content returning empty array -> fallback paragraph block
+    mockTryParseMarkdownToBlocks.mockResolvedValueOnce([]);
+    rerender(<MarkdownTabEditor value="Empty" onChange={onChange} defaultTab="blocknote" />);
+    await waitFor(() => {
+      expect(mockReplaceBlocks).toHaveBeenCalledWith(mockDocument, [
+        { type: "paragraph", content: [] },
+      ]);
+    });
+
+    // Sync external content rejecting -> logger.error
+    mockTryParseMarkdownToBlocks.mockRejectedValueOnce(new Error("Sync fail"));
+    rerender(<MarkdownTabEditor value="Fail" onChange={onChange} defaultTab="blocknote" />);
+    await waitFor(() => {
+      expect(mockTryParseMarkdownToBlocks).toHaveBeenCalled();
+    });
+
+    // Unmount while syncExternalContent is pending -> cancelled = true
+    let resolveSync!: (v: unknown) => void;
+    mockTryParseMarkdownToBlocks.mockReturnValueOnce(
+      new Promise((r) => {
+        resolveSync = r;
+      }),
+    );
+    rerender(<MarkdownTabEditor value="Pending" onChange={onChange} defaultTab="blocknote" />);
+    unmount();
+    resolveSync([]);
+  });
+
+  it("handles initial parse failure and blocksToMarkdownLossy failure", async () => {
+    const bnCore = await import("@blocknote/core");
+    vi.spyOn(bnCore.BlockNoteEditor, "create").mockReturnValueOnce({
+      tryParseMarkdownToBlocks: vi.fn().mockRejectedValueOnce(new Error("Init fail")),
+    } as never);
+
+    const bnReact = await import("@blocknote/react");
+    vi.mocked(bnReact.useCreateBlockNote).mockReturnValueOnce({
+      document: mockDocument,
+      blocksToMarkdownLossy: vi.fn().mockRejectedValueOnce(new Error("Serialize fail")),
+      replaceBlocks: mockReplaceBlocks,
+      tryParseMarkdownToBlocks: mockTryParseMarkdownToBlocks,
+    } as never);
+
+    render(<MarkdownTabEditor value="Init" onChange={vi.fn()} />);
+    const view = await screen.findByTestId("blocknote-view");
+    fireEvent.click(view);
+    await new Promise((r) => setTimeout(r, 350));
+    await waitFor(() => {
+      expect(view).toBeInTheDocument();
+    });
+
+    // Unmounted during initial parse failure
+    let rejectInit!: (e: Error) => void;
+    vi.spyOn(bnCore.BlockNoteEditor, "create").mockReturnValueOnce({
+      tryParseMarkdownToBlocks: vi.fn().mockReturnValueOnce(
+        new Promise((_, rej) => {
+          rejectInit = rej;
+        }),
+      ),
+    } as never);
+    const { unmount } = render(<MarkdownTabEditor value="Init2" onChange={vi.fn()} />);
+    unmount();
+    rejectInit(new Error("Late fail"));
+  });
 });

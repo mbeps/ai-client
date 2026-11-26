@@ -213,7 +213,7 @@ export function KnowledgebasePicker({
                   <div className="pt-0.5">
                     <Checkbox
                       checked={selectedIds.has(kb.id)}
-                      onCheckedChange={() => isReady && handleToggle(kb.id)}
+                      onCheckedChange={() => handleToggle(kb.id)}
                       onClick={(e) => e.stopPropagation()}
                       disabled={!isReady}
                     />

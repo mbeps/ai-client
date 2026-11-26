@@ -88,5 +88,83 @@ describe("DownloadCard", () => {
 
     downloadSpy.mockRestore();
   });
+
+  it("renders all file types, size formats, invalid date, escape key, and download error", async () => {
+    const downloadSpy = vi
+      .spyOn(downloadUtil, "downloadFile")
+      .mockRejectedValueOnce(new Error("Network error"));
+
+    const types = ["document", "archive", "code", "image", "audio", "video", "other"] as const;
+    const { rerender } = render(
+      <DownloadCard
+        item={{ id: "d1", title: "File", url: "/f", type: "document", size: 500 } as any}
+        createdAt={"not-a-date" as any}
+      />,
+    );
+    expect(screen.getByText(/500 B/)).toBeInTheDocument();
+
+    const card = screen.getByRole("button", { name: /^download$/i });
+    fireEvent.keyDown(card, { key: "Escape" });
+    fireEvent.click(card);
+    await waitFor(() => expect(downloadSpy).toHaveBeenCalledTimes(1));
+
+    rerender(
+      <DownloadCard
+        item={{ id: "d2", title: "", url: "/f2", type: "archive", size: 2048 } as any}
+      />,
+    );
+    expect(screen.getByText(/2\.0 KB/)).toBeInTheDocument();
+
+    rerender(
+      <DownloadCard
+        item={{ id: "d3", title: "Big", url: "/f3", type: "code", size: 2 * 1024 * 1024 } as any}
+      />,
+    );
+    expect(screen.getByText(/2\.0 MB/)).toBeInTheDocument();
+
+    for (const t of types) {
+      rerender(
+        <DownloadCard
+          item={{ id: `d-${t}`, title: t, url: "/f", type: t } as any}
+        />,
+      );
+    }
+
+    downloadSpy.mockRestore();
+  });
+
+  it("ignores duplicate clicks while downloading, handles DateTimeFormat error, and shows item.source without sizeLabel", async () => {
+    let resolveDl!: () => void;
+    const downloadSpy = vi
+      .spyOn(downloadUtil, "downloadFile")
+      .mockImplementation(() => new Promise<void>((r) => { resolveDl = r; }));
+
+    const dtfSpy = vi.spyOn(Intl, "DateTimeFormat").mockImplementationOnce(() => {
+      throw new Error("dtf fail");
+    });
+
+    render(
+      <DownloadCard
+        item={{
+          id: "d-src",
+          title: "Report",
+          url: "/r.pdf",
+          type: "pdf",
+          source: "S3",
+        } as any}
+        createdAt={new Date()}
+      />,
+    );
+
+    expect(screen.getByText("S3")).toBeInTheDocument();
+    const btn = screen.getAllByRole("button", { name: /download/i })[0];
+    fireEvent.click(btn);
+    fireEvent.click(btn); // second click while isDownloading is true
+    expect(downloadSpy).toHaveBeenCalledTimes(1);
+
+    resolveDl();
+    dtfSpy.mockRestore();
+    downloadSpy.mockRestore();
+  });
 });
 

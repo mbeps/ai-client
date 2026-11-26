@@ -73,6 +73,16 @@ describe("CreateSkillForm", () => {
     });
   });
 
+  it("renders with empty defaultValues and updates scope via ScopeConfigurator", async () => {
+    const user = userEvent.setup();
+    render(<CreateSkillForm onSubmit={vi.fn()} />);
+
+    // Switch to Specific Scopes mode, then back to Global to trigger onProjectIdsChange/onAssistantIdsChange
+    const radios = screen.getAllByRole("radio");
+    await user.click(radios[1]);
+    await user.click(radios[0]);
+  });
+
   it("renders with default values", () => {
     render(
       <CreateSkillForm

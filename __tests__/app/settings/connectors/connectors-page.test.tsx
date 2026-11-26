@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import ConnectorsPage from "@/app/settings/connectors/page";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -59,6 +60,18 @@ describe("ConnectorsPage", () => {
     const names = Array.from(serverHeadings).map((h) => h.textContent);
 
     expect(names).toEqual(["Excel MCP", "Maruf", "Mock Public Tools"]);
+  });
+
+  it("filters MCP servers by search query", async () => {
+    const user = userEvent.setup();
+    render(<ConnectorsPage />);
+
+    const searchInput = screen.getByPlaceholderText("Search servers...");
+    await user.type(searchInput, "excel");
+
+    expect(screen.getByText("Excel MCP")).toBeInTheDocument();
+    expect(screen.queryByText("Maruf")).not.toBeInTheDocument();
+    expect(screen.queryByText("Mock Public Tools")).not.toBeInTheDocument();
   });
 });
 

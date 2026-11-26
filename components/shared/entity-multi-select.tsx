@@ -135,7 +135,6 @@ export function EntityMultiSelect({
                       <div className="flex w-full items-center gap-2">
                         <Checkbox
                           checked={isSelected}
-                          onCheckedChange={() => toggleItem(item.id)}
                           className="pointer-events-none"
                         />
                         <div className="flex-1 truncate">

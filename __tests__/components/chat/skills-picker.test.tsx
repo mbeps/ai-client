@@ -106,7 +106,7 @@ describe("SkillsPickerDialog", () => {
     render(
       <SkillsPickerDialog
         skills={[]}
-        selectedSkills={new Set()}
+        selectedIds={new Set()}
         onToggleSkill={vi.fn()}
         trigger={<button type="button">Open</button>}
       />,
@@ -134,5 +134,76 @@ describe("SkillsPickerDialog", () => {
         return element?.textContent === "1/2 selected skills";
       }),
     ).toBeDefined();
+  });
+
+  it("handles deselect all, onToggleSkill fallback, checkbox click, empty state, and default dialog trigger", () => {
+    const onToggleSkill = vi.fn();
+    const onSelectSkills = vi.fn();
+    const skills = [
+      { id: "sk-1", name: "alpha", displayName: "Alpha", description: "First", enabled: true },
+      { id: "sk-2", name: "beta", displayName: "", description: "Second", enabled: true },
+    ] as any[];
+
+    const { rerender } = render(
+      <SkillsPicker
+        skills={skills}
+        selectedIds={new Set(["sk-1", "sk-2"])}
+        onToggleSkill={onToggleSkill}
+        onSelectSkills={onSelectSkills}
+        maxHeight="200px"
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Deselect All"));
+    expect(onSelectSkills).toHaveBeenCalledWith(new Set());
+
+    // Fallback without onSelectSkills: select unselected
+    rerender(
+      <SkillsPicker
+        skills={skills}
+        selectedIds={new Set(["sk-1"])}
+        onToggleSkill={onToggleSkill}
+      />,
+    );
+    fireEvent.click(screen.getByText("Select All"));
+    expect(onToggleSkill).toHaveBeenCalledWith("sk-2");
+
+    // Fallback without onSelectSkills: deselect all
+    onToggleSkill.mockClear();
+    rerender(
+      <SkillsPicker
+        skills={skills}
+        selectedIds={new Set(["sk-1", "sk-2"])}
+        onToggleSkill={onToggleSkill}
+      />,
+    );
+    fireEvent.click(screen.getByText("Deselect All"));
+    expect(onToggleSkill).toHaveBeenCalledTimes(2);
+
+    // Checkbox click
+    const checkboxes = screen.getAllByRole("checkbox");
+    fireEvent.click(checkboxes[0]);
+    expect(onToggleSkill).toHaveBeenCalled();
+
+    // Empty state
+    rerender(
+      <SkillsPicker
+        skills={[]}
+        selectedIds={new Set()}
+        onToggleSkill={onToggleSkill}
+        maxHeight="300px"
+      />,
+    );
+    expect(screen.getByText("No skills found.")).toBeDefined();
+
+    // Default dialog trigger
+    render(
+      <SkillsPickerDialog
+        skills={skills}
+        selectedSkills={new Set()}
+        onToggleSkill={onToggleSkill}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Select Skills" })).toBeDefined();
   });
 });

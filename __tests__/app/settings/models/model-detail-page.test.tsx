@@ -51,6 +51,28 @@ vi.mock("@/lib/providers/invalidate-provider-registry-cache", () => ({
   invalidateProviderRegistryCache: vi.fn(),
 }));
 
+vi.mock("@/components/settings/models/model-editor-form", () => ({
+  ModelEditorForm: ({
+    onDelete,
+    onSuccess,
+  }: {
+    onDelete?: () => void;
+    onSuccess?: () => void;
+  }) => (
+    <div>
+      <button type="button" role="tab">
+        Details
+      </button>
+      <button type="button" onClick={onSuccess}>
+        Trigger Success
+      </button>
+      <button type="button" onClick={onDelete}>
+        Delete Model
+      </button>
+    </div>
+  ),
+}));
+
 import ModelDetailPage from "@/app/settings/models/[id]/page";
 
 describe("ModelDetailPage", () => {
@@ -117,5 +139,52 @@ describe("ModelDetailPage", () => {
 
     render(<ModelDetailPage />);
     expect(screen.queryByText("Back to Models")).not.toBeInTheDocument();
+  });
+
+  it("handles delete success, errors, onSuccess, and fallback labels", async () => {
+    const user = userEvent.setup();
+    const mockRefresh = vi.fn();
+    mockUseUserModels.mockReturnValue({
+      rawModels: [
+        {
+          ...dummyModel,
+          label: "",
+          providerName: null,
+        },
+      ],
+      isLoading: false,
+      refresh: mockRefresh,
+    });
+
+    render(<ModelDetailPage />);
+    expect(screen.getByText("openai/gpt-4o")).toBeInTheDocument();
+    expect(
+      screen.getByText("Identifier: openai/gpt-4o • Provider: Custom"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Trigger Success" }));
+    expect(mockRefresh).toHaveBeenCalled();
+
+    mockDeleteModel.mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Cannot delete" },
+    });
+    await user.click(screen.getByRole("button", { name: "Delete Model" }));
+
+    mockDeleteModel.mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    });
+    await user.click(screen.getByRole("button", { name: "Delete Model" }));
+
+    mockDeleteModel.mockRejectedValueOnce(new Error("Network error"));
+    await user.click(screen.getByRole("button", { name: "Delete Model" }));
+
+    mockDeleteModel.mockRejectedValueOnce("unknown");
+    await user.click(screen.getByRole("button", { name: "Delete Model" }));
+
+    mockDeleteModel.mockResolvedValueOnce({ ok: true, value: {} });
+    await user.click(screen.getByRole("button", { name: "Delete Model" }));
+    expect(mockPush).toHaveBeenCalled();
   });
 });

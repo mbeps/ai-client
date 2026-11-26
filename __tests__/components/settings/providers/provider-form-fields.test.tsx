@@ -95,4 +95,50 @@ describe("ProviderFormFields", () => {
     await user.click(removeButton);
     expect(onHeaderRowsChange).toHaveBeenCalledWith([{ key: "", value: "" }]);
   });
+
+  it("calls name, baseUrl, apiKey, header value, and multi-row remove handlers", async () => {
+    const user = userEvent.setup();
+    const onNameChange = vi.fn();
+    const onBaseUrlChange = vi.fn();
+    const onApiKeyChange = vi.fn();
+    const onHeaderRowsChange = vi.fn();
+
+    render(
+      <ProviderFormFields
+        {...defaultProps}
+        headerRows={[
+          { key: "X-One", value: "1" },
+          { key: "X-Two", value: "2" },
+        ]}
+        onNameChange={onNameChange}
+        onBaseUrlChange={onBaseUrlChange}
+        onApiKeyChange={onApiKeyChange}
+        onHeaderRowsChange={onHeaderRowsChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Groq" } });
+    expect(onNameChange).toHaveBeenCalledWith("Groq");
+
+    fireEvent.change(screen.getByLabelText("Base URL"), {
+      target: { value: "https://api.groq.com" },
+    });
+    expect(onBaseUrlChange).toHaveBeenCalledWith("https://api.groq.com");
+
+    fireEvent.change(screen.getByLabelText("API Key"), {
+      target: { value: "sk-new" },
+    });
+    expect(onApiKeyChange).toHaveBeenCalledWith("sk-new");
+
+    const valueInputs = screen.getAllByPlaceholderText("Header value");
+    fireEvent.change(valueInputs[0], { target: { value: "updated" } });
+    expect(onHeaderRowsChange).toHaveBeenCalledWith([
+      { key: "X-One", value: "updated" },
+      { key: "X-Two", value: "2" },
+    ]);
+
+    const removeButtons = screen.getAllByRole("button", { name: /Remove/i });
+    await user.click(removeButtons[0]);
+    expect(onHeaderRowsChange).toHaveBeenCalledWith([{ key: "X-Two", value: "2" }]);
+  });
 });

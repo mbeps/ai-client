@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { processAttachment } from "@/lib/attachments/process-attachment";
 import * as extractDoc from "@/lib/attachments/extract-document";

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("katex/dist/katex.min.css", () => ({}));
@@ -133,5 +133,87 @@ describe("ArtifactPanel", () => {
     expect(
       screen.queryByRole("button", { name: "Go to latest" }),
     ).toBeNull();
+  });
+
+  it("returns null when closed, supports full width, fallback title, and navigation buttons", () => {
+    const onNavigate = vi.fn();
+    const { container, rerender } = render(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={mockArtifact}
+          isOpen={false}
+          onClose={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+    expect(container.firstChild).toBeNull();
+
+    const secondArtifact = { ...mockArtifact, messageId: "msg-2", title: "" };
+    rerender(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={secondArtifact}
+          isOpen={true}
+          isFullWidth={true}
+          onClose={vi.fn()}
+          artifacts={[mockArtifact, secondArtifact]}
+          currentIndex={1}
+          onNavigate={onNavigate}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Artifact")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Previous artifact" }));
+    expect(onNavigate).toHaveBeenCalledWith(0);
+  });
+
+  it("navigates to next artifact, handles null artifact, and copies non-markdown artifact with timer reset", async () => {
+    const onNavigate = vi.fn();
+    const secondArtifact: ArtifactData = {
+      ...mockArtifact,
+      id: "art-2",
+      type: "html",
+      content: "<p>Hi</p>",
+      title: "HTML",
+    };
+
+    const { container, rerender } = render(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={null}
+          isOpen={true}
+          onClose={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+    expect(container.firstChild).toBeNull();
+
+    rerender(
+      <TooltipProvider>
+        <ArtifactPanel
+          artifact={secondArtifact}
+          isOpen={true}
+          onClose={vi.fn()}
+          artifacts={[mockArtifact, secondArtifact]}
+          currentIndex={0}
+          onNavigate={onNavigate}
+        />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Next artifact" }));
+    expect(onNavigate).toHaveBeenCalledWith(1);
+
+    vi.useFakeTimers();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy content" }));
+    await vi.waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("<p>Hi</p>");
+    });
+    vi.advanceTimersByTime(2000);
+    vi.useRealTimers();
   });
 });

@@ -114,4 +114,76 @@ describe("MessageActions Copy with Generative UI", () => {
     expect(mockToast.success).toHaveBeenCalledWith("Copied to clipboard");
     expect(mockToast.info).not.toHaveBeenCalled();
   });
+
+  it("handles copy error, sibling navigation, delete, regenerate, and hasNoModels", async () => {
+    vi.useFakeTimers();
+    writeTextMock.mockRejectedValueOnce(new Error("Clipboard denied"));
+    const onDelete = vi.fn();
+    const onRegenerate = vi.fn();
+    const onNavigateBranch = vi.fn();
+
+    const { rerender } = render(
+      <TooltipProvider>
+        <MessageActions
+          message={baseMessage}
+          isUser={false}
+          contentToCopy="hello"
+          onDelete={onDelete}
+          onRegenerate={onRegenerate}
+          siblings={[{ id: "s1" } as any, { id: "s2" } as any, { id: "s3" } as any]}
+          currentSiblingIndex={1}
+          onNavigateBranch={onNavigateBranch}
+          hasNoModels={false}
+        />
+      </TooltipProvider>,
+    );
+
+    // Copy error
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy markdown" }));
+    });
+    expect(mockToast.error).toHaveBeenCalledWith("Failed to copy text");
+
+    // Copy success + timer reset
+    writeTextMock.mockResolvedValueOnce(undefined);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy markdown" }));
+    });
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    // Sibling prev & next
+    const buttons = screen.getAllByRole("button");
+    fireEvent.click(buttons[0]);
+    expect(onNavigateBranch).toHaveBeenCalledWith("s1");
+    fireEvent.click(buttons[1]);
+    expect(onNavigateBranch).toHaveBeenCalledWith("s3");
+
+    // Delete & Regenerate
+    fireEvent.click(screen.getByRole("button", { name: "Delete message" }));
+    expect(onDelete).toHaveBeenCalledWith(baseMessage.id);
+
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate response" }));
+    expect(onRegenerate).toHaveBeenCalledWith(baseMessage.id);
+
+    // currentSiblingIndex < 0 and hasNoModels = true
+    rerender(
+      <TooltipProvider>
+        <MessageActions
+          message={baseMessage}
+          isUser={false}
+          contentToCopy="hello"
+          onDelete={onDelete}
+          onRegenerate={onRegenerate}
+          siblings={[{ id: "s1" } as any, { id: "s2" } as any]}
+          currentSiblingIndex={-1}
+          onNavigateBranch={onNavigateBranch}
+          hasNoModels={true}
+        />
+      </TooltipProvider>,
+    );
+    expect(screen.getByText("1 / 2")).toBeTruthy();
+    vi.useRealTimers();
+  });
 });

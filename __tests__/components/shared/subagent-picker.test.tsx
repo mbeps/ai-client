@@ -262,4 +262,17 @@ describe("SubagentPicker", () => {
     expect(onToggle).toHaveBeenCalledWith("leaf-1");
     expect(onToggle).toHaveBeenCalledWith("leaf-2");
   });
+
+  it("handles search when agent description is null", () => {
+    const agents: Agent[] = [
+      makeCustomAgent("leaf-1", "Alpha", { description: null as never }),
+    ];
+    render(
+      <SubagentPicker agents={agents} selectedIds={[]} onToggle={vi.fn()} />,
+    );
+    fireEvent.change(screen.getByPlaceholderText(/search subagents/i), {
+      target: { value: "nonexistent" },
+    });
+    expect(screen.getByText(/no subagents/i)).toBeInTheDocument();
+  });
 });

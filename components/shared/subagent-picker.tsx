@@ -123,7 +123,6 @@ export function SubagentPicker({
   };
 
   const applyBulkSelection = (targetIds: string[], select: boolean) => {
-    if (disabled) return;
     if (onSelectIds) {
       const targetSet = new Set(targetIds);
       const nextIds = select

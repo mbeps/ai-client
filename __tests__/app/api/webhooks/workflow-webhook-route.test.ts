@@ -190,4 +190,29 @@ describe("POST /api/webhooks/workflows/[workflowId]", () => {
       }),
     );
   });
+
+  it("handles empty request body and non-Error inngest.send rejection", async () => {
+    mockSelectWhere
+      .mockResolvedValueOnce([{ id: "wf-1", userId: "u1", webhookSecret: "super-secret" }])
+      .mockResolvedValueOnce([
+        {
+          id: "n1",
+          type: "webhook_trigger",
+          data: {
+            kind: "other_kind",
+            variableName: "webhook",
+          },
+        },
+      ]);
+
+    vi.mocked(inngest.send).mockRejectedValueOnce("string error");
+
+    const req = new NextRequest("http://localhost:3000/api/webhooks/workflows/wf-1", {
+      method: "POST",
+      headers: { "x-webhook-secret": "super-secret" },
+      body: "",
+    });
+    const res = await POST(req, { params: Promise.resolve({ workflowId: "wf-1" }) });
+    expect(res.status).toBe(503);
+  });
 });

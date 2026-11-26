@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-tools";
 import { resetClientState } from "@/lib/store/reset-client-state";

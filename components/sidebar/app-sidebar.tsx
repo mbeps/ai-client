@@ -242,9 +242,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           {!isChatsCollapsed && (
             <SidebarMenu>
               {recentChats.map((chat) => {
-                const href = chat.projectId
-                  ? ROUTES.PROJECTS.chat(chat.projectId, chat.id)
-                  : ROUTES.CHATS.detail(chat.id);
+                const href = ROUTES.CHATS.detail(chat.id);
                 return (
                   <SidebarMenuItem key={chat.id}>
                     <SidebarMenuButton

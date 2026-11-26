@@ -4,6 +4,8 @@ import {
   PromptPicker,
   PromptPickerDialog,
 } from "@/components/chat/prompt-picker";
+import { PromptGroupSection } from "@/components/chat/prompt-picker/prompt-group-section";
+import { buildPromptGroups } from "@/components/chat/prompt-picker/prompt-picker-utils";
 import type { MentionPromptItem } from "@/hooks/chat/use-mention-commands";
 import type { DiscoveredPrompt } from "@/types/mcp/discovered-prompt";
 import type { Prompt } from "@/types/prompt/prompt";
@@ -224,5 +226,90 @@ describe("PromptPickerDialog", () => {
         return element?.textContent === "1/3 selected prompts";
       }),
     ).toBeDefined();
+  });
+
+  it("handles toggleExpand, select/clear all fallbacks, empty states, maxHeight, and dialog Clear", () => {
+    const onSelectAll = vi.fn();
+    const onClearAll = vi.fn();
+    const onTogglePrompt = vi.fn();
+
+    const { rerender } = render(
+      <PromptPicker
+        prompts={mockPrompts}
+        mcpPrompts={[]}
+        selectedPromptIds={new Set(["p1", "p2"])}
+        onSelectAll={onSelectAll}
+        onClearAll={onClearAll}
+        maxHeight="200px"
+      />,
+    );
+
+    // Deselect all via onClearAll
+    fireEvent.click(screen.getByText("Deselect All"));
+    expect(onClearAll).toHaveBeenCalledTimes(1);
+
+    // Select all via onSelectAll
+    rerender(
+      <PromptPicker
+        prompts={mockPrompts}
+        mcpPrompts={mockMcpPrompts}
+        selectedPromptIds={new Set(["p1"])}
+        onSelectAll={onSelectAll}
+        onClearAll={onClearAll}
+      />,
+    );
+    fireEvent.click(screen.getByText("Select All"));
+    expect(onSelectAll).toHaveBeenCalledTimes(1);
+
+    // Fallback without onSelectAll/onClearAll: select unselected
+    rerender(
+      <PromptPicker
+        prompts={mockPrompts}
+        mcpPrompts={mockMcpPrompts}
+        selectedPromptIds={new Set(["p1"])}
+        onTogglePrompt={onTogglePrompt}
+      />,
+    );
+    fireEvent.click(screen.getByText("Select All"));
+    expect(onTogglePrompt).toHaveBeenCalledTimes(2);
+
+    // Fallback without onSelectAll/onClearAll: deselect all
+    onTogglePrompt.mockClear();
+    rerender(
+      <PromptPicker
+        prompts={mockPrompts}
+        mcpPrompts={[]}
+        selectedPromptIds={new Set(["p1", "p2"])}
+        onTogglePrompt={onTogglePrompt}
+      />,
+    );
+    fireEvent.click(screen.getByText("Deselect All"));
+    expect(onTogglePrompt).toHaveBeenCalledTimes(2);
+
+    // Search with no results
+    fireEvent.change(screen.getByPlaceholderText("Search prompts..."), {
+      target: { value: "zzzzz" },
+    });
+    expect(screen.getByText(/No prompts found matching/)).toBeDefined();
+
+    // Empty without search and without selectedPromptIds
+    fireEvent.change(screen.getByPlaceholderText("Search prompts..."), {
+      target: { value: "" },
+    });
+    rerender(<PromptPicker prompts={[]} mcpPrompts={[]} />);
+    expect(screen.getByText("No prompts found.")).toBeDefined();
+
+    // Dialog with default trigger and Clear button
+    const onDialogClear = vi.fn();
+    render(
+      <PromptPickerDialog
+        prompts={mockPrompts}
+        selectedPromptIds={new Set(["p1"])}
+        onClearAll={onDialogClear}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Select Prompt" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(onDialogClear).toHaveBeenCalledTimes(1);
   });
 });

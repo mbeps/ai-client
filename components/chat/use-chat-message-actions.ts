@@ -33,7 +33,6 @@ export function scrollElementToBottom(container: HTMLElement | null): void {
  * @author Maruf Bepary
  */
 function clearMsgQueryParamFromUrl(): void {
-  if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
   if (!url.searchParams.has("msg")) return;
   url.searchParams.delete("msg");

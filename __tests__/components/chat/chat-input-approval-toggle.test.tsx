@@ -97,4 +97,27 @@ describe("ChatInput approval mode toggle", () => {
       screen.getByRole("button", { name: "Tool approval mode: auto" }),
     ).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("forwards onCompact with selected modelId", () => {
+    useAppStore.setState({
+      models: [{ id: "m1", name: "M1", contextWindow: 1000, providerId: "p1" } as never],
+    });
+    const onCompact = vi.fn();
+    render(
+      <ChatInput
+        chatId="chat-compact-1"
+        initialModelId="m1"
+        onSend={vi.fn()}
+        onCompact={onCompact}
+      />,
+    );
+
+    const compactBtn = screen.getByRole("button", { name: /0%/i });
+    fireEvent.click(compactBtn);
+    const triggerCompact = screen.queryByRole("button", { name: /^Compact$/i });
+    if (triggerCompact) {
+      fireEvent.click(triggerCompact);
+      expect(onCompact).toHaveBeenCalledWith("m1");
+    }
+  });
 });

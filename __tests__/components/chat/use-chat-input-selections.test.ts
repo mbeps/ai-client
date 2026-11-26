@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { useChatInputSelections } from "@/components/chat/input/use-chat-input-selections";
+import { useChatToolsStore } from "@/lib/store/use-chat-tools-store";
 import { useChatInteraction } from "@/components/chat/input/use-chat-interaction";
 import { LINKABLE_BUILT_IN_AGENT_IDS } from "@/config/built-in-agents";
 import { useAppStore } from "@/lib/store/use-app-store";
@@ -256,5 +257,136 @@ describe("useChatInputSelections - knowledgebase sync & mentions", () => {
       result.current.mentions.setSelectedAssistant(undefined);
     });
     expect(result.current.selections.subagentsEnabled).toBe(true);
+  });
+
+  it("handles toggleTool, handleBulkSelect, KB toggles/removals, and skill toggles/mentions", () => {
+    const onKnowledgebaseChange = vi.fn();
+    const { result, unmount } = renderHook(() =>
+      useChatInputSelections({
+        chatId: "chat-sel-1",
+        initialSelectedServerIds: [],
+        initialSelectedTools: [],
+        initialSelectedKbs: ["kb-1"],
+        initialSelectedSkillIds: [],
+        initialSubagentsEnabled: false,
+        onKnowledgebaseChange,
+      }),
+    );
+
+    // toggleTool (add & remove)
+    act(() => {
+      result.current.toggleTool("srv1", "search");
+    });
+    expect(result.current.selectedTools.has("srv1:tool:search")).toBe(true);
+    expect(result.current.selectedServerIds.has("srv1")).toBe(true);
+
+    act(() => {
+      result.current.toggleTool("srv1", "search");
+    });
+    expect(result.current.selectedTools.has("srv1:tool:search")).toBe(false);
+
+    // handleBulkSelect (select=true & select=false)
+    act(() => {
+      result.current.handleBulkSelect("srv2", ["a", "b"], true);
+    });
+    expect(result.current.selectedTools.has("srv2:tool:a")).toBe(true);
+    act(() => {
+      result.current.handleBulkSelect("srv2", ["a", "b"], false);
+    });
+    expect(result.current.selectedTools.has("srv2:tool:a")).toBe(false);
+
+    // handleToggleKb (remove existing, add new), handleRemoveKb, addKbById (duplicate)
+    act(() => {
+      result.current.handleToggleKb("kb-1");
+      result.current.handleToggleKb("kb-2");
+      result.current.handleRemoveKb("kb-2");
+      result.current.onMentionKb({ id: "kb-3" });
+      result.current.onMentionKb({ id: "kb-3" });
+    });
+    expect(result.current.selectedKbs.has("kb-3")).toBe(true);
+    expect(onKnowledgebaseChange).toHaveBeenCalled();
+
+    // handleToggleSkill, handleRemoveSkill, onMentionSkill
+    act(() => {
+      result.current.handleToggleSkill("sk-1");
+      result.current.handleRemoveSkill("sk-1");
+      result.current.onMentionSkill({ id: "sk-2" });
+    });
+    expect(result.current.selectedSkills.has("sk-2")).toBe(true);
+
+    unmount();
+  });
+
+  it("preserves persisted tools when seed keys change and handles approvalMode without chatId", () => {
+    const { result, rerender } = renderHook(
+      ({ initialTools, initialServerIds, initialSubagentIds, chatId, initialApprovalMode }: any) =>
+        useChatInputSelections({
+          chatId,
+          initialSelectedTools: initialTools,
+          initialSelectedServerIds: initialServerIds,
+          initialSubagentIds,
+          initialApprovalMode,
+        }),
+      {
+        initialProps: {
+          chatId: "chat-persist" as string | undefined,
+          initialTools: ["srv:tool:b"],
+          initialServerIds: ["srv"],
+          initialSubagentIds: ["sub-1"] as string[] | undefined,
+          initialApprovalMode: "auto" as "ask" | "auto" | undefined,
+        },
+      },
+    );
+
+    rerender({
+      chatId: "chat-persist",
+      initialTools: ["srv:tool:c"],
+      initialServerIds: ["srv2"],
+      initialSubagentIds: undefined,
+      initialApprovalMode: "ask",
+    });
+
+    expect(result.current.selectedTools.has("srv:tool:c")).toBe(true);
+
+    rerender({
+      chatId: undefined,
+      initialTools: undefined,
+      initialServerIds: [],
+      initialSubagentIds: undefined,
+      initialApprovalMode: undefined,
+    });
+
+    act(() => {
+      result.current.toggleApprovalMode();
+      result.current.toggleApprovalMode();
+      result.current.toggleTool("srv", "a");
+      result.current.handleBulkSelect("srv", ["a", "b"], true);
+    });
+  });
+
+  it("does not overwrite persistedTools when initialTools or initialServerIds change", () => {
+    useChatToolsStore.getState().setChatTools("chat-persisted-2", ["srv:tool:saved"]);
+    const { result, rerender } = renderHook(
+      (props: { initialTools?: string[]; initialServerIds?: string[] }) =>
+        useChatInputSelections({
+          ...baseProps,
+          chatId: "chat-persisted-2",
+          initialTools: props.initialTools,
+          initialServerIds: props.initialServerIds,
+        }),
+      {
+        initialProps: {
+          initialTools: ["srv:tool:a"],
+          initialServerIds: ["srv"],
+        },
+      },
+    );
+
+    rerender({
+      initialTools: ["srv:tool:b"],
+      initialServerIds: ["srv2"],
+    });
+
+    expect(result.current.selectedTools.has("srv:tool:saved")).toBe(true);
   });
 });

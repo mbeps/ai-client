@@ -113,4 +113,32 @@ describe("ChatPageClient", () => {
 
     expect(lastChatUiProps.initialMessage).toBeUndefined();
   });
+
+  it("strips msg query param from URL on mount while preserving other params", () => {
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState");
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      value: new URL("http://localhost:3000/chats/chat-1?msg=hello&foo=bar"),
+      writable: true,
+    });
+
+    render(
+      <ChatPageClient
+        initialChat={createMockChat("chat-url")}
+        initialMessage="hello"
+      />,
+    );
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(
+      {},
+      "",
+      "/chats/chat-1?foo=bar",
+    );
+
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+    });
+    replaceStateSpy.mockRestore();
+  });
 });

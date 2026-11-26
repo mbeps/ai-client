@@ -236,4 +236,111 @@ describe("KbGraphTab", () => {
     await userEvent.click(refreshBtn);
     expect(mockGetKnowledgebaseGraph).toHaveBeenCalledTimes(2);
   });
+
+  it("falls back to default error message when error.message is empty", async () => {
+    mockGetKnowledgebaseGraph.mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    });
+
+    render(<KbGraphTab kbId={KB_ID} />);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(screen.getByText("Failed to load document graph")).toBeInTheDocument();
+  });
+
+  it("clears search, filters by relation type, handles unknown/empty docType, and navigates related docs", async () => {
+    const graphWithVariants = {
+      documents: [
+        ...sampleGraph.documents,
+        {
+          id: "doc-3",
+          name: "Unknown.txt",
+          documentType: "",
+          summary: "No type",
+          keyEntities: [],
+          chunkCount: 1,
+          tokenCount: 10,
+        },
+        {
+          id: "doc-4",
+          name: "Custom.txt",
+          documentType: "custom_type",
+          summary: "Custom type",
+          keyEntities: [],
+          chunkCount: 1,
+          tokenCount: 10,
+        },
+      ],
+      relations: [
+        ...sampleGraph.relations,
+        {
+          id: "rel-2",
+          sourceDocId: "doc-1",
+          targetDocId: "doc-3",
+          relationType: "contradicts",
+          description: "Contradicts",
+          weight: 0.5,
+        },
+      ],
+    };
+
+    mockGetKnowledgebaseGraph
+      .mockResolvedValueOnce({ ok: true, value: graphWithVariants })
+      .mockResolvedValueOnce({
+        ok: true,
+        value: { documents: [graphWithVariants.documents[1]], relations: [] },
+      });
+
+    render(<KbGraphTab kbId={KB_ID} />);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    // Type in search and clear with X button
+    const searchInput = screen.getByPlaceholderText(
+      /search documents or entities/i,
+    );
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: "Arch" } });
+    const clearBtn = searchInput.parentElement?.querySelector("button");
+    expect(clearBtn).toBeTruthy();
+    fireEvent.click(clearBtn!);
+    expect(searchInput).toHaveValue("");
+
+    // Select a relation filter (Radix Select) - reset back to All Relations after so Guide.md is visible
+    const select = screen.getByRole("combobox");
+    fireEvent.click(select);
+    fireEvent.click(screen.getByRole("option", { name: /references/i }));
+    fireEvent.click(select);
+    fireEvent.click(screen.getByRole("option", { name: /all relations/i }));
+
+    // Select doc-1 via search
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: "Arch" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Architecture\.md/i }),
+    );
+
+    // Click related document in KbGraphNodeDetails to trigger onSelectDocument
+    const relatedBtn = screen.queryByRole("button", { name: /Security\.pdf/i });
+    if (relatedBtn) {
+      fireEvent.click(relatedBtn);
+      // Switch back to Architecture.md so refresh clears selection
+      fireEvent.focus(searchInput);
+      fireEvent.change(searchInput, { target: { value: "Arch" } });
+      fireEvent.click(
+        screen.getAllByRole("button", { name: /Architecture\.md/i })[0],
+      );
+    }
+
+    // Refresh with graph missing doc-1
+    fireEvent.click(screen.getByRole("button", { name: /refresh graph/i }));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.getByText("No document selected")).toBeInTheDocument();
+  });
 });

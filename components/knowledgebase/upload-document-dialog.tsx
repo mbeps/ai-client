@@ -72,14 +72,14 @@ export function UploadDocumentDialog({
       setError(
         "Spreadsheets and Office files are not supported. Use PDF, plain text or Markdown.",
       );
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      e.currentTarget.value = "";
       setFile(null);
       return;
     }
 
     if (selected.size > KB_CONFIG.MAX_FILE_SIZE_BYTES) {
       setError(`File exceeds the ${KB_CONFIG.MAX_FILE_SIZE_MB} MB limit.`);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      e.currentTarget.value = "";
       setFile(null);
       return;
     }
@@ -89,8 +89,7 @@ export function UploadDocumentDialog({
   };
 
   const handleSubmit = () => {
-    if (!file) return;
-    const selected = file;
+    const selected = file!;
     onOpenChange(false);
     reset();
     onUpload(selected);

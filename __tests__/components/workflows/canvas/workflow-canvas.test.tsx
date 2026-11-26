@@ -308,4 +308,248 @@ describe("WorkflowCanvas", () => {
     });
     expect(onEdgesChange).toHaveBeenCalledWith([]);
   });
+
+  it("handles node onConfigure/onDelete, position changes, readOnly guards, and onConnect", async () => {
+    const { addEdge } = await import("@xyflow/react");
+    vi.mocked(addEdge).mockImplementation((conn, prev) => [
+      ...(prev as Array<Record<string, unknown>>),
+      {
+        id: "",
+        source: (conn as { source: string }).source,
+        target: (conn as { target: string }).target,
+      } as never,
+    ]);
+
+    const onNodesChange = vi.fn();
+    const onEdgesChange = vi.fn();
+    const onDeleteNode = vi.fn();
+    const onUpdateNode = vi.fn();
+
+    const { rerender } = render(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={[]}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onAddNode={vi.fn()}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={onDeleteNode}
+      />,
+    );
+
+    const rfNodes = capturedReactFlowProps.nodes as Array<{
+      id: string;
+      data: {
+        onConfigure?: (id: string) => void;
+        onDelete?: (id: string) => void;
+      };
+    }>;
+
+    act(() => {
+      rfNodes[0].data.onConfigure?.("n1");
+    });
+    expect(screen.getByText(/Configure Node/i)).toBeInTheDocument();
+
+    act(() => {
+      rfNodes[0].data.onDelete?.("n1");
+    });
+    expect(onDeleteNode).toHaveBeenCalledWith("n1");
+
+    // Position change + measured
+    const rfOnNodesChange = capturedReactFlowProps.onNodesChange as (c: {
+      applyTo: (nodes: Array<Record<string, unknown>>) => Array<Record<string, unknown>>;
+    }) => void;
+    act(() => {
+      rfOnNodesChange({
+        applyTo: (prev) =>
+          prev.map((n) => ({
+            ...n,
+            position: { x: 120, y: 220 },
+            measured: { width: 200, height: 80 },
+          })),
+      });
+    });
+    expect(onNodesChange).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "n1", position: { x: 120, y: 220 } }),
+    ]);
+
+    // onConnect: self-loop ignored, valid connection mapped
+    const rfOnConnect = capturedReactFlowProps.onConnect as (conn: {
+      source: string;
+      target: string;
+    }) => void;
+    act(() => {
+      rfOnConnect({ source: "n1", target: "n1" });
+    });
+    expect(onEdgesChange).not.toHaveBeenCalled();
+
+    act(() => {
+      rfOnConnect({ source: "n1", target: "n2" });
+    });
+    expect(onEdgesChange).toHaveBeenCalledWith([
+      expect.objectContaining({
+        sourceNodeId: "n1",
+        targetNodeId: "n2",
+        sourceHandle: "main",
+        targetHandle: "main",
+      }),
+    ]);
+
+    // readOnly guards
+    rerender(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={[]}
+        readOnly={true}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onAddNode={vi.fn()}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={onDeleteNode}
+      />,
+    );
+
+    act(() => {
+      (capturedReactFlowProps.onNodesChange as (c: { applyTo: (n: unknown[]) => unknown[] }) => void)({
+        applyTo: (prev) => prev,
+      });
+      (capturedReactFlowProps.onEdgesChange as (c: { applyTo: (e: unknown[]) => unknown[] }) => void)({
+        applyTo: (prev) => prev,
+      });
+      (capturedReactFlowProps.onConnect as (conn: { source: string; target: string }) => void)({
+        source: "n1",
+        target: "n2",
+      });
+    });
+    expect(onEdgesChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("covers nodeStates, true/false edge labels, readOnly double-click, and pendingNode updates", () => {
+    const onAddNode = vi.fn();
+    const onUpdateNode = vi.fn();
+    const { rerender } = render(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={[
+          {
+            id: "e-true",
+            sourceNodeId: "n1",
+            targetNodeId: "n2",
+            sourceHandle: "true",
+            targetHandle: "main",
+          },
+        ]}
+        nodeStates={{ n1: { status: "running" } as never }}
+        onAddNode={onAddNode}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+
+    expect(
+      (capturedReactFlowProps.edges as Array<{ id: string; label?: string }>)[0]?.label,
+    ).toBe("true");
+
+    // Open pending node from palette, update it, then close sheet
+    fireEvent.click(screen.getByRole("button", { name: /Add Node/i }));
+    fireEvent.click(screen.getByText(/AI Step/i));
+    expect(screen.getByText(/Configure Node/i)).toBeInTheDocument();
+
+    const labelInput = screen.getByLabelText(/Node Name/i);
+    fireEvent.change(labelInput, { target: { value: "Updated Pending" } });
+    expect(onUpdateNode).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /Close/i }));
+
+    // Double-click existing node and update it -> calls onUpdateNode
+    act(() => {
+      (capturedReactFlowProps.onNodeDoubleClick as (e: unknown, n: { id: string }) => void)(
+        {},
+        { id: "n1" },
+      );
+    });
+    const existingLabelInput = screen.getByLabelText(/Node Name/i);
+    fireEvent.change(existingLabelInput, { target: { value: "Updated Existing" } });
+    expect(onUpdateNode).toHaveBeenCalledWith("n1", expect.objectContaining({ name: "Updated Existing" }));
+
+    // readOnly double-click does nothing
+    rerender(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={[]}
+        readOnly={true}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+    act(() => {
+      (capturedReactFlowProps.onNodeDoubleClick as (e: unknown, n: { id: string }) => void)(
+        {},
+        { id: "n1" },
+      );
+    });
+  });
+
+  it("handles nodes without measured, omitted onAutoLayout/onRunWorkflow, and onOpenChange(true)", () => {
+    const onNodesChange = vi.fn();
+    render(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={[]}
+        onNodesChange={onNodesChange}
+        onUpdateNode={vi.fn()}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /Auto-Layout/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Run Workflow/i })).toBeNull();
+
+    const onRfNodesChange = capturedReactFlowProps.onNodesChange as (cs: {
+      applyTo: (nodes: unknown[]) => unknown[];
+    }) => void;
+
+    act(() => {
+      onRfNodesChange({
+        applyTo: () => [
+          {
+            id: "n1",
+            position: { x: 99, y: 99 },
+          },
+        ],
+      });
+    });
+    expect(onNodesChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("covers optional toolbar props and sheet onOpenChange(true) / onConfirmAdd without pendingNode", () => {
+    const onUpdateNode = vi.fn();
+    const onDeleteNode = vi.fn();
+
+    render(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={[
+          {
+            id: "t1",
+            type: "manual_trigger",
+            position: { x: 0, y: 0 },
+            data: { kind: "manual_trigger", label: "Trigger", requiresFileUpload: false },
+          },
+        ]}
+        edges={[]}
+        onNodesChange={vi.fn()}
+        onEdgesChange={vi.fn()}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={onDeleteNode}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /Auto-Layout/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Run Workflow/i })).toBeNull();
+  });
 });

@@ -143,4 +143,57 @@ describe("AgentKnowledgebasesTab", () => {
     fireEvent.click(screen.getByRole("button", { name: /Create Agent/i }));
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  it("handles failed listKnowledgebases, null description, and isSaving state", async () => {
+    vi.mocked(listKnowledgebases).mockResolvedValue({
+      ok: false,
+      error: "Failed",
+    });
+
+    render(
+      <AgentKnowledgebasesTab
+        selectedKbIds={[]}
+        onSelectKbIds={vi.fn()}
+        onSave={vi.fn()}
+        isSaving
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Loading knowledge bases/i)).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /Save Knowledge Bases/i })).toBeDisabled();
+  });
+
+  it("skips state updates if unmounted before listKnowledgebases resolves", async () => {
+    let resolveFn!: (v: any) => void;
+    vi.mocked(listKnowledgebases).mockReturnValue(
+      new Promise((res) => {
+        resolveFn = res;
+      }),
+    );
+
+    const { unmount } = render(
+      <AgentKnowledgebasesTab
+        selectedKbIds={[]}
+        onSelectKbIds={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    unmount();
+    resolveFn({ ok: true, value: [{ ...mockKbs[0], description: null }] });
+  });
+
+  it("renders knowledgebases with null description", () => {
+    render(
+      <AgentKnowledgebasesTab
+        knowledgebases={[{ ...mockKbs[0], description: null }]}
+        selectedKbIds={[]}
+        onSelectKbIds={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Docs KB")).toBeInTheDocument();
+  });
 });

@@ -109,6 +109,91 @@ describe("ModelEditorForm", () => {
     expect(screen.getByLabelText("Display Label")).toBeInTheDocument();
   });
 
+  it("handles empty providers, embedding model defaults, tab interactions, and update error", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<ModelEditorForm providers={[]} />);
+    expect(screen.getByText("Select provider")).toBeInTheDocument();
+    unmount();
+
+    const embeddingModel: AiModelRow = {
+      ...dummyModel,
+      modelType: "embedding",
+      embeddingDimensions: 1536,
+      reasoningEffortFormat: null as never,
+      label: "",
+    };
+
+    mockUpdateModels.mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    });
+
+    const { rerender } = render(
+      <ModelEditorForm
+        model={embeddingModel}
+        providers={dummyProviders}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    // Toggle Enabled switch in details tab
+    await user.click(screen.getByRole("switch", { name: "Enabled" }));
+
+    // Switch to Type tab and click radio
+    currentQueryTab = "type";
+    rerender(
+      <ModelEditorForm
+        model={embeddingModel}
+        providers={dummyProviders}
+        onDelete={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("radio", { name: /both/i }));
+
+    // Switch to Context tab and edit inputs
+    currentQueryTab = "context";
+    rerender(
+      <ModelEditorForm
+        model={embeddingModel}
+        providers={dummyProviders}
+        onDelete={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Context Window (Tokens)"), {
+      target: { value: "" },
+    });
+    fireEvent.change(screen.getByLabelText("Embedding Dimensions"), {
+      target: { value: "768" },
+    });
+
+    // Switch to Capabilities tab and toggle a checkbox
+    currentQueryTab = "capabilities";
+    rerender(
+      <ModelEditorForm
+        model={embeddingModel}
+        providers={dummyProviders}
+        onDelete={vi.fn()}
+      />,
+    );
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[0]);
+
+    // Back to details to set label and save
+    currentQueryTab = "details";
+    rerender(
+      <ModelEditorForm
+        model={embeddingModel}
+        providers={dummyProviders}
+        onDelete={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Display Label"), {
+      target: { value: "Embed" },
+    });
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    expect(mockUpdateModels).toHaveBeenCalled();
+  });
+
   it("navigates across tabs and switches with setTab", async () => {
     const user = userEvent.setup();
     const { rerender } = render(<ModelEditorForm providers={dummyProviders} />);
@@ -232,5 +317,89 @@ describe("ModelEditorForm", () => {
     await user.click(confirmBtn[confirmBtn.length - 1]);
 
     expect(onDelete).toHaveBeenCalled();
+  });
+
+  it("handles modelOptions JSON validation and create/update error branches", async () => {
+    const user = userEvent.setup();
+    const { toast } = await import("sonner");
+    vi.spyOn(toast, "error").mockImplementation(vi.fn());
+
+    currentQueryTab = "configuration";
+    render(
+      <ModelEditorForm
+        model={{
+          ...dummyModel,
+          modelOptions: { temp: 0.7 },
+        }}
+        providers={dummyProviders}
+      />,
+    );
+
+    const optionsInput = document.querySelector("textarea")!;
+    fireEvent.change(optionsInput, { target: { value: "{bad-json" } });
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+    expect(toast.error).toHaveBeenCalledWith("Invalid JSON format in Model Options");
+
+    fireEvent.change(optionsInput, { target: { value: "[1, 2]" } });
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+    expect(toast.error).toHaveBeenCalledWith(
+      "Model options must be a valid JSON object",
+    );
+
+    fireEvent.change(optionsInput, { target: { value: '{"temp":0.5}' } });
+    mockUpdateModels.mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Update err" },
+    });
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+    expect(toast.error).toHaveBeenCalledWith("Update err");
+
+    mockUpdateModels.mockRejectedValueOnce("raw-err");
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+    expect(toast.error).toHaveBeenCalledWith("Failed to save model");
+  });
+
+  it("handles createModel ok:false and thrown Error", async () => {
+    const user = userEvent.setup();
+    const { toast } = await import("sonner");
+    vi.spyOn(toast, "error").mockImplementation(vi.fn());
+
+    currentQueryTab = "details";
+    render(<ModelEditorForm providers={dummyProviders} />);
+
+    fireEvent.change(screen.getByLabelText("Model ID"), {
+      target: { value: "gpt-4o-mini" },
+    });
+    fireEvent.change(screen.getByLabelText("Display Label"), {
+      target: { value: "GPT-4o Mini" },
+    });
+
+    mockCreateModel.mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    });
+    await user.click(screen.getByRole("button", { name: /create model/i }));
+    expect(toast.error).toHaveBeenCalledWith("Failed to create model");
+
+    mockCreateModel.mockRejectedValueOnce(new Error("Network fail"));
+    await user.click(screen.getByRole("button", { name: /create model/i }));
+    expect(toast.error).toHaveBeenCalledWith("Network fail");
+  });
+
+  it("selects provider from combobox and reasoning effort format from select", async () => {
+    const user = userEvent.setup();
+    currentQueryTab = "details";
+    const { unmount } = render(<ModelEditorForm providers={dummyProviders} />);
+
+    await user.click(screen.getByRole("combobox", { name: /select provider/i }));
+    const anthropicOption = await screen.findByText("Anthropic");
+    await user.click(anthropicOption);
+    unmount();
+
+    currentQueryTab = "configuration";
+    render(<ModelEditorForm model={dummyModel} providers={dummyProviders} />);
+    await user.click(screen.getByLabelText("Reasoning Effort Format"));
+    const openaiOption = await screen.findByRole("option", { name: /openai/i });
+    await user.click(openaiOption);
   });
 });

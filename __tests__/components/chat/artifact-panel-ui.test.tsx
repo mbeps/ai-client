@@ -27,6 +27,7 @@ vi.mock("@/lib/artifacts/download-artifact", () => ({
 
 vi.mock("next/dynamic", () => ({
   default: (loader: () => Promise<unknown>) => {
+    void loader().catch(() => {});
     const src = loader.toString();
     if (src.includes("ui-view")) {
       return function MockUiView({ content }: { content: string }) {

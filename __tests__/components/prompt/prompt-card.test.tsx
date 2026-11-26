@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -119,5 +119,71 @@ describe("PromptCard", () => {
     await waitFor(() => {
       expect(mockDeletePrompt).toHaveBeenCalledWith("p1");
     });
+  });
+
+  it("renders multi-project, multi-agent, fallback names, and delete error", async () => {
+    render(
+      <PromptCard
+        prompt={{
+          ...basePrompt,
+          id: "p-2proj",
+          projectIds: ["unknown-1", "unknown-2"],
+          assistantIds: [],
+        }}
+      />,
+    );
+    expect(screen.getByText("2 Projects")).toBeInTheDocument();
+
+    render(
+      <PromptCard
+        prompt={{
+          ...basePrompt,
+          id: "p-2agent",
+          projectIds: [],
+          assistantIds: ["a1", "a2"],
+        }}
+      />,
+    );
+    expect(screen.getByText("2 Agents")).toBeInTheDocument();
+
+    mockDeletePrompt.mockRejectedValueOnce(new Error("Delete failed"));
+    render(
+      <PromptCard
+        prompt={{
+          ...basePrompt,
+          id: "p-err",
+          projectIds: ["unknown-p"],
+          assistantIds: [],
+        }}
+      />,
+    );
+    expect(screen.getByText("Project: Project")).toBeInTheDocument();
+
+    const deleteBtns = screen.getAllByLabelText("Delete prompt");
+    fireEvent.click(deleteBtns[deleteBtns.length - 1]);
+    const confirmBtns = screen.getAllByRole("button", { name: /^delete$/i });
+    fireEvent.click(confirmBtns[confirmBtns.length - 1]);
+    await waitFor(() => expect(mockDeletePrompt).toHaveBeenCalledWith("p-err"));
+  });
+
+  it("renders fallback Agent name and handles delete error without message", async () => {
+    mockDeletePrompt.mockRejectedValueOnce({});
+    render(
+      <PromptCard
+        prompt={{
+          ...basePrompt,
+          id: "p-unknown-agent",
+          projectIds: [],
+          assistantIds: ["unknown-agent-id"],
+        }}
+      />,
+    );
+    expect(screen.getByText("Agent: Agent")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Delete prompt"));
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    await waitFor(() =>
+      expect(mockDeletePrompt).toHaveBeenCalledWith("p-unknown-agent"),
+    );
   });
 });

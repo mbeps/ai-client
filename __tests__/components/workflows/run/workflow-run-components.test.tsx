@@ -1,5 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("react-resizable-panels", () => ({
+  Group: ({ children }: any) => <div>{children}</div>,
+  Panel: ({ children }: any) => <div>{children}</div>,
+  Separator: () => <div data-testid="panel-separator" />,
+}));
 import { ResizablePanelGroup } from "@/components/ui/resizable";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkflowRunApprovalBanner } from "@/components/workflows/run/workflow-run-approval-banner";
@@ -257,5 +263,281 @@ describe("Workflow Run Workbench Components", () => {
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith("Failed to download file");
     });
+  });
+
+  it("covers WorkflowRunFilesSection missing meta, WorkflowRunPreviewPane, WorkflowRunTimeline, WorkflowRunHeader, and WorkflowRunNodeCard", async () => {
+    // Missing meta in WorkflowRunFilesSection
+    render(
+      <WorkflowRunFilesSection
+        inputAttachmentIds={["missing-id", "att-1"]}
+        attachmentMeta={{ "att-1": { url: "https://example.com/a.xlsx", name: "a.xlsx" } }}
+      />,
+    );
+    expect(screen.getByText("a.xlsx")).toBeInTheDocument();
+
+    // WorkflowRunPreviewPane states
+    const { rerender } = render(
+      <WorkflowRunPreviewPane
+        isLoadingArtifact={true}
+        currentArtifact={null}
+        isArtifactOpen={false}
+        onCloseArtifact={vi.fn()}
+        selectedNodeId={null}
+      />,
+    );
+    expect(screen.getByText("Loading artifact preview...")).toBeInTheDocument();
+
+    rerender(
+      <WorkflowRunPreviewPane
+        isLoadingArtifact={false}
+        currentArtifact={null}
+        isArtifactOpen={false}
+        onCloseArtifact={vi.fn()}
+        selectedNodeId="n1"
+      />,
+    );
+    expect(
+      screen.getByText("This node has not produced a Canvas artifact."),
+    ).toBeInTheDocument();
+
+    rerender(
+      <WorkflowRunPreviewPane
+        isLoadingArtifact={false}
+        currentArtifact={null}
+        isArtifactOpen={false}
+        onCloseArtifact={vi.fn()}
+        selectedNodeId={null}
+      />,
+    );
+    expect(
+      screen.getByText(/Select a node from the live graph or timeline/i),
+    ).toBeInTheDocument();
+
+    // WorkflowRunHeader: Graph View + Download Final Result success & error
+    const onViewModeChange = vi.fn();
+    mockDownloadFile.mockResolvedValueOnce(undefined);
+    render(
+      <WorkflowRunHeader
+        workflowId="wf-1"
+        workflowName="My Flow"
+        status="completed"
+        viewMode="timeline"
+        onViewModeChange={onViewModeChange}
+        outputAttachmentIds={[]}
+        attachmentMeta={{}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Graph View/i }));
+    expect(onViewModeChange).toHaveBeenCalledWith("graph");
+
+    // WorkflowRunTimeline + WorkflowRunNodeCard with undefined state & non-Enter key
+    const onSelectNode = vi.fn();
+    render(
+      <WorkflowRunTimeline
+        nodes={[
+          {
+            id: "n-empty",
+            type: "ai_step",
+            name: "Empty Node",
+            position: { x: 0, y: 0 },
+            data: { kind: "ai_step", variableName: "v1", prompt: "", mcpServerIds: [], toolIds: [], requiresReview: false },
+          },
+        ]}
+        nodeStates={{}}
+        selectedNodeId={null}
+        onSelectNode={onSelectNode}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /Select Empty Node/i });
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(onSelectNode).not.toHaveBeenCalled();
+    // KeyDown on child element hits e.target !== e.currentTarget guard
+    fireEvent.keyDown(screen.getByText("Empty Node"), { key: "Enter" });
+    expect(onSelectNode).not.toHaveBeenCalled();
+    fireEvent.click(trigger);
+    expect(onSelectNode).toHaveBeenCalledWith("n-empty");
+  });
+
+  it("covers WorkflowRunHeader final download success and error, and WorkflowRunApprovalBanner actions", async () => {
+    mockDownloadFile.mockRejectedValueOnce(new Error("fail"));
+    render(
+      <WorkflowRunHeader
+        workflowId="wf-1"
+        workflowName="My Flow"
+        status="completed"
+        viewMode="graph"
+        onViewModeChange={vi.fn()}
+        outputAttachmentIds={["out-1"]}
+        attachmentMeta={{
+          "out-1": { url: "https://example.com/out.pdf", name: "out.pdf" },
+        }}
+      />,
+    );
+    const dlBtn = screen.getByRole("link", { name: /Download Final Result/i });
+    await act(async () => {
+      fireEvent.click(dlBtn);
+    });
+
+    const onSubmitReview = vi.fn();
+    const { rerender } = render(
+      <WorkflowRunApprovalBanner
+        status="awaiting_review"
+        pendingApprovals={[]}
+        reviewContext={{ nodeId: "n1", nodeName: "Step 1", summary: "Check" }}
+        isSubmitting={false}
+        onSubmitReview={onSubmitReview}
+        onSubmitToolDecisions={vi.fn()}
+      />,
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("Optional review feedback or guidance..."),
+      { target: { value: "Looks good" } },
+    );
+
+    const onSubmitToolDecisions = vi.fn();
+    rerender(
+      <WorkflowRunApprovalBanner
+        status="awaiting_tool_approval"
+        nodeState={{
+          status: "awaiting_tool_approval",
+          pendingToolApprovals: [
+            { approvalId: "ap-1", toolCallId: "tc-1", toolName: "fetch_url", args: { url: "https://a.com" } },
+          ],
+        } as any}
+        isSubmitting={false}
+        onSubmitReview={vi.fn()}
+        onSubmitToolDecisions={onSubmitToolDecisions}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Deny" }));
+    fireEvent.click(screen.getByRole("button", { name: "Allow" }));
+    fireEvent.click(screen.getByRole("button", { name: /Submit Decisions/i }));
+    expect(onSubmitToolDecisions).toHaveBeenCalledWith(true, { "ap-1": true });
+    fireEvent.click(screen.getByRole("button", { name: /Reject & Stop/i }));
+    expect(onSubmitToolDecisions).toHaveBeenCalledWith(false, { "ap-1": false });
+  });
+
+  it("covers remaining branches in WorkflowRunApprovalBanner, FilesSection, and NodeCard", () => {
+    render(
+      <WorkflowRunApprovalBanner
+        status="awaiting_tool_approval"
+        nodeState={{
+          status: "awaiting_tool_approval",
+          pendingToolApprovals: [
+            { toolCallId: "tc-fallback", toolName: "search", args: {} },
+          ],
+        } as any}
+        isSubmitting={false}
+        onSubmitReview={vi.fn()}
+        onSubmitToolDecisions={vi.fn()}
+      />,
+    );
+
+    render(
+      <WorkflowRunFilesSection
+        inputAttachmentIds={["in-empty"]}
+        outputAttachmentIds={[]}
+        attachmentMeta={{
+          "in-empty": { url: "https://example.com/in", name: "" },
+        }}
+      />,
+    );
+    expect(screen.getByText("Input 1")).toBeInTheDocument();
+
+    render(
+      <WorkflowRunNodeCard
+        node={{
+          id: "n-err",
+          type: "http_request",
+          name: "HTTP",
+          position: { x: 0, y: 0 },
+          data: { kind: "http_request", variableName: "http", url: "https://a.com", method: "GET" },
+        }}
+        state={{
+          status: "failed",
+          branchTaken: "false",
+          httpResponse: { status: 500, statusText: "Server Error" },
+          reasoning: "",
+          toolCalls: [{ toolCallId: "tc1", toolName: "t", args: {}, state: "result", result: "ok" } as any],
+          errorMessage: "Node failed",
+        }}
+        isSelected={false}
+        onClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Branch: false")).toBeInTheDocument();
+    expect(screen.getByText("HTTP 500 Server Error")).toBeInTheDocument();
+    expect(screen.getByText("Node failed")).toBeInTheDocument();
+  });
+
+  it("handles WorkflowRunHeader download failure and concurrent click guard", async () => {
+    let rejectDownload!: (err: Error) => void;
+    mockDownloadFile.mockReset();
+    mockDownloadFile.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectDownload = reject;
+        }),
+    );
+
+    render(
+      <WorkflowRunHeader
+        workflowId="wf-1"
+        workflowName="My Flow"
+        status="completed"
+        dryRun={false}
+        viewMode="list"
+        onViewModeChange={vi.fn()}
+        outputAttachmentIds={["out-1"]}
+        attachmentMeta={{
+          "out-1": { url: "https://example.com/out.pdf", name: "out.pdf" },
+        }}
+      />,
+    );
+
+    const downloadBtn = screen.getByText(/Download Final Result/i);
+    fireEvent.click(downloadBtn);
+    // Second click while isDownloading is true should be ignored
+    fireEvent.click(downloadBtn);
+    expect(mockDownloadFile).toHaveBeenCalledTimes(1);
+
+    rejectDownload(new Error("Download failed"));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("Failed to download output file");
+    });
+  });
+
+  it("renders WorkflowRunFilesSection with only inputAttachmentIds and handles non-button click in WorkflowRunNodeCard", () => {
+    render(
+      <WorkflowRunFilesSection
+        inputAttachmentIds={["in-1"]}
+        outputAttachmentIds={[]}
+        attachmentMeta={{ "in-1": { url: "https://example.com/in.txt", name: "in.txt" } }}
+      />,
+    );
+    expect(screen.getByText("Input Files")).toBeInTheDocument();
+    expect(screen.queryByText("Output Files")).not.toBeInTheDocument();
+
+    const onCardClick = vi.fn();
+    render(
+      <WorkflowRunNodeCard
+        node={{
+          id: "n-click",
+          type: "ai_step",
+          position: { x: 0, y: 0 },
+          data: { label: "Click Node" },
+        }}
+        state={{
+          status: "completed",
+          artifact: { id: "a1", type: "markdown", title: "Doc", content: "Hello" },
+        }}
+        isSelected={false}
+        onClick={onCardClick}
+      />,
+    );
+    const outputBox = document.querySelector('[class*="bg-muted/30"]');
+    expect(outputBox).not.toBeNull();
+    fireEvent.click(outputBox!);
+    expect(onCardClick).toHaveBeenCalledTimes(1);
   });
 });

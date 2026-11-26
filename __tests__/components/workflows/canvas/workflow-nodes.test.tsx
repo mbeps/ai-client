@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@xyflow/react", () => ({
@@ -26,6 +26,7 @@ vi.mock("@xyflow/react", () => ({
   Position: { Left: "left", Right: "right", Top: "top", Bottom: "bottom" },
 }));
 
+import { BaseWorkflowNode } from "@/components/workflows/canvas/base-workflow-node";
 import { WORKFLOW_NODE_TYPES } from "@/components/workflows/canvas/node-types";
 import { AiStepNode } from "@/components/workflows/canvas/nodes/ai-step-node";
 import { HttpRequestNode } from "@/components/workflows/canvas/nodes/http-request-node";
@@ -150,5 +151,122 @@ describe("Workflow Custom Nodes & Registry", () => {
     expect(screen.getByTestId("handle-target-main")).toBeInTheDocument();
     expect(screen.getByTestId("handle-source-true")).toBeInTheDocument();
     expect(screen.getByTestId("handle-source-false")).toBeInTheDocument();
+  });
+
+  it("handles toolbar Configure/Delete clicks, double-click, readOnly, and default accentClassName", () => {
+    const onConfigure = vi.fn();
+    const onDelete = vi.fn();
+
+    const { rerender } = render(
+      <BaseWorkflowNode
+        id="n-base"
+        selected={true}
+        icon={<span>icon</span>}
+        data={{
+          label: "Base Node",
+          nodeData: { kind: "manual_trigger", variableName: "baseVar" },
+          onConfigure,
+          onDelete,
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Configure/i }));
+    expect(onConfigure).toHaveBeenCalledWith("n-base");
+
+    fireEvent.click(screen.getByRole("button", { name: /Delete/i }));
+    expect(onDelete).toHaveBeenCalledWith("n-base");
+
+    fireEvent.doubleClick(screen.getByText("Base Node"));
+    expect(onConfigure).toHaveBeenCalledTimes(2);
+
+    rerender(
+      <BaseWorkflowNode
+        id="n-base"
+        selected={true}
+        icon={<span>icon</span>}
+        data={{
+          label: "Base Node",
+          readOnly: true,
+          nodeData: { kind: "manual_trigger", variableName: "baseVar" },
+          onConfigure,
+          onDelete,
+        }}
+      />,
+    );
+
+    fireEvent.doubleClick(screen.getByText("Base Node"));
+    expect(onConfigure).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders plural tool/rule badges and empty URL fallback", () => {
+    render(
+      <>
+        <AiStepNode
+          id="n-ai-2"
+          selected={false}
+          data={{
+            label: "Multi Tool",
+            nodeData: {
+              kind: "ai_step",
+              variableName: "ai2",
+              prompt: "",
+              mcpServerIds: [],
+              toolIds: ["t1", "t2"],
+            },
+          }}
+        />
+        <HttpRequestNode
+          id="n-http-empty"
+          selected={false}
+          data={{
+            label: "Empty URL",
+            nodeData: {
+              kind: "http_request",
+              variableName: "httpEmpty",
+              method: "GET",
+              url: "",
+              headers: [],
+            },
+          }}
+        />
+        <IfConditionNode
+          id="n-if-1"
+          selected={false}
+          data={{
+            label: "One Rule",
+            nodeData: {
+              kind: "if_condition",
+              variableName: "if1",
+              evaluationMode: "rules",
+              logic: "and",
+              rules: [{ id: "r1", leftOperand: "a", operator: "equals", rightOperand: "b" }],
+            },
+          }}
+        />
+        <IfConditionNode
+          id="n-if-2"
+          selected={false}
+          data={{
+            label: "Two Rules",
+            nodeData: {
+              kind: "if_condition",
+              variableName: "if2",
+              evaluationMode: "rules",
+              logic: "and",
+              rules: [
+                { id: "r1", leftOperand: "a", operator: "equals", rightOperand: "b" },
+                { id: "r2", leftOperand: "c", operator: "equals", rightOperand: "d" },
+              ],
+            },
+          }}
+        />
+      </>,
+    );
+
+    expect(screen.getByText("2 tools")).toBeInTheDocument();
+    expect(screen.getByText("Configure URL...")).toBeInTheDocument();
+    expect(screen.getByText("1 rule")).toBeInTheDocument();
+    expect(screen.getByText("2 rules")).toBeInTheDocument();
   });
 });

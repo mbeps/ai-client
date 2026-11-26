@@ -32,8 +32,19 @@ vi.mock("@/components/workflows/canvas/workflow-canvas", () => ({
 }));
 
 vi.mock("@/components/chat/artifact-panel", () => ({
-  ArtifactPanel: ({ artifact }: { artifact: { title: string } }) => (
-    <div data-testid="mock-run-artifact">{artifact.title}</div>
+  ArtifactPanel: ({
+    artifact,
+    onClose,
+  }: {
+    artifact: { title: string };
+    onClose?: () => void;
+  }) => (
+    <div data-testid="mock-run-artifact">
+      {artifact.title}
+      <button type="button" data-testid="mock-close-artifact" onClick={onClose}>
+        Close
+      </button>
+    </div>
   ),
 }));
 
@@ -166,6 +177,10 @@ describe("WorkflowRunDetailPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Timeline View/i }));
     expect(screen.getByText("Review Step")).toBeInTheDocument();
+
+    for (const btn of screen.getAllByTestId("mock-close-artifact")) {
+      fireEvent.click(btn);
+    }
   });
 
   it("renders load error retry button and stream retry button when pending start fails", () => {
@@ -209,5 +224,49 @@ describe("WorkflowRunDetailPage", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(mockRetryStart).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles loading, notFound, and null currentNodeId", () => {
+    mockUseWorkflowRunData.mockReturnValue(baseRunData({ isLoading: true }));
+    mockUseWorkflowRunStream.mockReturnValue({
+      streamError: null,
+      retryStart: mockRetryStart,
+    });
+
+    const { rerender } = render(
+      <TooltipProvider>
+        <WorkflowRunDetailPage />
+      </TooltipProvider>,
+    );
+    expect(screen.queryByText("Live DAG Workflow")).not.toBeInTheDocument();
+
+    mockUseWorkflowRunData.mockReturnValue(
+      baseRunData({ run: null, workflow: null, loadError: null }),
+    );
+    rerender(
+      <TooltipProvider>
+        <WorkflowRunDetailPage />
+      </TooltipProvider>,
+    );
+
+    const noNodeData = baseRunData();
+    noNodeData.run = { ...noNodeData.run, currentNodeId: null };
+    mockUseWorkflowRunData.mockReturnValue(noNodeData);
+    rerender(
+      <TooltipProvider>
+        <WorkflowRunDetailPage />
+      </TooltipProvider>,
+    );
+    expect(screen.getByText("Live DAG Workflow")).toBeInTheDocument();
+
+    mockUseWorkflowRunData.mockReturnValue(
+      baseRunData({ workflow: null, loadError: "Missing workflow" }),
+    );
+    rerender(
+      <TooltipProvider>
+        <WorkflowRunDetailPage />
+      </TooltipProvider>,
+    );
+    expect(screen.getByText("Failed to load workflow run")).toBeInTheDocument();
   });
 });

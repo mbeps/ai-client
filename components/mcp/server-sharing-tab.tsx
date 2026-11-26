@@ -42,9 +42,9 @@ export function ServerSharingTab({ serverId }: ServerSharingTabProps) {
   );
 
   if (!server || server.isInstalled) return null;
+  const currentServer = server;
 
   async function handleTogglePublic() {
-    if (!server) return;
     setTogglingPublic(true);
     try {
       const res = await toggleMcpServerPublic(serverId);
@@ -52,7 +52,9 @@ export function ServerSharingTab({ serverId }: ServerSharingTabProps) {
         toast.error(res.error.message || "Failed to toggle public status");
         return;
       }
-      toast.success(`Server is now ${!server.isPublic ? "public" : "private"}`);
+      toast.success(
+        `Server is now ${!currentServer.isPublic ? "public" : "private"}`,
+      );
       await loadMcpServers();
     } catch {
       toast.error("Failed to toggle public status");

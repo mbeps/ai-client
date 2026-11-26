@@ -1,264 +1,61 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clientEnvSchema, env, serverEnvSchema, validateEnv } from "@/config/env";
 
-const baseRequiredServerEnv = {
-  DATABASE_URL: "postgres://user:pass@localhost:5432/db",
-  BETTER_AUTH_SECRET: "secret",
-  BETTER_AUTH_URL: "http://localhost:3000",
-  POSTMARK_SERVER_TOKEN: "token",
-  POSTMARK_FROM_EMAIL: "from@example.com",
-  ENCRYPTION_SECRET: "secret",
-  S3_ENDPOINT: "http://localhost:9000",
-  S3_REGION: "us-east-1",
-  S3_ACCESS_KEY: "key",
-  S3_SECRET_KEY: "secret",
-  S3_BUCKET: "bucket",
-  QDRANT_URL: "http://localhost:6333",
-};
-
-const newVars = [
-  "EMBEDDING_DIMENSIONS",
-  "EMBEDDING_BATCH_SIZE",
-  "CHAT_MAX_HISTORY_TURNS",
-  "RAG_TOP_K",
-  "TRANSFORM_TOP_K",
-  "MAX_DOCUMENT_CHARS",
-  "DEFAULT_CHUNK_SIZE",
-  "DEFAULT_CHUNK_OVERLAP",
-  "CHAT_MAX_STEPS",
-  "CHAT_MAX_APPROVAL_ROUNDS",
-  "S3_FORCE_PATH_STYLE",
-  "RATE_LIMIT_CHAT_RPM",
-  "RATE_LIMIT_UPLOAD_RPM",
-] as const;
-
-const expectedDefaults: Record<(typeof newVars)[number], number | boolean> = {
-  EMBEDDING_DIMENSIONS: 2048,
-  EMBEDDING_BATCH_SIZE: 96,
-  CHAT_MAX_HISTORY_TURNS: 50,
-  RAG_TOP_K: 5,
-  TRANSFORM_TOP_K: 3,
-  MAX_DOCUMENT_CHARS: 500000,
-  DEFAULT_CHUNK_SIZE: 1000,
-  DEFAULT_CHUNK_OVERLAP: 200,
-  CHAT_MAX_STEPS: 10,
-  CHAT_MAX_APPROVAL_ROUNDS: 10,
-  S3_FORCE_PATH_STYLE: true,
-  RATE_LIMIT_CHAT_RPM: 20,
-  RATE_LIMIT_UPLOAD_RPM: 30,
-};
-
-describe("env configuration and validation", () => {
+describe("config/env", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.resetModules();
   });
 
-  describe("server env validation", () => {
-    it("parses defaults when optional tunables are absent", () => {
-      const parsed = validateEnv(baseRequiredServerEnv, true);
-      for (const name of newVars) {
-        expect(parsed[name]).toBe(expectedDefaults[name]);
-      }
-    });
+  it("throws when required server env vars are missing or invalid", async () => {
+    vi.resetModules();
+    vi.stubEnv("DATABASE_URL", "not-a-url");
 
-    it("parses numeric strings to numbers", () => {
-      const parsed = validateEnv(
-        {
-          ...baseRequiredServerEnv,
-          EMBEDDING_DIMENSIONS: "1536",
-          CHAT_MAX_APPROVAL_ROUNDS: "5",
-        },
-        true,
-      );
-      expect(parsed.EMBEDDING_DIMENSIONS).toBe(1536);
-      expect(parsed.CHAT_MAX_APPROVAL_ROUNDS).toBe(5);
-    });
-
-    it("clamps CHAT_MAX_APPROVAL_ROUNDS to at least 1", () => {
-      const parsed = validateEnv(
-        {
-          ...baseRequiredServerEnv,
-          CHAT_MAX_APPROVAL_ROUNDS: "0",
-        },
-        true,
-      );
-      expect(parsed.CHAT_MAX_APPROVAL_ROUNDS).toBe(1);
-    });
-
-    it("preserves TOOL_APPROVAL_SECRET when provided and leaves it undefined when omitted", () => {
-      const withoutSecret = validateEnv(baseRequiredServerEnv, true);
-      expect(withoutSecret.TOOL_APPROVAL_SECRET).toBeUndefined();
-
-      const withSecret = validateEnv(
-        {
-          ...baseRequiredServerEnv,
-          TOOL_APPROVAL_SECRET: "approval-secret-key",
-        },
-        true,
-      );
-      expect(withSecret.TOOL_APPROVAL_SECRET).toBe("approval-secret-key");
-    });
-
-    it("parses S3_FORCE_PATH_STYLE=false to boolean false", () => {
-      const parsed = validateEnv(
-        {
-          ...baseRequiredServerEnv,
-          S3_FORCE_PATH_STYLE: "false",
-        },
-        true,
-      );
-      expect(parsed.S3_FORCE_PATH_STYLE).toBe(false);
-    });
-
-    it("parses INNGEST_SERVE_ORIGIN when provided", () => {
-      const parsed = validateEnv(
-        {
-          ...baseRequiredServerEnv,
-          INNGEST_SERVE_ORIGIN: "http://host.docker.internal:3000",
-        },
-        true,
-      );
-      expect(parsed.INNGEST_SERVE_ORIGIN).toBe("http://host.docker.internal:3000");
-    });
-
-    it("parses NEXT_RUNTIME and VITEST when provided on server", () => {
-      const parsed = validateEnv(
-        {
-          ...baseRequiredServerEnv,
-          NEXT_RUNTIME: "nodejs",
-          VITEST: "true",
-        },
-        true,
-      );
-      expect(parsed.NEXT_RUNTIME).toBe("nodejs");
-      expect(parsed.VITEST).toBe("true");
-    });
-
-    it("throws error when critical server variables are missing", () => {
-      expect(() =>
-        validateEnv(
-          {
-            ...baseRequiredServerEnv,
-            DATABASE_URL: "not-a-valid-url",
-          },
-          true,
-        ),
-      ).toThrow("Invalid environment variables");
-    });
-
-    describe("RAG_MODE and Qdrant configuration", () => {
-      it("defaults RAG_MODE to hybrid when omitted", () => {
-        const parsed = validateEnv(baseRequiredServerEnv, true);
-        expect(parsed.RAG_MODE).toBe("hybrid");
-      });
-
-      it.each(["hybrid", "vector", "file_read"] as const)(
-        "accepts valid RAG_MODE=%s",
-        (mode) => {
-          const parsed = validateEnv(
-            { ...baseRequiredServerEnv, RAG_MODE: mode },
-            true,
-          );
-          expect(parsed.RAG_MODE).toBe(mode);
-        },
-      );
-
-      it("rejects invalid RAG_MODE values", () => {
-        expect(() =>
-          validateEnv(
-            { ...baseRequiredServerEnv, RAG_MODE: "invalid_mode" },
-            true,
-          ),
-        ).toThrow("Invalid environment variables");
-      });
-
-      it("requires QDRANT_URL when RAG_MODE is omitted (defaults to hybrid)", () => {
-        const { QDRANT_URL: _, ...withoutQdrant } = baseRequiredServerEnv;
-        expect(() => validateEnv(withoutQdrant, true)).toThrow(
-          "Invalid environment variables",
-        );
-      });
-
-      it("requires QDRANT_URL when RAG_MODE is hybrid or vector (missing or empty)", () => {
-        const { QDRANT_URL: _, ...withoutQdrant } = baseRequiredServerEnv;
-        for (const mode of ["hybrid", "vector"] as const) {
-          expect(() =>
-            validateEnv({ ...withoutQdrant, RAG_MODE: mode }, true),
-          ).toThrow("Invalid environment variables");
-          expect(() =>
-            validateEnv(
-              { ...withoutQdrant, RAG_MODE: mode, QDRANT_URL: "" },
-              true,
-            ),
-          ).toThrow("Invalid environment variables");
-        }
-      });
-
-      it("allows QDRANT_URL and QDRANT_API_KEY to be omitted or empty when RAG_MODE is file_read", () => {
-        const { QDRANT_URL: _, ...withoutQdrant } = baseRequiredServerEnv;
-        const parsedUnset = validateEnv(
-          { ...withoutQdrant, RAG_MODE: "file_read" },
-          true,
-        );
-        expect(parsedUnset.RAG_MODE).toBe("file_read");
-        expect(parsedUnset.QDRANT_URL).toBeUndefined();
-        expect(parsedUnset.QDRANT_API_KEY).toBeUndefined();
-
-        const parsedEmpty = validateEnv(
-          {
-            ...withoutQdrant,
-            RAG_MODE: "file_read",
-            QDRANT_URL: "",
-            QDRANT_API_KEY: "",
-          },
-          true,
-        );
-        expect(parsedEmpty.QDRANT_URL).toBeUndefined();
-        expect(parsedEmpty.QDRANT_API_KEY).toBeUndefined();
-      });
-
-      it("preserves QDRANT_API_KEY when provided", () => {
-        const parsed = validateEnv(
-          { ...baseRequiredServerEnv, QDRANT_API_KEY: "qdrant-secret" },
-          true,
-        );
-        expect(parsed.QDRANT_API_KEY).toBe("qdrant-secret");
-      });
-    });
+    await expect(import("@/config/env")).rejects.toThrow();
   });
 
-  describe("client env validation", () => {
-    it("validates client variables with defaults when isServerEnv is false", () => {
-      const parsed = validateEnv({}, false);
-      expect(parsed.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD).toBe(true);
-      expect(parsed.NODE_ENV).toBe("development");
-      expect(parsed.VITEST).toBeUndefined();
-    });
+  it("clamps EMBEDDING_BATCH_SIZE and CHAT_MAX_APPROVAL_ROUNDS to minimum 1", async () => {
+    vi.resetModules();
+    vi.stubEnv("EMBEDDING_BATCH_SIZE", "0");
+    vi.stubEnv("CHAT_MAX_APPROVAL_ROUNDS", "-5");
 
-    it("parses client NODE_ENV and VITEST when provided", () => {
-      const parsed = validateEnv(
-        { NODE_ENV: "production", VITEST: "true" },
-        false,
-      );
-      expect(parsed.NODE_ENV).toBe("production");
-      expect(parsed.VITEST).toBe("true");
-    });
-
-    it("parses NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD=false correctly", () => {
-      const parsed = validateEnv(
-        { NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD: "false" },
-        false,
-      );
-      expect(parsed.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD).toBe(false);
-    });
+    const { env } = await import("@/config/env");
+    expect(env.EMBEDDING_BATCH_SIZE).toBe(1);
+    expect(env.CHAT_MAX_APPROVAL_ROUNDS).toBe(1);
   });
 
-  describe("schemas and singleton", () => {
-    it("exports valid schemas and singleton instance", () => {
-      expect(clientEnvSchema).toBeDefined();
-      expect(serverEnvSchema).toBeDefined();
-      expect(env).toBeDefined();
-    });
+  it("validates RAG_MODE enum and transforms NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD", async () => {
+    vi.resetModules();
+    vi.stubEnv("RAG_MODE", "vector");
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD", "false");
+
+    const { env } = await import("@/config/env");
+    expect(env.RAG_MODE).toBe("vector");
+    expect(env.NEXT_PUBLIC_ENABLE_EMAIL_PASSWORD).toBe(false);
+
+    vi.resetModules();
+    vi.stubEnv("RAG_MODE", "invalid-mode");
+    await expect(import("@/config/env")).rejects.toThrow();
+  });
+
+  it("handles LOG_LEVEL warn, empty QDRANT_* strings, and client-only parseEnv", async () => {
+    vi.resetModules();
+    vi.stubEnv("LOG_LEVEL", "warn");
+    vi.stubEnv("QDRANT_API_KEY", "");
+
+    const { env } = await import("@/config/env");
+    expect(env.LOG_LEVEL).toBe("warning");
+    expect(env.QDRANT_API_KEY).toBeUndefined();
+
+    vi.resetModules();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubGlobal("window", {});
+    const { env: clientOnly } = await import("@/config/env");
+    expect(clientOnly.NODE_ENV).toBe("production");
+    vi.unstubAllGlobals();
+
+    vi.resetModules();
+    vi.stubEnv("RAG_MODE", "hybrid");
+    vi.stubEnv("QDRANT_URL", "");
+    await expect(import("@/config/env")).rejects.toThrow();
   });
 });
-

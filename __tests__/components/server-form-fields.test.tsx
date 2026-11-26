@@ -231,4 +231,98 @@ describe("ServerFormFields", () => {
     render(<TestFormWrapper showPublicToggle={false} isInstalled={false} />);
     expect(screen.queryByLabelText(/public server/i)).toBeNull();
   });
+
+  it("handles malformed/non-object headers, x-api-key, Bearer prefix, and installed OAuth", () => {
+    // Non-object JSON
+    const { unmount: u1 } = render(
+      <TestFormWrapper
+        defaultValues={{
+          name: "S1",
+          url: "https://example.com",
+          authType: "headers",
+          headers: "[1, 2, 3]",
+          isPublic: false,
+        }}
+      />,
+    );
+    u1();
+
+    // Invalid JSON
+    const { unmount: u2 } = render(
+      <TestFormWrapper
+        defaultValues={{
+          name: "S2",
+          url: "https://example.com",
+          authType: "headers",
+          headers: "{invalid-json",
+          isPublic: false,
+        }}
+      />,
+    );
+    u2();
+
+    // x-api-key and non-string value
+    const { unmount: u3 } = render(
+      <TestFormWrapper
+        defaultValues={{
+          name: "S3",
+          url: "https://example.com",
+          authType: "headers",
+          headers: JSON.stringify({ "x-api-key": "secret-123", extra: 42 }),
+          isPublic: false,
+        }}
+      />,
+    );
+    u3();
+
+    // Installed OAuth
+    const { unmount: u4 } = render(
+      <TestFormWrapper
+        defaultValues={{
+          name: "S4",
+          url: "https://example.com",
+          authType: "oauth",
+          headers: "",
+          isPublic: false,
+        }}
+        isInstalled={true}
+        serverId="srv-1"
+      />,
+    );
+    u4();
+
+    // api-key header, Bearer prefix in serializeHeaders, empty record, and non-installed OAuth
+    const { unmount: u5 } = render(
+      <TestFormWrapper
+        defaultValues={{
+          name: "S5",
+          url: "https://example.com",
+          authType: "headers",
+          headers: JSON.stringify({ "api-key": "my-key" }),
+          isPublic: false,
+        }}
+      />,
+    );
+    const apiKeyInput = screen.getByPlaceholderText(/enter api key or token/i);
+    fireEvent.change(apiKeyInput, { target: { value: "Bearer already-prefixed" } });
+    fireEvent.change(apiKeyInput, { target: { value: "" } });
+    // Switch authType back to none
+    const tabs = screen.getAllByRole("tab");
+    fireEvent.click(tabs[0]);
+    u5();
+
+    // Non-installed OAuth with undefined oauth fields
+    render(
+      <TestFormWrapper
+        defaultValues={{
+          name: "S6",
+          url: "https://example.com",
+          authType: "oauth",
+          headers: "",
+          isPublic: false,
+        }}
+        isInstalled={false}
+      />,
+    );
+  });
 });

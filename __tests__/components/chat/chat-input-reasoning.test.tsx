@@ -183,4 +183,18 @@ describe("ChatInput Reasoning Effort", () => {
     const textarea = screen.getByRole("textbox");
     expect(textarea).toHaveClass("bg-transparent", "dark:bg-transparent");
   });
+
+  it("shows provider setup placeholder when no models exist and triggers onCompact", () => {
+    const onCompact = vi.fn();
+    mockUserModels.length = 0;
+    render(
+      <TooltipProvider>
+        <ChatInput onSend={vi.fn()} onCompact={onCompact} />
+      </TooltipProvider>,
+    );
+
+    expect(
+      screen.getByPlaceholderText("Set up a provider to start chatting..."),
+    ).toBeInTheDocument();
+  });
 });

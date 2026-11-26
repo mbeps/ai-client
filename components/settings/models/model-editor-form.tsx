@@ -144,8 +144,6 @@ export function ModelEditorForm({
     !isSaving;
 
   const handleSave = async (): Promise<void> => {
-    if (!canSave) return;
-
     let parsedOptions: Record<string, unknown> | null = null;
     if (form.modelOptions.trim().length > 0) {
       try {

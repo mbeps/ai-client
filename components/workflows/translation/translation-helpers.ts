@@ -134,7 +134,7 @@ export function applyHydratedTranslation(
   if (isCompletedWithText) {
     setters.setSourceText((current) => current || latest.sourceText);
     setters.setTranslatedText(
-      (current) => current || (latest.translatedText ?? ""),
+      (current) => current || (latest.translatedText as string),
     );
     syncLanguagesAndModel(latest, setters);
   }

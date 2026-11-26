@@ -174,7 +174,7 @@ export function SpreadsheetView({ title, content }: SpreadsheetViewProps) {
     if (activeSheet.data.length === 0) return { headers: [], rows: [] };
 
     if (isAOA) {
-      const headerRow = (activeSheet.data[0] as any[]) || [];
+      const headerRow = activeSheet.data[0] as any[];
       const dataRows = activeSheet.data.slice(1);
 
       // Determine max columns across header row and all data rows

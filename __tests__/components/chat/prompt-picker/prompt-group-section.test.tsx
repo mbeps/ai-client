@@ -111,5 +111,78 @@ describe("PromptGroupSection", () => {
     fireEvent.click(groupCheckbox);
     expect(onBulkToggleGroup).toHaveBeenCalledWith(group, true);
   });
+
+  it("does nothing on group checkbox click when neither onBulkToggleGroup nor onTogglePrompt is provided", () => {
+    render(
+      <PromptGroupSection
+        group={group}
+        isExpanded={true}
+        selectedPromptIds={new Set()}
+        onToggleExpand={vi.fn()}
+      />,
+    );
+
+    const groupCheckbox = screen.getByLabelText("Select all from Internal Prompts");
+    expect(() => fireEvent.click(groupCheckbox)).not.toThrow();
+  });
+
+  it("toggles item checkbox directly and renders shortcut without leading slash and content fallback", () => {
+    const onTogglePrompt = vi.fn();
+    const itemNoSlash = {
+      ...mockItem,
+      id: "p-no-slash",
+      title: "No Slash",
+      shortcut: "noslash",
+      description: undefined,
+      content: "Fallback content",
+    } as any;
+    const itemNoDescNoContent = {
+      ...mockItem,
+      id: "p-empty",
+      title: "Empty Body",
+      shortcut: undefined,
+      description: undefined,
+      content: undefined,
+    } as any;
+
+    render(
+      <PromptGroupSection
+        group={{ ...group, items: [itemNoSlash, itemNoDescNoContent] }}
+        isExpanded={true}
+        selectedPromptIds={new Set()}
+        onToggleExpand={vi.fn()}
+        onTogglePrompt={onTogglePrompt}
+      />,
+    );
+
+    expect(screen.getByText("/noslash")).toBeDefined();
+    expect(screen.getByText("Fallback content")).toBeDefined();
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    // checkboxes[0] is group checkbox, checkboxes[1] is first item
+    fireEvent.click(checkboxes[1]);
+    expect(onTogglePrompt).toHaveBeenCalledWith(itemNoSlash);
+  });
+
+  it("renders shortcut with leading slash as-is", () => {
+    const itemWithSlash = {
+      ...mockItem,
+      id: "p-slash",
+      title: "With Slash",
+      shortcut: "/withslash",
+    } as any;
+
+    render(
+      <PromptGroupSection
+        group={{ ...group, items: [itemWithSlash] }}
+        isExpanded={true}
+        selectedPromptIds={new Set()}
+        onToggleExpand={vi.fn()}
+        onTogglePrompt={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("/withslash")).toBeDefined();
+  });
 });
 

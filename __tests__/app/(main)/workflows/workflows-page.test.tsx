@@ -65,4 +65,37 @@ describe("WorkflowsPage", () => {
     expect(screen.getByText("Database offline")).toBeInTheDocument();
     expect(screen.queryByText("No workflows found")).not.toBeInTheDocument();
   });
+
+  it("renders fallback error message when listWorkflows fails with empty message", async () => {
+    mockListWorkflows.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "INTERNAL", message: "" },
+    });
+
+    const element = await WorkflowsPage({});
+    render(element);
+
+    expect(
+      screen.getByText("Unable to fetch workflows right now."),
+    ).toBeInTheDocument();
+  });
+
+  it("renders workflow cards when listWorkflows succeeds and empty state when empty", async () => {
+    mockGetWorkflowRun.mockResolvedValueOnce({ ok: false, error: {} });
+    mockListWorkflows.mockResolvedValueOnce({
+      ok: true,
+      value: [{ id: "wf-1", name: "My WF" }],
+    });
+
+    const element = await WorkflowsPage({
+      searchParams: Promise.resolve({ runId: "missing" }),
+    });
+    const { rerender } = render(element);
+    expect(screen.getByTestId("workflow-card")).toHaveTextContent("My WF");
+
+    mockListWorkflows.mockResolvedValueOnce({ ok: true, value: [] });
+    const emptyEl = await WorkflowsPage({});
+    rerender(emptyEl);
+    expect(screen.getByText("No workflows found")).toBeInTheDocument();
+  });
 });

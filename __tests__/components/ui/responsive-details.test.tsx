@@ -1,8 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ResponsiveDetails } from "@/components/ui/responsive-details";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+const mockUseIsMobile = vi.hoisted(() => vi.fn(() => false));
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: mockUseIsMobile,
+}));
 
 describe("ResponsiveDetails", () => {
   it("renders trigger element without error", () => {
@@ -57,6 +62,46 @@ describe("ResponsiveDetails", () => {
 
     expect(await screen.findByText("Modal Title")).toBeInTheDocument();
     expect(screen.getByText("Modal body content")).toBeInTheDocument();
+  });
+
+  it("renders Drawer on mobile with description", async () => {
+    mockUseIsMobile.mockReturnValue(true);
+    const user = userEvent.setup();
+
+    render(
+      <TooltipProvider>
+        <ResponsiveDetails
+          trigger={<button type="button">Mobile Trigger</button>}
+          title="Mobile Title"
+          description="Mobile Desc"
+        >
+          <p>Mobile Body</p>
+        </ResponsiveDetails>
+      </TooltipProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Mobile Trigger" }));
+    expect(await screen.findByText("Mobile Title")).toBeInTheDocument();
+    expect(screen.getByText("Mobile Desc")).toBeInTheDocument();
+    mockUseIsMobile.mockReturnValue(false);
+  });
+
+  it("renders Drawer without description on mobile", async () => {
+    const user = userEvent.setup();
+    mockUseIsMobile.mockReturnValue(true);
+
+    render(
+      <ResponsiveDetails
+        trigger={<button>No Desc Trigger</button>}
+        title="No Desc Title"
+      >
+        <div>Body</div>
+      </ResponsiveDetails>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "No Desc Trigger" }));
+    expect(await screen.findByText("No Desc Title")).toBeInTheDocument();
+    mockUseIsMobile.mockReturnValue(false);
   });
 });
 

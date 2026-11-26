@@ -47,16 +47,14 @@ export function ChatPageClient({
 
   useEffect(() => {
     upsertChat(initialChat);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has("msg")) {
-        url.searchParams.delete("msg");
-        window.history.replaceState(
-          {},
-          "",
-          url.pathname + (url.search ? url.search : ""),
-        );
-      }
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("msg")) {
+      url.searchParams.delete("msg");
+      window.history.replaceState(
+        {},
+        "",
+        url.pathname + (url.search ? url.search : ""),
+      );
     }
   }, [initialChat, upsertChat]);
 

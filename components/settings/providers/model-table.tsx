@@ -252,9 +252,9 @@ export function ModelTable({ models, providers, onRefresh }: ModelTableProps) {
         onCloseDeleteModel={() => setModelToDelete(null)}
         isModelDeleteLoading={busyModelId === modelToDelete?.id}
         onConfirmDeleteModel={async () => {
-          if (!modelToDelete) return;
-          await runModelAction(modelToDelete.id, async () => {
-            const res = await deleteModel(modelToDelete.id);
+          const target = modelToDelete!;
+          await runModelAction(target.id, async () => {
+            const res = await deleteModel(target.id);
             if (!res.ok) throw new Error(res.error.message);
             toast.success("Model deleted");
             setModelToDelete(null);

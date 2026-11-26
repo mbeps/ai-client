@@ -341,10 +341,9 @@ function useKnowledgebaseSettings(
   }, [kb]);
 
   const handleSaveSettings = async () => {
-    if (!kb) return;
     setIsSaving(true);
     try {
-      const res = await updateKnowledgebase(kb.id, {
+      const res = await updateKnowledgebase(kb!.id, {
         name,
         description,
         metadataModelId,

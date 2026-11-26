@@ -211,4 +211,58 @@ describe("SidebarUserFooter", () => {
     fireEvent.click(await screen.findByRole("menuitemradio", { name: /system/i }));
     await waitFor(() => expect(mockSetTheme).toHaveBeenCalledWith("system"));
   });
+
+  it("signs out, resets client state, and redirects to login", async () => {
+    const user = userEvent.setup();
+    render(
+      <SidebarProvider>
+        <SidebarUserFooter />
+      </SidebarProvider>,
+    );
+
+    const trigger = screen.getByRole("button");
+    await user.click(trigger);
+    await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"), { timeout: 300 });
+
+    const signOutItem = await screen.findByRole("menuitem", { name: /log out|sign out/i });
+    await user.click(signOutItem);
+
+    await waitFor(() => {
+      expect(mockSignOut).toHaveBeenCalled();
+      expect(mockResetClientState).toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith(ROUTES.AUTH.LOGIN.path);
+    });
+  });
+
+  it("renders dropdown on bottom side when isMobile is true", async () => {
+    const origInnerWidth = window.innerWidth;
+    const origMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: 500 });
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    try {
+      const user = userEvent.setup();
+      render(
+        <SidebarProvider>
+          <SidebarUserFooter />
+        </SidebarProvider>,
+      );
+
+      const trigger = screen.getByRole("button");
+      await user.click(trigger);
+      await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"), { timeout: 300 });
+    } finally {
+      Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: origInnerWidth });
+      window.matchMedia = origMatchMedia;
+    }
+  });
 });

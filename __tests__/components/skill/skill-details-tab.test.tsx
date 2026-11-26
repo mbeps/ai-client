@@ -75,4 +75,25 @@ describe("SkillDetailsTab", () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  it("renders Disabled label when enabled is false, Skill Name placeholder when name is empty, and updates description", async () => {
+    const user = userEvent.setup();
+    const onDescriptionChange = vi.fn();
+
+    render(
+      <SkillDetailsTab
+        {...defaultProps}
+        enabled={false}
+        name=""
+        onDescriptionChange={onDescriptionChange}
+      />,
+    );
+
+    expect(screen.getByText("Disabled")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Skill Name")).toBeInTheDocument();
+
+    const descInput = screen.getByDisplayValue("Helper skill for Next.js AI SDK");
+    await user.type(descInput, "!");
+    expect(onDescriptionChange).toHaveBeenCalled();
+  });
 });

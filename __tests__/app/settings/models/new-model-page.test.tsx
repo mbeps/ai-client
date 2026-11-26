@@ -32,6 +32,19 @@ vi.mock("@/lib/providers/invalidate-provider-registry-cache", () => ({
   invalidateProviderRegistryCache: vi.fn(),
 }));
 
+vi.mock("@/components/settings/models/model-editor-form", () => ({
+  ModelEditorForm: ({ onSuccess }: { onSuccess: () => void }) => (
+    <div>
+      <button type="button" role="tab">
+        Details
+      </button>
+      <button type="button" onClick={onSuccess}>
+        Trigger Success
+      </button>
+    </div>
+  ),
+}));
+
 import NewModelPage from "@/app/settings/models/new/page";
 
 describe("NewModelPage", () => {
@@ -65,5 +78,13 @@ describe("NewModelPage", () => {
 
     render(<NewModelPage />);
     expect(screen.queryByText("Add Model")).not.toBeInTheDocument();
+  });
+
+  it("redirects to models list on form success", async () => {
+    const user = userEvent.setup();
+    render(<NewModelPage />);
+
+    await user.click(screen.getByRole("button", { name: "Trigger Success" }));
+    expect(mockPush).toHaveBeenCalled();
   });
 });

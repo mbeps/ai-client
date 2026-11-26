@@ -122,4 +122,38 @@ describe("PickerDialog", () => {
 
     expect(screen.getByText("Controlled Body")).toBeDefined();
   });
+
+  it("closes dialog when emptyAction or manageAction link is clicked", () => {
+    const handleOpenChange = vi.fn();
+    const { rerender } = render(
+      <PickerDialog
+        open={true}
+        onOpenChange={handleOpenChange}
+        title="Empty Picker"
+        isEmpty={true}
+        emptyTitle="Nothing here"
+        emptyAction={{ label: "Create one", href: "/create" }}
+      >
+        <div>Body</div>
+      </PickerDialog>,
+    );
+
+    fireEvent.click(screen.getByText("Create one"));
+    expect(handleOpenChange).toHaveBeenCalledWith(false);
+
+    handleOpenChange.mockClear();
+    rerender(
+      <PickerDialog
+        open={true}
+        onOpenChange={handleOpenChange}
+        title="Manage Picker"
+        manageAction={{ label: "Manage", href: "/manage" }}
+      >
+        <div>Body</div>
+      </PickerDialog>,
+    );
+
+    fireEvent.click(screen.getByText("Manage"));
+    expect(handleOpenChange).toHaveBeenCalledWith(false);
+  });
 });

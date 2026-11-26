@@ -168,20 +168,20 @@ export function autoLayoutWorkflowNodes(
     if (!inDegree.has(edge.sourceNodeId) || !inDegree.has(edge.targetNodeId)) {
       continue;
     }
-    inDegree.set(edge.targetNodeId, (inDegree.get(edge.targetNodeId) ?? 0) + 1);
-    outgoing.get(edge.sourceNodeId)?.push(edge.targetNodeId);
+    inDegree.set(edge.targetNodeId, inDegree.get(edge.targetNodeId)! + 1);
+    outgoing.get(edge.sourceNodeId)!.push(edge.targetNodeId);
   }
 
   const queue = nodes
-    .filter((n) => (inDegree.get(n.id) ?? 0) === 0)
+    .filter((n) => inDegree.get(n.id)! === 0)
     .map((n) => n.id);
 
   while (queue.length > 0) {
     const curr = queue.shift()!;
-    const currDepth = depthMap.get(curr) ?? 0;
-    for (const next of outgoing.get(curr) ?? []) {
-      depthMap.set(next, Math.max(depthMap.get(next) ?? 0, currDepth + 1));
-      const remaining = (inDegree.get(next) ?? 1) - 1;
+    const currDepth = depthMap.get(curr)!;
+    for (const next of outgoing.get(curr)!) {
+      depthMap.set(next, Math.max(depthMap.get(next)!, currDepth + 1));
+      const remaining = inDegree.get(next)! - 1;
       inDegree.set(next, remaining);
       if (remaining === 0) queue.push(next);
     }
@@ -189,7 +189,7 @@ export function autoLayoutWorkflowNodes(
 
   const layerCounters = new Map<number, number>();
   return nodes.map((node) => {
-    const layer = depthMap.get(node.id) ?? 0;
+    const layer = depthMap.get(node.id)!;
     const row = layerCounters.get(layer) ?? 0;
     layerCounters.set(layer, row + 1);
     return {

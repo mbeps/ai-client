@@ -41,9 +41,7 @@ function SubagentCardItem({
         checked={checked}
         disabled={disabled}
         aria-label={agent.name}
-        onCheckedChange={() => {
-          if (!disabled) onToggle(agent.id);
-        }}
+        onCheckedChange={() => onToggle(agent.id)}
         className="mt-0.5"
       />
       <div className="min-w-0 flex-1 space-y-1">
@@ -146,14 +144,12 @@ export function SubagentGroupSection({
             disabled={disabled || group.items.length === 0}
             aria-label={`Select all ${group.name}`}
             className="h-4 w-4"
-            onCheckedChange={() => {
-              if (!disabled) {
-                onBulkSelect(
-                  group.items.map((a) => a.id),
-                  !isAllInGroupSelected,
-                );
-              }
-            }}
+            onCheckedChange={() =>
+              onBulkSelect(
+                group.items.map((a) => a.id),
+                !isAllInGroupSelected,
+              )
+            }
           />
         </div>
       </div>

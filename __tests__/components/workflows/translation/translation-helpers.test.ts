@@ -306,6 +306,131 @@ describe("translation-helpers", () => {
       expect(onError).toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalledWith("Network offline");
     });
+
+    it("handles res.ok false and non-Error catch branches", async () => {
+      const onSuccess = vi.fn();
+      const onError = vi.fn();
+      const handleApiError = vi.fn().mockReturnValue(false);
+
+      vi.mocked(triggerTranslation).mockResolvedValueOnce({
+        ok: false,
+        error: { message: "" },
+      } as any);
+      await executeTranslationRequest({
+        sourceText: "Hi",
+        sourceLangLabel: "English",
+        targetLangLabel: "Spanish",
+        attachment: null,
+        handleApiError,
+        onSuccess,
+        onError,
+      });
+      expect(toast.error).toHaveBeenCalledWith("Translation failed");
+
+      handleApiError.mockReturnValueOnce(true);
+      vi.mocked(triggerTranslation).mockResolvedValueOnce({
+        ok: false,
+        error: { message: "Custom" },
+      } as any);
+      await executeTranslationRequest({
+        sourceText: "Hi",
+        sourceLangLabel: "English",
+        targetLangLabel: "Spanish",
+        attachment: null,
+        handleApiError,
+        onSuccess,
+        onError,
+      });
+
+      handleApiError.mockReturnValueOnce(true);
+      vi.mocked(triggerTranslation).mockRejectedValueOnce("string-err");
+      await executeTranslationRequest({
+        sourceText: "Hi",
+        sourceLangLabel: "English",
+        targetLangLabel: "Spanish",
+        attachment: null,
+        handleApiError,
+        onSuccess,
+        onError,
+      });
+
+      handleApiError.mockReturnValueOnce(false);
+      vi.mocked(triggerTranslation).mockRejectedValueOnce("string-err");
+      await executeTranslationRequest({
+        sourceText: "Hi",
+        sourceLangLabel: "English",
+        targetLangLabel: "Spanish",
+        attachment: null,
+        handleApiError,
+        onSuccess,
+        onError,
+      });
+      expect(toast.error).toHaveBeenCalledWith("Translation failed");
+    });
+  });
+
+  describe("remaining translation-helpers branches", () => {
+    it("covers empty event fields, unknown languages, and non-document attachment", () => {
+      const setTranslatedText = vi.fn();
+      const setIsLoading = vi.fn();
+      applyTranslationRealtimeEvent(
+        { type: "text-delta", text: "" } as any,
+        setTranslatedText,
+        setIsLoading,
+      );
+      applyTranslationRealtimeEvent(
+        { type: "finish", translatedText: "" } as any,
+        setTranslatedText,
+        setIsLoading,
+      );
+      applyTranslationRealtimeEvent(
+        { type: "error", message: "" } as any,
+        setTranslatedText,
+        setIsLoading,
+      );
+      expect(setIsLoading).toHaveBeenCalledWith(false);
+      expect(toast.error).toHaveBeenCalledWith("Translation failed");
+
+      const setters = {
+        setActiveTranslationId: vi.fn(),
+        setSourceText: vi.fn(),
+        setTranslatedText: vi.fn(),
+        setIsLoading: vi.fn(),
+        setSourceLangValue: vi.fn(),
+        setTargetLangValue: vi.fn(),
+        setModelId: vi.fn(),
+      };
+      applyHydratedTranslation(
+        {
+          id: "tx-1",
+          status: "pending",
+          sourceText: "Hi",
+          translatedText: "",
+          sourceLanguage: "UnknownLang",
+          targetLanguage: "UnknownTarget",
+          modelId: "",
+        } as any,
+        setters,
+      );
+      expect(setters.setTranslatedText).toHaveBeenCalledWith("");
+      expect(setters.setSourceLangValue).not.toHaveBeenCalled();
+      expect(setters.setTargetLangValue).not.toHaveBeenCalled();
+      expect(setters.setModelId).not.toHaveBeenCalled();
+
+      const setSourceText = vi.fn();
+      handleProcessedAttachment(
+        {
+          id: "img-1",
+          name: "a.png",
+          type: "image",
+          mimeType: "image/png",
+          dataUrl: "data:...",
+          size: 10,
+        },
+        setSourceText,
+      );
+      expect(setSourceText).not.toHaveBeenCalled();
+    });
   });
 });
 

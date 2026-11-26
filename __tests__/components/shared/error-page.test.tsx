@@ -66,5 +66,19 @@ describe("ErrorPage", () => {
     expect(reloadMock).toHaveBeenCalledOnce();
     expect(reset).not.toHaveBeenCalled();
   });
+
+  it("renders fallbackDescription when error.message is empty", () => {
+    render(
+      <ErrorPage
+        error={new Error("")}
+        reset={vi.fn()}
+        heading="Oops"
+        fallbackDescription="Fallback desc"
+        linkHref="/"
+        linkLabel="Home"
+      />,
+    );
+    expect(screen.getByText("Fallback desc")).toBeInTheDocument();
+  });
 });
 

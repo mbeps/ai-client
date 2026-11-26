@@ -3,43 +3,79 @@ import path from "path";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
+const sharedPlugins = [react(), tsconfigPaths()];
+const sharedAlias = {
+  "@": path.resolve(__dirname, "."),
+};
+
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: sharedPlugins,
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "."),
-    },
+    alias: sharedAlias,
   },
   test: {
-    environment: "jsdom",
     globals: true,
     reportsDirectory: "./coverage",
-    setupFiles: ["./vitest.setup.ts"],
-    include: [
-      "__tests__/**/*.test.{ts,tsx}",
-      "lib/actions/**/*.test.{ts,tsx}",
-      "tests/**/*.test.{ts,tsx}",
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          setupFiles: ["./vitest.setup.node.ts"],
+          include: [
+            "__tests__/actions/**/*.test.ts",
+            "__tests__/app/api/**/*.test.ts",
+            "__tests__/architecture/**/*.test.ts",
+            "__tests__/config/**/*.test.ts",
+            "__tests__/drizzle/**/*.test.ts",
+            "__tests__/lib/**/*.test.ts",
+            "__tests__/schemas/**/*.test.ts",
+            "__tests__/proxy.test.ts",
+            "__tests__/next.config.test.ts",
+            "__tests__/instrumentation.test.ts",
+          ],
+          exclude: ["**/node_modules/**", "**/.next/**"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "jsdom",
+          environment: "jsdom",
+          setupFiles: ["./vitest.setup.ts"],
+          include: [
+            "__tests__/components/**/*.test.{ts,tsx}",
+            "__tests__/hooks/**/*.test.{ts,tsx}",
+            "__tests__/app/**/*.test.tsx",
+            "__tests__/lib/**/*.test.tsx",
+          ],
+          exclude: ["**/node_modules/**", "**/.next/**"],
+        },
+      },
     ],
-    exclude: ["**/node_modules/**", "**/.next/**"],
     coverage: {
       provider: "v8",
-      all: false,
+      all: true,
       reporter: ["text", "lcov", "json"],
       reportsDirectory: "coverage",
+      include: [
+        "actions/**/*.{ts,tsx}",
+        "app/**/*.{ts,tsx}",
+        "components/**/*.{ts,tsx}",
+        "config/**/*.{ts,tsx}",
+        "hooks/**/*.{ts,tsx}",
+        "lib/**/*.{ts,tsx}",
+        "schemas/**/*.{ts,tsx}",
+        "proxy.ts",
+        "instrumentation.ts",
+      ],
       exclude: [
         "drizzle/**",
         "**/node_modules/**",
         "**/.next/**",
-        "**/migrations/**",
-        "app/**",
-        "components/**",
         "types/**",
         "scripts/**",
-        "proxy.ts",
-        "models.ts",
-        "config/env.ts",
-        "lib/auth/auth.ts",
-        "lib/auth/client.ts",
       ],
       thresholds: {
         statements: 100,

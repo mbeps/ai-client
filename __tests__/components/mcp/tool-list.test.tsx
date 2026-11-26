@@ -354,4 +354,91 @@ describe("ToolList", () => {
     expect(screen.getByText("query")).toBeInTheDocument();
     expect(screen.getByText("Search query")).toBeInTheDocument();
   });
+
+  it("handles undefined autoApprovedTools, blockedTools, and inputSchema.properties", async () => {
+    mockDiscoverMcpServerTools.mockResolvedValueOnce({
+      tools: [
+        {
+          name: "ping",
+          description: "Ping",
+          inputSchema: { type: "object" },
+        },
+      ],
+      resources: [],
+      prompts: [],
+    });
+    render(
+      <ToolList
+        server={createServer({
+          autoApprovedTools: undefined as any,
+          blockedTools: undefined as any,
+        })}
+      />,
+    );
+    const trigger = await screen.findByRole("button", { name: /ping/i });
+    fireEvent.click(trigger);
+    expect(await screen.findByText("Ping")).toBeInTheDocument();
+  });
+
+  it("does not call updateMcpToolApprovals when clicking already-active radio or batch states", async () => {
+    // 1. All approved
+    const { unmount } = render(
+      <ToolList
+        server={createServer({
+          autoApprovedTools: ["search", "delete_item"],
+          blockedTools: [],
+        })}
+      />,
+    );
+    const searchAlwaysAllow = await screen.findByRole("radio", {
+      name: "Always allow search",
+    });
+    fireEvent.click(searchAlwaysAllow);
+    const batchAlwaysAllow = screen.getByRole("button", { name: /Always allow/i });
+    fireEvent.pointerDown(batchAlwaysAllow);
+    fireEvent.click(batchAlwaysAllow);
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Always allow/i }));
+    expect(mockUpdateMcpToolApprovals).not.toHaveBeenCalled();
+    unmount();
+
+    // 2. All needs approval
+    const { unmount: unmount2 } = render(
+      <ToolList
+        server={createServer({ autoApprovedTools: [], blockedTools: [] })}
+      />,
+    );
+    const searchNeedsApproval = await screen.findByRole("radio", {
+      name: "Needs approval search",
+    });
+    fireEvent.click(searchNeedsApproval);
+    const batchNeedsApproval = screen.getByRole("button", {
+      name: /Needs approval/i,
+    });
+    fireEvent.pointerDown(batchNeedsApproval);
+    fireEvent.click(batchNeedsApproval);
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Needs approval/i }),
+    );
+    expect(mockUpdateMcpToolApprovals).not.toHaveBeenCalled();
+    unmount2();
+
+    // 3. All blocked
+    render(
+      <ToolList
+        server={createServer({
+          autoApprovedTools: [],
+          blockedTools: ["search", "delete_item"],
+        })}
+      />,
+    );
+    const searchBlocked = await screen.findByRole("radio", {
+      name: "Blocked search",
+    });
+    fireEvent.click(searchBlocked);
+    const batchBlocked = screen.getByRole("button", { name: /Blocked/i });
+    fireEvent.pointerDown(batchBlocked);
+    fireEvent.click(batchBlocked);
+    fireEvent.click(await screen.findByRole("menuitem", { name: /Blocked/i }));
+    expect(mockUpdateMcpToolApprovals).not.toHaveBeenCalled();
+  });
 });

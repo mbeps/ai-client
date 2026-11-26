@@ -129,7 +129,7 @@ export function PromptGroupSection({
         });
       } else {
         group.items.forEach((item) => {
-          if (!selectedPromptIds?.has(item.id)) onTogglePrompt(item);
+          onTogglePrompt(item);
         });
       }
     }

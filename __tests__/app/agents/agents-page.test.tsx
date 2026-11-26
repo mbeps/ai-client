@@ -79,6 +79,26 @@ describe("AgentsPage", () => {
     expect(screen.queryByText("Custom Leaf")).not.toBeInTheDocument();
     expect(screen.queryByText("Researcher")).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole("tab", { name: "My Agents" }));
+    expect(screen.getByText("Custom Leaf")).toBeInTheDocument();
+    expect(screen.getByText("Custom Orchestrator")).toBeInTheDocument();
+    expect(screen.queryByText("Researcher")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Subagents" }));
+    expect(screen.getByText("Custom Leaf")).toBeInTheDocument();
+    expect(screen.queryByText("Custom Orchestrator")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Built-in" }));
+    expect(screen.getByText("Researcher")).toBeInTheDocument();
+    expect(screen.queryByText("Custom Leaf")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "All" }));
+    const searchInput = screen.getByPlaceholderText("Search agents...");
+    await user.type(searchInput, "Parent coordinator");
+    expect(screen.getByText("Custom Orchestrator")).toBeInTheDocument();
+    expect(screen.queryByText("Custom Leaf")).not.toBeInTheDocument();
+
+    await user.clear(searchInput);
     await user.click(screen.getByRole("tab", { name: "Built-in" }));
     expect(screen.getByText("Researcher")).toBeInTheDocument();
     expect(screen.queryByText("Custom Orchestrator")).not.toBeInTheDocument();

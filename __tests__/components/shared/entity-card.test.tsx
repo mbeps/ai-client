@@ -69,4 +69,29 @@ describe("EntityCard", () => {
     fireEvent.keyDown(actionBtn, { key: "Enter" });
     // Handled and stopped propagation inside EntityCard container
   });
+
+  it("stops propagation on horizontal card rightActions", () => {
+    const parentClick = vi.fn();
+    const actionClick = vi.fn();
+    render(
+      <div onClick={parentClick}>
+        <EntityCard
+          title="Horiz"
+          horizontal
+          rightActions={
+            <button type="button" onClick={actionClick}>
+              Horiz Action
+            </button>
+          }
+        />
+      </div>,
+    );
+
+    const btn = screen.getByRole("button", { name: "Horiz Action" });
+    fireEvent.click(btn);
+    expect(actionClick).toHaveBeenCalledTimes(1);
+    expect(parentClick).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(btn, { key: "Enter" });
+  });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { WorkflowCanvasConfigTab } from "@/components/workflows/editor/workflow-canvas-config-tab";
 import { WorkflowCard } from "@/components/workflows/editor/workflow-card";
 import { WorkflowEditorTabs } from "@/components/workflows/editor/workflow-editor-tabs";
+import { WorkflowEditorHeader } from "@/components/workflows/editor/workflow-editor-header";
 import { WorkflowRunDialog } from "@/components/workflows/editor/workflow-run-dialog";
 import { SPREADSHEET_EXTENSIONS } from "@/config/attachments";
 import {
@@ -19,8 +20,19 @@ vi.mock("@/components/workflows/canvas/workflow-canvas", () => ({
 }));
 
 vi.mock("@/components/chat/artifact-panel", () => ({
-  ArtifactPanel: ({ artifact }: { artifact: { title: string } }) => (
-    <div data-testid="mock-artifact-panel">{artifact.title}</div>
+  ArtifactPanel: ({
+    artifact,
+    onClose,
+  }: {
+    artifact: { title: string };
+    onClose: () => void;
+  }) => (
+    <div data-testid="mock-artifact-panel">
+      {artifact.title}
+      <button type="button" onClick={onClose}>
+        close-artifact
+      </button>
+    </div>
   ),
 }));
 
@@ -33,11 +45,27 @@ vi.mock("@/components/chat/knowledgebase-picker", () => ({
 }));
 
 vi.mock("@/components/shared/skills-config-tab", () => ({
-  SkillsConfigTab: () => <div data-testid="mock-skills-tab" />,
+  SkillsConfigTab: ({
+    onToggleSkill,
+  }: {
+    onToggleSkill: (id: string) => void;
+  }) => (
+    <div data-testid="mock-skills-tab">
+      <button type="button" onClick={() => onToggleSkill("skill-1")}>
+        toggle-skill
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/shared/subagent-picker", () => ({
-  SubagentPicker: () => <div data-testid="mock-subagent-picker" />,
+  SubagentPicker: ({ onToggle }: { onToggle: (id: string) => void }) => (
+    <div data-testid="mock-subagent-picker">
+      <button type="button" onClick={() => onToggle("agent-1")}>
+        toggle-subagent
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/shared/markdown-tab-editor", () => ({
@@ -93,6 +121,14 @@ describe("Workflow Editor Tabs & Canvas Config", () => {
     expect(onCanvasConfigChange).toHaveBeenCalledWith(
       expect.objectContaining({
         sharedCanvas: false,
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(screen.getByRole("option", { name: "Markdown" }));
+    expect(onCanvasConfigChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultType: "markdown",
       }),
     );
   });
@@ -248,8 +284,206 @@ describe("Workflow Editor Tabs & Canvas Config", () => {
         }}
       />,
     );
-    expect(screen.getByRole("link", { name: "Edit Workflow" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View Runs" })).toBeInTheDocument();
+    render(
+      <WorkflowCard
+        workflow={{
+          id: "wf-2",
+          name: "Single Node Flow",
+          description: "Desc",
+          nodeCount: 1,
+          hasManualTrigger: false,
+          hasWebhookTrigger: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }}
+      />,
+    );
+    render(
+      <WorkflowCard
+        workflow={{
+          id: "wf-3",
+          name: "Undefined Node Flow",
+          description: "Desc",
+          hasManualTrigger: false,
+          hasWebhookTrigger: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }}
+      />,
+    );
+
+    const dialogInput = document.querySelector("input[type='file']") as HTMLInputElement;
+    if (dialogInput) {
+      fireEvent.change(dialogInput, { target: { files: [new File(["a"], "a.csv")] } });
+    }
+  });
+
+  it("covers WorkflowConfigTab, WorkflowContextTab, WorkflowCanvasConfigTab, WorkflowEditorHeader, and WorkflowRunDialog", () => {
+    const onNameChange = vi.fn();
+    const onDescriptionChange = vi.fn();
+    const onCanvasConfigChange = vi.fn();
+    const onRunFilesChange = vi.fn();
+    const onInitialInputJsonChange = vi.fn();
+    const onOpenChange = vi.fn();
+
+    render(
+      <WorkflowEditorTabs
+        activeTab="settings"
+        onActiveTabChange={vi.fn()}
+        isNew={false}
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={[]}
+        onNodesChange={vi.fn()}
+        onEdgesChange={vi.fn()}
+        onAddNode={vi.fn()}
+        onUpdateNode={vi.fn()}
+        onDeleteNode={vi.fn()}
+        onAutoLayout={vi.fn()}
+        webhookSecret=""
+        globalContext=""
+        onGlobalContextChange={vi.fn()}
+        knowledgebases={[]}
+        knowledgeBaseIds={new Set()}
+        onSelectKnowledgebases={vi.fn()}
+        mcpServers={[]}
+        tools={new Set()}
+        onToggleTool={vi.fn()}
+        onBulkSelectTools={vi.fn()}
+        canvasConfig={{ enabled: false, shared: false, allowedTypes: [] }}
+        onCanvasConfigChange={onCanvasConfigChange}
+        skillMode="dynamic"
+        onSkillModeChange={vi.fn()}
+        skillIds={new Set()}
+        onSelectSkills={vi.fn()}
+        skills={[]}
+        onSave={vi.fn()}
+        isSaving={true}
+        runs={[{ id: "r1" } as never]}
+        isLoadingRuns={false}
+        name=""
+        onNameChange={onNameChange}
+        description=""
+        onDescriptionChange={onDescriptionChange}
+        modelId=""
+        onModelIdChange={vi.fn()}
+        requiresFileUpload={true}
+        onRequiresFileUploadChange={vi.fn()}
+        onRunWorkflow={vi.fn()}
+        onDelete={vi.fn()}
+        isDeleting={false}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/Workflow Name/i), {
+      target: { value: "New Name" },
+    });
+    expect(onNameChange).toHaveBeenCalledWith("New Name");
+
+    fireEvent.change(screen.getByLabelText(/Description/i), {
+      target: { value: "New Desc" },
+    });
+    expect(onDescriptionChange).toHaveBeenCalledWith("New Desc");
+
+    // Switch to context tab
+    render(
+      <WorkflowEditorTabs
+        activeTab="context"
+        onActiveTabChange={vi.fn()}
+        isNew={true}
+        workflowId="wf-new"
+        nodes={sampleNodes}
+        edges={[]}
+        onNodesChange={vi.fn()}
+        onEdgesChange={vi.fn()}
+        onAddNode={vi.fn()}
+        onUpdateNode={vi.fn()}
+        onDeleteNode={vi.fn()}
+        onAutoLayout={vi.fn()}
+        webhookSecret=""
+        globalContext="ctx"
+        onGlobalContextChange={vi.fn()}
+        knowledgebases={[]}
+        knowledgeBaseIds={new Set()}
+        onSelectKnowledgebases={vi.fn()}
+        mcpServers={[]}
+        tools={new Set()}
+        onToggleTool={vi.fn()}
+        onBulkSelectTools={vi.fn()}
+        canvasConfig={{ enabled: false, shared: false, allowedTypes: [] }}
+        onCanvasConfigChange={onCanvasConfigChange}
+        skillMode="dynamic"
+        onSkillModeChange={vi.fn()}
+        skillIds={new Set()}
+        onSelectSkills={vi.fn()}
+        skills={[]}
+        onSave={vi.fn()}
+        isSaving={false}
+        runs={[]}
+        isLoadingRuns={false}
+        name=""
+        onNameChange={onNameChange}
+        description=""
+        onDescriptionChange={onDescriptionChange}
+        modelId=""
+        onModelIdChange={vi.fn()}
+        requiresFileUpload={false}
+        onRequiresFileUploadChange={vi.fn()}
+        onRunWorkflow={vi.fn()}
+        onDelete={vi.fn()}
+        isDeleting={false}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Global Context" })).toBeInTheDocument();
+
+    // Canvas config tab: toggle enabled switch & add allowed type
+    render(
+      <WorkflowCanvasConfigTab
+        canvasConfig={{ enabled: false, shared: false, allowedTypes: [] }}
+        onCanvasConfigChange={onCanvasConfigChange}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText(/Enable Canvas Artifacts/i));
+    expect(onCanvasConfigChange).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: true }),
+    );
+    fireEvent.click(screen.getByLabelText("Markdown"));
+    expect(onCanvasConfigChange).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedTypes: ["markdown"] }),
+    );
+
+    // WorkflowEditorHeader + WorkflowRunDialog
+    render(
+      <WorkflowEditorHeader
+        isNew={false}
+        name=""
+        nodeCount={1}
+        runDialogOpen={true}
+        onRunDialogOpenChange={onOpenChange}
+        requiresFileUpload={true}
+        runFiles={[new File(["a"], "a.csv")]}
+        onRunFilesChange={onRunFilesChange}
+        initialInputJson="{}"
+        onInitialInputJsonChange={onInitialInputJsonChange}
+        dryRun={false}
+        onDryRunChange={vi.fn()}
+        onStartRun={vi.fn()}
+        isStartingRun={true}
+        disabledRun={false}
+        onSave={vi.fn()}
+        isSaving={true}
+        disabledSave={false}
+      />,
+    );
+    expect(screen.getByText("Untitled Workflow")).toBeInTheDocument();
+    expect(screen.getByText("1 node in graph")).toBeInTheDocument();
+    expect(screen.getByText("1 file selected")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Trigger JSON Payload/i), {
+      target: { value: '{"a":1}' },
+    });
+    expect(onInitialInputJsonChange).toHaveBeenCalledWith('{"a":1}');
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
 
     render(
       <WorkflowRunDialog
@@ -266,10 +500,110 @@ describe("Workflow Editor Tabs & Canvas Config", () => {
         isStartingRun={false}
       />,
     );
-    const fileInput = document.querySelector('input[type="file"]');
+    const fileInput = document.querySelector('input[type="file"]')!;
     expect(fileInput).toHaveAttribute(
       "accept",
       Array.from(SPREADSHEET_EXTENSIONS).join(","),
     );
+    const csvFile = new File(["a,b"], "test.csv", { type: "text/csv" });
+    fireEvent.change(fileInput, { target: { files: [csvFile] } });
+    fireEvent.change(fileInput, { target: { files: null } });
+
+    render(
+      <WorkflowRunDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        requiresFileUpload={true}
+        runFiles={[csvFile, new File(["c,d"], "test2.csv", { type: "text/csv" })]}
+        onRunFilesChange={vi.fn()}
+        initialInputJson="{}"
+        onInitialInputJsonChange={vi.fn()}
+        dryRun={false}
+        onDryRunChange={vi.fn()}
+        onStartRun={vi.fn()}
+        isStartingRun={false}
+      />,
+    );
+    expect(screen.getByText("2 files selected")).toBeInTheDocument();
+  });
+
+  it("renders WorkflowEditorHeader with isNew=true", () => {
+    render(
+      <WorkflowEditorHeader
+        isNew={true}
+        name=""
+        nodeCount={0}
+        onSave={vi.fn()}
+        isSaving={false}
+        disabledSave={false}
+        onRun={vi.fn()}
+        isStartingRun={false}
+        disabledRun={false}
+      />,
+    );
+    expect(screen.getByText("New Workflow")).toBeInTheDocument();
+    expect(
+      screen.getByText("Design a visual multi-node AI automation"),
+    ).toBeInTheDocument();
+  });
+
+  it("wires skills, subagents, mcpServers filter, and artifact close", () => {
+    const onSelectSkills = vi.fn();
+    const onToggleSubagent = vi.fn();
+    const baseProps = {
+      onActiveTabChange: vi.fn(),
+      isNew: true,
+      workflowId: "",
+      nodes: sampleNodes,
+      edges: [],
+      onNodesChange: vi.fn(),
+      onEdgesChange: vi.fn(),
+      onAddNode: vi.fn(),
+      onUpdateNode: vi.fn(),
+      onDeleteNode: vi.fn(),
+      onAutoLayout: vi.fn(),
+      webhookSecret: "",
+      globalContext: "",
+      onGlobalContextChange: vi.fn(),
+      knowledgebases: [],
+      knowledgeBaseIds: new Set<string>(),
+      onSelectKnowledgeBases: vi.fn(),
+      mcpServers: [{ id: "m1", name: "MCP", enabled: true, tools: [] }] as never,
+      tools: new Set<string>(),
+      onToggleTool: vi.fn(),
+      onBulkSelectTools: vi.fn(),
+      canvasConfig: DEFAULT_WORKFLOW_CANVAS_CONFIG,
+      onCanvasConfigChange: vi.fn(),
+      latestArtifact: {
+        id: "art-1",
+        type: "markdown" as const,
+        title: "Latest Report",
+        content: "# Summary",
+      },
+      skillMode: "auto" as const,
+      onSkillModeChange: vi.fn(),
+      skillIds: new Set<string>(),
+      onSelectSkills,
+      skills: [],
+      agents: [],
+      subagentIds: new Set<string>(),
+      onToggleSubagent,
+      runs: [],
+      isLoadingRuns: false,
+      onSave: vi.fn(),
+      isSaving: false,
+    };
+    const { rerender } = render(
+      <WorkflowEditorTabs activeTab="skills" {...baseProps} />,
+    );
+    fireEvent.click(screen.getByText("toggle-skill"));
+    expect(onSelectSkills).toHaveBeenCalled();
+
+    rerender(<WorkflowEditorTabs activeTab="subagents" {...baseProps} />);
+    fireEvent.click(screen.getByText("toggle-subagent"));
+    expect(onToggleSubagent).toHaveBeenCalledWith("agent-1");
+
+    rerender(<WorkflowEditorTabs activeTab="canvas-config" {...baseProps} />);
+    fireEvent.click(screen.getByText("close-artifact"));
   });
 });

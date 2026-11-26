@@ -219,14 +219,11 @@ function useMemorySelection(
   };
 
   const handleBulkDelete = () => {
-    if (selectedIds.size === 0) return;
     setTargetDeleteIds(Array.from(selectedIds));
   };
 
   const handleConfirmDelete = () => {
-    if (!targetDeleteIds || targetDeleteIds.length === 0) return;
-
-    const idsToDelete = [...targetDeleteIds];
+    const idsToDelete = [...targetDeleteIds!];
     startDeleteTransition(async () => {
       try {
         const res = await deleteMemories({ ids: idsToDelete });

@@ -105,4 +105,46 @@ describe("ModelSelector", () => {
     fireEvent.click(screen.getByText("Claude 3.5 Sonnet"));
     expect(onValueChange).toHaveBeenCalledWith("claude-3-5-sonnet");
   });
+
+  it("renders empty, unavailable override, custom placeholder, and default placeholder states", () => {
+    mockUseUserModels.mockReturnValue({ models: [], isLoading: false });
+    const { rerender } = render(
+      <ModelSelector value="" onValueChange={vi.fn()} />,
+    );
+    expect(screen.getByText("No models configured")).toBeInTheDocument();
+
+    mockUseUserModels.mockReturnValue({
+      models: [
+        {
+          id: "m1",
+          modelId: "gpt-4o",
+          label: "GPT-4o",
+          providerName: "OpenAI",
+          contextWindow: 128000,
+        },
+      ],
+      isLoading: false,
+    });
+    rerender(
+      <ModelSelector
+        value="missing-model"
+        onValueChange={vi.fn()}
+        allowClear
+      />,
+    );
+    expect(document.body.textContent).toContain("Unavailable (missing-model)");
+
+    rerender(
+      <ModelSelector
+        value=""
+        onValueChange={vi.fn()}
+        allowClear
+        placeholder="Pick a model"
+      />,
+    );
+    expect(screen.getByText("Pick a model")).toBeInTheDocument();
+
+    rerender(<ModelSelector value="" onValueChange={vi.fn()} allowClear />);
+    expect(screen.getByText("Select model...")).toBeInTheDocument();
+  });
 });

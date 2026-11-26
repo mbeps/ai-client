@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AttachmentsMenu } from "@/components/chat/attachments-menu";
 
@@ -86,5 +86,51 @@ describe("AttachmentsMenu", () => {
     );
 
     expect(screen.queryByText("0")).toBeNull();
+  });
+
+  it("triggers file input click when Upload File is clicked", () => {
+    const clickSpy = vi.fn();
+    const fileInputRef = {
+      current: { click: clickSpy } as unknown as HTMLInputElement,
+    };
+    render(
+      <AttachmentsMenu
+        fileInputRef={fileInputRef}
+        selectedTools={new Set()}
+        onToggleTool={vi.fn()}
+        onBulkSelect={vi.fn()}
+        kbs={[]}
+        selectedKbs={new Set()}
+        onToggleKb={vi.fn()}
+        skills={[]}
+        selectedSkills={new Set()}
+        onToggleSkill={vi.fn()}
+        selectedPromptIds={new Set()}
+        onTogglePrompt={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Upload File/i }));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles undefined optional sets and supportsTools=false", () => {
+    render(
+      <AttachmentsMenu
+        fileInputRef={{ current: null }}
+        selectedTools={new Set()}
+        onToggleTool={vi.fn()}
+        onBulkSelect={vi.fn()}
+        kbs={[]}
+        selectedKbs={new Set()}
+        onToggleKb={vi.fn()}
+        onToggleSkill={vi.fn()}
+        onTogglePrompt={vi.fn()}
+        supportsTools={false}
+      />,
+    );
+
+    const toolsBtn = screen.getByRole("button", { name: /Tools Unsupported/i });
+    expect(toolsBtn).toBeDisabled();
   });
 });

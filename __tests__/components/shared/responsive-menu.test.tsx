@@ -42,6 +42,7 @@ describe("ResponsiveMenu", () => {
           label: "Combined Item",
           href: "/combined-path",
           onClick: vi.fn(),
+          isDestructive: true,
         },
         {
           label: "Destructive Item",
@@ -94,10 +95,12 @@ describe("ResponsiveMenu", () => {
       {
         label: "Mobile Link",
         href: "/mobile-path",
+        isDestructive: true,
       },
       {
         label: "Mobile Action",
         onClick: vi.fn(),
+        isDestructive: true,
       },
       {
         label: "Mobile Combined",
@@ -166,6 +169,40 @@ describe("ResponsiveMenu", () => {
       const link = screen.getByRole("link", { name: /clickable link item/i });
       await user.click(link);
       expect(onCombinedClick).toHaveBeenCalledTimes(1);
+    });
+
+    it("renders destructive action button in mobile drawer and closes on click", async () => {
+      const user = userEvent.setup();
+      const onDelete = vi.fn();
+      render(
+        <ResponsiveMenu
+          title="Mobile Menu"
+          items={[{ label: "Delete Item", isDestructive: true, onClick: onDelete }]}
+          isMobile={true}
+        />,
+      );
+
+      await user.click(screen.getByRole("button"));
+      const deleteBtn = await screen.findByRole("button", { name: /delete item/i });
+      await user.click(deleteBtn);
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("renders non-destructive action button in mobile drawer", async () => {
+      const user = userEvent.setup();
+      const onAction = vi.fn();
+      render(
+        <ResponsiveMenu
+          title="Mobile Menu"
+          items={[{ label: "Normal Item", onClick: onAction }]}
+          isMobile={true}
+        />,
+      );
+
+      await user.click(screen.getByRole("button"));
+      const btn = await screen.findByRole("button", { name: /normal item/i });
+      await user.click(btn);
+      expect(onAction).toHaveBeenCalledTimes(1);
     });
   });
 });

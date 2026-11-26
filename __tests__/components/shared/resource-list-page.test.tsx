@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { ResourceListPage } from "@/components/shared/resource-list-page";
 import type { SortableResource } from "@/lib/sortable-resource";
 
+let mockLoadError: string | null = null;
+
 vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: (state: { loadError: string | null }) => unknown) =>
-    selector({ loadError: null }),
+    selector({ loadError: mockLoadError }),
 }));
 
 interface TestItem extends SortableResource {
@@ -90,9 +92,13 @@ describe("ResourceListPage", () => {
         description="Manage test resources"
         items={mockItems}
         emptyStateMessage="No resources found"
-        renderCard={(item) => (
-          <div data-testid={`card-${item.id}`}>{item.name}</div>
-        )}
+        renderList={(sorted) =>
+          sorted.map((item) => (
+            <div key={item.id} data-testid={`card-${item.id}`}>
+              {item.name}
+            </div>
+          ))
+        }
       />,
     );
 
@@ -114,9 +120,13 @@ describe("ResourceListPage", () => {
         items={mockItems}
         emptyStateMessage="No resources found"
         sortFn={customSort}
-        renderCard={(item) => (
-          <div data-testid={`card-${item.id}`}>{item.name}</div>
-        )}
+        renderList={(sorted) =>
+          sorted.map((item) => (
+            <div key={item.id} data-testid={`card-${item.id}`}>
+              {item.name}
+            </div>
+          ))
+        }
       />,
     );
 
@@ -139,5 +149,24 @@ describe("ResourceListPage", () => {
 
     expect(screen.getByTestId("resource-list-skeleton")).toBeInTheDocument();
     expect(screen.queryByText("No resources found")).not.toBeInTheDocument();
+  });
+
+  it("renders loadError and custom renderList", () => {
+    mockLoadError = "Failed to load";
+    render(
+      <ResourceListPage
+        icon={<span>Icon</span>}
+        title="Test Resources"
+        description="Manage test resources"
+        items={mockItems}
+        emptyStateMessage="No resources found"
+        renderList={(sorted) => (
+          <div data-testid="custom-list">{sorted.length} items</div>
+        )}
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Failed to load");
+    expect(screen.getByTestId("custom-list")).toHaveTextContent("2 items");
+    mockLoadError = null;
   });
 });

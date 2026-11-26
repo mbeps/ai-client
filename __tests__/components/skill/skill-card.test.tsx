@@ -149,4 +149,107 @@ describe("SkillCard", () => {
       expect(mockDeleteSkill).toHaveBeenCalledWith("sk-1");
     });
   });
+
+  it("handles toggle and delete error responses, exceptions, and fallback labels", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    mockToggleSkillEnabled
+      .mockResolvedValueOnce({ ok: false, error: { message: "Toggle err" } })
+      .mockResolvedValueOnce({ ok: false, error: { message: "" } })
+      .mockRejectedValueOnce(new Error("Toggle boom"))
+      .mockRejectedValueOnce({});
+
+    render(
+      <SkillCard
+        skill={{
+          ...baseSkill,
+          description: "",
+          projectIds: ["unknown-proj"],
+          assistantIds: [],
+        }}
+      />,
+    );
+
+    const toggle = screen.getByRole("switch", { name: /toggle skill/i });
+    fireEvent.click(toggle);
+    await waitFor(() => expect(mockToggleSkillEnabled).toHaveBeenCalledTimes(1));
+    fireEvent.click(toggle);
+    await waitFor(() => expect(mockToggleSkillEnabled).toHaveBeenCalledTimes(2));
+    fireEvent.click(toggle);
+    await waitFor(() => expect(mockToggleSkillEnabled).toHaveBeenCalledTimes(3));
+    fireEvent.click(toggle);
+    await waitFor(() => expect(mockToggleSkillEnabled).toHaveBeenCalledTimes(4));
+
+    mockDeleteSkill
+      .mockResolvedValueOnce({ ok: false, error: { message: "Del err" } })
+      .mockResolvedValueOnce({ ok: false, error: { message: "" } })
+      .mockRejectedValueOnce(new Error("Del boom"))
+      .mockRejectedValueOnce({});
+
+    const triggerDelete = async (count: number) => {
+      fireEvent.click(screen.getByLabelText("Delete skill"));
+      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+      await waitFor(() => expect(mockDeleteSkill).toHaveBeenCalledTimes(count));
+    };
+
+    await triggerDelete(1);
+    await triggerDelete(2);
+    await triggerDelete(3);
+    await triggerDelete(4);
+
+    mockToggleSkillEnabled.mockResolvedValueOnce({ ok: true, value: {} });
+    render(
+      <SkillCard
+        skill={{
+          ...baseSkill,
+          id: "sk-disabled-files",
+          enabled: false,
+          files: [
+            { id: "f1", path: "a.md", size: 10, updatedAt: new Date() },
+            { id: "f2", path: "b.md", size: 20, updatedAt: new Date() },
+          ] as any,
+        }}
+      />,
+    );
+    expect(screen.getByText("2 files")).toBeInTheDocument();
+    const toggles = screen.getAllByRole("switch", { name: /toggle skill/i });
+    fireEvent.click(toggles[toggles.length - 1]);
+    await waitFor(() => expect(mockToggleSkillEnabled).toHaveBeenCalledTimes(5));
+
+    render(
+      <SkillCard
+        skill={{
+          ...baseSkill,
+          id: "sk-unknown-asst",
+          projectIds: [],
+          assistantIds: ["unknown-asst"],
+        }}
+      />,
+    );
+    expect(screen.getByText("Agent: Agent")).toBeInTheDocument();
+
+    render(
+      <SkillCard
+        skill={{
+          ...baseSkill,
+          id: "sk-multi-proj",
+          projectIds: ["p1", "p2"],
+          assistantIds: [],
+          description: "",
+        }}
+      />,
+    );
+    expect(screen.getByText("2 Projects")).toBeInTheDocument();
+
+    render(
+      <SkillCard
+        skill={{
+          ...baseSkill,
+          id: "sk-multi-asst",
+          projectIds: [],
+          assistantIds: ["a1", "a2"],
+        }}
+      />,
+    );
+    expect(screen.getByText("2 Agents")).toBeInTheDocument();
+  });
 });

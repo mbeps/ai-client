@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import SkillsPage from "@/app/settings/skills/page";
@@ -45,9 +45,24 @@ const mockSkills: Skill[] = [
     files: [],
     enabled: false,
     projectIds: [],
-    assistantIds: ["asst-1"],
+    agentIds: ["asst-1"],
+    assistantIds: [],
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-02-01"), // Middle
+  },
+  {
+    id: "skill-4",
+    userId: "user-1",
+    name: "alpha-skill",
+    displayName: "Alpha Skill",
+    description: "Alpha description",
+    content: "unique-body-token",
+    files: [],
+    enabled: true,
+    projectIds: [],
+    assistantIds: undefined as unknown as string[],
+    createdAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-01-10"),
   },
 ];
 
@@ -73,6 +88,7 @@ describe("SkillsPage", () => {
     const names = Array.from(skillHeadings).map((h) => h.textContent);
 
     expect(names).toEqual([
+      "Alpha Skill",
       "Brainstorming",
       "Karpathy Guidelines",
       "Writing Plans",
@@ -108,6 +124,33 @@ describe("SkillsPage", () => {
     expect(screen.getByText("Brainstorming")).toBeInTheDocument();
     expect(screen.getByText("Karpathy Guidelines")).toBeInTheDocument();
     expect(screen.getByText("Writing Plans")).toBeInTheDocument();
+  });
+
+  it("filters skills by search query across name, displayName, description, and content", () => {
+    render(<SkillsPage />);
+
+    const searchInput = screen.getByPlaceholderText(
+      "Search skills by name, slug, description...",
+    );
+
+    fireEvent.change(searchInput, { target: { value: "brainstorming" } });
+    expect(screen.getByText("Brainstorming")).toBeInTheDocument();
+    expect(screen.queryByText("Writing Plans")).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "Karpathy Guidelines" } });
+    expect(screen.getByText("Karpathy Guidelines")).toBeInTheDocument();
+    expect(screen.queryByText("Brainstorming")).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "Write structured" } });
+    expect(screen.getByText("Writing Plans")).toBeInTheDocument();
+    expect(screen.queryByText("Brainstorming")).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "unique-body-token" } });
+    expect(screen.getByText("Alpha Skill")).toBeInTheDocument();
+    expect(screen.queryByText("Brainstorming")).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "nonexistent-xyz" } });
+    expect(screen.queryByText("Brainstorming")).not.toBeInTheDocument();
   });
 });
 

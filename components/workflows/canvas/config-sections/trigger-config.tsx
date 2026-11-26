@@ -62,17 +62,15 @@ export function TriggerConfig({
   const endpointPath = ROUTES.API.WEBHOOKS.workflow(workflowId || "new");
 
   const handleCopySecret = async () => {
-    if (!webhookSecret) return;
-    await navigator.clipboard?.writeText(webhookSecret);
+    await navigator.clipboard?.writeText(webhookSecret!);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
   const handleRegenerate = async () => {
-    if (!onRegenerateWebhookSecret) return;
     setIsRegenerating(true);
     try {
-      await onRegenerateWebhookSecret();
+      await onRegenerateWebhookSecret!();
     } finally {
       setIsRegenerating(false);
     }

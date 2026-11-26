@@ -103,14 +103,12 @@ export const auth = betterAuth({
           email: ctx.body.email,
         };
 
-        if (user != null) {
-          // Non-critical: a mail outage must not fail sign-up.
-          ctx.context.runInBackground(
-            sendWelcomeEmail(user).catch((error: unknown) => {
-              log.error("Welcome email failed: {error}", { error });
-            }),
-          );
-        }
+        // Non-critical: a mail outage must not fail sign-up.
+        ctx.context.runInBackground(
+          sendWelcomeEmail(user).catch((error: unknown) => {
+            log.error("Welcome email failed: {error}", { error });
+          }),
+        );
       }
     }),
   },

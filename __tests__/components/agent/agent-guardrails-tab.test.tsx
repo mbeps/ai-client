@@ -52,4 +52,26 @@ describe("AgentGuardrailsTab", () => {
     fireEvent.click(screen.getByRole("button", { name: /save guardrails/i }));
     expect(onSave).toHaveBeenCalledOnce();
   });
+
+  it("updates scratchpadAccess and shows saving state", () => {
+    const onChange = vi.fn();
+    render(
+      <AgentGuardrailsTab
+        guardrails={DEFAULT_AGENT_GUARDRAILS}
+        onGuardrailsChange={onChange}
+        onSave={vi.fn()}
+        isSaving
+      />,
+    );
+
+    const trigger = screen.getByRole("combobox");
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByText("Read Only"));
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_AGENT_GUARDRAILS,
+      scratchpadAccess: "read_only",
+    });
+
+    expect(screen.getByRole("button", { name: /save guardrails/i })).toBeDisabled();
+  });
 });

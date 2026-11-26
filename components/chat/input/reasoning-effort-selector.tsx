@@ -83,10 +83,10 @@ export function ReasoningEffortSlider({
 
   // Map incoming value to a valid notch index [0..3], falling back to medium (2)
   const safeEffort = REASONING_EFFORTS.includes(value) ? value : "medium";
-  const activeIndex = useMemo(() => {
-    const idx = EFFORT_OPTIONS.indexOf(safeEffort);
-    return idx >= 0 ? idx : 2;
-  }, [safeEffort]);
+  const activeIndex = useMemo(
+    () => EFFORT_OPTIONS.indexOf(safeEffort),
+    [safeEffort],
+  );
 
   const handleSliderChange = (newVal: number | readonly number[]) => {
     const rawIndex = Array.isArray(newVal) ? newVal[0] : newVal;
@@ -163,7 +163,7 @@ export function ReasoningEffortSelector({
   const [isOpen, setIsOpen] = useState(false);
 
   const safeEffort = REASONING_EFFORTS.includes(value) ? value : "medium";
-  const activeLabel = EFFORT_LABELS[safeEffort] ?? EFFORT_LABELS.medium;
+  const activeLabel = EFFORT_LABELS[safeEffort];
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>

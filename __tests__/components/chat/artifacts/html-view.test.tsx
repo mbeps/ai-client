@@ -12,4 +12,10 @@ describe("HtmlView — iframe sandbox (ART-01)", () => {
     // Scripts must still run for Mermaid/chart rendering
     expect(sandbox).toContain("allow-scripts");
   });
+
+  it("renders empty state when content is empty", () => {
+    const { getByText, container } = render(<HtmlView content="" />);
+    expect(getByText("No HTML content to display.")).toBeTruthy();
+    expect(container.querySelector("iframe")).toBeNull();
+  });
 });

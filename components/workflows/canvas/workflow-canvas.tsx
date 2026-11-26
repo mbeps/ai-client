@@ -193,7 +193,7 @@ function WorkflowCanvasInner({
         .filter((n) => updatedMap.has(n.id))
         .map((n) => ({
           ...n,
-          position: updatedMap.get(n.id)?.position ?? n.position,
+          position: updatedMap.get(n.id)!.position,
         })),
     );
   };
@@ -335,7 +335,7 @@ function WorkflowCanvasInner({
           }}
           onUpdateNode={(nodeId, updates) => {
             if (pendingNode && pendingNode.id === nodeId) {
-              setPendingNode((prev) => (prev ? { ...prev, ...updates } : null));
+              setPendingNode((prev) => ({ ...prev!, ...updates }));
               return;
             }
             onUpdateNode(nodeId, updates);

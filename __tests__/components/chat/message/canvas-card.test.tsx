@@ -152,4 +152,56 @@ describe("CanvasCard", () => {
     await user.click(downloadBtn);
     expect(onDownload).toHaveBeenCalledTimes(1);
   });
+
+  it("renders html, mermaid, unknown type fallback, invalid date, and ignores Escape key", () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(
+      <CanvasCard
+        artifact={{ id: "a-html", type: "html", title: "", content: "<p>hi</p>" }}
+        isOpen={false}
+        onToggle={onToggle}
+        createdAt={"invalid-date" as any}
+      />,
+    );
+    const card = screen.getByRole("button", { name: /Canvas Artifact canvas card/i });
+    fireEvent.keyDown(card, { key: "Escape" });
+    expect(onToggle).not.toHaveBeenCalled();
+
+    rerender(
+      <CanvasCard
+        artifact={{ id: "a-mmd", type: "mermaid", title: "Flow", content: "graph TD" }}
+        isOpen={false}
+        onToggle={onToggle}
+      />,
+    );
+    expect(screen.getByText("Flow")).toBeInTheDocument();
+
+    rerender(
+      <CanvasCard
+        artifact={{ id: "a-unk", type: "unknown" as any, title: "Other", content: "" }}
+        isOpen={false}
+        onToggle={onToggle}
+      />,
+    );
+    expect(screen.getByText("Other")).toBeInTheDocument();
+  });
+
+  it("handles DateTimeFormat error and empty artifact.title in Download aria-label", () => {
+    const dtfSpy = vi.spyOn(Intl, "DateTimeFormat").mockImplementationOnce(() => {
+      throw new Error("dtf fail");
+    });
+
+    render(
+      <CanvasCard
+        artifact={{ id: "a-empty", type: "markdown", title: "", content: "" }}
+        isOpen={false}
+        onToggle={vi.fn()}
+        onDownload={vi.fn()}
+        createdAt={new Date()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Download artifact" })).toBeInTheDocument();
+    dtfSpy.mockRestore();
+  });
 });

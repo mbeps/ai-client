@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
@@ -222,5 +222,130 @@ describe("AppSidebar", () => {
 
     const seeAllLink = screen.getByRole("link", { name: /see all/i });
     expect(seeAllLink).toHaveAttribute("data-active", "true");
+  });
+
+  it("loads chats when listChats succeeds and toggles recent chats collapse", async () => {
+    const user = userEvent.setup();
+    const { listChats } = await import("@/actions/chats/list-chats");
+    vi.mocked(listChats).mockResolvedValueOnce({
+      ok: true,
+      value: [],
+    } as any);
+
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
+
+    expect(mockStoreState.loadChats).toHaveBeenCalledWith([], []);
+
+    const collapseBtn = screen.getByRole("button", { name: /collapse/i });
+    await user.click(collapseBtn);
+    expect(screen.getByRole("button", { name: /expand/i })).toBeInTheDocument();
+  });
+
+  it("silently ignores listChats rejection and calls createNewChat on New Chat click", async () => {
+    const user = userEvent.setup();
+    const { listChats } = await import("@/actions/chats/list-chats");
+    vi.mocked(listChats).mockRejectedValueOnce(new Error("network error"));
+
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
+
+    const newChatBtn = screen.getByRole("button", { name: /new chat/i });
+    await user.click(newChatBtn);
+    expect(newChatBtn).toBeInTheDocument();
+  });
+
+  it("opens Workflows dropdown and clicks links on desktop and mobile", async () => {
+    const user = userEvent.setup();
+
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
+
+    const workflowsTrigger = screen.getByRole("button", { name: /workflows/i });
+    await user.click(workflowsTrigger);
+    const translationLink = await screen.findByRole("menuitem", { name: /translation/i });
+    await user.click(translationLink);
+
+    cleanup();
+    document.body.style.pointerEvents = "auto";
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
+    const workflowsTrigger2 = screen.getByRole("button", { name: /workflows/i });
+    await user.click(workflowsTrigger2);
+    const menuItems = await screen.findAllByRole("menuitem");
+    await user.click(menuItems[1]);
+
+    const origInnerWidth = window.innerWidth;
+    const origMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: 500 });
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    try {
+      cleanup();
+      document.body.style.pointerEvents = "auto";
+      const { SidebarTrigger } = await import("@/components/ui/sidebar");
+      await act(async () => {
+        render(
+          <TooltipProvider>
+            <SidebarProvider>
+              <SidebarTrigger />
+              <AppSidebar />
+            </SidebarProvider>
+          </TooltipProvider>,
+        );
+      });
+
+      await user.click(screen.getByRole("button", { name: /toggle sidebar/i }));
+      const mobileTrigger = await screen.findByRole("button", { name: /workflows/i });
+      await user.click(mobileTrigger);
+      const mobileTranslation = await screen.findByRole("menuitem", { name: /translation/i });
+      await user.click(mobileTranslation);
+
+      await user.click(screen.getByRole("button", { name: /toggle sidebar/i }));
+      const mobileTrigger2 = await screen.findByRole("button", { name: /workflows/i });
+      await user.click(mobileTrigger2);
+      const mobileItems = await screen.findAllByRole("menuitem");
+      await user.click(mobileItems[1]);
+    } finally {
+      Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: origInnerWidth });
+      window.matchMedia = origMatchMedia;
+    }
   });
 });

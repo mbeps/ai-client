@@ -67,4 +67,17 @@ describe("SkillDirectoryPicker", () => {
 
     expect(onSelectFile).toHaveBeenCalledWith("references/guide.md");
   });
+
+  it("opens New File and New Folder dialogs from toolbar buttons", async () => {
+    const user = userEvent.setup();
+    render(<SkillDirectoryPicker {...defaultProps} />);
+
+    await user.click(screen.getByRole("button", { name: /directory/i }));
+    await user.click(screen.getByRole("button", { name: "New File" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "New Folder" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });

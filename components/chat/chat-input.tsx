@@ -253,10 +253,10 @@ function useMentionPlacement(
   const [placement, setPlacement] = useState<"top" | "bottom">("top");
 
   useEffect(() => {
-    if (!isOpen || !containerRef?.current) return;
+    const el = containerRef?.current;
+    if (!isOpen || !el) return;
     const update = () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
       // When fewer than 320px of clearance above the input, open downwards
       setPlacement(rect.top < 320 ? "bottom" : "top");
     };

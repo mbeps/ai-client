@@ -1,6 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { CommandDialog, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandDialog,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from "@/components/ui/command";
 
 describe("CommandDialog", () => {
   beforeEach(() => {
@@ -52,5 +59,21 @@ describe("CommandDialog", () => {
     expect(dialog).toContainElement(title);
     expect(dialog).toContainElement(description);
     expect(dialog).toContainElement(item);
+  });
+
+  it("renders CommandSeparator and CommandShortcut", () => {
+    render(
+      <Command>
+        <CommandList>
+          <CommandItem>
+            Item <CommandShortcut>⌘K</CommandShortcut>
+          </CommandItem>
+          <CommandSeparator data-testid="cmd-sep" />
+        </CommandList>
+      </Command>,
+    );
+
+    expect(screen.getByText("⌘K")).toBeInTheDocument();
+    expect(screen.getByTestId("cmd-sep")).toBeInTheDocument();
   });
 });

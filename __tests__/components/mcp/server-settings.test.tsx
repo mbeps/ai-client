@@ -127,5 +127,47 @@ describe("ServerSettings UI", () => {
       expect(toast.success).toHaveBeenCalledWith("Tool uninstalled");
     });
   });
+
+  it("handles delete/uninstall error responses and exceptions", async () => {
+    vi.mocked(deleteMcpServer)
+      .mockResolvedValueOnce({ ok: false, error: { message: "Custom delete error" } } as any)
+      .mockResolvedValueOnce({ ok: false, error: { message: "" } } as any)
+      .mockRejectedValueOnce(new Error("boom"));
+
+    render(<ServerSettings serverId="srv-owned" />);
+
+    const triggerOwned = () => {
+      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+      const btns = screen.getAllByRole("button", { name: /^delete$/i });
+      fireEvent.click(btns[btns.length - 1]);
+    };
+
+    triggerOwned();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Custom delete error"));
+
+    triggerOwned();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to delete MCP server"));
+
+    triggerOwned();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to delete MCP server"));
+
+    vi.mocked(deleteMcpServer)
+      .mockResolvedValueOnce({ ok: false, error: { message: "" } } as any)
+      .mockRejectedValueOnce(new Error("boom"));
+
+    render(<ServerSettings serverId="srv-installed" />);
+
+    const triggerInstalled = () => {
+      fireEvent.click(screen.getByRole("button", { name: /^uninstall$/i }));
+      const btns = screen.getAllByRole("button", { name: /^uninstall$/i });
+      fireEvent.click(btns[btns.length - 1]);
+    };
+
+    triggerInstalled();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to uninstall tool"));
+
+    triggerInstalled();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to uninstall tool"));
+  });
 });
 

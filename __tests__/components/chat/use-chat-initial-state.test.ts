@@ -278,4 +278,26 @@ describe("resolveInitialChatConfig", () => {
     );
     expect(overridden.initialApprovalMode).toBe("ask");
   });
+
+  it("resolves initialModelId from project or assistant defaultChatModelId and handles undefined skillIds", () => {
+    const fromProject = resolveInitialChatConfig(
+      [],
+      { id: "p1", defaultChatModelId: "proj-model", skillMode: "specific" } as any,
+      undefined,
+      null,
+      baseChat,
+    );
+    expect(fromProject.initialModelId).toBe("proj-model");
+    expect(fromProject.initialSkillIds).toEqual([]);
+
+    const fromAssistant = resolveInitialChatConfig(
+      [],
+      undefined,
+      { id: "a1", defaultChatModelId: "asst-model", skillMode: "specific" } as any,
+      null,
+      baseChat,
+    );
+    expect(fromAssistant.initialModelId).toBe("asst-model");
+    expect(fromAssistant.initialSkillIds).toEqual([]);
+  });
 });

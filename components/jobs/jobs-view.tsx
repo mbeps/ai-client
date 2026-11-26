@@ -191,17 +191,14 @@ export function JobsView() {
   useJobsPolling(loadJobs, autoRefresh);
 
   const handleConfirmCancel = () => {
-    if (!cancelTarget) return;
+    const target = cancelTarget!;
 
     startTransition(async () => {
       try {
-        const res = await cancelJob(cancelTarget.id, {
-          chatId:
-            cancelTarget.type === "chat" ? cancelTarget.entityId : undefined,
+        const res = await cancelJob(target.id, {
+          chatId: target.type === "chat" ? target.entityId : undefined,
           workflowRunId:
-            cancelTarget.type === "workflow"
-              ? cancelTarget.entityId
-              : undefined,
+            target.type === "workflow" ? target.entityId : undefined,
         });
 
         if (res.ok) {

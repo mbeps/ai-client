@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ProjectsPage from "@/app/(main)/projects/page";
 import { ROUTES } from "@/config/routes";
@@ -45,5 +45,27 @@ describe("ProjectsPage", () => {
     const createLink = screen.getByRole("link", { name: /new project/i });
     expect(createLink).toBeInTheDocument();
     expect(createLink).toHaveAttribute("href", ROUTES.PROJECTS.new);
+  });
+
+  it("filters projects by name and description", () => {
+    mockProjects.push({
+      ...mockProjects[0],
+      id: "proj-2",
+      name: "Beta Workspace",
+      description: null,
+    });
+
+    render(<ProjectsPage />);
+
+    const searchInput = screen.getByPlaceholderText("Search projects...");
+    fireEvent.change(searchInput, { target: { value: "core" } });
+    expect(screen.getByText("Alpha Workspace")).toBeInTheDocument();
+    expect(screen.queryByText("Beta Workspace")).not.toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "beta" } });
+    expect(screen.getByText("Beta Workspace")).toBeInTheDocument();
+    expect(screen.queryByText("Alpha Workspace")).not.toBeInTheDocument();
+
+    mockProjects.pop();
   });
 });

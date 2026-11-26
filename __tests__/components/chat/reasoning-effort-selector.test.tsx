@@ -102,6 +102,19 @@ describe("ReasoningEffortSelector", () => {
     fireEvent.click(offButton);
 
     expect(handleChange).toHaveBeenCalledWith("off");
+
+    // Clicking the already-active 'Medium' button does not call onChange again
+    const medButton = screen.getByRole("button", { name: /^Medium$/i });
+    fireEvent.click(medButton);
+    expect(handleChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to medium for invalid value", () => {
+    const handleChange = vi.fn();
+    render(
+      <ReasoningEffortSelector value={"invalid" as any} onChange={handleChange} />,
+    );
+    expect(screen.getByRole("button", { name: /Reasoning effort: Medium/i })).toBeTruthy();
   });
 
   it("disables trigger button when disabled prop is true", () => {

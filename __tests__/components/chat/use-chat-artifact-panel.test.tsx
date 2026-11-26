@@ -195,5 +195,80 @@ describe("useChatArtifactPanel", () => {
       expect.stringContaining("# Updated Content"),
     );
   });
+
+  it("handles stringified tool results, invalid JSON, non-matching artifact, and removing all artifacts", () => {
+    const updateMessageMetadataDb = vi.fn();
+    const msg: Message = {
+      id: "msg-1",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Content",
+      parentId: null,
+      childrenIds: [],
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        toolResults: [
+          {
+            toolName: "manage_artifact",
+            toolCallId: "tc-bad",
+            result: "{invalid-json",
+          },
+          {
+            toolName: "manage_artifact",
+            toolCallId: "tc-other",
+            result: JSON.stringify({
+              artifact: { id: "other-id", type: "markdown", title: "Other", content: "x" },
+            }),
+          },
+          {
+            toolName: "manage_artifact",
+            toolCallId: "tc-str",
+            result: JSON.stringify({
+              artifact: { id: "art-str", type: "markdown", title: "Str", content: "# Old" },
+            }),
+          },
+        ],
+      }),
+    };
+    const chat: Chat = {
+      id: "chat-1",
+      title: "Test Chat",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      currentLeafId: "msg-1",
+      messages: { "msg-1": msg },
+    };
+
+    const { result, rerender } = renderHook(
+      ({ msgs }) =>
+        useChatArtifactPanel(
+          "chat-1",
+          chat,
+          msgs,
+          [],
+          null,
+          updateMessageMetadataDb,
+        ),
+      { initialProps: { msgs: [msg] } },
+    );
+
+    act(() => {
+      result.current.handleUpdateArtifact("# New Str");
+    });
+    expect(updateMessageMetadataDb).toHaveBeenCalledWith(
+      "chat-1",
+      "msg-1",
+      expect.stringContaining("# New Str"),
+    );
+
+    // Removing all artifacts closes panel
+    rerender({ msgs: [] });
+    expect(result.current.isArtifactOpen).toBe(false);
+
+    // handleUpdateArtifact when no activeArtifact
+    act(() => {
+      result.current.handleUpdateArtifact("# Ignored");
+    });
+  });
 });
 

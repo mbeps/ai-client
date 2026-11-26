@@ -33,5 +33,19 @@ describe("KbStatsCards", () => {
     expect(reindexBtn).toBeInTheDocument();
     expect(reindexBtn.getAttribute("title")).toBeNull();
   });
+
+  it("renders indexing status with spinning icon and processing message", () => {
+    render(
+      <TooltipProvider>
+        <KbStatsCards
+          kb={{ ...mockKb, indexStatus: "indexing" }}
+          documents={mockDocs}
+          onReindex={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Processing documents...")).toBeInTheDocument();
+  });
 });
 

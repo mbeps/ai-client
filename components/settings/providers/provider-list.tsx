@@ -179,9 +179,9 @@ export function ProviderList({
         description={`Are you sure you want to delete "${providerToDelete?.name}"? This will also delete all associated models and cannot be undone.`}
         loading={busyProviderId === providerToDelete?.id}
         onConfirm={async () => {
-          if (!providerToDelete) return;
-          await runAction(providerToDelete.id, async () => {
-            const res = await deleteProvider(providerToDelete.id);
+          const target = providerToDelete!;
+          await runAction(target.id, async () => {
+            const res = await deleteProvider(target.id);
             if (!res.ok) return res;
             toast.success("Provider deleted");
             setProviderToDelete(null);

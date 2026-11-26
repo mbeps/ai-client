@@ -240,4 +240,32 @@ describe("chart-components", () => {
       expect(screen.getByText("No chart data available")).toBeInTheDocument();
     });
   });
+
+  it("handles non-array data and series props gracefully across all charts", () => {
+    const nonArray = null as unknown as [];
+    const { rerender } = render(
+      <GenerativeAreaChart data={nonArray} xKey="x" series={nonArray} />,
+    );
+    expect(screen.getByText("No chart data available")).toBeInTheDocument();
+
+    rerender(
+      <GenerativeBarChart data={nonArray} xKey="x" series={nonArray} />,
+    );
+    expect(screen.getByText("No chart data available")).toBeInTheDocument();
+
+    rerender(
+      <GenerativeLineChart data={nonArray} xKey="x" series={nonArray} />,
+    );
+    expect(screen.getByText("No chart data available")).toBeInTheDocument();
+
+    rerender(
+      <GenerativePieChart data={nonArray} nameKey="name" valueKey="value" />,
+    );
+    expect(screen.getByText("No chart data available")).toBeInTheDocument();
+
+    rerender(
+      <GenerativeRadarChart data={nonArray} angleKey="angle" series={nonArray} />,
+    );
+    expect(screen.getByText("No chart data available")).toBeInTheDocument();
+  });
 });

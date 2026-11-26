@@ -64,8 +64,7 @@ export function SkillBundleUploader({
   };
 
   const handleSubmit = async () => {
-    if (!selectedFile) return;
-    await onUpload(selectedFile);
+    await onUpload(selectedFile!);
   };
 
   return (

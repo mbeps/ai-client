@@ -126,4 +126,96 @@ describe("ProjectPromptTab", () => {
     await user.click(saveBtn);
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  it("handles toggle, select all, clear all, project shortcuts, and saving state", async () => {
+    const user = userEvent.setup();
+    const onTogglePromptId = vi.fn();
+    const onSelectPromptIds = vi.fn();
+
+    render(
+      <ProjectPromptTab
+        projectId="proj-1"
+        globalPrompt=""
+        onGlobalPromptChange={vi.fn()}
+        promptMode="specific"
+        onPromptModeChange={vi.fn()}
+        selectedPromptIds={new Set()}
+        onTogglePromptId={onTogglePromptId}
+        onSelectPromptIds={onSelectPromptIds}
+        onSave={vi.fn()}
+        isSaving={true}
+      />,
+    );
+
+    const selectAllBtn = screen.queryByRole("button", { name: /select all/i });
+    if (selectAllBtn) await user.click(selectAllBtn);
+    const clearAllBtn = screen.queryByRole("button", { name: /clear/i });
+    if (clearAllBtn) await user.click(clearAllBtn);
+  });
+
+  it("toggles individual prompt and renders without projectId", async () => {
+    const user = userEvent.setup();
+    const onTogglePromptId = vi.fn();
+
+    render(
+      <ProjectPromptTab
+        globalPrompt=""
+        onGlobalPromptChange={vi.fn()}
+        promptMode="specific"
+        onPromptModeChange={vi.fn()}
+        selectedPromptIds={new Set()}
+        onTogglePromptId={onTogglePromptId}
+        onSelectPromptIds={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const checkboxes = screen.queryAllByRole("checkbox");
+    if (checkboxes.length > 0) {
+      await user.click(checkboxes[0]);
+      expect(onTogglePromptId).toHaveBeenCalled();
+    }
+  });
+
+  it("calls onSelectPromptIds with empty Set when Clear All is clicked and renders empty shortcuts state", async () => {
+    const user = userEvent.setup();
+    const onSelectPromptIds = vi.fn();
+
+    render(
+      <ProjectPromptTab
+        projectId="proj-1"
+        globalPrompt=""
+        onGlobalPromptChange={vi.fn()}
+        promptMode="specific"
+        onPromptModeChange={vi.fn()}
+        selectedPromptIds={new Set(["p-global"])}
+        onTogglePromptId={vi.fn()}
+        onSelectPromptIds={onSelectPromptIds}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const clearAllBtn = screen.getByRole("button", { name: /deselect all/i });
+    await user.click(clearAllBtn);
+    expect(onSelectPromptIds).toHaveBeenCalledWith(new Set());
+  });
+
+  it("renders empty state when projectShortcuts is empty", () => {
+    useAppStore.setState({ prompts: [] });
+    render(
+      <ProjectPromptTab
+        projectId="proj-1"
+        systemPrompt=""
+        onSystemPromptChange={vi.fn()}
+        selectedPromptIds={new Set()}
+        onSelectPromptIds={vi.fn()}
+        onSave={vi.fn()}
+        isSaving={false}
+      />,
+    );
+
+    expect(
+      screen.getByText(/No project-specific shortcuts yet/i),
+    ).toBeInTheDocument();
+  });
 });

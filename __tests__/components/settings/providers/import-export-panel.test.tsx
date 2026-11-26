@@ -127,6 +127,46 @@ describe("ImportExportPanel UI component", () => {
     expect(toast.success).toHaveBeenCalledWith("Exported Ollama Local");
   });
 
+  it("handles non-Error throws and empty error messages in export and import", async () => {
+    const user = userEvent.setup();
+    vi.mocked(exportProviderRegistry).mockRejectedValueOnce("raw export err");
+
+    render(
+      <ImportExportPanel providers={mockProviders} onRefresh={onRefresh} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Export All/i }));
+    expect(toast.error).toHaveBeenCalledWith("Failed to export registry");
+
+    vi.mocked(exportProviderRegistry).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    } as never);
+    await user.click(screen.getByRole("button", { name: /OpenAI/i }));
+    expect(toast.error).toHaveBeenCalledWith("Failed to export provider");
+
+    vi.mocked(exportProviderRegistry).mockRejectedValueOnce("raw single err");
+    await user.click(screen.getByRole("button", { name: /OpenAI/i }));
+    expect(toast.error).toHaveBeenCalledWith("Failed to export provider");
+
+    const file = new File(["{}"], "bad.json", { type: "application/json" });
+    vi.mocked(importProviderRegistry).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    } as never);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to import registry");
+    });
+
+    vi.mocked(importProviderRegistry).mockRejectedValueOnce("raw import err");
+    fireEvent.change(input, { target: { files: [file] } });
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to import registry");
+    });
+  });
+
   it("handles file import with created providers and models", async () => {
     const fileContent = JSON.stringify({
       version: "1",
@@ -241,6 +281,105 @@ describe("ImportExportPanel UI component", () => {
     });
 
     expect(fileInput.value).toBe("");
+  });
+
+  it("handles exportAll and exportSingleProvider errors (ok:false, Error, non-Error)", async () => {
+    render(<ImportExportPanel providers={mockProviders} onRefresh={onRefresh} />);
+
+    vi.mocked(exportProviderRegistry).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    } as never);
+    fireEvent.click(screen.getByRole("button", { name: /export all/i }));
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to export registry");
+    });
+
+    vi.mocked(exportProviderRegistry).mockRejectedValueOnce("raw-err");
+    fireEvent.click(screen.getByRole("button", { name: /export all/i }));
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to export registry");
+    });
+
+    const singleExportBtn = screen.getAllByRole("button")[2];
+    vi.mocked(exportProviderRegistry).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Single export failed" },
+    } as never);
+    fireEvent.click(singleExportBtn);
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Single export failed");
+    });
+
+    vi.mocked(exportProviderRegistry).mockRejectedValueOnce(new Error("Boom"));
+    fireEvent.click(singleExportBtn);
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Boom");
+    });
+  });
+
+  it("handles import button click, empty file selection, and importProviderRegistry ok:false", async () => {
+    const { container } = render(
+      <ImportExportPanel providers={mockProviders} onRefresh={onRefresh} />,
+    );
+
+    const importBtn = screen.getByRole("button", { name: /^import$/i });
+    fireEvent.click(importBtn);
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [] } });
+
+    const file = new File([JSON.stringify({ providers: [] })], "reg.json", {
+      type: "application/json",
+    });
+
+    vi.mocked(importProviderRegistry).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Import rejected" },
+    } as never);
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Import rejected");
+    });
+  });
+
+  it("handles Error throw in exportAll, UNAUTHORIZED in import, and unmount during import", async () => {
+    const user = userEvent.setup();
+    vi.mocked(exportProviderRegistry).mockRejectedValueOnce(new Error("Export boom"));
+
+    const { container, unmount } = render(
+      <ImportExportPanel providers={mockProviders} onRefresh={onRefresh} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Export All/i }));
+    expect(toast.error).toHaveBeenCalledWith("Export boom");
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File([JSON.stringify({ providers: [] })], "reg.json", {
+      type: "application/json",
+    });
+
+    vi.mocked(importProviderRegistry).mockResolvedValueOnce({
+      ok: false,
+      error: { code: "UNAUTHORIZED", message: "Unauthorized" },
+    } as never);
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    await waitFor(() => {
+      expect(importProviderRegistry).toHaveBeenCalled();
+    });
+
+    let resolveImport!: (v: unknown) => void;
+    vi.mocked(importProviderRegistry).mockReturnValueOnce(
+      new Promise((r) => {
+        resolveImport = r;
+      }) as never,
+    );
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    unmount();
+    resolveImport({ ok: false, error: { message: "late" } });
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("late");
+    });
   });
 });
 

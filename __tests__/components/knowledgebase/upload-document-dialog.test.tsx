@@ -96,4 +96,37 @@ describe("UploadDocumentDialog", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^upload$/i })).toBeDisabled();
   });
+
+  it("handles Cancel click, empty file selection, and filename without extension", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <UploadDocumentDialog
+        open={true}
+        onOpenChange={onOpenChange}
+        onUpload={vi.fn()}
+      />,
+    );
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    // Empty file selection
+    fireEvent.change(input, { target: { files: [] } });
+    expect(screen.queryByText(/Selected:/)).not.toBeInTheDocument();
+
+    // Filename without extension
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["data"], "README", { type: "text/plain" })],
+      },
+    });
+    expect(
+      screen.getByText(
+        "Spreadsheets and Office files are not supported. Use PDF, plain text or Markdown.",
+      ),
+    ).toBeInTheDocument();
+
+    // Cancel button closes and resets
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });

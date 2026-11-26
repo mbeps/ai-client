@@ -101,6 +101,12 @@ describe("useChatModelSelection", () => {
     expect(result.current.modelId).toBe("nvidia/nemotron-3.5-lightning:free");
   });
 
+  it("returns empty string when chatModels is empty", () => {
+    const { result, unmount } = renderHook(() => useChatModelSelection([], false, undefined));
+    expect(result.current.modelId).toBe("");
+    unmount();
+  });
+
   it("prefers initialModelId matched by record id once it appears in chatModels later", async () => {
     const { result, rerender } = renderHook(
       ({

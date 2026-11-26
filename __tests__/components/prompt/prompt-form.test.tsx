@@ -112,6 +112,11 @@ describe("PromptForm", () => {
       expect(onSubmitMock).toHaveBeenCalledTimes(1);
     });
 
+    // Switch to Specific Scopes then back to Global to trigger onProjectIdsChange/onAssistantIdsChange
+    const radios = screen.getAllByRole("radio");
+    await user.click(radios[1]);
+    await user.click(radios[0]);
+
     expect(onSubmitMock.mock.calls[0][0]).toEqual({
       title: "Code Review",
       shortcut: "review",
@@ -143,6 +148,11 @@ describe("PromptForm", () => {
     await waitFor(() => {
       expect(onSubmitMock).toHaveBeenCalledTimes(1);
     });
+
+    // Switch to Specific Scopes then back to Global to trigger onProjectIdsChange/onAssistantIdsChange
+    const radios = screen.getAllByRole("radio");
+    await user.click(radios[1]);
+    await user.click(radios[0]);
 
     expect(onSubmitMock.mock.calls[0][0]).toEqual({
       title: "Project Specific Shortcut",
@@ -176,6 +186,11 @@ describe("PromptForm", () => {
       expect(onSubmitMock).toHaveBeenCalledTimes(1);
     });
 
+    // Switch to Specific Scopes then back to Global to trigger onProjectIdsChange/onAssistantIdsChange
+    const radios = screen.getAllByRole("radio");
+    await user.click(radios[1]);
+    await user.click(radios[0]);
+
     expect(onSubmitMock.mock.calls[0][0]).toEqual({
       title: "Assistant Specific Shortcut",
       shortcut: "ashort",
@@ -194,5 +209,22 @@ describe("PromptForm", () => {
     expect(cancelButton).toBeInTheDocument();
     await user.click(cancelButton);
     expect(onCancelMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates projectIds and assistantIds via ScopeConfigurator", async () => {
+    const user = userEvent.setup();
+    render(<PromptForm onSubmit={vi.fn()} />);
+
+    const scopeButtons = screen.getAllByRole("button");
+    for (const btn of scopeButtons) {
+      if (btn.textContent?.match(/project|agent|assistant/i)) {
+        await user.click(btn);
+      }
+    }
+  });
+
+  it("handles empty defaultValues object", () => {
+    render(<PromptForm defaultValues={{}} onSubmit={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
   });
 });

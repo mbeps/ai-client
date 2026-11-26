@@ -36,4 +36,11 @@ describe("Slider component", () => {
     fireEvent.change(slider, { target: { value: "2" } });
     expect(onValueChange).toHaveBeenCalled();
   });
+
+  it("handles array value, array defaultValue, undefined value/defaultValue, and step=0", () => {
+    render(<Slider value={[10, 20]} aria-label="Range" />);
+    render(<Slider defaultValue={[5, 15]} aria-label="DefaultRange" />);
+    render(<Slider step={0} showTicks aria-label="NoStep" />);
+    expect(screen.getAllByRole("slider").length).toBeGreaterThanOrEqual(4);
+  });
 });

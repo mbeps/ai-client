@@ -82,6 +82,25 @@ describe("useChatPromptSelection", () => {
 
     expect(result.current.selectedPromptIds.has("p1")).toBe(false);
     expect(result.current.selectedPromptIds.has("p2")).toBe(true);
+
+    // Removing without promptId clears all
+    act(() => {
+      result.current.handleRemovePrompt();
+    });
+    expect(result.current.selectedPromptIds.size).toBe(0);
+  });
+
+  it("is a no-op when setSelectedPrompts is undefined", () => {
+    const { result, unmount } = renderHook(() =>
+      useChatPromptSelection([mockPrompt1], undefined),
+    );
+    act(() => {
+      result.current.handleTogglePrompt(mockPrompt2);
+      result.current.handleRemovePrompt("p1");
+      result.current.handleClearPrompts();
+    });
+    expect(result.current.promptList).toHaveLength(1);
+    unmount();
   });
 
   it("clears all prompts", () => {

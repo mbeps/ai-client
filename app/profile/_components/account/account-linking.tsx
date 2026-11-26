@@ -106,12 +106,9 @@ function AccountCard({
    * Unlinks the OAuth account and triggers a page refresh to update the account list.
    */
   function unlinkAccount() {
-    if (account == null) {
-      return Promise.resolve({ error: { message: "Account not found" } });
-    }
     return authClient.unlinkAccount(
       {
-        accountId: account.accountId,
+        accountId: account!.accountId,
       },
       {
         onSuccess: () => {

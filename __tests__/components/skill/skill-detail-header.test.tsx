@@ -148,4 +148,21 @@ describe("SkillDetailHeader", () => {
       "dark:bg-transparent",
     );
   });
+
+  it("renders disabled, saving, and exporting states", () => {
+    render(
+      <SkillDetailHeader
+        {...defaultProps}
+        enabled={false}
+        isSaving={true}
+        isExporting={true}
+      />,
+    );
+
+    expect(screen.getByText("Disabled")).toBeInTheDocument();
+    expect(screen.getByText("Saving...")).toBeInTheDocument();
+
+    render(<SkillDetailHeader {...defaultProps} name="" />);
+    expect(screen.getByPlaceholderText("Skill Name")).toBeInTheDocument();
+  });
 });

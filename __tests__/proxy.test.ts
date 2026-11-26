@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
-import { proxy } from "@/proxy";
+import { NextRequest } from "next/server";
+import { config as proxyConfig, proxy } from "@/proxy";
 
 vi.mock("@/lib/auth/auth", () => ({
   auth: {
@@ -72,6 +72,32 @@ describe("Next.js proxy middleware", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("bypasses /api/webhooks/workflows/* without requiring a session", async () => {
+    const req = new NextRequest(
+      "http://localhost:3000/api/webhooks/workflows/wf-123",
+    );
+    const res = await proxy(req);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("config.matcher matches protected routes and skips static assets", () => {
+    const matcherPattern = proxyConfig.matcher[0];
+    // Next.js matcher regex: strip leading "/" for RegExp test on pathname
+    const regex = new RegExp(`^${matcherPattern}$`);
+
+    expect(regex.test("/dashboard")).toBe(true);
+    expect(regex.test("/api/inngest")).toBe(true);
+    expect(regex.test("/api/webhooks/workflows/1")).toBe(true);
+    expect(regex.test("/api/mcp/oauth/client-metadata")).toBe(true);
+    expect(regex.test("/_next/static/chunks/main.js")).toBe(false);
+    expect(regex.test("/_next/image")).toBe(false);
+    expect(regex.test("/favicon.ico")).toBe(false);
+    expect(regex.test("/logo.svg")).toBe(false);
+    expect(regex.test("/avatar.png")).toBe(false);
   });
 });
 

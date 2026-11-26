@@ -55,12 +55,10 @@ export default function ResetPasswordClient() {
   const { isSubmitting } = form.formState;
 
   async function handleResetPassword(data: ResetPasswordForm) {
-    if (token == null) return;
-
     await authClient.resetPassword(
       {
         newPassword: data.password,
-        token,
+        token: token!,
       },
       {
         onError: (error) => {

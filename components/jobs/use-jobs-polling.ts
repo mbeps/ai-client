@@ -24,9 +24,7 @@ export function useJobsPolling(
   // Tab visibility listener: pause polling when tab is hidden, refresh immediately when visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      const isVisible =
-        typeof document !== "undefined" &&
-        document.visibilityState === "visible";
+      const isVisible = document.visibilityState === "visible";
       isVisibleRef.current = isVisible;
 
       if (isVisible && autoRefresh) {
@@ -34,17 +32,10 @@ export function useJobsPolling(
       }
     };
 
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      if (typeof document !== "undefined") {
-        document.removeEventListener(
-          "visibilitychange",
-          handleVisibilityChange,
-        );
-      }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [autoRefresh, loadJobs]);
 
@@ -53,11 +44,7 @@ export function useJobsPolling(
     if (!autoRefresh) return;
 
     const intervalId = setInterval(() => {
-      if (
-        isVisibleRef.current &&
-        typeof document !== "undefined" &&
-        document.visibilityState === "visible"
-      ) {
+      if (isVisibleRef.current && document.visibilityState === "visible") {
         loadJobs(false);
       }
     }, 5000);

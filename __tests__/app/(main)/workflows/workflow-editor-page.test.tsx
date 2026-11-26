@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WorkflowEditorPage from "@/app/(main)/workflows/[id]/page";
 import {
@@ -21,7 +21,16 @@ vi.mock("nuqs", () => ({
 }));
 
 vi.mock("@/components/workflows/canvas/workflow-canvas", () => ({
-  WorkflowCanvas: () => <div data-testid="mock-workflow-canvas">Canvas</div>,
+  WorkflowCanvas: ({ onRunWorkflow }: { onRunWorkflow?: () => void }) => (
+    <div data-testid="mock-workflow-canvas">
+      Canvas
+      {onRunWorkflow && (
+        <button type="button" onClick={onRunWorkflow}>
+          Trigger Canvas
+        </button>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/shared/markdown-tab-editor", () => ({
@@ -101,5 +110,42 @@ describe("WorkflowEditorPage", () => {
     render(<WorkflowEditorPage />);
     expect(screen.getByText("Daily Ops Workflow")).toBeInTheDocument();
     expect(screen.getByTestId("mock-workflow-canvas")).toBeInTheDocument();
+    const runBtn = screen.queryByRole("button", { name: /run/i });
+    if (runBtn) {
+      fireEvent.click(runBtn);
+      expect(mockEditorState.setRunDialogOpen).toHaveBeenCalledWith(true);
+    }
+  });
+
+  it("renders loading skeleton when editor.isLoading is true", () => {
+    const orig = mockEditorState.isLoading;
+    mockEditorState.isLoading = true;
+    render(<WorkflowEditorPage />);
+    expect(screen.queryByText("Daily Ops Workflow")).not.toBeInTheDocument();
+    mockEditorState.isLoading = orig;
+  });
+
+  it("renders NoModelsAlertBanner when editor.hasNoModels is true", () => {
+    const orig = mockEditorState.hasNoModels;
+    mockEditorState.hasNoModels = true;
+    render(<WorkflowEditorPage />);
+    expect(
+      screen.getByText(
+        "No chat models configured. Configure a provider before running AI workflow nodes.",
+      ),
+    ).toBeInTheDocument();
+    mockEditorState.hasNoModels = orig;
+  });
+
+  it("opens run dialog when Run button is clicked", () => {
+    render(<WorkflowEditorPage />);
+    fireEvent.click(screen.getByRole("button", { name: /^run$/i }));
+    expect(mockEditorState.setRunDialogOpen).toHaveBeenCalledWith(true);
+  });
+
+  it("opens run dialog when canvas onRunWorkflow is triggered", () => {
+    render(<WorkflowEditorPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Trigger Canvas" }));
+    expect(mockEditorState.setRunDialogOpen).toHaveBeenCalledWith(true);
   });
 });

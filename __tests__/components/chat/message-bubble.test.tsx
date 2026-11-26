@@ -579,5 +579,110 @@ describe("MessageBubble message editing", () => {
     expect(within(header).getByText("Dedicated Chat Bot")).toBeInTheDocument();
     expect(within(header).queryByText("anthropic/claude-3-opus")).not.toBeInTheDocument();
   });
+
+  it("renders CompactionDivider for compaction messages", () => {
+    const compactionMsg: Message = {
+      id: "compact-1",
+      chatId: "chat-1",
+      role: "system",
+      content: "Compacted summary",
+      createdAt: new Date(),
+      metadata: { isCompaction: true },
+    };
+
+    renderMessageBubble({ message: compactionMsg });
+    expect(screen.getByText(/Compacted/i)).toBeInTheDocument();
+  });
+
+  it("passes promptIds to inline edit ChatInput when message has promptIds", async () => {
+    const user = userEvent.setup();
+    const msgWithPrompts: Message = {
+      id: "msg-prompts",
+      chatId: "chat-1",
+      role: "user",
+      content: "Prompted message",
+      createdAt: new Date(),
+      metadata: { promptMeta: { promptId: "p-1" }, promptIds: ["p-1", "p-2"] },
+    };
+
+    renderMessageBubble({ message: msgWithPrompts, onEdit: vi.fn() });
+    await user.click(screen.getByRole("button", { name: /edit message/i }));
+    expect(screen.getByRole("button", { name: /save & submit/i })).toBeInTheDocument();
+  });
+
+  it("renders CompactionDivider for compaction messages", () => {
+    const compactionMsg: Message = {
+      id: "msg-compact-1",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Compacted summary",
+      createdAt: new Date(),
+      metadata: JSON.stringify({ isCompaction: true, compactedCount: 4 }),
+    };
+
+    renderMessageBubble({ message: compactionMsg });
+    expect(screen.getByText(/compacted/i)).toBeInTheDocument();
+  });
+
+  it("falls back to default assistant name when matched assistant has empty name", () => {
+    const assistantMsg: Message = {
+      id: "msg-asst-empty",
+      chatId: "chat-1",
+      role: "assistant",
+      content: "Hello",
+      createdAt: new Date(),
+      metadata: JSON.stringify({ assistantId: "asst-empty" }),
+    };
+
+    renderMessageBubble({
+      message: assistantMsg,
+      assistantsList: [{ id: "asst-empty", name: "" } as never],
+    });
+    expect(screen.getByText("Hello")).toBeInTheDocument();
+  });
+
+  it("renders CompactionDivider for compaction messages", () => {
+    const compactionMsg: Message = {
+      id: "msg-compact",
+      chatId: "chat-1",
+      role: "system",
+      content: "Compacted",
+      createdAt: new Date(),
+      metadata: JSON.stringify({ isCompaction: true }),
+    };
+
+    renderMessageBubble({ message: compactionMsg });
+    expect(screen.getByText(/Compacted/i)).toBeInTheDocument();
+  });
+
+  it("passes promptIds when editing a message with promptIds in metadata", async () => {
+    const user = userEvent.setup();
+    const promptMsg: Message = {
+      id: "msg-prompt",
+      chatId: "chat-1",
+      role: "user",
+      content: "Prompted",
+      createdAt: new Date(),
+      metadata: JSON.stringify({
+        promptMeta: { promptIds: ["prompt-1"] },
+      }),
+    };
+
+    renderMessageBubble({ message: promptMsg, onEdit: vi.fn() });
+    await user.click(screen.getByRole("button", { name: /edit message/i }));
+    expect(screen.getByRole("textbox", { name: /edit message/i })).toBeInTheDocument();
+  });
+
+  it("falls back to default assistant name when assistantId is not in assistantsList", () => {
+    renderMessageBubble({
+      message: {
+        ...mockUserMessage,
+        role: "assistant",
+        content: "Assistant reply",
+        metadata: JSON.stringify({ assistantId: "non-existent-assistant" }),
+      },
+    });
+    expect(screen.getByText("Assistant reply")).toBeInTheDocument();
+  });
 });
 

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatInput } from "@/components/chat/chat-input";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -118,5 +118,29 @@ describe("ChatInput mention placement", () => {
       document.querySelector(".fade-in-0");
     expect(mentionContainer).toHaveClass("bottom-full");
     expect(mentionContainer).toHaveClass("mb-2");
+  });
+
+  it("handles dragOver state, actions placeholder, and onCompact callback", () => {
+    const onCompact = vi.fn();
+    const { container } = render(
+      <TooltipProvider>
+        <ChatInput
+          onSend={vi.fn()}
+          actions={[{ id: "act-1", label: "Compact", onSelect: vi.fn() }]}
+          onCompact={onCompact}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(
+      screen.getByPlaceholderText(
+        /Ask anything\.\.\. Use \/ for skills, prompts, agents, knowledgebases, and actions/i,
+      ),
+    ).toBeInTheDocument();
+
+    const dropZone = container.querySelector(".relative.mx-auto");
+    if (dropZone) {
+      fireEvent.dragOver(dropZone, { dataTransfer: { files: [] } });
+    }
   });
 });

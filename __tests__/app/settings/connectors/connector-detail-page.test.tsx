@@ -87,6 +87,8 @@ vi.mock("@/components/mcp/server-sharing-tab", () => ({
 }));
 
 import React from "react";
+import { useQueryState } from "nuqs";
+import { toast } from "sonner";
 import { listMcpServers } from "@/actions/mcp-servers/list-mcp-servers";
 import { toggleMcpServer } from "@/actions/mcp-servers/toggle-mcp-server";
 import McpServerPage from "@/app/settings/connectors/[id]/page";
@@ -239,5 +241,107 @@ describe("McpServerPage (Connector Detail Page)", () => {
     );
 
     consoleSpy.mockRestore();
+  });
+
+  it("does not show oauth toast when oauth and error params are null", () => {
+    useAppStore.setState({ mcpServers: [mockServer] });
+    vi.mocked(useQueryState).mockImplementation((key: string) => {
+      if (key === "oauth" || key === "error") return [null, vi.fn()] as any;
+      return ["tools", vi.fn()] as any;
+    });
+
+    render(<McpServerPage />);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("shows toast.success when oauth query param is connected", () => {
+    useAppStore.setState({ mcpServers: [mockServer] });
+    vi.mocked(useQueryState).mockImplementation((key: string) => {
+      if (key === "oauth") return ["connected", vi.fn()] as any;
+      if (key === "error") return [null, vi.fn()] as any;
+      return ["tools", vi.fn()] as any;
+    });
+
+    render(<McpServerPage />);
+    expect(toast.success).toHaveBeenCalledWith("OAuth 2.1 connected successfully!");
+  });
+
+  it("shows toast.error when error query param is present", () => {
+    useAppStore.setState({ mcpServers: [mockServer] });
+    vi.mocked(useQueryState).mockImplementation((key: string) => {
+      if (key === "oauth") return [null, vi.fn()] as any;
+      if (key === "error") return ["access_denied", vi.fn()] as any;
+      return ["tools", vi.fn()] as any;
+    });
+
+    render(<McpServerPage />);
+    expect(toast.error).toHaveBeenCalledWith("OAuth connection failed: access_denied");
+  });
+
+  it("enables a disabled server and shows enabled toast", async () => {
+    useAppStore.setState({ mcpServers: [{ ...mockServer, enabled: false }] });
+    vi.mocked(toggleMcpServer).mockResolvedValue({ ok: true, value: undefined } as any);
+    vi.mocked(listMcpServers).mockResolvedValue({
+      ok: true,
+      value: [{ ...mockServer, enabled: true }],
+    } as any);
+
+    render(<McpServerPage />);
+    fireEvent.click(screen.getByRole("switch"));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("GitHub Tools enabled");
+    });
+  });
+
+  it("shows error toast when toggleMcpServer returns !ok with message and fallback", async () => {
+    useAppStore.setState({ mcpServers: [mockServer] });
+    vi.mocked(toggleMcpServer).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "Custom toggle error" },
+    } as any);
+
+    render(<McpServerPage />);
+    fireEvent.click(screen.getByRole("switch"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Custom toggle error");
+    });
+
+    vi.mocked(toggleMcpServer).mockResolvedValueOnce({
+      ok: false,
+      error: { message: "" },
+    } as any);
+    fireEvent.click(screen.getByRole("switch"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to toggle server state");
+    });
+  });
+
+  it("shows error toast when toggleMcpServer throws", async () => {
+    useAppStore.setState({ mcpServers: [mockServer] });
+    vi.mocked(toggleMcpServer).mockRejectedValue(new Error("Network failure"));
+
+    render(<McpServerPage />);
+    fireEvent.click(screen.getByRole("switch"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to toggle server state");
+    });
+  });
+
+  it("shows error toast when oauth error query param is present", () => {
+    useAppStore.setState({ mcpServers: [mockServer] });
+    vi.mocked(useQueryState).mockImplementation((key: string) => {
+      if (key === "error") return ["access_denied", vi.fn()];
+      return ["tools", vi.fn()];
+    });
+
+    render(<McpServerPage />);
+    expect(toast.error).toHaveBeenCalledWith(
+      "OAuth connection failed: access_denied",
+    );
   });
 });

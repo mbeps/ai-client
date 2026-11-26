@@ -242,4 +242,80 @@ describe("SpreadsheetView", () => {
     ]);
     expect(mockWriteFile).toHaveBeenCalledWith(expect.anything(), "car_specs.xlsx");
   });
+
+  it("renders styled CellObject cells, search filter, and multi-sheet navigation", () => {
+    const multiSheet = {
+      sheets: [
+        {
+          name: "Sheet1",
+          data: [
+            [{ v: "Name" }, { v: null }],
+            [
+              {
+                v: "Alice",
+                s: {
+                  backgroundColor: "rgb(255, 0, 0)",
+                  color: "rgb(0, 0, 0)",
+                  bold: true,
+                  italic: true,
+                  textAlign: "center",
+                },
+              },
+              { v: null },
+            ],
+            null,
+          ],
+        },
+        {
+          name: "Sheet2",
+          data: [{ "": "emptyKey", role: "admin" }, null],
+        },
+      ],
+    };
+
+    render(<SpreadsheetView title="" content={JSON.stringify(multiSheet)} />);
+
+    expect(screen.getByText("Name")).toBeInTheDocument();
+    expect(screen.getByText("Column 2")).toBeInTheDocument();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+
+    const searchInput = screen.getByPlaceholderText("Search sheet...");
+    fireEvent.change(searchInput, { target: { value: "Alice" } });
+    expect((searchInput as HTMLInputElement).value).toBe("Alice");
+
+    fireEvent.click(screen.getByRole("button", { name: "Sheet2" }));
+    expect((searchInput as HTMLInputElement).value).toBe("");
+    expect(screen.getByText("admin")).toBeInTheDocument();
+
+    // Navigate back with ChevronLeft and forward with ChevronRight
+    const buttons = screen.getAllByRole("button");
+    const prevBtn = buttons[buttons.length - 2];
+    const nextBtn = buttons[buttons.length - 1];
+    fireEvent.click(prevBtn);
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    fireEvent.click(nextBtn);
+    expect(screen.getByText("admin")).toBeInTheDocument();
+
+    // Export XLSX with array-of-objects and empty title
+    fireEvent.click(screen.getByRole("button", { name: /Export XLSX/i }));
+  });
+
+  it("handles empty AOA colCount === 0, empty object keys, and export error", () => {
+    const emptyAoa = { sheets: [{ name: "EmptyAOA", data: [[]] }] };
+    const { rerender } = render(
+      <SpreadsheetView title="Test" content={JSON.stringify(emptyAoa)} />,
+    );
+    expect(screen.getByText("This sheet contains no data.")).toBeInTheDocument();
+
+    const emptyObj = { sheets: [{ name: "EmptyObj", data: [{}] }] };
+    rerender(<SpreadsheetView title="Test" content={JSON.stringify(emptyObj)} />);
+    expect(screen.getByText("This sheet contains no data.")).toBeInTheDocument();
+
+    const valid = { sheets: [{ name: "S1", data: [["A"], ["1"]] }] };
+    rerender(<SpreadsheetView title="Test" content={JSON.stringify(valid)} />);
+    mockWriteFile.mockImplementationOnce(() => {
+      throw new Error("write failed");
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Export XLSX/i }));
+  });
 });

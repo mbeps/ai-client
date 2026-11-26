@@ -117,4 +117,14 @@ describe("DataTableComponent", () => {
     fireEvent.click(screen.getByRole("button", { name: /Previous/i }));
     expect(screen.getByText("Charlie")).toBeInTheDocument();
   });
+
+  it("handles non-array columns and data gracefully", () => {
+    render(
+      <DataTableComponent
+        columns={null as unknown as typeof columns}
+        data={null as unknown as typeof rows}
+      />,
+    );
+    expect(screen.getByText("No data available")).toBeInTheDocument();
+  });
 });

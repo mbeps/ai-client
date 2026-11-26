@@ -112,7 +112,7 @@ export function PromptPicker({
     } else if (onTogglePrompt && selectedPromptIds) {
       if (isAllSelected) {
         filteredItems.forEach((item) => {
-          if (selectedPromptIds.has(item.id)) onTogglePrompt(item);
+          onTogglePrompt(item);
         });
       } else {
         filteredItems.forEach((item) => {

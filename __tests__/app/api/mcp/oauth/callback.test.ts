@@ -204,4 +204,55 @@ describe("GET /api/mcp/oauth/callback", () => {
       "/settings/connectors/srv-installed?oauth=connected",
     );
   });
+
+  it("falls back to request origin when BETTER_AUTH_URL is unset and handles oauth error without description", async () => {
+    getSessionMock.mockResolvedValueOnce({ user: { id: "user-1" } });
+    const prev = process.env.BETTER_AUTH_URL;
+    delete process.env.BETTER_AUTH_URL;
+    try {
+      const req = new Request(
+        "https://example.com/api/mcp/oauth/callback?error=access_denied",
+      );
+      const res = await GET(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe(
+        "https://example.com/settings/connectors?error=oauth_rejected&error_description=access_denied",
+      );
+    } finally {
+      if (prev !== undefined) process.env.BETTER_AUTH_URL = prev;
+    }
+  });
+
+  it("handles non-Error and stackless Error in token exchange catch", async () => {
+    getSessionMock.mockResolvedValue({ user: { id: "user-1" } });
+    getMcpOAuthCredentialByStateMock.mockResolvedValue({
+      userId: "user-1",
+      serverId: "srv-1",
+    });
+    dbMock.query.mcpServer.findFirst.mockResolvedValue({
+      id: "srv-1",
+      name: "Srv",
+      url: "https://example.com/mcp",
+      authType: "oauth",
+      isPublic: false,
+      oauthClientId: "cid",
+      oauthClientSecret: "csec",
+    });
+
+    mcpAuthMock.mockRejectedValueOnce("string failure");
+    const res1 = await GET(
+      new Request("http://localhost:3000/api/mcp/oauth/callback?code=c1&state=s1"),
+    );
+    expect(res1.status).toBe(307);
+    expect(res1.headers.get("location")).toContain("error=oauth_exchange_failed");
+
+    const errNoStack = new Error("no stack");
+    errNoStack.stack = undefined;
+    mcpAuthMock.mockRejectedValueOnce(errNoStack);
+    const res2 = await GET(
+      new Request("http://localhost:3000/api/mcp/oauth/callback?code=c1&state=s1"),
+    );
+    expect(res2.status).toBe(307);
+    expect(res2.headers.get("location")).toContain("error=oauth_exchange_failed");
+  });
 });

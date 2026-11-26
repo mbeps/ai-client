@@ -117,7 +117,7 @@ export function ModelSelector({
         items={groupedModels}
         value={selectedModel}
         onValueChange={(val) =>
-          onValueChange(val ? (val as UserModelOption).modelId : "")
+          onValueChange((val as UserModelOption).modelId)
         }
         itemToStringValue={(m) => (m as UserModelOption).label}
         disabled={disabled || isLoading || isEmpty}

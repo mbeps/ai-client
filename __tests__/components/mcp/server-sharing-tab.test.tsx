@@ -94,5 +94,31 @@ describe("ServerSharingTab", () => {
     );
     expect(installedContainer).toBeEmptyDOMElement();
   });
+
+  it("handles toggling from public to private and error states", async () => {
+    useAppStore.setState({
+      mcpServers: [{ ...mockServer, isPublic: true }],
+    });
+    vi.mocked(toggleMcpServerPublic)
+      .mockResolvedValueOnce({ ok: true, value: { ...mockServer, isPublic: false } } as any)
+      .mockResolvedValueOnce({ ok: false, error: { message: "Toggle failed" } } as any)
+      .mockResolvedValueOnce({ ok: false, error: { message: "" } } as any)
+      .mockRejectedValueOnce(new Error("boom"));
+
+    render(<ServerSharingTab serverId="srv-1" />);
+    const switchBtn = screen.getByRole("switch", { name: /make this server public/i });
+
+    fireEvent.click(switchBtn);
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Server is now private"));
+
+    fireEvent.click(switchBtn);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Toggle failed"));
+
+    fireEvent.click(switchBtn);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to toggle public status"));
+
+    fireEvent.click(switchBtn);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to toggle public status"));
+  });
 });
 

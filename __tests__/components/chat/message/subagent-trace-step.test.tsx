@@ -382,4 +382,165 @@ describe("SubagentTraceStep", () => {
     );
     expect(screen.getByText("Completed")).toBeDefined();
   });
+
+  it("handles subagent duration formatting (<1s and >=1m), empty metadata, scratchpad rejection without chatId, and status-only result", async () => {
+    const user = userEvent.setup();
+
+    const { rerender } = render(
+      <SubagentTraceStep
+        toolCallId="call-meta-1"
+        role="researcher"
+        taskBrief="Short task"
+        state="done"
+        messageId="msg-1"
+        result={{
+          id: "r1",
+          role: "assistant",
+          parts: [],
+          metadata: {
+            durationMs: 500,
+            stepCount: 1,
+            usage: { totalTokens: 10 },
+          },
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Researcher/i }));
+    expect(screen.getAllByText("500ms").length).toBeGreaterThanOrEqual(1);
+
+    rerender(
+      <SubagentTraceStep
+        toolCallId="call-meta-2"
+        role="researcher"
+        taskBrief="Long task"
+        state="done"
+        result={{
+          id: "r2",
+          role: "assistant",
+          parts: [],
+          metadata: { durationMs: 65000 },
+        }}
+      />,
+    );
+    expect(screen.getAllByText("1m 5.0s").length).toBeGreaterThanOrEqual(1);
+
+    rerender(
+      <SubagentTraceStep
+        toolCallId="call-meta-3"
+        role="researcher"
+        taskBrief="Empty meta"
+        state="done"
+        result={{
+          id: "r3",
+          role: "assistant",
+          parts: [],
+          metadata: {},
+        }}
+      />,
+    );
+
+    rerender(
+      <SubagentTraceStep
+        toolCallId="call-status-only"
+        role="researcher"
+        taskBrief="Status only"
+        state="done"
+        result="STATUS: DONE"
+      />,
+    );
+    expect(screen.getAllByText("STATUS: DONE").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("covers finishReason badge, streaming reasoning/text, calling tool step, and plural tools", async () => {
+    const user = userEvent.setup();
+    render(
+      <SubagentTraceStep
+        toolCallId="call-stream-1"
+        role="researcher"
+        taskBrief="Streaming task"
+        state="running"
+        result={{
+          id: "r-stream",
+          role: "assistant",
+          parts: [
+            { type: "reasoning", text: "", state: "streaming" },
+            {
+              type: "tool-search",
+              toolCallId: "tc-1",
+              toolName: "search",
+              state: "input-streaming",
+              input: { q: "a" },
+            },
+            {
+              type: "tool-read",
+              toolCallId: "tc-2",
+              toolName: "read",
+              state: "output-available",
+              input: { path: "b" },
+              output: "ok",
+            },
+            { type: "text", text: "Partial findings", state: "streaming" },
+          ],
+          metadata: {
+            finishReason: "length",
+            stepCount: 2,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("2 tools")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: /Researcher/i }));
+    expect(screen.getByText("length")).toBeDefined();
+    expect(screen.getByText("Partial findings")).toBeDefined();
+  });
+
+  it("handles scratchpad lookup rejection, running state, singular tool, and Concerns/Needs Context badges", async () => {
+    const scratchpadMod = await import("@/actions/subagents/get-scratchpad");
+    vi.spyOn(scratchpadMod, "getScratchpadFilesAction").mockRejectedValueOnce(new Error("transient"));
+
+    const { rerender } = render(
+      <SubagentTraceStep
+        toolCallId="call-concerns"
+        role="reviewer"
+        taskBrief="Review"
+        state="done"
+        chatId="c1"
+        messageId="m1"
+        result={{
+          id: "r1",
+          role: "assistant",
+          parts: [
+            { type: "tool-read_file", toolCallId: "t1", state: "output-available", input: {}, output: {} },
+            { type: "text", text: "STATUS: DONE_WITH_CONCERNS\n\nFound issues.", state: "done" },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText("1 tool")).toBeDefined();
+    expect(screen.getByText("Concerns")).toBeDefined();
+
+    rerender(
+      <SubagentTraceStep
+        toolCallId="call-needs-context"
+        role="researcher"
+        taskBrief="Research"
+        state="done"
+        result="STATUS: NEEDS_CONTEXT\n\nNeed more info."
+      />,
+    );
+    expect(screen.getByText("Needs Context")).toBeDefined();
+
+    rerender(
+      <SubagentTraceStep
+        toolCallId="call-running-empty"
+        role="coder"
+        taskBrief="Code"
+        state="running"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Coder/i }));
+    expect(screen.getByText("Subagent is working...")).toBeDefined();
+  });
 });

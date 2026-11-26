@@ -407,4 +407,99 @@ describe("MarkdownView — editor remount prevention and lifecycle", () => {
     });
     expect(onUpdate).toHaveBeenCalledTimes(1);
   });
+
+  it("handles debounced rapid onChange, flushPending error, and onUpdate becoming undefined", async () => {
+    vi.useFakeTimers();
+    const onUpdate = vi.fn();
+    const flushRef = { current: null as MarkdownViewFlushFn | null };
+
+    const { rerender, unmount } = render(
+      <MarkdownView id="art-flush" content="# Start" onUpdate={onUpdate} flushRef={flushRef} />,
+    );
+    await vi.waitFor(() => expect(capturedProps.length).toBeGreaterThan(0));
+
+    const onChange = capturedProps[capturedProps.length - 1].onChange as () => void;
+
+    // Trigger onChange twice rapidly to hit clearTimeout(timerRef.current)
+    act(() => {
+      onChange();
+      onChange();
+    });
+
+    // Make blocksToMarkdownLossy reject during flushPending
+    mockBlocksToMarkdownLossy.mockRejectedValueOnce(new Error("serialize fail"));
+    await act(async () => {
+      await flushRef.current?.();
+    });
+    expect(logger.error).toHaveBeenCalledWith("Failed to serialize markdown blocks", expect.any(Error));
+
+    // Trigger onChange again, then rerender without onUpdate before flushing
+    act(() => {
+      onChange();
+    });
+    await act(async () => {
+      rerender(<MarkdownView id="art-flush" content="# Start" flushRef={flushRef} />);
+    });
+    await act(async () => {
+      await flushRef.current?.();
+    });
+
+    // Calling onChange when onUpdate is undefined is a no-op
+    const onChangeNoUpdate = capturedProps[capturedProps.length - 1].onChange as () => void;
+    act(() => {
+      onChangeNoUpdate();
+    });
+
+    // Overwrite flushRef.current externally before unmount to hit flushRef.current !== flushPending
+    flushRef.current = () => null;
+    unmount();
+  });
+
+  it("ignores async parseMarkdown resolution and rejection after unmount", async () => {
+    let resolveParse!: (val: unknown[]) => void;
+    mockTryParseMarkdownToBlocks.mockImplementationOnce(
+      () => new Promise((res) => { resolveParse = res; }),
+    );
+    let unmount1!: () => void;
+    await act(async () => {
+      ({ unmount: unmount1 } = render(<MarkdownView id="art-cancel-1" content="# Pending" />));
+    });
+    unmount1();
+    await act(async () => {
+      resolveParse([{ id: "b1", type: "paragraph", content: "late" }]);
+    });
+
+    let rejectParse!: (err: Error) => void;
+    mockTryParseMarkdownToBlocks.mockImplementationOnce(
+      () => new Promise((_, rej) => { rejectParse = rej; }),
+    );
+    let unmount2!: () => void;
+    await act(async () => {
+      ({ unmount: unmount2 } = render(<MarkdownView id="art-cancel-2" content="# Pending Err" />));
+    });
+    unmount2();
+    await act(async () => {
+      rejectParse(new Error("late fail"));
+    });
+    expect(logger.error).toHaveBeenCalledWith("Failed to parse markdown", expect.any(Error));
+  });
+
+  it("returns null from flushPending when onUpdate is removed after onChange", async () => {
+    const flushRef = { current: null as (() => Promise<void> | null) | null };
+    let rerender!: (ui: React.ReactElement) => void;
+    await act(async () => {
+      ({ rerender } = render(
+        <MarkdownView id="art-no-update" content="# Hi" flushRef={flushRef} onUpdate={vi.fn()} />,
+      ));
+    });
+    const lastProps = capturedProps[capturedProps.length - 1];
+    act(() => {
+      (lastProps.onChange as () => void)();
+    });
+    await act(async () => {
+      rerender(<MarkdownView id="art-no-update" content="# Hi" flushRef={flushRef} />);
+    });
+    const res = await flushRef.current?.();
+    expect(res).toBeUndefined();
+  });
 });

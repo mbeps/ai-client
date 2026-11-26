@@ -119,6 +119,21 @@ describe("groupPromptsByCategory", () => {
     expect(groups[0].name).toBe("Internal Prompts");
     expect(groups[0].items).toHaveLength(2);
 
+    const twoMcpPrompts: DiscoveredPrompt[] = [
+      ...mockMcpPrompts,
+      {
+        name: "list-issues",
+        description: "List GitHub issues",
+        arguments: [],
+        serverId: "srv-github",
+        serverName: "GitHub MCP",
+      },
+    ];
+    const items2 = buildPromptItems([], twoMcpPrompts);
+    const groups2 = groupPromptsByCategory(items2, twoMcpPrompts, false, false);
+    expect(groups2).toHaveLength(1);
+    expect(groups2[0].items).toHaveLength(2);
+
     expect(groups[1].id).toBe("srv-github");
     expect(groups[1].name).toBe("GitHub MCP");
     expect(groups[1].items).toHaveLength(1);
@@ -134,6 +149,30 @@ describe("groupPromptsByCategory", () => {
   it("hides empty categories when search query is active", () => {
     const groups = groupPromptsByCategory([], mockMcpPrompts, true, true);
     expect(groups).toHaveLength(0);
+  });
+
+  it("creates MCP group from filteredItems when not in mcpPrompts and falls back to sourceServer/mcp", () => {
+    const orphanMcpItem = {
+      id: "mcp:orphan:cmd",
+      title: "cmd",
+      isMcp: true,
+      sourceServer: "Orphan Server",
+    } as any;
+    const fallbackMcpItem = {
+      id: "mcp:fallback:cmd",
+      title: "cmd2",
+      isMcp: true,
+    } as any;
+
+    const groups = groupPromptsByCategory(
+      [orphanMcpItem, fallbackMcpItem],
+      [],
+      false,
+      false,
+    );
+    expect(groups).toHaveLength(2);
+    expect(groups[0].id).toBe("Orphan Server");
+    expect(groups[1].id).toBe("mcp");
   });
 });
 
@@ -303,6 +342,38 @@ describe("filterAccessiblePrompts", () => {
       promptMode: "none",
     });
     expect(accessible.map((p) => p.id)).toEqual(["pA", "agent1", "dual1"]);
+  });
+
+  it("handles missing shortcut and empty serverId/serverName fallbacks", () => {
+    const mcpNoShortcut = {
+      id: "mcp-1",
+      title: "MCP One",
+      isMcp: true,
+      sourceServer: "srv",
+    } as any;
+    expect(filterPromptsByQuery([mcpNoShortcut], "zzz")).toEqual([]);
+
+    const mcpPrompts = [
+      { id: "m1", name: "p1", serverId: "", serverName: "NamedSrv" },
+      { id: "m2", name: "p2", serverId: "", serverName: "" },
+    ] as any[];
+
+    const groups = groupPromptsByCategory([], mcpPrompts);
+    expect(groups.some((g) => g.id === "NamedSrv")).toBe(true);
+    expect(groups.some((g) => g.id === "mcp" && g.name === "MCP Server")).toBe(
+      true,
+    );
+
+    const expandedTrue = resolveInitialExpandedGroups(true, undefined, mcpPrompts);
+    expect(expandedTrue.has("NamedSrv")).toBe(true);
+    expect(expandedTrue.has("mcp")).toBe(true);
+
+    const expandedSelected = resolveInitialExpandedGroups(
+      false,
+      new Set(["mcp::p2"]),
+      mcpPrompts,
+    );
+    expect(expandedSelected.has("mcp")).toBe(true);
   });
 });
 

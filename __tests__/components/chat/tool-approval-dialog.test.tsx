@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAppStore } from "@/store/app-store";
 import { ToolApprovalDialog } from "@/components/chat/tool-approval-dialog";
 import type { PendingApproval } from "@/types/tool/approval";
 
@@ -272,5 +273,97 @@ describe("ToolApprovalDialog", () => {
     expect(
       screen.getByRole("button", { name: /Always Allow/i }),
     ).toBeDisabled();
+  });
+
+  it("handles circular args, publicMcpServers fallback, and MCP Always Allow error", async () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    mockUpdateMcpToolApprovals.mockResolvedValueOnce({
+      ok: false,
+      error: { message: "MCP permission failed" },
+    });
+
+    render(
+      <ToolApprovalDialog
+        pendingApprovals={[
+          {
+            approvalId: "app-mcp-err",
+            toolCallId: "call-mcp-err",
+            toolName: "mcp_tool",
+            serverId: "pub-srv-1",
+            args: circular,
+            signature: "sig-mcp-err",
+          },
+        ]}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Always Allow/i }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith("MCP permission failed");
+    });
+  });
+
+  it("handles undefined args and ignores Always Allow when disabled", () => {
+    render(
+      <ToolApprovalDialog
+        pendingApprovals={[
+          {
+            approvalId: "app-undef",
+            toolCallId: "call-undef",
+            toolName: "create_skill",
+            args: undefined as unknown as Record<string, unknown>,
+            signature: "sig-undef",
+          },
+        ]}
+        onSubmit={vi.fn()}
+        disabled={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Create Skill/i }));
+    expect(screen.getByText("{}")).toBeInTheDocument();
+
+    const alwaysAllowBtn = screen.getByRole("button", { name: /Always Allow/i });
+    alwaysAllowBtn.removeAttribute("disabled");
+    fireEvent.click(alwaysAllowBtn);
+    expect(mockUpdateInternalToolApproval).not.toHaveBeenCalled();
+  });
+
+  it("falls back to publicMcpServers when serverId is not in mcpServers", async () => {
+    useAppStore.setState({
+      mcpServers: [],
+      publicMcpServers: [
+        { id: "pub-1", name: "Public Server", autoApprovedTools: ["existing_tool"] } as never,
+      ],
+    });
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    render(
+      <ToolApprovalDialog
+        pendingApprovals={[
+          {
+            approvalId: "app-pub",
+            toolCallId: "call-pub",
+            toolName: "new_tool",
+            serverId: "pub-1",
+            serverName: "Public Server",
+            args: {},
+            signature: "sig-pub",
+          },
+        ]}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Always Allow/i }));
+    await waitFor(() => {
+      expect(mockUpdateMcpToolApprovals).toHaveBeenCalledWith({
+        serverId: "pub-1",
+        autoApprovedTools: ["existing_tool", "new_tool"],
+      });
+    });
   });
 });

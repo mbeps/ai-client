@@ -214,3 +214,33 @@ describe("MarkdownRenderer Generative UI integration", () => {
     expect(mountCounts.unmounts).toBe(0);
   });
 });
+
+describe("generative-ui registry and Slider input", () => {
+  it("invokes placeholder sendChatMessage action on registry", async () => {
+    const { generativeUIRegistry } = await import(
+      "@/components/chat/generative-ui/registry"
+    );
+    const reg = generativeUIRegistry as unknown as {
+      actions?: Record<string, () => Promise<void>>;
+    };
+    if (reg.actions?.sendChatMessage) {
+      await expect(reg.actions.sendChatMessage()).resolves.toBeUndefined();
+    }
+  });
+
+  it("Slider renders via JSX", async () => {
+    const { StateProvider } = await import("@json-render/react");
+    const { generativeUIInputComponents } = await import(
+      "@/components/chat/generative-ui/input-components"
+    );
+    const SliderComp = generativeUIInputComponents.Slider as unknown as React.ComponentType<
+      Record<string, unknown>
+    >;
+    const { container } = render(
+      <StateProvider initialState={{}}>
+        <SliderComp props={{ label: "Vol", min: 0, max: 100 }} bindings={{}} />
+      </StateProvider>,
+    );
+    expect(container).toBeTruthy();
+  });
+});

@@ -68,4 +68,43 @@ describe("KnowledgebasesPage", () => {
       ),
     ).not.toBeInTheDocument();
   });
+
+  it("renders knowledgebases, filters by name/description, and handles list errors", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    mockListKnowledgebases.mockResolvedValueOnce({
+      ok: true,
+      value: [
+        { id: "kb1", name: "Docs", description: "API reference", updatedAt: new Date() },
+        { id: "kb2", name: "Notes", description: null, updatedAt: new Date() },
+      ],
+    });
+
+    render(<KnowledgebasesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Docs")).toBeInTheDocument();
+      expect(screen.getByText("Notes")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText("Search knowledgebases...");
+    fireEvent.change(searchInput, { target: { value: "api" } });
+    expect(screen.getByText("Docs")).toBeInTheDocument();
+    expect(screen.queryByText("Notes")).not.toBeInTheDocument();
+
+    mockListKnowledgebases.mockResolvedValueOnce({
+      ok: false,
+      error: new Error("fetch failed"),
+    });
+    const { unmount } = render(<KnowledgebasesPage />);
+    await waitFor(() => {
+      expect(mockListKnowledgebases).toHaveBeenCalledTimes(2);
+    });
+    unmount();
+
+    mockListKnowledgebases.mockRejectedValueOnce(new Error("network"));
+    render(<KnowledgebasesPage />);
+    await waitFor(() => {
+      expect(mockListKnowledgebases).toHaveBeenCalledTimes(3);
+    });
+  });
 });

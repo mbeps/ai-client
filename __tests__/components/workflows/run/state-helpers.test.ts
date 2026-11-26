@@ -214,4 +214,165 @@ describe("Workflow Run State Helpers", () => {
     );
     expect(multiArtifact?.id).toBe("art-newer");
   });
+
+  it("covers mapRunRowToWorkflowRun, applyToolCallToNode dedupe, calculateWorkflowProgress <= 0, and attachment helpers", async () => {
+    const {
+      mapRunRowToWorkflowRun,
+      applyToolCallToNode,
+      calculateWorkflowProgress,
+      resolveNodePreviewArtifact,
+      resolveTargetAttachmentId,
+      checkHasAnyArtifact,
+    } = await import("@/components/workflows/run/state-helpers");
+
+    const mappedWebhook = mapRunRowToWorkflowRun({
+      id: "r1",
+      workflowId: "w1",
+      userId: "u1",
+      triggerType: "webhook",
+      status: "running",
+      currentNodeId: "n1",
+      dryRun: true,
+      initialData: { a: 1 },
+      nodeStates: {},
+      contextData: { b: 2 },
+      inputAttachmentIds: ["in-1"],
+      outputAttachmentIds: ["out-1"],
+      errorMessage: "err",
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+    } as any);
+    expect(mappedWebhook.triggerType).toBe("webhook");
+    expect(mappedWebhook.currentNodeId).toBe("n1");
+
+    const mappedNulls = mapRunRowToWorkflowRun({
+      id: "r2",
+      workflowId: "w1",
+      userId: "u1",
+      triggerType: "manual",
+      status: "pending",
+      currentNodeId: null,
+      dryRun: false,
+      initialData: null,
+      nodeStates: null,
+      contextData: null,
+      inputAttachmentIds: null,
+      outputAttachmentIds: null,
+      errorMessage: null,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+    } as any);
+    expect(mappedNulls.inputAttachmentIds).toEqual([]);
+
+    const s1 = applyToolCallToNode({}, "n1", {
+      toolCallId: "tc1",
+      toolName: "search",
+      args: {},
+    });
+    const s2 = applyToolCallToNode(s1, "n1", {
+      toolCallId: "tc1",
+      toolName: "search",
+      args: {},
+    });
+    expect(s2).toBe(s1);
+
+    expect(calculateWorkflowProgress("running", {}, 0)).toBe(0);
+
+    const untitled = resolveNodePreviewArtifact(
+      "unknown",
+      sampleNodes,
+      {
+        unknown: {
+          status: "completed",
+          artifact: { id: "a1", type: "markdown", title: "", content: "x" },
+        },
+      },
+      true,
+    );
+    expect(untitled?.title).toBe("Step");
+
+    const noTs = resolveNodePreviewArtifact(
+      null,
+      sampleNodes,
+      {
+        n1: {
+          status: "completed",
+          completedAt: "2026-01-01T00:00:00Z",
+          artifact: { id: "a1", type: "markdown", title: "T1", content: "x" },
+        },
+        n2: {
+          status: "completed",
+          artifact: { id: "a2", type: "markdown", title: "T2", content: "y" },
+        },
+      },
+      true,
+    );
+    expect(noTs?.id).toBe("a1");
+
+    expect(resolveTargetAttachmentId(null, {}, ["in-1"])).toBe("in-1");
+    expect(checkHasAnyArtifact({}, ["in-1"])).toBe(true);
+    expect(checkHasAnyArtifact({}, undefined)).toBe(false);
+  });
+
+  it("covers remaining branches in applyToolResultToNode, resolveNodePreviewArtifact, and resolveTargetAttachmentId", async () => {
+    const { resolveTargetAttachmentId } = await import(
+      "@/components/workflows/run/state-helpers"
+    );
+    // applyToolResultToNode when node has no prior state and no toolCalls
+    const fresh = applyToolResultToNode({}, "n1", {
+      toolCallId: "tc1",
+      toolName: "search",
+      result: { ok: true },
+    });
+    expect(fresh.n1.status).toBe("running");
+    expect(fresh.n1.toolCalls).toEqual([]);
+    expect(fresh.n1.toolResults).toHaveLength(1);
+
+    // applyToolResultToNode when toolCalls has a non-matching toolCallId
+    const withOtherCall = applyToolResultToNode(
+      {
+        n1: {
+          status: "running",
+          toolCalls: [{ toolCallId: "other", toolName: "t", args: {}, status: "running" }],
+        },
+      },
+      "n1",
+      { toolCallId: "tc1", toolName: "search", result: "done" },
+    );
+    expect(withOtherCall.n1.toolCalls?.[0].status).toBe("running");
+
+    // resolveNodePreviewArtifact: earlier timestamp visited after later timestamp, and NaN timestamp after non-null latestNodeId
+    const nodes = [
+      { id: "n1", type: "ai_step", position: { x: 0, y: 0 }, data: { label: "N1" } },
+      { id: "n2", type: "ai_step", position: { x: 0, y: 0 }, data: { label: "N2" } },
+      { id: "n3", type: "ai_step", position: { x: 0, y: 0 }, data: { label: "N3" } },
+    ] as unknown as WorkflowNode[];
+    const res = resolveNodePreviewArtifact(
+      null,
+      nodes,
+      {
+        n1: {
+          status: "completed",
+          artifact: { id: "a1", type: "markdown", title: "T1", content: "1" },
+        },
+        n2: {
+          status: "completed",
+          completedAt: "2026-01-01T00:00:00Z",
+          artifact: { id: "a2", type: "markdown", title: "T2", content: "2" },
+        },
+        n3: {
+          status: "completed",
+          completedAt: "2026-01-02T00:00:00Z",
+          artifact: { id: "a3", type: "markdown", title: "T3", content: "3" },
+        },
+      },
+      true,
+    );
+    expect(res?.id).toBe("a3");
+
+    // resolveTargetAttachmentId when selectedNodeId is set but has no outputAttachmentId
+    expect(resolveTargetAttachmentId("n1", { n1: { status: "completed" } }, ["in-fallback"])).toBe(
+      "in-fallback",
+    );
+  });
 });

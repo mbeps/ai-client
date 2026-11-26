@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthenticatedLayout } from "@/components/shared/authenticated-layout";
+import { ROUTES } from "@/config/routes";
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -89,5 +90,17 @@ describe("AuthenticatedLayout", () => {
       "overflow-hidden",
       "bg-background",
     );
+  });
+
+  it("redirects to login when not pending and no session", () => {
+    mockUseSession.mockReturnValue({ data: null, isPending: false });
+
+    render(
+      <AuthenticatedLayout sidebar={<div>Sidebar</div>}>
+        <div>Protected Content</div>
+      </AuthenticatedLayout>,
+    );
+
+    expect(mockPush).toHaveBeenCalledWith(ROUTES.AUTH.LOGIN.path);
   });
 });

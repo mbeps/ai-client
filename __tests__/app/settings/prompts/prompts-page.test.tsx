@@ -36,9 +36,21 @@ const mockPrompts: Prompt[] = [
     shortcut: "refactor",
     content: "Refactor this function",
     projectIds: [],
-    assistantIds: ["asst-1"],
+    agentIds: ["asst-1"],
+    assistantIds: [],
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-02-01"),
+  },
+  {
+    id: "p-4",
+    userId: "user-1",
+    title: "Debug Helper",
+    shortcut: "debug",
+    content: "Debug this issue",
+    projectIds: [],
+    assistantIds: undefined as unknown as string[],
+    createdAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-01-15"),
   },
 ];
 
@@ -65,6 +77,7 @@ describe("PromptsPage", () => {
 
     expect(titles).toEqual([
       "Code Review",
+      "Debug Helper",
       "Refactor Helper",
       "Summarize Code",
     ]);
@@ -99,6 +112,31 @@ describe("PromptsPage", () => {
     expect(screen.getByText("Code Review")).toBeInTheDocument();
     expect(screen.getByText("Refactor Helper")).toBeInTheDocument();
     expect(screen.getByText("Summarize Code")).toBeInTheDocument();
+  });
+
+  it("filters prompts by search query across title, shortcut, and content", async () => {
+    const user = userEvent.setup();
+    render(<PromptsPage />);
+
+    const searchInput = screen.getByPlaceholderText("Search prompts...");
+
+    await user.type(searchInput, "Code Review");
+    expect(screen.getByText("Code Review")).toBeInTheDocument();
+    expect(screen.queryByText("Refactor Helper")).not.toBeInTheDocument();
+
+    await user.clear(searchInput);
+    await user.type(searchInput, "refactor");
+    expect(screen.getByText("Refactor Helper")).toBeInTheDocument();
+    expect(screen.queryByText("Code Review")).not.toBeInTheDocument();
+
+    await user.clear(searchInput);
+    await user.type(searchInput, "Summarize the given");
+    expect(screen.getByText("Summarize Code")).toBeInTheDocument();
+    expect(screen.queryByText("Code Review")).not.toBeInTheDocument();
+
+    await user.clear(searchInput);
+    await user.type(searchInput, "nonexistent-xyz");
+    expect(screen.queryByText("Code Review")).not.toBeInTheDocument();
   });
 });
 

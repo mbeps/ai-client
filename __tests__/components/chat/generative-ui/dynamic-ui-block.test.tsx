@@ -728,4 +728,25 @@ describe("DynamicUIBlock", () => {
     fireEvent.change(sliderInput, { target: { value: "2" } });
     expect(screen.getByText("High")).toBeInTheDocument();
   });
+
+  it("covers hasSendChatMessageAction array/non-object/onError branches and registry placeholder action", async () => {
+    const { hasSendChatMessageAction } = await import(
+      "@/components/chat/generative-ui/input-components"
+    );
+    const { generativeUIRegistry } = await import(
+      "@/components/chat/generative-ui/registry"
+    );
+
+    expect(
+      hasSendChatMessageAction([
+        "not-an-object",
+        { action: "other", onError: { action: "sendChatMessage" } },
+      ]),
+    ).toBe(true);
+    expect(
+      hasSendChatMessageAction([{ action: "other", onSuccess: "invalid" }]),
+    ).toBe(false);
+
+    expect(generativeUIRegistry.Button).toBeDefined();
+  });
 });

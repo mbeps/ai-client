@@ -121,7 +121,10 @@ describe("WorkflowNodeConfigSheet", () => {
         onOpenChange={vi.fn()}
         node={nodes[1]}
         allNodes={nodes}
-        edges={edges}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
         workflowId="wf-1"
         webhookSecret="sec-abc"
         mcpServers={[]}
@@ -152,7 +155,10 @@ describe("WorkflowNodeConfigSheet", () => {
         onOpenChange={vi.fn()}
         node={nodes[2]}
         allNodes={nodes}
-        edges={edges}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
         workflowId="wf-1"
         webhookSecret="sec-abc"
         mcpServers={[]}
@@ -184,7 +190,10 @@ describe("WorkflowNodeConfigSheet", () => {
         onOpenChange={vi.fn()}
         node={nodes[3]}
         allNodes={nodes}
-        edges={edges}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
         workflowId="wf-1"
         webhookSecret="sec-abc"
         mcpServers={[]}
@@ -202,7 +211,10 @@ describe("WorkflowNodeConfigSheet", () => {
         onOpenChange={vi.fn()}
         node={nodes[4]}
         allNodes={nodes}
-        edges={edges}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
         workflowId="wf-1"
         webhookSecret="sec-abc"
         mcpServers={[]}
@@ -226,7 +238,10 @@ describe("WorkflowNodeConfigSheet", () => {
         onOpenChange={onOpenChange}
         node={nodes[0]}
         allNodes={nodes}
-        edges={edges}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
         workflowId="wf-1"
         mcpServers={[]}
         onUpdateNode={vi.fn()}
@@ -266,7 +281,10 @@ describe("WorkflowNodeConfigSheet", () => {
           },
         }}
         allNodes={nodes}
-        edges={edges}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
         workflowId="wf-1"
         mcpServers={[]}
         knowledgebases={[
@@ -368,7 +386,10 @@ describe("WorkflowNodeConfigSheet", () => {
           },
         }}
         allNodes={nodes}
-        edges={edges}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
         workflowId="wf-1"
         mcpServers={[]}
         onUpdateNode={onUpdateNode}
@@ -399,7 +420,10 @@ describe("WorkflowNodeConfigSheet", () => {
           },
         }}
         allNodes={nodes}
-        edges={edges}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
         workflowId="wf-1"
         mcpServers={[]}
         onUpdateNode={onUpdateNode}
@@ -420,6 +444,304 @@ describe("WorkflowNodeConfigSheet", () => {
             "internal:tool:interactive_ui",
           ],
         }),
+      }),
+    );
+  });
+
+  it("handles node name/variable edits, upstream variable insertion for if_condition and http_request, skill badge, and footer buttons", () => {
+    const onUpdateNode = vi.fn();
+    const onDeleteNode = vi.fn();
+    const onOpenChange = vi.fn();
+
+    const { rerender } = render(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={onOpenChange}
+        node={{
+          ...nodes[1],
+          data: {
+            kind: "ai_step",
+            variableName: "step1",
+            prompt: "",
+            mcpServerIds: [],
+            toolIds: [],
+            requiresReview: false,
+            skillMode: "specific",
+            skillIds: ["sk-1", "sk-2"],
+          },
+        }}
+        allNodes={nodes}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={onDeleteNode}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Node Name"), {
+      target: { value: "Renamed Node" },
+    });
+    expect(onUpdateNode).toHaveBeenCalledWith("n2", { name: "Renamed Node" });
+
+    fireEvent.change(screen.getByLabelText("Variable Name"), {
+      target: { value: "renamedVar" },
+    });
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n2",
+      expect.objectContaining({
+        data: expect.objectContaining({ variableName: "renamedVar" }),
+      }),
+    );
+
+    // Delete Node button in non-new mode
+    fireEvent.click(screen.getByRole("button", { name: /Delete Node/i }));
+    expect(onDeleteNode).toHaveBeenCalledWith("n2");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    // isNew={true} Cancel button
+    rerender(
+      <WorkflowNodeConfigSheet
+        open={true}
+        isNew={true}
+        onOpenChange={onOpenChange}
+        node={nodes[2]}
+        allNodes={nodes}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={onDeleteNode}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    // if_condition in llm mode: insertVariable
+    rerender(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={onOpenChange}
+        node={{
+          ...nodes[2],
+          data: {
+            kind: "if_condition",
+            variableName: "branch1",
+            evaluationMode: "llm",
+            logic: "and",
+            rules: [],
+            llmConditionPrompt: "Check",
+          },
+        }}
+        allNodes={nodes}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={onDeleteNode}
+      />,
+    );
+    const chip3 = screen.getAllByText(/^\{\{.*\}\}$/)[0];
+    fireEvent.click(chip3);
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n3",
+      expect.objectContaining({
+        data: expect.objectContaining({
+          llmConditionPrompt: expect.stringContaining("Check {{"),
+        }),
+      }),
+    );
+
+    // http_request: insertVariable
+    rerender(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={onOpenChange}
+        node={{
+          ...nodes[3],
+          data: {
+            kind: "http_request",
+            variableName: "http1",
+            method: "POST",
+            url: "https://api.example.com",
+            headers: [],
+            body: "",
+          },
+        }}
+        allNodes={nodes}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+          { id: "e3", sourceNodeId: "n3", targetNodeId: "n4", sourceHandle: "true", targetHandle: "main" },
+        ]}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={onDeleteNode}
+      />,
+    );
+    const chip4 = screen.getAllByText(/^\{\{.*\}\}$/)[0];
+    fireEvent.click(chip4);
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n4",
+      expect.objectContaining({
+        data: expect.objectContaining({
+          body: expect.stringContaining("{{"),
+        }),
+      }),
+    );
+  });
+
+  it("covers insertVariable edge cases and skillMode badge variants", () => {
+    const onUpdateNode = vi.fn();
+    const emptyVarNodes = [
+      {
+        ...nodes[0],
+        data: { kind: "manual_trigger" as const, variableName: "" },
+      },
+      ...nodes.slice(1),
+    ];
+
+    const { rerender } = render(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={vi.fn()}
+        node={{
+          ...nodes[1],
+          data: {
+            kind: "ai_step",
+            variableName: "step1",
+            prompt: "",
+            mcpServerIds: [],
+            toolIds: [],
+            skillMode: "all",
+            requiresReview: false,
+          },
+        }}
+        allNodes={emptyVarNodes}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("all")).toBeInTheDocument();
+
+    // ai_step with empty prompt
+    rerender(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={vi.fn()}
+        node={{
+          ...nodes[1],
+          data: {
+            kind: "ai_step",
+            variableName: "step1",
+            prompt: "",
+            mcpServerIds: [],
+            toolIds: [],
+            skillMode: "specific",
+            requiresReview: false,
+          },
+        }}
+        allNodes={nodes}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getAllByText(/^\{\{.*\}\}$/)[0]);
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n2",
+      expect.objectContaining({
+        data: expect.objectContaining({ prompt: "{{trigger}}" }),
+      }),
+    );
+
+    // if_condition llm with undefined llmConditionPrompt
+    rerender(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={vi.fn()}
+        node={{
+          ...nodes[2],
+          data: {
+            kind: "if_condition",
+            variableName: "branch1",
+            evaluationMode: "llm",
+            logic: "and",
+            rules: [],
+          },
+        }}
+        allNodes={nodes}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+        ]}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getAllByText(/^\{\{.*\}\}$/)[0]);
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n3",
+      expect.objectContaining({
+        data: expect.objectContaining({ llmConditionPrompt: "{{step1}}" }),
+      }),
+    );
+
+    // http_request with undefined body
+    rerender(
+      <WorkflowNodeConfigSheet
+        open={true}
+        onOpenChange={vi.fn()}
+        node={{
+          ...nodes[3],
+          data: {
+            kind: "http_request",
+            variableName: "http1",
+            method: "POST",
+            url: "https://api.example.com",
+            headers: [],
+          },
+        }}
+        allNodes={nodes}
+        edges={[
+          ...edges,
+          { id: "e2", sourceNodeId: "n2", targetNodeId: "n3", sourceHandle: "main", targetHandle: "main" },
+          { id: "e3", sourceNodeId: "n3", targetNodeId: "n4", sourceHandle: "true", targetHandle: "main" },
+        ]}
+        workflowId="wf-1"
+        mcpServers={[]}
+        onUpdateNode={onUpdateNode}
+        onDeleteNode={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getAllByText(/^\{\{.*\}\}$/)[0]);
+    expect(onUpdateNode).toHaveBeenCalledWith(
+      "n4",
+      expect.objectContaining({
+        data: expect.objectContaining({ body: "{{branch1}}" }),
       }),
     );
   });

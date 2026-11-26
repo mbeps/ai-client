@@ -45,6 +45,7 @@ describe("ModelTableFilterToolbar", () => {
 
   it("displays capitalized types dropdown options when opened", async () => {
     const user = userEvent.setup();
+    const onTypeFilterChange = vi.fn();
     render(
       <ModelTableFilterToolbar
         search=""
@@ -54,7 +55,7 @@ describe("ModelTableFilterToolbar", () => {
         providerFilter="all"
         onProviderFilterChange={vi.fn()}
         typeFilter="all"
-        onTypeFilterChange={vi.fn()}
+        onTypeFilterChange={onTypeFilterChange}
         providers={dummyProviders}
       />,
     );
@@ -65,6 +66,9 @@ describe("ModelTableFilterToolbar", () => {
     expect(screen.getByRole("option", { name: /chat/i })).toHaveTextContent("Chat");
     expect(screen.getByRole("option", { name: /embedding/i })).toHaveTextContent("Embedding");
     expect(screen.getByRole("option", { name: /both/i })).toHaveTextContent("Both");
+
+    await user.click(screen.getByRole("option", { name: /chat/i }));
+    expect(onTypeFilterChange).toHaveBeenCalledWith("chat");
   });
 });
 

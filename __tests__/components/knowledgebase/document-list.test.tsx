@@ -371,4 +371,47 @@ describe("DocumentList", () => {
     expect(screen.queryByText("Uploading document")).not.toBeInTheDocument();
     expect(screen.queryByText("Extracting & chunking text")).not.toBeInTheDocument();
   });
+
+  it("renders singular link label when relationCount is 1 and handles missing relationCount/keyEntities", async () => {
+    const user = userEvent.setup();
+    const docOneLink = createMockDoc({
+      id: "doc-one-link",
+      name: "one-link.pdf",
+      relationCount: 1,
+      keyEntities: ["Alpha"],
+    });
+    const docNoMeta = createMockDoc({
+      id: "doc-no-meta",
+      name: "no-meta.pdf",
+      relationCount: undefined as any,
+      keyEntities: undefined as any,
+    });
+
+    render(<DocumentList documents={[docOneLink]} onDeleted={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /details/i }));
+    expect(screen.getByText("1 link")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+
+    render(<DocumentList documents={[docNoMeta]} onDeleted={vi.fn()} />);
+    const detailsButtons = screen.getAllByRole("button", { name: /details/i });
+    await user.click(detailsButtons[detailsButtons.length - 1]);
+    expect(screen.queryByText("Entities")).not.toBeInTheDocument();
+  });
+
+  it("defaults missing ingest step entries to pending", () => {
+    const doc = createMockDoc({
+      id: "doc-partial-steps",
+      name: "partial.pdf",
+      status: "processing",
+      ingestSteps: {
+        uploading: { status: "completed" },
+      } as any,
+    });
+
+    render(<DocumentList documents={[doc]} onDeleted={vi.fn()} />);
+
+    expect(screen.getByText("Uploading document")).toBeInTheDocument();
+    expect(screen.queryByText("Extracting & chunking text")).not.toBeInTheDocument();
+  });
 });
