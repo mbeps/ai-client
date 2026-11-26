@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  executeNodeWithGates,
-  executeSingleWorkflowNode,
-} from "@/lib/workflows/workflow-run-helpers";
+import { executeNodeWithGates } from "@/lib/workflows/workflow-run-gates";
+import { executeSingleWorkflowNode } from "@/lib/workflows/workflow-run-helpers";
 import type { Agent } from "@/types/agent/agent";
 import type { WorkflowNode } from "@/types/workflows/workflow";
 
@@ -50,15 +48,6 @@ vi.mock("@/lib/workflows/execute-filter-node", () => ({
 const mockResolveProvider = vi.fn();
 vi.mock("@/lib/chat/resolve-provider", () => ({
   resolveProvider: (...args: unknown[]) => mockResolveProvider(...args),
-}));
-
-const mockAwaitHumanReviewGate = vi.fn().mockResolvedValue(true);
-const mockResolvePendingToolApprovalLoop = vi.fn(async ({ outcome }) => outcome);
-vi.mock("@/lib/workflows/workflow-run-gates", () => ({
-  awaitHumanReviewGate: (...args: unknown[]) =>
-    mockAwaitHumanReviewGate(...args),
-  resolvePendingToolApprovalLoop: (...args: unknown[]) =>
-    mockResolvePendingToolApprovalLoop(...args),
 }));
 
 const baseWorkflowRow = {
@@ -453,11 +442,18 @@ describe("executeSingleWorkflowNode — agent persona & overrides", () => {
   });
 
   it("forwards stepIdPrefix to review and tool approval gates in executeNodeWithGates", async () => {
-    mockAwaitHumanReviewGate.mockClear();
-    mockResolvePendingToolApprovalLoop.mockClear();
+    let capturedGateId: string | undefined;
     const step = {
-      run: vi.fn(async (_id: string, fn: () => Promise<unknown>) => fn()),
-      waitForEvent: vi.fn(),
+      run: vi.fn(async (id: string, fn: () => Promise<unknown>) => {
+        const res = await fn();
+        if (id.includes("pause-") && typeof res === "string") {
+          capturedGateId = res;
+        }
+        return res;
+      }),
+      waitForEvent: vi.fn(async () => ({
+        data: { nodeId: "node-1", gateId: capturedGateId, approved: true },
+      })),
     };
 
     const res = await executeNodeWithGates({
@@ -481,16 +477,21 @@ describe("executeSingleWorkflowNode — agent persona & overrides", () => {
     });
 
     expect(res.status).toBe("completed");
-    expect(mockAwaitHumanReviewGate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reviewPhase: "before",
-        stepIdPrefix: "loop-l1-iter-0-",
-      }),
+    expect(step.run).toHaveBeenCalledWith(
+      "loop-l1-iter-0-pause-before-review-node-1",
+      expect.any(Function),
     );
-    expect(mockResolvePendingToolApprovalLoop).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stepIdPrefix: "loop-l1-iter-0-",
-      }),
+    expect(step.waitForEvent).toHaveBeenCalledWith(
+      "loop-l1-iter-0-wait-before-review-node-1",
+      expect.any(Object),
+    );
+    expect(step.run).toHaveBeenCalledWith(
+      "loop-l1-iter-0-node-node-1",
+      expect.any(Function),
+    );
+    expect(step.run).toHaveBeenCalledWith(
+      "loop-l1-iter-0-checkpoint-node-node-1",
+      expect.any(Function),
     );
   });
 });

@@ -6,7 +6,11 @@ import type { AiStepNodeData, WorkflowCanvasConfig } from "@/types/workflows/wor
 
 const mockGenerateText = vi.fn();
 const mockHandleStepArtifactOutput = vi.fn();
-const mockDbUpdateSetWhere = vi.fn().mockResolvedValue(undefined);
+const mockDbUpdateSetWhere = vi.fn(() =>
+  Object.assign(Promise.resolve(undefined), {
+    returning: vi.fn().mockResolvedValue([{ id: "run-1" }]),
+  }),
+);
 const mockDbUpdateSet = vi.fn(() => ({ where: mockDbUpdateSetWhere }));
 const mockDbUpdate = vi.fn(() => ({ set: mockDbUpdateSet }));
 

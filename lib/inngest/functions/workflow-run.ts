@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NonRetriableError } from "inngest";
 import { db } from "@/drizzle/db";
 import {
@@ -14,18 +14,18 @@ import {
   workflowRunChannel,
 } from "@/lib/inngest/workflow-run-channel";
 import { getLogger } from "@/lib/logger";
-import { resolveWorkflowTemplateValue } from "@/lib/workflows/compile-template";
 import {
   extractLoopBodyMap,
   resolveNodeExecutionEligibility,
   validateAndSortWorkflowGraph,
 } from "@/lib/workflows/dag-planner";
-import {
-  executeNodeWithGates,
-  failWorkflowRun,
-} from "@/lib/workflows/workflow-run-helpers";
+import { executeLoopNode } from "@/lib/workflows/execute-loop-node";
+import { updateActiveWorkflowRun } from "@/lib/workflows/workflow-run-db";
+import { executeNodeWithGates } from "@/lib/workflows/workflow-run-gates";
+import type { WorkflowStepTools } from "@/lib/workflows/workflow-run-helpers";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type {
+  LoopNodeData,
   WorkflowEdge,
   WorkflowNode,
   WorkflowNodeRunState,
@@ -53,15 +53,10 @@ export const executeWorkflowRun = inngest.createFunction(
       const { runId } = event.data.event.data as { runId?: string };
       if (!runId) return;
       const appErr = toAppError(error);
-      const updated = await db
-        .update(workflowRun)
-        .set({
-          status: "failed",
-          errorMessage: appErr.message,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
-        .returning({ id: workflowRun.id });
+      const updated = await updateActiveWorkflowRun(runId, {
+        status: "failed",
+        errorMessage: appErr.message,
+      });
 
       if (updated.length === 0) return;
 
@@ -81,6 +76,7 @@ export const executeWorkflowRun = inngest.createFunction(
       workflowId: string;
       userId: string;
     };
+    const stepTools = step as unknown as WorkflowStepTools;
     const wfCh = workflowRunChannel({ runId });
 
     const emit = async (data: WorkflowStreamEvent) => {
@@ -142,11 +138,10 @@ export const executeWorkflowRun = inngest.createFunction(
         serializedLoopBodyMap[loopId] = Array.from(bodyIds);
       }
 
-      const initialized = await db
-        .update(workflowRun)
-        .set({ status: "running", errorMessage: null, updatedAt: new Date() })
-        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
-        .returning({ id: workflowRun.id });
+      const initialized = await updateActiveWorkflowRun(runId, {
+        status: "running",
+        errorMessage: null,
+      });
 
       if (initialized.length === 0) {
         return {
@@ -222,200 +217,49 @@ export const executeWorkflowRun = inngest.createFunction(
         }
         await step.run(`skip-node-${node.id}`, async () => {
           nodeStates[node.id] = { status: "skipped" };
-          await db
-            .update(workflowRun)
-            .set({ nodeStates, updatedAt: new Date() })
-            .where(
-              and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
-            );
+          await updateActiveWorkflowRun(runId, { nodeStates });
           await emit({ type: "workflow-node-skipped", runId, nodeId: node.id });
         });
         continue;
       }
 
       if (node.type === "loop" && node.data.kind === "loop") {
-        const loopData = node.data;
-        let items: unknown[];
-        if (loopData.mode === "for_each") {
-          const resolved = resolveWorkflowTemplateValue(
-            loopData.itemsTemplate ?? "",
-            { ...(runRow.initialData ?? {}), ...contextData },
-          );
-          if (!Array.isArray(resolved)) {
-            await step.run(`fail-loop-${node.id}`, async () => {
-              await failWorkflowRun(
-                runId,
-                node.id,
-                `Loop node "${node.name}" expected an array from "${loopData.itemsTemplate ?? ""}"`,
-                emit,
-              );
-            });
-            return { success: false };
-          }
-          items = resolved;
-        } else {
-          const count = Math.max(0, Math.min(50, loopData.count ?? 0));
-          items = Array.from({ length: count }, (_, i) => i);
-        }
-
-        const maxIter = Math.min(50, Math.max(1, loopData.maxIterations ?? 20));
-        const truncated = items.length > maxIter;
-        const slicedItems = items.slice(0, maxIter);
-
-        const bodyNodeIds = loopBodyMap.get(node.id) ?? new Set<string>();
-        const bodyNodes = sortedNodes.filter((n) => bodyNodeIds.has(n.id));
-        const terminalBodyNodes = bodyNodes.filter(
-          (bn) =>
-            !edges.some(
-              (e) =>
-                e.sourceNodeId === bn.id && bodyNodeIds.has(e.targetNodeId),
-            ),
-        );
-
-        const results: unknown[] = [];
-        for (let i = 0; i < slicedItems.length; i++) {
-          const item = slicedItems[i];
-          const iterContextData: Record<string, unknown> = {
-            ...contextData,
-            [loopData.variableName]: {
-              item,
-              index: i,
-              total: slicedItems.length,
-              isFirst: i === 0,
-              isLast: i === slicedItems.length - 1,
-            },
-            item,
-            index: i,
-          };
-          const iterActiveHandles = new Map<string, Set<string>>([
-            [node.id, new Set(["body"])],
-          ]);
-          const iterSkipped = new Set<string>();
-
-          for (let bIdx = 0; bIdx < bodyNodes.length; bIdx++) {
-            const bodyNode = bodyNodes[bIdx];
-            const bodyEligibility = resolveNodeExecutionEligibility(
-              bodyNode.id,
-              edges,
-              iterActiveHandles,
-              iterSkipped,
-            );
-            if (bodyEligibility === "skip") {
-              iterSkipped.add(bodyNode.id);
-              continue;
-            }
-
-            const bodyOutcome = await executeNodeWithGates({
-              step: step as Parameters<typeof executeNodeWithGates>[0]["step"],
-              runId,
-              userId,
-              node: bodyNode,
-              stepIndex: bIdx,
-              allNodes: sortedNodes,
-              workflowRow: wfRow,
-              initialData: runRow.initialData ?? {},
-              contextData: iterContextData,
-              inputAttachmentIds: runRow.inputAttachmentIds ?? [],
-              outputAttachmentIds,
-              activeWorkbookFilePath,
-              activeArtifact,
-              dryRun: runRow.dryRun,
-              nodeStates,
-              emit,
-              stepIdPrefix: `loop-${node.id}-iter-${i}-`,
-            });
-
-            if (bodyOutcome.status === "cancelled") {
-              return { success: false, cancelled: true };
-            }
-            if (bodyOutcome.status !== "completed") {
-              return { success: false };
-            }
-
-            iterActiveHandles.set(
-              bodyNode.id,
-              new Set(bodyOutcome.activeHandles),
-            );
-            iterContextData[bodyNode.data.variableName] =
-              bodyOutcome.contextEntry;
-            outputAttachmentIds = bodyOutcome.outputAttachmentIds;
-            activeWorkbookFilePath = bodyOutcome.activeWorkbookFilePath;
-            activeArtifact = bodyOutcome.activeArtifact ?? activeArtifact;
-          }
-
-          if (terminalBodyNodes.length === 0) {
-            results.push(item);
-          } else if (terminalBodyNodes.length === 1) {
-            results.push(
-              iterContextData[terminalBodyNodes[0].data.variableName],
-            );
-          } else {
-            const combined: Record<string, unknown> = {};
-            for (const tn of terminalBodyNodes) {
-              combined[tn.data.variableName] =
-                iterContextData[tn.data.variableName];
-            }
-            results.push(combined);
-          }
-        }
-
-        if (slicedItems.length === 0) {
-          for (const bodyNode of bodyNodes) {
-            nodeStates[bodyNode.id] = { status: "skipped" };
-          }
-        }
-
-        contextData[loopData.variableName] = {
-          results,
-          items: slicedItems,
-          count: slicedItems.length,
-        };
-        activeHandlesByNode.set(node.id, new Set(["done"]));
-        nodeStates[node.id] = {
-          status: "completed",
-          loopSummary: {
-            totalItems: items.length,
-            iterations: slicedItems.length,
-            truncated,
-          },
-          completedAt: new Date().toISOString(),
-        };
-
-        await step.run(`checkpoint-node-${node.id}`, async () => {
-          await db
-            .update(workflowRun)
-            .set({
-              currentNodeId: node.id,
-              nodeStates,
-              contextData,
-              outputAttachmentIds,
-              updatedAt: new Date(),
-            })
-            .where(
-              and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
-            );
-          if (slicedItems.length === 0) {
-            for (const bodyNode of bodyNodes) {
-              await emit({
-                type: "workflow-node-skipped",
-                runId,
-                nodeId: bodyNode.id,
-              });
-            }
-          }
-          await emit({
-            type: "workflow-node-complete",
-            runId,
-            nodeId: node.id,
-            state: nodeStates[node.id],
-            outputAttachmentIds,
-          });
+        const loopOutcome = await executeLoopNode({
+          step: stepTools,
+          runId,
+          userId,
+          node: node as WorkflowNode & { data: LoopNodeData },
+          sortedNodes,
+          edges,
+          loopBodyMap,
+          workflowRow: wfRow,
+          initialData: runRow.initialData ?? {},
+          contextData,
+          inputAttachmentIds: runRow.inputAttachmentIds ?? [],
+          outputAttachmentIds,
+          activeWorkbookFilePath,
+          activeArtifact,
+          dryRun: runRow.dryRun,
+          nodeStates,
+          emit,
         });
+
+        if (loopOutcome.status === "cancelled") {
+          return { success: false, cancelled: true };
+        }
+        if (loopOutcome.status !== "completed") {
+          return { success: false };
+        }
+
+        activeHandlesByNode.set(node.id, new Set(["done"]));
+        outputAttachmentIds = loopOutcome.outputAttachmentIds;
+        activeWorkbookFilePath = loopOutcome.activeWorkbookFilePath;
+        activeArtifact = loopOutcome.activeArtifact ?? activeArtifact;
         continue;
       }
 
       const outcome = await executeNodeWithGates({
-        step: step as Parameters<typeof executeNodeWithGates>[0]["step"],
+        step: stepTools,
         runId,
         userId,
         node,
@@ -447,16 +291,11 @@ export const executeWorkflowRun = inngest.createFunction(
     }
 
     const completed = await step.run("finalize-workflow-run", async () => {
-      const updated = await db
-        .update(workflowRun)
-        .set({
-          status: "completed",
-          currentNodeId: null,
-          outputAttachmentIds,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
-        .returning({ id: workflowRun.id });
+      const updated = await updateActiveWorkflowRun(runId, {
+        status: "completed",
+        currentNodeId: null,
+        outputAttachmentIds,
+      });
 
       if (updated.length === 0) {
         return false;

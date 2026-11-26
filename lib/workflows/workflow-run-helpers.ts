@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import {
   type WorkflowRow,
@@ -14,19 +14,24 @@ import { executeFilterNode } from "@/lib/workflows/execute-filter-node";
 import { executeHttpRequestNode } from "@/lib/workflows/execute-http-node";
 import { loadWorkflowContext } from "@/lib/workflows/load-workflow-context";
 import { resolveEffectiveAiStepConfig } from "@/lib/workflows/resolve-effective-ai-step-config";
-import {
-  awaitHumanReviewGate,
-  resolvePendingToolApprovalLoop,
-} from "@/lib/workflows/workflow-run-gates";
+import { updateActiveWorkflowRun } from "@/lib/workflows/workflow-run-db";
 import type { ResumedToolDecision } from "@/lib/workflows/workflow-tool-approval";
 import type { Agent } from "@/types/agent/agent";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { PendingApproval } from "@/types/tool/approval";
-import type {
-  WorkflowApprovalConfig,
-  WorkflowNode,
-  WorkflowNodeRunState,
+import {
+  type AiStepNodeData,
+  RESERVED_STRUCTURED_OUTPUT_FIELDS,
+  type WorkflowNode,
+  type WorkflowNodeRunState,
 } from "@/types/workflows/workflow";
+
+/** Minimal durable Inngest `step` contract required by workflow execution helpers. */
+export interface WorkflowStepTools {
+  run: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  waitForEvent: (id: string, opts: unknown) => Promise<any>;
+}
 
 /** Projection of persisted workflow settings needed by node executors. */
 export type WorkflowRunExecutionRow = Omit<
@@ -53,24 +58,6 @@ export type NodeStepOutcome =
   | { status: "failed" };
 
 /**
- * Resolves human review timing for a workflow node (`before`, `after`, or `none`).
- */
-export function resolveNodeReviewGate(
-  node: WorkflowNode,
-  approvalConfig: WorkflowApprovalConfig,
-): "before" | "after" | "none" {
-  if (node.data.kind === "ai_step") {
-    if (!node.data.requiresReview) return "none";
-    if (node.data.reviewTiming) return node.data.reviewTiming;
-    return approvalConfig.defaultReviewGate === "before" ? "before" : "after";
-  }
-  if (node.data.kind === "http_request" && node.data.requiresReview) {
-    return "before";
-  }
-  return "none";
-}
-
-/**
  * Marks a workflow run as failed in PostgreSQL and emits an `error` realtime event.
  */
 export async function failWorkflowRun(
@@ -79,24 +66,207 @@ export async function failWorkflowRun(
   errorMessage: string,
   emit: (data: WorkflowStreamEvent) => Promise<void>,
 ): Promise<void> {
-  const updated = await db
-    .update(workflowRun)
-    .set({
-      status: "failed",
-      currentNodeId: nodeId ?? null,
-      errorMessage,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
-    .returning({ id: workflowRun.id });
+  const updated = await updateActiveWorkflowRun(runId, {
+    status: "failed",
+    currentNodeId: nodeId ?? null,
+    errorMessage,
+  });
 
   if (updated.length > 0) {
     await emit({ type: "error", nodeId, message: errorMessage });
   }
 }
 
+async function resolveNodeChatModel(params: {
+  userId: string;
+  nodeModelId?: string;
+  nodeReasoningEffort?: WorkflowRow["reasoningEffort"];
+  workflowRow: WorkflowRunExecutionRow;
+  allNodes: WorkflowNode[];
+}) {
+  const { userId, nodeModelId, nodeReasoningEffort, workflowRow, allNodes } =
+    params;
+  const targetModelId = nodeModelId || workflowRow.modelId;
+  const targetEffort =
+    (nodeModelId ? nodeReasoningEffort : workflowRow.reasoningEffort) ??
+    undefined;
+  const resolved = targetModelId
+    ? await resolveProvider(userId, targetModelId, targetEffort).catch(
+        () => null,
+      )
+    : (await loadWorkflowContext({ userId, workflowRow, nodes: allNodes }))
+        .resolvedProvider;
+  if (resolved?.sdkProvider?.chat && resolved.modelId) {
+    return resolved.sdkProvider.chat(resolved.modelId);
+  }
+  return undefined;
+}
+
+async function executeAiStepNodeWrapper(params: {
+  runId: string;
+  userId: string;
+  node: WorkflowNode & { data: AiStepNodeData };
+  stepIndex: number;
+  allNodes: WorkflowNode[];
+  workflowRow: WorkflowRunExecutionRow;
+  contextData: Record<string, unknown>;
+  inputAttachmentIds: string[];
+  outputAttachmentIds: string[];
+  activeWorkbookFilePath: string | null;
+  activeArtifact?: ArtifactData | null;
+  dryRun: boolean;
+  emit: (data: WorkflowStreamEvent) => Promise<void>;
+  resumedToolDecisions?: ResumedToolDecision[];
+  startedAt: string;
+}): Promise<NodeStepOutcome> {
+  const {
+    runId,
+    userId,
+    node,
+    stepIndex,
+    allNodes,
+    workflowRow,
+    contextData,
+    inputAttachmentIds,
+    outputAttachmentIds,
+    activeWorkbookFilePath,
+    activeArtifact,
+    dryRun,
+    emit,
+    resumedToolDecisions,
+    startedAt,
+  } = params;
+
+  let linkedAgent: Agent | null = null;
+  if (node.data.agentId) {
+    const [resolvedAgent] = await resolveLinkedSubagents(userId, [
+      node.data.agentId,
+    ]);
+    if (!resolvedAgent) {
+      await failWorkflowRun(
+        runId,
+        node.id,
+        `Linked agent "${node.data.agentId}" was not found or is no longer accessible.`,
+        emit,
+      );
+      return { status: "failed" };
+    }
+    linkedAgent = resolvedAgent;
+  }
+
+  const effective = resolveEffectiveAiStepConfig({
+    nodeData: node.data,
+    linkedAgent,
+    workflowRow,
+  });
+
+  const stageIds =
+    outputAttachmentIds.length > 0
+      ? [outputAttachmentIds[outputAttachmentIds.length - 1]]
+      : inputAttachmentIds;
+  const { attachmentRows } = workflowRow.requiresFileUpload
+    ? await buildFileContext(stageIds, userId)
+    : { attachmentRows: [] };
+
+  const wfCtx = await loadWorkflowContext({
+    userId,
+    workflowRow,
+    nodes: allNodes,
+    modelOverride: effective.modelId,
+    nodeOverride: {
+      reasoningEffort: effective.reasoningEffort,
+      knowledgeBaseIds: effective.knowledgeBaseIds,
+      skillMode: effective.skillMode,
+      skillIds: effective.skillIds,
+      subagentIds: effective.subagentIds,
+    },
+  });
+
+  try {
+    const aiRes = await executeAiStepNode({
+      runId,
+      nodeId: node.id,
+      nodeName: node.name,
+      stepIndex,
+      userId,
+      data: {
+        ...node.data,
+        mcpServerIds: effective.mcpServerIds,
+        subagentIds: effective.subagentIds,
+      },
+      workflow: workflowRow,
+      context: contextData,
+      resolvedProvider: wfCtx.resolvedProvider!,
+      allServers: wfCtx.allServers,
+      runMcpTools: wfCtx.mcpTools,
+      runToolSourceMap: wfCtx.toolSourceMap,
+      kbContext: wfCtx.kbContext,
+      skillCatalog: wfCtx.availableSkills,
+      preloadedSkills: wfCtx.selectedSkills,
+      linkedSubagents: wfCtx.linkedSubagents,
+      currentAttachmentRows: attachmentRows,
+      currentOutputAttachmentIds: outputAttachmentIds,
+      activeWorkbookFilePath,
+      activeArtifact,
+      dryRun,
+      emit,
+      resumedToolDecisions,
+      agentPersonaPrompt: effective.agentPersonaPrompt,
+      effectiveTools: effective.toolIds,
+    });
+
+    if (aiRes.status === "awaiting_tool_approval") {
+      return {
+        status: "awaiting_tool_approval",
+        pendingApprovals: aiRes.pendingApprovals,
+      };
+    }
+    if (aiRes.status === "failed") return { status: "failed" };
+
+    const structuredFields = aiRes.structuredOutput
+      ? Object.fromEntries(
+          Object.entries(aiRes.structuredOutput).filter(
+            ([k]) => !RESERVED_STRUCTURED_OUTPUT_FIELDS.has(k),
+          ),
+        )
+      : {};
+
+    return {
+      status: "completed",
+      activeHandles: ["main"],
+      contextEntry: {
+        ...structuredFields,
+        text: aiRes.summary,
+        ...(aiRes.structuredOutput ? { data: aiRes.structuredOutput } : {}),
+        artifact: aiRes.artifact,
+        outputAttachmentId: aiRes.outputAttachmentId,
+      },
+      outputAttachmentIds: aiRes.currentOutputAttachmentIds,
+      activeWorkbookFilePath: aiRes.activeWorkbookFilePath,
+      activeArtifact:
+        workflowRow.canvasConfig?.sharedCanvas !== false
+          ? (aiRes.artifact ?? activeArtifact ?? null)
+          : null,
+      nodeState: {
+        status: "completed",
+        summary: aiRes.summary,
+        ...(aiRes.structuredOutput
+          ? { structuredOutput: aiRes.structuredOutput }
+          : {}),
+        artifact: aiRes.artifact,
+        outputAttachmentId: aiRes.outputAttachmentId,
+        toolCalls: aiRes.toolCalls,
+        startedAt,
+        completedAt: new Date().toISOString(),
+      },
+    };
+  } finally {
+    await wfCtx.mcpCleanup();
+  }
+}
+
 /**
- * Executes a single DAG node (trigger, AI step, If condition, or HTTP request).
+ * Executes a single DAG node (trigger, AI step, If condition, Filter, or HTTP request).
  */
 export async function executeSingleWorkflowNode(params: {
   runId: string;
@@ -207,23 +377,16 @@ export async function executeSingleWorkflowNode(params: {
   }
 
   if (node.data.kind === "if_condition") {
-    let model: any;
-    if (node.data.evaluationMode !== "deterministic") {
-      const targetModelId = node.data.modelId || workflowRow.modelId;
-      const targetEffort =
-        (node.data.modelId
-          ? node.data.reasoningEffort
-          : workflowRow.reasoningEffort) ?? undefined;
-      const resolved = targetModelId
-        ? await resolveProvider(userId, targetModelId, targetEffort).catch(
-            () => null,
-          )
-        : (await loadWorkflowContext({ userId, workflowRow, nodes: allNodes }))
-            .resolvedProvider;
-      if (resolved?.sdkProvider?.chat && resolved.modelId) {
-        model = resolved.sdkProvider.chat(resolved.modelId);
-      }
-    }
+    const model =
+      node.data.evaluationMode !== "deterministic"
+        ? await resolveNodeChatModel({
+            userId,
+            nodeModelId: node.data.modelId,
+            nodeReasoningEffort: node.data.reasoningEffort,
+            workflowRow,
+            allNodes,
+          })
+        : undefined;
     const condRes = await evaluateIfConditionNode({
       data: node.data,
       context: contextData,
@@ -252,23 +415,16 @@ export async function executeSingleWorkflowNode(params: {
   }
 
   if (node.data.kind === "filter") {
-    let model: any;
-    if (node.data.evaluationMode === "llm") {
-      const targetModelId = node.data.modelId || workflowRow.modelId;
-      const targetEffort =
-        (node.data.modelId
-          ? node.data.reasoningEffort
-          : workflowRow.reasoningEffort) ?? undefined;
-      const resolved = targetModelId
-        ? await resolveProvider(userId, targetModelId, targetEffort).catch(
-            () => null,
-          )
-        : (await loadWorkflowContext({ userId, workflowRow, nodes: allNodes }))
-            .resolvedProvider;
-      if (resolved?.sdkProvider?.chat && resolved.modelId) {
-        model = resolved.sdkProvider.chat(resolved.modelId);
-      }
-    }
+    const model =
+      node.data.evaluationMode === "llm"
+        ? await resolveNodeChatModel({
+            userId,
+            nodeModelId: node.data.modelId,
+            nodeReasoningEffort: node.data.reasoningEffort,
+            workflowRow,
+            allNodes,
+          })
+        : undefined;
     const filterRes = await executeFilterNode({
       data: node.data,
       context: contextData,
@@ -301,232 +457,14 @@ export async function executeSingleWorkflowNode(params: {
     };
   }
 
-  if (node.data.kind !== "ai_step") {
-    await failWorkflowRun(
-      runId,
-      node.id,
-      `Unsupported node kind "${node.data.kind}" in single-node executor.`,
-      emit,
-    );
-    return { status: "failed" };
-  }
-
-  let linkedAgent: Agent | null = null;
-  if (node.data.agentId) {
-    const [resolvedAgent] = await resolveLinkedSubagents(userId, [
-      node.data.agentId,
-    ]);
-    if (!resolvedAgent) {
-      await failWorkflowRun(
-        runId,
-        node.id,
-        `Linked agent "${node.data.agentId}" was not found or is no longer accessible.`,
-        emit,
-      );
-      return { status: "failed" };
-    }
-    linkedAgent = resolvedAgent;
-  }
-
-  const effective = resolveEffectiveAiStepConfig({
-    nodeData: node.data,
-    linkedAgent,
-    workflowRow,
-  });
-
-  const stageIds =
-    outputAttachmentIds.length > 0
-      ? [outputAttachmentIds[outputAttachmentIds.length - 1]]
-      : inputAttachmentIds;
-  const { attachmentRows } = workflowRow.requiresFileUpload
-    ? await buildFileContext(stageIds, userId)
-    : { attachmentRows: [] };
-
-  const wfCtx = await loadWorkflowContext({
-    userId,
-    workflowRow,
-    nodes: allNodes,
-    modelOverride: effective.modelId,
-    nodeOverride: {
-      reasoningEffort: effective.reasoningEffort,
-      knowledgeBaseIds: effective.knowledgeBaseIds,
-      skillMode: effective.skillMode,
-      skillIds: effective.skillIds,
-      subagentIds: effective.subagentIds,
-    },
-  });
-
-  try {
-    const aiRes = await executeAiStepNode({
-      runId,
-      nodeId: node.id,
-      nodeName: node.name,
-      stepIndex,
-      userId,
-      data: {
-        ...node.data,
-        mcpServerIds: effective.mcpServerIds,
-        subagentIds: effective.subagentIds,
-      },
-      workflow: workflowRow,
-      context: contextData,
-      resolvedProvider: wfCtx.resolvedProvider!,
-      allServers: wfCtx.allServers,
-      runMcpTools: wfCtx.mcpTools,
-      runToolSourceMap: wfCtx.toolSourceMap,
-      kbContext: wfCtx.kbContext,
-      skillCatalog: wfCtx.availableSkills,
-      preloadedSkills: wfCtx.selectedSkills,
-      linkedSubagents: wfCtx.linkedSubagents,
-      currentAttachmentRows: attachmentRows,
-      currentOutputAttachmentIds: outputAttachmentIds,
-      activeWorkbookFilePath,
-      activeArtifact,
-      dryRun,
-      emit,
-      resumedToolDecisions,
-      agentPersonaPrompt: effective.agentPersonaPrompt,
-      effectiveTools: effective.toolIds,
-    });
-
-    if (aiRes.status === "awaiting_tool_approval") {
-      return {
-        status: "awaiting_tool_approval",
-        pendingApprovals: aiRes.pendingApprovals,
-      };
-    }
-    if (aiRes.status === "failed") return { status: "failed" };
-
-    const structuredFields = aiRes.structuredOutput
-      ? Object.fromEntries(
-          Object.entries(aiRes.structuredOutput).filter(
-            ([k]) =>
-              k !== "text" &&
-              k !== "data" &&
-              k !== "artifact" &&
-              k !== "outputAttachmentId",
-          ),
-        )
-      : {};
-
-    return {
-      status: "completed",
-      activeHandles: ["main"],
-      contextEntry: {
-        ...structuredFields,
-        text: aiRes.summary,
-        ...(aiRes.structuredOutput ? { data: aiRes.structuredOutput } : {}),
-        artifact: aiRes.artifact,
-        outputAttachmentId: aiRes.outputAttachmentId,
-      },
-      outputAttachmentIds: aiRes.currentOutputAttachmentIds,
-      activeWorkbookFilePath: aiRes.activeWorkbookFilePath,
-      activeArtifact:
-        workflowRow.canvasConfig?.sharedCanvas !== false
-          ? (aiRes.artifact ?? activeArtifact ?? null)
-          : null,
-      nodeState: {
-        status: "completed",
-        summary: aiRes.summary,
-        ...(aiRes.structuredOutput
-          ? { structuredOutput: aiRes.structuredOutput }
-          : {}),
-        artifact: aiRes.artifact,
-        outputAttachmentId: aiRes.outputAttachmentId,
-        toolCalls: aiRes.toolCalls,
-        startedAt,
-        completedAt: new Date().toISOString(),
-      },
-    };
-  } finally {
-    await wfCtx.mcpCleanup();
-  }
-}
-
-/**
- * Executes a single node with its pre/post human review gates, tool approval loop,
- * state updates, and DB/realtime checkpointing. Shared by top-level DAG and loop body runs.
- */
-export async function executeNodeWithGates(params: {
-  step: {
-    run: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
-    waitForEvent: (id: string, opts: unknown) => Promise<unknown>;
-  };
-  runId: string;
-  userId: string;
-  node: WorkflowNode;
-  stepIndex: number;
-  allNodes: WorkflowNode[];
-  workflowRow: WorkflowRunExecutionRow;
-  initialData: Record<string, unknown>;
-  contextData: Record<string, unknown>;
-  inputAttachmentIds: string[];
-  outputAttachmentIds: string[];
-  activeWorkbookFilePath: string | null;
-  activeArtifact: ArtifactData | null;
-  dryRun: boolean;
-  nodeStates: Record<string, WorkflowNodeRunState>;
-  emit: (data: WorkflowStreamEvent) => Promise<void>;
-  stepIdPrefix?: string;
-}): Promise<
-  | {
-      status: "completed";
-      activeHandles: string[];
-      nodeState: WorkflowNodeRunState;
-      contextEntry: unknown;
-      outputAttachmentIds: string[];
-      activeWorkbookFilePath: string | null;
-      activeArtifact: ArtifactData | null;
-    }
-  | { status: "cancelled" }
-  | { status: "failed" }
-> {
-  const {
-    step,
-    runId,
-    userId,
-    node,
-    stepIndex,
-    allNodes,
-    workflowRow,
-    initialData,
-    contextData,
-    inputAttachmentIds,
-    outputAttachmentIds,
-    activeWorkbookFilePath,
-    activeArtifact,
-    dryRun,
-    nodeStates,
-    emit,
-    stepIdPrefix = "",
-  } = params;
-
-  const reviewGate = resolveNodeReviewGate(node, workflowRow.approvalConfig);
-  if (reviewGate === "before") {
-    const ok = await awaitHumanReviewGate({
-      step: step as Parameters<typeof awaitHumanReviewGate>[0]["step"],
-      runId,
-      nodeId: node.id,
-      reviewPhase: "before",
-      nodeStates,
-      emit,
-      stepIdPrefix,
-    });
-    if (!ok) return { status: "failed" };
-  }
-
-  const executeStepId = stepIdPrefix
-    ? `${stepIdPrefix}node-${node.id}`
-    : `execute-node-${node.id}`;
-  const initialOutcome = (await step.run(executeStepId, async () =>
-    executeSingleWorkflowNode({
+  if (node.data.kind === "ai_step") {
+    return executeAiStepNodeWrapper({
       runId,
       userId,
-      node,
+      node: node as WorkflowNode & { data: AiStepNodeData },
       stepIndex,
       allNodes,
       workflowRow,
-      initialData,
       contextData,
       inputAttachmentIds,
       outputAttachmentIds,
@@ -534,81 +472,16 @@ export async function executeNodeWithGates(params: {
       activeArtifact,
       dryRun,
       emit,
-    }),
-  )) as NodeStepOutcome;
+      resumedToolDecisions,
+      startedAt,
+    });
+  }
 
-  const outcome = await resolvePendingToolApprovalLoop({
-    step: step as Parameters<typeof resolvePendingToolApprovalLoop>[0]["step"],
-    outcome: initialOutcome,
+  await failWorkflowRun(
     runId,
-    userId,
-    node,
-    stepIndex,
-    allNodes,
-    workflowRow,
-    initialData,
-    contextData,
-    inputAttachmentIds,
-    outputAttachmentIds,
-    activeWorkbookFilePath,
-    activeArtifact,
-    dryRun,
-    nodeStates,
+    node.id,
+    `Unsupported node kind "${node.data.kind}" in single-node executor.`,
     emit,
-    stepIdPrefix,
-  });
-
-  if (outcome.status === "cancelled") {
-    return { status: "cancelled" };
-  }
-  if (outcome.status !== "completed") {
-    return { status: "failed" };
-  }
-
-  nodeStates[node.id] = outcome.nodeState;
-  contextData[node.data.variableName] = outcome.contextEntry;
-
-  const checkpointStepId = `${stepIdPrefix}checkpoint-node-${node.id}`;
-  await step.run(checkpointStepId, async () => {
-    await db
-      .update(workflowRun)
-      .set({
-        currentNodeId: node.id,
-        nodeStates,
-        contextData,
-        outputAttachmentIds: outcome.outputAttachmentIds,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")));
-    await emit({
-      type: "workflow-node-complete",
-      runId,
-      nodeId: node.id,
-      state: outcome.nodeState,
-      outputAttachmentIds: outcome.outputAttachmentIds,
-    });
-  });
-
-  if (reviewGate === "after") {
-    const ok = await awaitHumanReviewGate({
-      step: step as Parameters<typeof awaitHumanReviewGate>[0]["step"],
-      runId,
-      nodeId: node.id,
-      reviewPhase: "after",
-      nodeStates,
-      emit,
-      stepIdPrefix,
-    });
-    if (!ok) return { status: "failed" };
-  }
-
-  return {
-    status: "completed",
-    activeHandles: outcome.activeHandles,
-    nodeState: outcome.nodeState,
-    contextEntry: outcome.contextEntry,
-    outputAttachmentIds: outcome.outputAttachmentIds,
-    activeWorkbookFilePath: outcome.activeWorkbookFilePath,
-    activeArtifact: outcome.activeArtifact ?? activeArtifact,
-  };
+  );
+  return { status: "failed" };
 }

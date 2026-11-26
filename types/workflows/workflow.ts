@@ -83,6 +83,17 @@ export interface WebhookTriggerNodeData {
 }
 
 /**
+ * Reserved context keys on AI step outputs that user-defined structured output
+ * fields cannot shadow.
+ */
+export const RESERVED_STRUCTURED_OUTPUT_FIELDS: ReadonlySet<string> = new Set([
+  "text",
+  "data",
+  "artifact",
+  "outputAttachmentId",
+]);
+
+/**
  * Supported field types for structured JSON output on an AI Step node.
  */
 export type StructuredOutputFieldType =

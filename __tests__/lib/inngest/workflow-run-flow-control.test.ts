@@ -27,10 +27,18 @@ vi.mock("@/lib/inngest/client", () => ({
   },
 }));
 
-vi.mock("@/lib/workflows/workflow-run-helpers", () => ({
+vi.mock("@/lib/workflows/workflow-run-gates", () => ({
   executeNodeWithGates: mockExecuteNodeWithGates,
-  failWorkflowRun: mockFailWorkflowRun,
 }));
+
+vi.mock("@/lib/workflows/workflow-run-helpers", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/workflows/workflow-run-helpers")>();
+  return {
+    ...actual,
+    failWorkflowRun: mockFailWorkflowRun,
+  };
+});
 
 import { inngest } from "@/lib/inngest/client";
 import { executeWorkflowRun } from "@/lib/inngest/functions/workflow-run";

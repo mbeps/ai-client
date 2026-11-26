@@ -1,8 +1,5 @@
 import { generateText, isStepCount } from "ai";
-import { and, eq, ne } from "drizzle-orm";
 import { env } from "@/config/env";
-import { db } from "@/drizzle/db";
-import { workflowRun } from "@/drizzle/schemas/workflow-schema";
 import { generateStructuredObject } from "@/lib/chat/generate-structured-object";
 import type { WorkflowStreamEvent } from "@/lib/inngest/workflow-run-channel";
 import {
@@ -23,6 +20,7 @@ import {
   resolveStepCanvasPolicy,
   resolveStepFileContext,
 } from "@/lib/workflows/step-tool-filtering";
+import { updateActiveWorkflowRun } from "@/lib/workflows/workflow-run-db";
 import {
   applyCanvasToolEnforcement,
   executeResumedToolDecisions,
@@ -39,6 +37,7 @@ import type { PendingApproval } from "@/types/tool/approval";
 import type { ToolCallState } from "@/types/tool/tool-call";
 import type {
   AiStepNodeData,
+  StructuredOutputField,
   WorkflowApprovalConfig,
   WorkflowCanvasConfig,
 } from "@/types/workflows/workflow";
@@ -101,6 +100,25 @@ export type ExecuteAiStepNodeResult =
       errorMessage: string;
       errorCode?: string;
     };
+
+async function runStructuredExtraction(params: {
+  model: ReturnType<ResolvedProvider["sdkProvider"]["chat"]>;
+  fields: StructuredOutputField[];
+  variableName: string;
+  nodeName: string;
+  system: string;
+  prompt: string;
+}): Promise<Record<string, unknown>> {
+  const outputSchema = buildZodSchemaFromOutputFields(params.fields);
+  return (await generateStructuredObject({
+    model: params.model,
+    schema: outputSchema,
+    schemaName: params.variableName || "step_output",
+    schemaDescription: `Structured output for workflow step "${params.nodeName}"`,
+    system: params.system,
+    prompt: params.prompt,
+  })) as Record<string, unknown>;
+}
 
 /**
  * Executes an `ai_step` workflow node: compiles prompt templates, enforces canvas policies
@@ -255,15 +273,14 @@ export async function executeAiStepNode(
     const model = resolvedProvider.sdkProvider.chat(resolvedProvider.modelId);
 
     if (isStructured && Object.keys(wrappedTools).length === 0) {
-      const outputSchema = buildZodSchemaFromOutputFields(structuredFields);
-      const structuredOutput = (await generateStructuredObject({
+      const structuredOutput = await runStructuredExtraction({
         model,
-        schema: outputSchema,
-        schemaName: data.variableName || "step_output",
-        schemaDescription: `Structured output for workflow step "${nodeName}"`,
+        fields: structuredFields,
+        variableName: data.variableName,
+        nodeName,
         system: systemPrompt,
         prompt: userMessage,
-      })) as Record<string, unknown>;
+      });
 
       return {
         status: "completed",
@@ -346,7 +363,6 @@ export async function executeAiStepNode(
 
     let structuredOutput: Record<string, unknown> | undefined;
     if (isStructured) {
-      const outputSchema = buildZodSchemaFromOutputFields(structuredFields);
       const toolResultsText =
         turn.toolCalls.length > 0
           ? turn.toolCalls
@@ -366,15 +382,15 @@ export async function executeAiStepNode(
         .filter(Boolean)
         .join("\n\n");
 
-      structuredOutput = (await generateStructuredObject({
+      structuredOutput = await runStructuredExtraction({
         model,
-        schema: outputSchema,
-        schemaName: data.variableName || "step_output",
-        schemaDescription: `Structured output for workflow step "${nodeName}"`,
+        fields: structuredFields,
+        variableName: data.variableName,
+        nodeName,
         system:
           "Extract and format the final response into the required structured JSON schema.",
         prompt: extractionPrompt,
-      })) as Record<string, unknown>;
+      });
     }
 
     return {
@@ -392,10 +408,11 @@ export async function executeAiStepNode(
     };
   } catch (err) {
     const classified = classifyAiStepError(err);
-    await db
-      .update(workflowRun)
-      .set({ status: "failed", errorMessage: classified.message })
-      .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")));
+    await updateActiveWorkflowRun(runId, {
+      status: "failed",
+      currentNodeId: nodeId,
+      errorMessage: classified.message,
+    });
     await emit({
       type: "error",
       nodeId,
