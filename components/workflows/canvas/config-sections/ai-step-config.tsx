@@ -250,13 +250,10 @@ export function AiStepConfig({
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem
-          value="knowledge-skills"
-          className="rounded-lg border px-3"
-        >
+        <AccordionItem value="knowledgebase" className="rounded-lg border px-3">
           <AccordionTrigger className="py-2.5 text-xs font-semibold hover:no-underline">
             <span className="flex items-center gap-2">
-              Knowledge &amp; Skills
+              Knowledgebase
               {(data.knowledgeBaseIds?.length ?? 0) > 0 && (
                 <Badge
                   variant="secondary"
@@ -281,7 +278,25 @@ export function AiStepConfig({
                 maxHeight="220px"
               />
             </div>
+          </AccordionContent>
+        </AccordionItem>
 
+        <AccordionItem value="skills" className="rounded-lg border px-3">
+          <AccordionTrigger className="py-2.5 text-xs font-semibold hover:no-underline">
+            <span className="flex items-center gap-2">
+              Skills
+              {effectiveSkillMode === "specific" &&
+                (data.skillIds?.length ?? 0) > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="px-1.5 py-0 font-mono text-[10px]"
+                  >
+                    {data.skillIds!.length}
+                  </Badge>
+                )}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-4 pt-1 pb-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Skill Loading Mode</Label>
               <Select

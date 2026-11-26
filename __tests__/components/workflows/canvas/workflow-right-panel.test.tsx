@@ -178,7 +178,7 @@ describe("WorkflowRightPanel", () => {
     expect(screen.getByText(/agent not found/i)).toBeInTheDocument();
   });
 
-  it("expands Connected apps, Knowledge & Skills, and More accordions and emits updates", () => {
+  it("expands Connected apps, Knowledgebase, Skills, and More accordions and emits updates", () => {
     const onUpdateNode = vi.fn();
     const node = makeAiNode({ prompt: "Hello" });
     render(
@@ -193,8 +193,11 @@ describe("WorkflowRightPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /connected apps/i }));
     expect(screen.getByTestId("tool-picker-list")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /knowledge & skills/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^knowledgebase/i }));
     expect(screen.getByTestId("kb-picker")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^skills/i }));
+    expect(screen.getByText("Skill Loading Mode")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^more/i }));
     expect(screen.getByLabelText("Model Override")).toBeInTheDocument();
