@@ -28,6 +28,7 @@ import {
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { sliceThreadFromLatestCompaction } from "@/lib/chat/slice-thread-from-compaction";
 import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
+import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { chatChannel } from "@/lib/inngest/chat-channel";
 import {
   buildStreamExecutionConfig,

@@ -278,9 +278,7 @@ export function useWorkflowEditor({
       ),
     );
     if (hasOverlap) {
-      form.setNodes(
-        autoLayoutWorkflowNodes(res.value.nodes, res.value.edges),
-      );
+      form.setNodes(autoLayoutWorkflowNodes(res.value.nodes, res.value.edges));
     }
   };
 

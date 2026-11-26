@@ -280,7 +280,10 @@ export async function executeAiStepNode(
     const pass1Instructions =
       isStructured && Object.keys(wrappedTools).length > 0
         ? `${systemPrompt}\n\nTarget structured output fields (ensure your final response includes all facts needed for these fields):\n${structuredFields
-            .map((f) => `- ${f.name} (${f.type})${f.description ? `: ${f.description}` : ""}`)
+            .map(
+              (f) =>
+                `- ${f.name} (${f.type})${f.description ? `: ${f.description}` : ""}`,
+            )
             .join("\n")}`
         : systemPrompt;
 

@@ -274,7 +274,7 @@ export function WorkflowBuilderChat({
           onStop={stopStream}
           onSend={handleSend}
           onSelectionsChange={(selections) =>
-            setSelectedModelId(selections.model)
+            setSelectedModelId(selections.modelId)
           }
           servers={[]}
         />

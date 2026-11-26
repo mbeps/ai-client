@@ -183,7 +183,15 @@ function WorkflowCanvasInner({
           },
         };
       }),
-    [nodes, selectedNodeId, nodeStates, readOnly, setSelectedNodeId, agentById],
+    [
+      nodes,
+      selectedNodeId,
+      nodeStates,
+      readOnly,
+      setSelectedNodeId,
+      agentById,
+      setPanelMode,
+    ],
   );
 
   const rfEdges = useMemo<Edge[]>(
