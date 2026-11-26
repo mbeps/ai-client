@@ -146,7 +146,7 @@ export function WorkflowRightPanel({
     <>
       <aside
         aria-label="Workflow studio panel"
-        className="bg-background hidden h-full w-[360px] shrink-0 flex-col border-l lg:flex xl:w-[400px]"
+        className="bg-background hidden h-full w-[420px] shrink-0 flex-col border-l lg:flex xl:w-[460px]"
       >
         {content}
       </aside>

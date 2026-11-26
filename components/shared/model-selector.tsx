@@ -37,6 +37,8 @@ interface ModelSelectorProps {
   allowClear?: boolean;
   /** Placeholder shown when no model is selected and allowClear is true. */
   placeholder?: string;
+  /** Optional footer content rendered at the bottom of the model picker popover. */
+  footer?: React.ReactNode;
 }
 
 /**
@@ -68,6 +70,7 @@ export function ModelSelector({
   type = "chat",
   allowClear = false,
   placeholder,
+  footer,
 }: ModelSelectorProps) {
   const { models, isLoading } = useUserModels(type);
   const isEmpty = !isLoading && models.length === 0;
@@ -191,6 +194,7 @@ export function ModelSelector({
               </ComboboxGroup>
             )}
           </ComboboxList>
+          {footer && <div className="border-t p-2.5">{footer}</div>}
         </ComboboxContent>
       </Combobox>
       {canShowClear && (

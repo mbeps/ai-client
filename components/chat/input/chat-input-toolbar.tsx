@@ -9,9 +9,13 @@ import {
   Square,
   X,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { AttachmentsMenu } from "@/components/chat/attachments-menu";
 import { ContextUsagePill } from "@/components/chat/context-usage-pill";
-import { ReasoningEffortSelector } from "@/components/chat/input/reasoning-effort-selector";
+import {
+  ReasoningEffortSelector,
+  ReasoningEffortSlider,
+} from "@/components/chat/input/reasoning-effort-selector";
 import { ModelSelector } from "@/components/shared/model-selector";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
@@ -445,9 +449,24 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
       props.selectedModelObj?.reasoningEffortFormat &&
       props.selectedModelObj?.reasoningEffortFormat !== "none",
   );
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (typeof width === "number") {
+        setIsNarrow(width < 420);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className="flex items-center justify-between pt-1">
+    <div ref={toolbarRef} className="flex items-center justify-between pt-1">
       <div className="flex items-center gap-1.5">
         {!props.minimalMode && (
           <ChatInputAttachmentsTrigger
@@ -479,9 +498,25 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
           </ChatInputAttachmentsTrigger>
         )}
 
-        <ModelSelector value={props.modelId} onValueChange={props.setModelId} />
+        <ModelSelector
+          value={props.modelId}
+          onValueChange={props.setModelId}
+          footer={
+            isNarrow &&
+            canConfigureReasoning &&
+            props.reasoningEffort &&
+            props.onReasoningEffortChange ? (
+              <ReasoningEffortSlider
+                value={props.reasoningEffort}
+                onChange={props.onReasoningEffortChange}
+                disabled={props.hasNoModels || props.isLoading}
+              />
+            ) : undefined
+          }
+        />
 
-        {canConfigureReasoning &&
+        {!isNarrow &&
+          canConfigureReasoning &&
           props.reasoningEffort &&
           props.onReasoningEffortChange && (
             <ReasoningEffortSelector
