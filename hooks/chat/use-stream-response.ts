@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { getChat } from "@/actions/chats/get-chat";
 import { respondToToolApproval } from "@/actions/chats/respond-to-tool-approval";
 import {
@@ -204,8 +204,17 @@ export function useStreamResponse(
     handleStreamEvent,
   );
 
+  const prevChatIdRef = useRef(chatId);
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reset pointer and streaming state on chatId change
   useEffect(() => {
+    const prevChatId = prevChatIdRef.current;
+    prevChatIdRef.current = chatId;
+    // Preserve in-flight stream state when transitioning from draft ("") to a newly created chat ID
+    if (prevChatId === "" && chatId !== "") {
+      return;
+    }
+
     streamRefs.rejoinedRef.current = false;
     streamRefs.pendingRef.current = {
       userMessageId: null,
@@ -308,6 +317,7 @@ export function useStreamResponse(
       reasoningEffort?: ReasoningEffort,
       subagentIds?: string[],
       approvalMode?: ApprovalMode,
+      overrideChatId?: string,
     ): Promise<string> => {
       const promptIds = Array.isArray(selectedPromptId)
         ? selectedPromptId
@@ -316,7 +326,7 @@ export function useStreamResponse(
           : [];
 
       return executeStreamResponse({
-        chatId,
+        chatId: overrideChatId || chatId,
         userMsgId,
         content,
         parentId,

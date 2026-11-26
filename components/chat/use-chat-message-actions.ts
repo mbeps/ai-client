@@ -3,7 +3,6 @@ import type { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { extractCitations } from "@/lib/chat/extract-citations";
 import { resolveRegeneratePayload } from "@/lib/chat/extract-regenerate-payload";
 import { getDeepestLeaf } from "@/lib/chat/get-deepest-leaf";
-import type { PendingChatLaunch } from "@/lib/store/use-chat-tools-store";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Attachment } from "@/types/attachment/attachment";
 import type { Chat } from "@/types/chat/chat";
@@ -78,6 +77,11 @@ interface UseChatMessageActionsParams {
   streamResponse: StreamResponseFn;
   deleteMessageDb: (chatId: string, id: string) => void;
   setCurrentLeafDb: (chatId: string, leafId: string) => void;
+  ensureChatId?: (
+    content: string,
+    selectedKbIds: string[],
+    selectedPromptId?: string | string[],
+  ) => Promise<string | null>;
 }
 
 /**
@@ -93,6 +97,7 @@ export function useChatMessageActions({
   streamResponse,
   deleteMessageDb,
   setCurrentLeafDb,
+  ensureChatId,
 }: UseChatMessageActionsParams) {
   const handleSend = useCallback(
     async (
@@ -110,7 +115,20 @@ export function useChatMessageActions({
       reasoningEffort?: ReasoningEffort,
       subagentIds?: string[],
       approvalMode?: ApprovalMode,
-    ) => {
+    ): Promise<boolean> => {
+      let targetChatId = chatId;
+      if (!targetChatId && ensureChatId) {
+        const resolved = await ensureChatId(
+          content,
+          selectedKbIds,
+          selectedPromptId,
+        );
+        if (!resolved) return false;
+        targetChatId = resolved;
+      }
+
+      const overrideChatId = !chatId && targetChatId ? targetChatId : undefined;
+
       await streamResponse(
         crypto.randomUUID(),
         content,
@@ -128,9 +146,11 @@ export function useChatMessageActions({
         reasoningEffort,
         subagentIds,
         approvalMode,
+        ...(overrideChatId ? [overrideChatId] : []),
       );
+      return true;
     },
-    [chat?.currentLeafId, streamResponse],
+    [chat?.currentLeafId, chatId, ensureChatId, streamResponse],
   );
 
   const handleEdit = useCallback(
@@ -274,45 +294,16 @@ export function useInitialChatAutoSend(
   isReady = true,
   initialReasoningEffort?: ReasoningEffort,
   initialApprovalMode?: ApprovalMode,
-  pendingLaunch?: PendingChatLaunch,
-  onConsumePendingLaunch?: () => void,
 ) {
   const sentInitial = useRef(false);
 
   useEffect(() => {
-    const hasLaunch = Boolean(pendingLaunch || initialMessage);
-    if (!hasLaunch || !chat || !isReady || sentInitial.current) return;
+    if (!initialMessage || !chat || !isReady || sentInitial.current) return;
     sentInitial.current = true;
     onInitialMessageSent?.();
-    onConsumePendingLaunch?.();
     clearMsgQueryParamFromUrl();
 
     if (Object.keys(chat.messages).length > 0) return;
-
-    if (pendingLaunch) {
-      handleSend(
-        pendingLaunch.content,
-        pendingLaunch.attachments,
-        pendingLaunch.model,
-        pendingLaunch.selectedServerIds,
-        pendingLaunch.selectedTools,
-        pendingLaunch.selectedPromptId,
-        pendingLaunch.selectedAssistantId ??
-          chat.agentId ??
-          chat.assistantId ??
-          undefined,
-        pendingLaunch.selectedKnowledgebases ?? [],
-        pendingLaunch.selectedSkillIds ?? [],
-        pendingLaunch.subagentsEnabled,
-        pendingLaunch.subagentModelId,
-        pendingLaunch.reasoningEffort,
-        pendingLaunch.subagentIds,
-        pendingLaunch.approvalMode,
-      );
-      return;
-    }
-
-    if (!initialMessage) return;
 
     handleSend(
       initialMessage,
@@ -346,8 +337,6 @@ export function useInitialChatAutoSend(
     isReady,
     initialReasoningEffort,
     initialApprovalMode,
-    pendingLaunch,
-    onConsumePendingLaunch,
   ]);
 }
 

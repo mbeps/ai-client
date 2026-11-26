@@ -47,9 +47,11 @@ function shouldAbortStalledWatchdog(params: {
   hasActiveCallingTools: boolean;
   isAwaitingApproval: boolean;
   attempts: number;
+  hasReceivedAnyChunk: boolean;
 }): boolean {
   if (params.isAwaitingApproval) return false;
   if (params.isConnectionError && params.attempts >= 10) return true;
+  if (!params.hasReceivedAnyChunk && params.attempts >= 4) return true;
   return !params.hasActiveCallingTools && params.attempts >= 30;
 }
 
@@ -67,6 +69,7 @@ async function executeWatchdogTick(params: {
   isConnectionError: boolean;
   hasActiveCallingTools: boolean;
   isAwaitingApproval: boolean;
+  hasReceivedAnyChunk: boolean;
   attempts: number;
   shouldSync: boolean;
 }) {
@@ -84,6 +87,7 @@ async function executeWatchdogTick(params: {
       isConnectionError: params.isConnectionError,
       hasActiveCallingTools: params.hasActiveCallingTools,
       isAwaitingApproval: params.isAwaitingApproval,
+      hasReceivedAnyChunk: params.hasReceivedAnyChunk,
       attempts: params.attempts,
     })
   ) {
@@ -139,10 +143,18 @@ function createWatchdogTickStatus(
     isAwaitingApproval,
   });
 
+  const hasReceivedAnyChunk =
+    refs.lastChunkTimeRef.current > refs.pendingRef.current.startTime ||
+    Boolean(refs.assistantMessageIdRef.current) ||
+    refs.accumulatedTextRef.current.length > 0 ||
+    refs.accumulatedReasoningRef.current.length > 0 ||
+    refs.activeToolCallsRef.current.length > 0;
+
   return {
     isConnectionError,
     hasActiveCallingTools,
     isAwaitingApproval,
+    hasReceivedAnyChunk,
     shouldSync,
   };
 }
@@ -206,6 +218,7 @@ export function useStreamWatchdog(
         isConnectionError: tick.isConnectionError,
         hasActiveCallingTools: tick.hasActiveCallingTools,
         isAwaitingApproval: tick.isAwaitingApproval,
+        hasReceivedAnyChunk: tick.hasReceivedAnyChunk,
         attempts,
         shouldSync: tick.shouldSync,
       });
