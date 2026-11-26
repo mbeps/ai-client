@@ -177,7 +177,10 @@ function WorkflowCanvasInner({
         targetHandle: edge.targetHandle,
         selected: selectedEdgeIds.has(edge.id),
         label:
-          edge.sourceHandle === "true" || edge.sourceHandle === "false"
+          edge.sourceHandle === "true" ||
+          edge.sourceHandle === "false" ||
+          edge.sourceHandle === "body" ||
+          edge.sourceHandle === "done"
             ? edge.sourceHandle
             : undefined,
         animated: nodeStates?.[edge.sourceNodeId]?.status === "running",

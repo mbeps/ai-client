@@ -34,11 +34,13 @@ import { ManualTriggerNode } from "@/components/workflows/canvas/nodes/manual-tr
 import { WebhookTriggerNode } from "@/components/workflows/canvas/nodes/webhook-trigger-node";
 
 describe("Workflow Custom Nodes & Registry", () => {
-  it("exports module-scope WORKFLOW_NODE_TYPES with all 5 node types", () => {
+  it("exports module-scope WORKFLOW_NODE_TYPES with all 7 node types", () => {
     expect(Object.keys(WORKFLOW_NODE_TYPES).sort()).toEqual([
       "ai_step",
+      "filter",
       "http_request",
       "if_condition",
+      "loop",
       "manual_trigger",
       "webhook_trigger",
     ]);

@@ -169,6 +169,36 @@ export function createDefaultWorkflowNode(
           rules: [],
         },
       };
+    case "loop":
+      return {
+        id,
+        type,
+        name: "Loop",
+        position,
+        data: {
+          kind: "loop",
+          variableName: buildUniqueVarName("loop", existingNodes),
+          mode: "for_each",
+          itemsTemplate: "",
+          maxIterations: 50,
+        },
+      };
+    case "filter":
+      return {
+        id,
+        type,
+        name: "Filter",
+        position,
+        data: {
+          kind: "filter",
+          variableName: buildUniqueVarName("filter", existingNodes),
+          itemsTemplate: "",
+          evaluationMode: "deterministic",
+          logic: "and",
+          rules: [],
+          continueWhenEmpty: true,
+        },
+      };
     case "http_request":
       return {
         id,

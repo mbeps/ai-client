@@ -2,10 +2,12 @@
 
 import {
   Bot,
+  Filter,
   GitBranch,
   Globe,
   type LucideIcon,
   Play,
+  Repeat,
   Search,
   Sparkles,
   Webhook,
@@ -47,6 +49,20 @@ const FLOW_CONTROL_ITEMS: PaletteNodeItem[] = [
     description: "Branch True / False via rules or LLM",
     icon: GitBranch,
     iconClassName: "text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    type: "loop",
+    label: "Loop",
+    description: "Iterate over an array or fixed count",
+    icon: Repeat,
+    iconClassName: "text-violet-600 dark:text-violet-400",
+  },
+  {
+    type: "filter",
+    label: "Filter",
+    description: "Filter array items via rules or LLM",
+    icon: Filter,
+    iconClassName: "text-sky-600 dark:text-sky-400",
   },
 ];
 

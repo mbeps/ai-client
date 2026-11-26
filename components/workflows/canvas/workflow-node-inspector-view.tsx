@@ -2,9 +2,11 @@
 
 import {
   ArrowLeft,
+  Filter,
   GitBranch,
   Globe,
   Play,
+  Repeat,
   Sparkles,
   Trash2,
   Webhook,
@@ -15,8 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AiStepConfig } from "@/components/workflows/canvas/config-sections/ai-step-config";
+import { FilterConfig } from "@/components/workflows/canvas/config-sections/filter-config";
 import { HttpRequestConfig } from "@/components/workflows/canvas/config-sections/http-request-config";
 import { IfConditionConfig } from "@/components/workflows/canvas/config-sections/if-condition-config";
+import { LoopConfig } from "@/components/workflows/canvas/config-sections/loop-config";
 import { TriggerConfig } from "@/components/workflows/canvas/config-sections/trigger-config";
 import type { Agent } from "@/types/agent/agent";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
@@ -76,6 +80,10 @@ function getNodeIcon(kind: WorkflowNodeType) {
       return Sparkles;
     case "if_condition":
       return GitBranch;
+    case "loop":
+      return Repeat;
+    case "filter":
+      return Filter;
     case "http_request":
       return Globe;
   }
@@ -146,6 +154,10 @@ export function WorkflowNodeInspectorView({
       updateData({
         body: `${node.data.body ?? ""} ${token}`.trim(),
       });
+    } else if (node.data.kind === "loop" && node.data.mode === "for_each") {
+      updateData({ itemsTemplate: token });
+    } else if (node.data.kind === "filter") {
+      updateData({ itemsTemplate: token });
     }
   };
 
@@ -244,6 +256,14 @@ export function WorkflowNodeInspectorView({
 
           {node.data.kind === "if_condition" && (
             <IfConditionConfig data={node.data} onChange={updateData} />
+          )}
+
+          {node.data.kind === "loop" && (
+            <LoopConfig data={node.data} onChange={updateData} />
+          )}
+
+          {node.data.kind === "filter" && (
+            <FilterConfig data={node.data} onChange={updateData} />
           )}
 
           {node.data.kind === "http_request" && (
