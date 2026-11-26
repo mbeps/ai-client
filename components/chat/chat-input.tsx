@@ -179,6 +179,12 @@ export interface ChatInputProps {
   /** Optional accessible label for the textarea. */
   textareaAriaLabel?: string;
 
+  /**
+   * When true, hides attachments, tools, KB, skills, mentions, and subagent controls
+   * while keeping model, reasoning, approval mode, context pill, and send/stop.
+   */
+  minimalMode?: boolean;
+
   /** Callback invoked when composer model, tool, KB, skill, or subagent selections change. */
   onSelectionsChange?: (selections: ChatComposerSelections) => void;
 }
@@ -318,6 +324,7 @@ function ChatInputMentionCommands(props: {
  * @author Maruf Bepary
  */
 export function ChatInput(props: ChatInputProps) {
+  const isMinimal = props.minimalMode ?? false;
   const defaults = resolveInputDefaults(props);
   const [input, setInput] = useState(defaults.initialValue);
   const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>(
@@ -327,9 +334,51 @@ export function ChatInput(props: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const effectiveProps = useMemo(
+    () =>
+      isMinimal
+        ? {
+            ...props,
+            onSend: (
+              content: string,
+              _attachments: Attachment[],
+              model: string,
+              _selectedServerIds: string[],
+              _selectedTools: string[],
+              selectedPromptId?: string | string[],
+              selectedAssistantId?: string,
+              _selectedKnowledgebases?: string[],
+              _selectedSkillIds?: string[],
+              _subagentsEnabled?: boolean,
+              subagentModelId?: string,
+              reasoningEffortArg?: ReasoningEffort,
+              _subagentIds?: string[],
+              approvalMode?: ApprovalMode,
+            ) =>
+              props.onSend(
+                content,
+                [],
+                model,
+                [],
+                [],
+                selectedPromptId,
+                selectedAssistantId,
+                [],
+                [],
+                false,
+                subagentModelId,
+                reasoningEffortArg,
+                [],
+                approvalMode,
+              ),
+          }
+        : props,
+    [isMinimal, props],
+  );
+
   const services = useChatInputServices(props.initialModelId);
   const interaction = useChatInteraction({
-    props,
+    props: effectiveProps,
     services,
     input,
     setInput,
@@ -402,49 +451,61 @@ export function ChatInput(props: ChatInputProps) {
     <div
       ref={containerRef}
       className={containerClass}
-      onDragOver={interaction.attachments.handleDragOver}
-      onDragLeave={interaction.attachments.handleDragLeave}
-      onDrop={interaction.attachments.handleDrop}
+      onDragOver={
+        isMinimal ? undefined : interaction.attachments.handleDragOver
+      }
+      onDragLeave={
+        isMinimal ? undefined : interaction.attachments.handleDragLeave
+      }
+      onDrop={isMinimal ? undefined : interaction.attachments.handleDrop}
     >
-      <ChatInputMentionCommands
-        openTrigger={interaction.mentions.openTrigger}
-        typeFilter={interaction.mentions.typeFilter}
-        filteredItems={interaction.mentions.filteredItems}
-        selectedIndex={interaction.mentions.selectedIndex}
-        onSelect={interaction.mentions.handleSelect}
-        onClose={interaction.handleCloseMentions}
-        containerRef={containerRef}
-      />
+      {!isMinimal && (
+        <ChatInputMentionCommands
+          openTrigger={interaction.mentions.openTrigger}
+          typeFilter={interaction.mentions.typeFilter}
+          filteredItems={interaction.mentions.filteredItems}
+          selectedIndex={interaction.mentions.selectedIndex}
+          onSelect={interaction.mentions.handleSelect}
+          onClose={interaction.handleCloseMentions}
+          containerRef={containerRef}
+        />
+      )}
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        multiple
-        accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/markdown,.md,.xlsx,.xlsm,.xls,.csv"
-        onChange={interaction.attachments.handleFileInputChange}
-      />
+      {!isMinimal && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/markdown,.md,.xlsx,.xlsm,.xls,.csv"
+          onChange={interaction.attachments.handleFileInputChange}
+        />
+      )}
 
-      <ActiveSelectionChips
-        selectedAssistant={interaction.mentions.selectedAssistant}
-        selectedPrompts={interaction.mentions.selectedPrompts}
-        selectedKbs={interaction.selections.selectedKbs}
-        knowledgebases={services.knowledgebases}
-        selectedSkills={interaction.selections.selectedSkills}
-        skills={accessibleSkills}
-        onRemoveAssistant={interaction.handleRemoveAssistant}
-        onRemovePrompt={interaction.prompts.handleRemovePrompt}
-        onRemoveKb={interaction.selections.handleRemoveKb}
-        onRemoveSkill={interaction.selections.handleRemoveSkill}
-      />
+      {!isMinimal && (
+        <ActiveSelectionChips
+          selectedAssistant={interaction.mentions.selectedAssistant}
+          selectedPrompts={interaction.mentions.selectedPrompts}
+          selectedKbs={interaction.selections.selectedKbs}
+          knowledgebases={services.knowledgebases}
+          selectedSkills={interaction.selections.selectedSkills}
+          skills={accessibleSkills}
+          onRemoveAssistant={interaction.handleRemoveAssistant}
+          onRemovePrompt={interaction.prompts.handleRemovePrompt}
+          onRemoveKb={interaction.selections.handleRemoveKb}
+          onRemoveSkill={interaction.selections.handleRemoveSkill}
+        />
+      )}
 
       <ModelCapabilityBanner hasNoModels={services.hasNoModels} />
 
-      <ChatInputAttachmentList
-        attachments={interaction.attachments.attachments}
-        supportsVision={services.supportsVision}
-        onRemove={interaction.attachments.removeAttachment}
-      />
+      {!isMinimal && (
+        <ChatInputAttachmentList
+          attachments={interaction.attachments.attachments}
+          supportsVision={services.supportsVision}
+          onRemove={interaction.attachments.removeAttachment}
+        />
+      )}
 
       <Textarea
         ref={textareaRef}
@@ -511,24 +572,27 @@ export function ChatInput(props: ChatInputProps) {
         onReasoningEffortChange={setReasoningEffort}
         approvalMode={interaction.selections.approvalMode}
         onToggleApprovalMode={interaction.selections.toggleApprovalMode}
+        minimalMode={isMinimal}
       />
 
-      <SubagentConfigDialog
-        open={interaction.selections.isSubagentDialogOpen}
-        onOpenChange={interaction.selections.setIsSubagentDialogOpen}
-        subagentsEnabled={interaction.selections.subagentsEnabled}
-        onToggleSubagents={interaction.selections.setSubagentsEnabled}
-        subagentModelId={interaction.selections.subagentModelId}
-        onSubagentModelChange={interaction.selections.setSubagentModelId}
-        selectedSubagentIds={interaction.selections.selectedSubagentIds}
-        onToggleSubagentId={interaction.selections.handleToggleSubagentId}
-        onSelectSubagentIds={interaction.selections.handleSelectSubagentIds}
-        excludeAgentId={
-          props.activeChatAssistantId ??
-          interaction.mentions.selectedAssistant?.id ??
-          undefined
-        }
-      />
+      {!isMinimal && (
+        <SubagentConfigDialog
+          open={interaction.selections.isSubagentDialogOpen}
+          onOpenChange={interaction.selections.setIsSubagentDialogOpen}
+          subagentsEnabled={interaction.selections.subagentsEnabled}
+          onToggleSubagents={interaction.selections.setSubagentsEnabled}
+          subagentModelId={interaction.selections.subagentModelId}
+          onSubagentModelChange={interaction.selections.setSubagentModelId}
+          selectedSubagentIds={interaction.selections.selectedSubagentIds}
+          onToggleSubagentId={interaction.selections.handleToggleSubagentId}
+          onSelectSubagentIds={interaction.selections.handleSelectSubagentIds}
+          excludeAgentId={
+            props.activeChatAssistantId ??
+            interaction.mentions.selectedAssistant?.id ??
+            undefined
+          }
+        />
+      )}
     </div>
   );
 }

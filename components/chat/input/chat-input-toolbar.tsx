@@ -158,6 +158,7 @@ function SendStopButton({
   isSendDisabled: boolean;
   approvalMode?: ApprovalMode;
   onToggleApprovalMode?: () => void;
+  minimalMode?: boolean;
 }) {
   if (isLoading) {
     return (
@@ -306,6 +307,7 @@ interface ChatInputActionButtonsProps {
   isSendDisabled: boolean;
   approvalMode?: ApprovalMode;
   onToggleApprovalMode?: () => void;
+  minimalMode?: boolean;
 }
 
 /**
@@ -318,7 +320,7 @@ interface ChatInputActionButtonsProps {
 function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
   return (
     <div className="flex items-center gap-1.5">
-      {props.subagentsEnabled && (
+      {!props.minimalMode && props.subagentsEnabled && (
         <SubagentsBadgeButton onOpen={props.onOpenSubagents} />
       )}
       <ContextUsagePill
@@ -352,6 +354,7 @@ function ChatInputActionButtons(props: ChatInputActionButtonsProps) {
         isSendDisabled={props.isSendDisabled}
         approvalMode={props.approvalMode}
         onToggleApprovalMode={props.onToggleApprovalMode}
+        minimalMode={props.minimalMode}
       />
     </div>
   );
@@ -412,6 +415,7 @@ export interface ChatInputToolbarProps {
   onReasoningEffortChange?: (effort: ReasoningEffort) => void;
   approvalMode?: ApprovalMode;
   onToggleApprovalMode?: () => void;
+  minimalMode?: boolean;
 }
 
 /**
@@ -445,33 +449,35 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
   return (
     <div className="flex items-center justify-between pt-1">
       <div className="flex items-center gap-1.5">
-        <ChatInputAttachmentsTrigger
-          isMobile={props.isMobile}
-          hasNoModels={props.hasNoModels}
-        >
-          <AttachmentsMenu
-            servers={props.servers}
-            fileInputRef={props.fileInputRef}
-            selectedTools={props.selectedTools}
-            onToggleTool={props.toggleTool}
-            onBulkSelect={props.handleBulkSelect}
-            knowledgebases={props.knowledgebases}
-            selectedKbs={props.selectedKbs}
-            onToggleKb={props.handleToggleKb}
-            skills={props.skills}
-            selectedSkills={props.selectedSkills}
-            onToggleSkill={props.handleToggleSkill}
-            prompts={props.prompts}
-            mcpPrompts={props.mcpPrompts}
-            selectedPromptIds={props.selectedPromptIds}
-            onTogglePrompt={props.handleTogglePrompt}
-            onClearPrompts={props.handleClearPrompts}
-            supportsVision={props.supportsVision}
-            supportsTools={props.supportsTools}
-            subagentsEnabled={props.subagentsEnabled}
-            onOpenSubagents={props.handleOpenSubagents}
-          />
-        </ChatInputAttachmentsTrigger>
+        {!props.minimalMode && (
+          <ChatInputAttachmentsTrigger
+            isMobile={props.isMobile}
+            hasNoModels={props.hasNoModels}
+          >
+            <AttachmentsMenu
+              servers={props.servers}
+              fileInputRef={props.fileInputRef}
+              selectedTools={props.selectedTools}
+              onToggleTool={props.toggleTool}
+              onBulkSelect={props.handleBulkSelect}
+              knowledgebases={props.knowledgebases}
+              selectedKbs={props.selectedKbs}
+              onToggleKb={props.handleToggleKb}
+              skills={props.skills}
+              selectedSkills={props.selectedSkills}
+              onToggleSkill={props.handleToggleSkill}
+              prompts={props.prompts}
+              mcpPrompts={props.mcpPrompts}
+              selectedPromptIds={props.selectedPromptIds}
+              onTogglePrompt={props.handleTogglePrompt}
+              onClearPrompts={props.handleClearPrompts}
+              supportsVision={props.supportsVision}
+              supportsTools={props.supportsTools}
+              subagentsEnabled={props.subagentsEnabled}
+              onOpenSubagents={props.handleOpenSubagents}
+            />
+          </ChatInputAttachmentsTrigger>
+        )}
 
         <ModelSelector value={props.modelId} onValueChange={props.setModelId} />
 
@@ -510,6 +516,7 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
         isSendDisabled={props.isSendDisabled}
         approvalMode={props.approvalMode}
         onToggleApprovalMode={props.onToggleApprovalMode}
+        minimalMode={props.minimalMode}
       />
     </div>
   );
