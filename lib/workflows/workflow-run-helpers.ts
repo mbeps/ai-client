@@ -90,12 +90,23 @@ async function resolveNodeChatModel(params: {
   const targetEffort =
     (nodeModelId ? nodeReasoningEffort : workflowRow.reasoningEffort) ??
     undefined;
-  const resolved = targetModelId
-    ? await resolveProvider(userId, targetModelId, targetEffort).catch(
-        () => null,
-      )
-    : (await loadWorkflowContext({ userId, workflowRow, nodes: allNodes }))
-        .resolvedProvider;
+  let resolved: Awaited<ReturnType<typeof resolveProvider>> | null;
+  if (targetModelId) {
+    resolved = await resolveProvider(userId, targetModelId, targetEffort).catch(
+      () => null,
+    );
+  } else {
+    const wfCtx = await loadWorkflowContext({
+      userId,
+      workflowRow,
+      nodes: allNodes,
+    });
+    try {
+      resolved = wfCtx.resolvedProvider;
+    } finally {
+      await wfCtx.mcpCleanup();
+    }
+  }
   if (resolved?.sdkProvider?.chat && resolved.modelId) {
     return resolved.sdkProvider.chat(resolved.modelId);
   }

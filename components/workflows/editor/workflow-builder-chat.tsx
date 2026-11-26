@@ -1,7 +1,7 @@
 "use client";
 
-import { AlertCircle, RotateCcw, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { AlertCircle, Loader2, RotateCcw, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getChat } from "@/actions/chats/get-chat";
 import {
   getOrCreateWorkflowChat,
@@ -43,6 +43,8 @@ export function WorkflowBuilderChat({
 }: WorkflowBuilderChatProps) {
   const { handleApiError } = useApiError();
   const [chatId, setChatId] = useState<string | null>(null);
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+  const creatingDraftRef = useRef(false);
   const { storeChat } = useChatStore(chatId ?? "");
   const [isLoadingChat, setIsLoadingChat] = useState(!isNew);
   const [isResetting, setIsResetting] = useState(false);
@@ -175,6 +177,18 @@ export function WorkflowBuilderChat({
     );
   };
 
+  const handleCreateDraftClick = async () => {
+    if (!onCreateDraft || creatingDraftRef.current) return;
+    creatingDraftRef.current = true;
+    setIsCreatingDraft(true);
+    try {
+      await onCreateDraft();
+    } finally {
+      creatingDraftRef.current = false;
+      setIsCreatingDraft(false);
+    }
+  };
+
   if (isNew) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
@@ -185,8 +199,18 @@ export function WorkflowBuilderChat({
             Save this draft first to build and edit nodes with AI.
           </p>
         </div>
-        <Button type="button" size="sm" onClick={() => void onCreateDraft?.()}>
-          Create Draft &amp; Start AI Builder
+        <Button
+          type="button"
+          size="sm"
+          disabled={isCreatingDraft}
+          onClick={() => void handleCreateDraftClick()}
+        >
+          {isCreatingDraft && (
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+          )}
+          {isCreatingDraft
+            ? "Creating Draft..."
+            : "Create Draft & Start AI Builder"}
         </Button>
       </div>
     );

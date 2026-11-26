@@ -535,4 +535,123 @@ describe("executeSingleWorkflowNode — agent persona & overrides", () => {
       },
     });
   });
+
+  it("restores and persists outcome.nodeState after post-execution review approval", async () => {
+    mockExecuteAiStepNode.mockResolvedValueOnce({
+      status: "completed",
+      summary: "Final output",
+      artifact: null,
+      outputAttachmentId: undefined,
+      currentOutputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      toolCalls: [],
+    });
+    mockUpdateReturning.mockResolvedValue([{ id: "run-1" }]);
+
+    const step = {
+      run: vi.fn(async (_id: string, fn: () => unknown) => fn()),
+      waitForEvent: vi.fn(async (_id: string, opts: { if: string }) => {
+        const match = opts.if.match(/gateId == "([^"]+)"/);
+        return {
+          data: {
+            runId: "run-1",
+            nodeId: "node-1",
+            gateId: match?.[1],
+            approved: true,
+          },
+        };
+      }),
+    };
+    const emit = vi.fn().mockResolvedValue(undefined);
+    const nodeStates: Record<string, any> = {};
+
+    const res = await executeNodeWithGates({
+      step,
+      runId: "run-1",
+      userId: "user-1",
+      node: makeAiNode({ requiresReview: true, reviewTiming: "after" }),
+      stepIndex: 0,
+      allNodes: [],
+      workflowRow: baseWorkflowRow,
+      initialData: {},
+      contextData: {},
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      activeArtifact: null,
+      dryRun: false,
+      nodeStates,
+      emit,
+    });
+
+    expect(res.status).toBe("completed");
+    expect(nodeStates["node-1"]).toMatchObject({
+      status: "completed",
+      summary: "Final output",
+    });
+    expect(step.run).toHaveBeenCalledWith(
+      "restore-after-review-node-1",
+      expect.any(Function),
+    );
+    expect(emit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        type: "workflow-node-complete",
+        runId: "run-1",
+        nodeId: "node-1",
+        state: expect.objectContaining({ status: "completed" }),
+      }),
+    );
+  });
+
+  it("closes workflow context via mcpCleanup when resolving default chat model for filter node", async () => {
+    const mockMcpCleanup = vi.fn().mockResolvedValue(undefined);
+    const mockChat = vi.fn(() => ({ id: "chat-model" }));
+    mockLoadWorkflowContext.mockResolvedValueOnce({
+      resolvedProvider: {
+        sdkProvider: { chat: mockChat },
+        modelId: "default-model",
+      },
+      mcpCleanup: mockMcpCleanup,
+    });
+    mockExecuteFilterNode.mockResolvedValueOnce({
+      status: "completed",
+      activeHandles: ["passed"],
+      passed: [{ id: 1 }],
+      filteredOutCount: 0,
+      summary: "Kept 1",
+    });
+
+    const outcome = await executeSingleWorkflowNode({
+      runId: "run-1",
+      userId: "user-1",
+      node: {
+        id: "filter-1",
+        type: "filter",
+        name: "LLM Filter",
+        position: { x: 0, y: 0 },
+        data: {
+          kind: "filter",
+          variableName: "filtered",
+          itemsTemplate: "{{items}}",
+          evaluationMode: "llm",
+          llmPrompt: "Keep valid",
+          continueWhenEmpty: true,
+        },
+      } as WorkflowNode,
+      stepIndex: 0,
+      allNodes: [],
+      workflowRow: { ...baseWorkflowRow, modelId: null, reasoningEffort: null },
+      initialData: {},
+      contextData: { items: [{ id: 1 }] },
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      dryRun: false,
+      emit,
+    });
+
+    expect(outcome.status).toBe("completed");
+    expect(mockMcpCleanup).toHaveBeenCalledTimes(1);
+    expect(mockChat).toHaveBeenCalledWith("default-model");
+  });
 });

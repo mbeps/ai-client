@@ -47,6 +47,9 @@ export function AiStepOutputSection({
               onChange({
                 outputMode,
                 ...(outputMode === "text" ? { canvasMode: "disabled" } : {}),
+                ...(outputMode === "canvas" && data.canvasMode === "disabled"
+                  ? { canvasMode: "inherit" }
+                  : {}),
                 ...(outputMode === "structured" && !data.structuredOutputSchema
                   ? { structuredOutputSchema: { fields: [] } }
                   : {}),

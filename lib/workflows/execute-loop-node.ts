@@ -47,18 +47,21 @@ function resolveLoopItems(
 
 function collectIterationResult(
   terminalBodyNodes: WorkflowNode[],
-  iterContextData: Record<string, unknown>,
+  iterCompletedOutputs: Map<string, { variableName: string; value: unknown }>,
   fallbackItem: unknown,
 ): unknown {
-  if (terminalBodyNodes.length === 0) {
+  const executedOutputs = terminalBodyNodes
+    .map((tn) => iterCompletedOutputs.get(tn.id))
+    .filter((entry) => entry !== undefined);
+  if (executedOutputs.length === 0) {
     return fallbackItem;
   }
-  if (terminalBodyNodes.length === 1) {
-    return iterContextData[terminalBodyNodes[0].data.variableName];
+  if (executedOutputs.length === 1) {
+    return executedOutputs[0].value;
   }
   const combined: Record<string, unknown> = {};
-  for (const tn of terminalBodyNodes) {
-    combined[tn.data.variableName] = iterContextData[tn.data.variableName];
+  for (const entry of executedOutputs) {
+    combined[entry.variableName] = entry.value;
   }
   return combined;
 }
@@ -164,6 +167,10 @@ export async function executeLoopNode(params: {
       [node.id, new Set(["body"])],
     ]);
     const iterSkipped = new Set<string>();
+    const iterCompletedOutputs = new Map<
+      string,
+      { variableName: string; value: unknown }
+    >();
 
     for (let bIdx = 0; bIdx < bodyNodes.length; bIdx++) {
       const bodyNode = bodyNodes[bIdx];
@@ -175,6 +182,18 @@ export async function executeLoopNode(params: {
       );
       if (bodyEligibility === "skip") {
         iterSkipped.add(bodyNode.id);
+        nodeStates[bodyNode.id] = { status: "skipped" };
+        await step.run(
+          `loop-${node.id}-iter-${i}-skip-${bodyNode.id}`,
+          async () => {
+            await updateActiveWorkflowRun(runId, { nodeStates });
+            await emit({
+              type: "workflow-node-skipped",
+              runId,
+              nodeId: bodyNode.id,
+            });
+          },
+        );
         continue;
       }
 
@@ -207,13 +226,17 @@ export async function executeLoopNode(params: {
 
       iterActiveHandles.set(bodyNode.id, new Set(bodyOutcome.activeHandles));
       iterContextData[bodyNode.data.variableName] = bodyOutcome.contextEntry;
+      iterCompletedOutputs.set(bodyNode.id, {
+        variableName: bodyNode.data.variableName,
+        value: bodyOutcome.contextEntry,
+      });
       outputAttachmentIds = bodyOutcome.outputAttachmentIds;
       activeWorkbookFilePath = bodyOutcome.activeWorkbookFilePath;
       activeArtifact = bodyOutcome.activeArtifact ?? activeArtifact;
     }
 
     results.push(
-      collectIterationResult(terminalBodyNodes, iterContextData, item),
+      collectIterationResult(terminalBodyNodes, iterCompletedOutputs, item),
     );
   }
 

@@ -223,4 +223,96 @@ describe("executeLoopNode", () => {
     );
     expect(result).toEqual({ status: "failed" });
   });
+
+  it("clears stale nodeStates and aggregates only terminal outputs from the current iteration", async () => {
+    mockResolveWorkflowTemplateValue.mockReturnValue(["item-0", "item-1"]);
+    const bTrue = makeBodyNode("bTrue", "branchOut");
+    const bFalse = makeBodyNode("bFalse", "otherOut");
+    const nodeStates: Record<string, any> = {};
+    const contextData: Record<string, unknown> = {
+      otherOut: "stale-parent-value",
+    };
+    const emit = vi.fn().mockResolvedValue(undefined);
+
+    // Iter 0: bTrue runs, bFalse skipped
+    // Iter 1: bTrue skipped, bFalse runs
+    mockResolveNodeExecutionEligibility
+      .mockReturnValueOnce("run")
+      .mockReturnValueOnce("skip")
+      .mockReturnValueOnce("skip")
+      .mockReturnValueOnce("run");
+
+    mockExecuteNodeWithGates
+      .mockImplementationOnce(async (p) => {
+        p.nodeStates[p.node.id] = { status: "completed", completedAt: "t0" };
+        return {
+          status: "completed",
+          activeHandles: ["next"],
+          contextEntry: "true-val-0",
+          outputAttachmentIds: [],
+          activeWorkbookFilePath: null,
+          activeArtifact: null,
+        };
+      })
+      .mockImplementationOnce(async (p) => {
+        p.nodeStates[p.node.id] = { status: "completed", completedAt: "t1" };
+        return {
+          status: "completed",
+          activeHandles: ["next"],
+          contextEntry: "false-val-1",
+          outputAttachmentIds: [],
+          activeWorkbookFilePath: null,
+          activeArtifact: null,
+        };
+      });
+
+    const result = await executeLoopNode(
+      makeBaseParams({
+        sortedNodes: [makeLoopNode(), bTrue, bFalse],
+        loopBodyMap: new Map([["loop-1", new Set(["bTrue", "bFalse"])]]),
+        contextData,
+        nodeStates,
+        emit,
+      }),
+    );
+
+    expect(result.status).toBe("completed");
+    expect(nodeStates.bTrue).toEqual({ status: "skipped" });
+    expect(nodeStates.bFalse).toEqual({
+      status: "completed",
+      completedAt: "t1",
+    });
+    expect(emit).toHaveBeenCalledWith({
+      type: "workflow-node-skipped",
+      runId: "run-1",
+      nodeId: "bTrue",
+    });
+    expect(contextData.loopOut).toEqual({
+      results: ["true-val-0", "false-val-1"],
+      items: ["item-0", "item-1"],
+      count: 2,
+    });
+  });
+
+  it("falls back to item when all terminal body nodes are skipped in an iteration", async () => {
+    mockResolveWorkflowTemplateValue.mockReturnValue(["only-item"]);
+    const b1 = makeBodyNode("b1", "var1");
+    mockResolveNodeExecutionEligibility.mockReturnValue("skip");
+    const contextData: Record<string, unknown> = {};
+
+    const result = await executeLoopNode(
+      makeBaseParams({
+        sortedNodes: [makeLoopNode(), b1],
+        loopBodyMap: new Map([["loop-1", new Set(["b1"])]]),
+        contextData,
+      }),
+    );
+
+    expect(result.status).toBe("completed");
+    expect(contextData.loopOut).toEqual({
+      results: ["only-item"],
+      items: ["only-item"],
+      count: 1,
+    });
+  });
 });

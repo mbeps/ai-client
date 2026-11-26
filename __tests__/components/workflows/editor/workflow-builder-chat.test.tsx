@@ -152,8 +152,14 @@ describe("WorkflowBuilderChat", () => {
     });
   });
 
-  it("renders Create Draft CTA when isNew is true", () => {
-    const onCreateDraft = vi.fn();
+  it("renders Create Draft CTA when isNew is true and blocks repeated clicks while pending", async () => {
+    let resolveDraft!: () => void;
+    const onCreateDraft = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDraft = resolve;
+        }),
+    );
     render(
       <WorkflowBuilderChat
         workflowId="new"
@@ -167,6 +173,21 @@ describe("WorkflowBuilderChat", () => {
     });
     fireEvent.click(cta);
     expect(onCreateDraft).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("button", { name: /creating draft/i }),
+    ).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: /creating draft/i }));
+    expect(onCreateDraft).toHaveBeenCalledTimes(1);
+
+    resolveDraft();
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: /create draft & start ai builder/i,
+        }),
+      ).not.toBeDisabled();
+    });
   });
 
   it("loads workflow chat and renders ChatInput in minimalMode", async () => {

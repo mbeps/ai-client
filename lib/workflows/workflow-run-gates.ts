@@ -480,6 +480,21 @@ export async function executeNodeWithGates(params: {
       stepIdPrefix,
     });
     if (!ok) return { status: "failed" };
+
+    nodeStates[node.id] = outcome.nodeState;
+    await step.run(
+      `${stepIdPrefix}restore-after-review-${node.id}`,
+      async () => {
+        await updateActiveWorkflowRun(runId, { nodeStates });
+        await emit({
+          type: "workflow-node-complete",
+          runId,
+          nodeId: node.id,
+          state: outcome.nodeState,
+          outputAttachmentIds: outcome.outputAttachmentIds,
+        });
+      },
+    );
   }
 
   return {

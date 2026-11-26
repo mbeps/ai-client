@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { createWorkflow } from "@/actions/workflows/create-workflow";
 import { deleteWorkflow } from "@/actions/workflows/delete-workflow";
@@ -60,6 +60,7 @@ export function useWorkflowEditor({
   const hasNoModels = !isModelsLoading && chatModels.length === 0;
 
   const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const requiresFileUpload =
@@ -177,9 +178,11 @@ export function useWorkflowEditor({
   };
 
   const handleSave = async (redirectQuery?: string) => {
+    if (isSavingRef.current) return;
     const payload = validateAndBuildPayload();
     if (!payload) return;
 
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       if (isNew) {
@@ -203,6 +206,7 @@ export function useWorkflowEditor({
     } catch (err) {
       handleApiError(err, "Failed to save workflow");
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
