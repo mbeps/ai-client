@@ -3,7 +3,7 @@ import {
   timestampColumns,
   userForeignKeyColumn,
 } from "@/drizzle/schemas/schema-helpers";
-import { workflowRun } from "@/drizzle/schemas/workflow-schema";
+import { workflow, workflowRun } from "@/drizzle/schemas/workflow-schema";
 
 /**
  * Stores chat sessions scoped to users, optional projects, and optional assistants.
@@ -20,10 +20,16 @@ export const chat = pgTable(
     projectId: text("project_id"),
     agentId: text("agent_id"),
     knowledgebaseId: text("knowledgebase_id"),
+    workflowId: text("workflow_id").references(() => workflow.id, {
+      onDelete: "cascade",
+    }),
     currentLeafId: text("current_leaf_id"),
     ...timestampColumns(),
   },
-  (table) => [index("chat_user_id_idx").on(table.userId)],
+  (table) => [
+    index("chat_user_id_idx").on(table.userId),
+    index("chat_workflow_id_idx").on(table.workflowId),
+  ],
 );
 
 /**
