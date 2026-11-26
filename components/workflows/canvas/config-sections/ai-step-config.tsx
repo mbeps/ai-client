@@ -34,6 +34,7 @@ import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { Skill } from "@/types/skill/skill";
 import type { AiStepNodeData } from "@/types/workflows/workflow";
+import { StructuredOutputSchemaEditor } from "./structured-output-editor";
 
 /** Navigation sections supported by the AI Step inspector. */
 export type AiStepSection =
@@ -423,31 +424,84 @@ export function AiStepConfig({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Output</Label>
-              <Select
-                value={data.canvasMode ?? "inherit"}
-                onValueChange={(value) =>
-                  onChange({
-                    canvasMode: value as AiStepNodeData["canvasMode"],
-                  })
-                }
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inherit">
-                    Inherit workflow default
-                  </SelectItem>
-                  <SelectItem value="disabled">Disabled</SelectItem>
-                  <SelectItem value="any">Any allowed format</SelectItem>
-                  <SelectItem value="markdown">Markdown</SelectItem>
-                  <SelectItem value="spreadsheet">Spreadsheet</SelectItem>
-                  <SelectItem value="html">HTML</SelectItem>
-                  <SelectItem value="mermaid">Mermaid</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Output</Label>
+                <Select
+                  value={
+                    data.outputMode ??
+                    (data.canvasMode &&
+                    data.canvasMode !== "inherit" &&
+                    data.canvasMode !== "disabled"
+                      ? "canvas"
+                      : "text")
+                  }
+                  onValueChange={(value) => {
+                    const outputMode = value as NonNullable<
+                      AiStepNodeData["outputMode"]
+                    >;
+                    onChange({
+                      outputMode,
+                      ...(outputMode === "structured" &&
+                      !data.structuredOutputSchema
+                        ? { structuredOutputSchema: { fields: [] } }
+                        : {}),
+                    });
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Plain text</SelectItem>
+                    <SelectItem value="structured">Structured JSON</SelectItem>
+                    <SelectItem value="canvas">Canvas (Artifact)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(data.outputMode === "structured" ||
+                (data.outputMode === undefined && false)) && (
+                <StructuredOutputSchemaEditor
+                  value={data.structuredOutputSchema}
+                  onChange={(structuredOutputSchema) =>
+                    onChange({ structuredOutputSchema })
+                  }
+                />
+              )}
+
+              {(data.outputMode === "canvas" ||
+                (data.outputMode === undefined &&
+                  data.canvasMode &&
+                  data.canvasMode !== "inherit" &&
+                  data.canvasMode !== "disabled")) && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Canvas Format</Label>
+                  <Select
+                    value={data.canvasMode ?? "inherit"}
+                    onValueChange={(value) =>
+                      onChange({
+                        canvasMode: value as AiStepNodeData["canvasMode"],
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inherit">
+                        Inherit workflow default
+                      </SelectItem>
+                      <SelectItem value="disabled">Disabled</SelectItem>
+                      <SelectItem value="any">Any allowed format</SelectItem>
+                      <SelectItem value="markdown">Markdown</SelectItem>
+                      <SelectItem value="spreadsheet">Spreadsheet</SelectItem>
+                      <SelectItem value="html">HTML</SelectItem>
+                      <SelectItem value="mermaid">Mermaid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 rounded-lg border p-3">

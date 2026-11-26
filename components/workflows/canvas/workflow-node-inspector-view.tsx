@@ -48,6 +48,17 @@ function collectUpstreamVariables(
         const upstream = nodeMap.get(edge.sourceNodeId);
         if (upstream?.data.variableName) {
           vars.push(upstream.data.variableName);
+          if (
+            upstream.data.kind === "ai_step" &&
+            upstream.data.outputMode === "structured" &&
+            upstream.data.structuredOutputSchema?.fields
+          ) {
+            for (const field of upstream.data.structuredOutputSchema.fields) {
+              if (field.name.trim()) {
+                vars.push(`${upstream.data.variableName}.${field.name.trim()}`);
+              }
+            }
+          }
         }
       }
     }

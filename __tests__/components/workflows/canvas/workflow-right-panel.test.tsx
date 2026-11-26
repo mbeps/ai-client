@@ -221,4 +221,52 @@ describe("WorkflowRightPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /delete node/i }));
     expect(onDeleteNode).toHaveBeenCalledWith("node-1");
   });
+
+  it("shows structured output field chips for upstream ai_step and renders schema editor when outputMode is structured", () => {
+    const upstreamNode = makeAiNode({
+      variableName: "step1",
+      outputMode: "structured",
+      structuredOutputSchema: {
+        fields: [
+          {
+            id: "f1",
+            name: "invoices",
+            type: "object_array",
+            required: true,
+            itemFields: [],
+          },
+        ],
+      },
+    });
+    const downstreamNode: WorkflowNode = {
+      ...makeAiNode({
+        variableName: "step2",
+        outputMode: "structured",
+        structuredOutputSchema: { fields: [] },
+      }),
+      id: "node-2",
+    };
+
+    render(
+      <WorkflowRightPanel
+        {...baseProps}
+        allNodes={[upstreamNode, downstreamNode]}
+        edges={[
+          {
+            id: "e1",
+            sourceNodeId: "node-1",
+            targetNodeId: "node-2",
+            sourceHandle: "main",
+          },
+        ]}
+        selectedNode={downstreamNode}
+      />,
+    );
+
+    expect(screen.getByText("{{step1}}")).toBeInTheDocument();
+    expect(screen.getByText("{{step1.invoices}}")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^more$/i }));
+    expect(screen.getByText("Output Schema")).toBeInTheDocument();
+  });
 });

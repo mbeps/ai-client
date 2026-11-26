@@ -67,13 +67,19 @@ export function AiStepNode({
             Review
           </Badge>
         )}
-        {nodeData.canvasMode &&
+        {nodeData.outputMode === "structured" ? (
+          <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+            JSON
+          </Badge>
+        ) : (
+          nodeData.canvasMode &&
           nodeData.canvasMode !== "inherit" &&
           nodeData.canvasMode !== "disabled" && (
             <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
               {nodeData.canvasMode}
             </Badge>
-          )}
+          )
+        )}
       </div>
     </BaseWorkflowNode>
   );
