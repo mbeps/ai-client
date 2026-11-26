@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  addEdge,
   Background,
   type Connection,
   Controls,
@@ -20,8 +19,13 @@ import { LayoutGrid, PanelRightOpen, Play } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { WorkflowCanvasNodeData } from "@/components/workflows/canvas/base-workflow-node";
-import type { WorkflowVisualNodeStatus } from "@/components/workflows/canvas/node-status-indicator";
 import { WORKFLOW_NODE_TYPES } from "@/components/workflows/canvas/node-types";
+import {
+  applyReactFlowNodesChanges,
+  mapConnectedEdges,
+  toReactFlowEdges,
+  toReactFlowNodes,
+} from "@/components/workflows/canvas/workflow-canvas-helpers";
 import { useWorkflowEditorStore } from "@/components/workflows/canvas/workflow-editor-store";
 import { WorkflowRightPanel } from "@/components/workflows/canvas/workflow-right-panel";
 import { WorkflowBuilderChat } from "@/components/workflows/editor/workflow-builder-chat";
@@ -39,10 +43,6 @@ import type {
   WorkflowNodeRunState,
   WorkflowNodeType,
 } from "@/types/workflows/workflow";
-
-function mapRunStatus(state?: WorkflowNodeRunState): WorkflowVisualNodeStatus {
-  return state ? state.status : "pending";
-}
 
 /** Props for {@link WorkflowCanvas}. */
 export interface WorkflowCanvasProps {
@@ -146,42 +146,19 @@ function WorkflowCanvasInner({
 
   const rfNodes = useMemo<Node<WorkflowCanvasNodeData>[]>(
     () =>
-      nodes.map((node) => {
-        const measured = measuredRef.current.get(node.id);
-        const agentId =
-          node.data.kind === "ai_step" ? node.data.agentId : undefined;
-        const matchedAgent = agentId ? agentById.get(agentId) : undefined;
-        return {
-          id: node.id,
-          type: node.type,
-          position: node.position,
-          ...(measured ? { measured } : {}),
-          selected: node.id === selectedNodeId,
-          data: {
-            label: node.name,
-            nodeData: node.data,
-            status: mapRunStatus(nodeStates?.[node.id]),
-            ...(agentId
-              ? {
-                  linkedAgent: matchedAgent
-                    ? { id: matchedAgent.id, name: matchedAgent.name }
-                    : null,
-                  missingAgent: !matchedAgent,
-                }
-              : {}),
-            readOnly,
-            onConfigure: readOnly
-              ? undefined
-              : (id) => {
-                  setSelectedNodeId(id);
-                  setPanelMode("build");
-                  setMobilePanelOpen(true);
-                },
-            onDelete: readOnly
-              ? undefined
-              : (id) => onDeleteNodeRef.current?.(id),
-          },
-        };
+      toReactFlowNodes({
+        nodes,
+        measuredMap: measuredRef.current,
+        agentById,
+        selectedNodeId,
+        nodeStates,
+        readOnly,
+        onConfigure: (id) => {
+          setSelectedNodeId(id);
+          setPanelMode("build");
+          setMobilePanelOpen(true);
+        },
+        onDelete: (id) => onDeleteNodeRef.current?.(id),
       }),
     [
       nodes,
@@ -195,23 +172,7 @@ function WorkflowCanvasInner({
   );
 
   const rfEdges = useMemo<Edge[]>(
-    () =>
-      edges.map((edge) => ({
-        id: edge.id,
-        source: edge.sourceNodeId,
-        target: edge.targetNodeId,
-        sourceHandle: edge.sourceHandle,
-        targetHandle: edge.targetHandle,
-        selected: selectedEdgeIds.has(edge.id),
-        label:
-          edge.sourceHandle === "true" ||
-          edge.sourceHandle === "false" ||
-          edge.sourceHandle === "body" ||
-          edge.sourceHandle === "done"
-            ? edge.sourceHandle
-            : undefined,
-        animated: nodeStates?.[edge.sourceNodeId]?.status === "running",
-      })),
+    () => toReactFlowEdges({ edges, nodeStates, selectedEdgeIds }),
     [edges, nodeStates, selectedEdgeIds],
   );
 
@@ -225,24 +186,8 @@ function WorkflowCanvasInner({
         measuredRef.current.set(rfNode.id, rfNode.measured);
       }
     }
-    const updatedMap = new Map(updated.map((n) => [n.id, n]));
-    const hasRemoved = updated.length !== nodes.length;
-    const hasPositionChange = nodes.some((n) => {
-      const next = updatedMap.get(n.id);
-      return (
-        next &&
-        (next.position.x !== n.position.x || next.position.y !== n.position.y)
-      );
-    });
-    if (!hasRemoved && !hasPositionChange) return;
-    onNodesChange(
-      nodes
-        .filter((n) => updatedMap.has(n.id))
-        .map((n) => ({
-          ...n,
-          position: updatedMap.get(n.id)?.position ?? n.position,
-        })),
-    );
+    const nextNodes = applyReactFlowNodesChanges(nodes, updated);
+    if (nextNodes) onNodesChange(nextNodes);
   };
 
   const handleRfEdgesChange: OnEdgesChange<Edge> = (changeset) => {
@@ -262,20 +207,12 @@ function WorkflowCanvasInner({
       readOnly ||
       !onEdgesChange ||
       !connection.source ||
-      !connection.target
+      !connection.target ||
+      connection.source === connection.target
     ) {
       return;
     }
-    if (connection.source === connection.target) return;
-    const nextRfEdges = addEdge(connection, rfEdges);
-    const mapped: WorkflowEdge[] = nextRfEdges.map((edge) => ({
-      id: edge.id || crypto.randomUUID(),
-      sourceNodeId: edge.source,
-      targetNodeId: edge.target,
-      sourceHandle: edge.sourceHandle ?? "main",
-      targetHandle: edge.targetHandle ?? "main",
-    }));
-    onEdgesChange(mapped);
+    onEdgesChange(mapConnectedEdges(connection, rfEdges));
   };
 
   const selectedNode = useMemo(

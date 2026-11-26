@@ -33,6 +33,37 @@ import type {
   WorkflowNodeType,
 } from "@/types/workflows/workflow";
 
+function getUpstreamNodeVariables(
+  upstream: WorkflowNode,
+  sourceHandle?: string,
+): string[] {
+  const varName = upstream.data.variableName;
+  if (!varName) return [];
+  const vars = [varName];
+
+  if (
+    upstream.data.kind === "ai_step" &&
+    upstream.data.outputMode === "structured" &&
+    upstream.data.structuredOutputSchema?.fields
+  ) {
+    for (const field of upstream.data.structuredOutputSchema.fields) {
+      if (field.name.trim()) {
+        vars.push(`${varName}.${field.name.trim()}`);
+      }
+    }
+  } else if (upstream.data.kind === "loop") {
+    vars.push(
+      ...(sourceHandle === "body"
+        ? [`${varName}.item`, `${varName}.index`]
+        : [`${varName}.results`, `${varName}.items`]),
+    );
+  } else if (upstream.data.kind === "filter") {
+    vars.push(`${varName}.items`);
+  }
+
+  return vars;
+}
+
 function collectUpstreamVariables(
   targetId: string,
   allNodes: WorkflowNode[],
@@ -50,33 +81,8 @@ function collectUpstreamVariables(
         visited.add(edge.sourceNodeId);
         queue.push(edge.sourceNodeId);
         const upstream = nodeMap.get(edge.sourceNodeId);
-        if (upstream?.data.variableName) {
-          vars.push(upstream.data.variableName);
-          if (
-            upstream.data.kind === "ai_step" &&
-            upstream.data.outputMode === "structured" &&
-            upstream.data.structuredOutputSchema?.fields
-          ) {
-            for (const field of upstream.data.structuredOutputSchema.fields) {
-              if (field.name.trim()) {
-                vars.push(`${upstream.data.variableName}.${field.name.trim()}`);
-              }
-            }
-          } else if (upstream.data.kind === "loop") {
-            if (edge.sourceHandle === "body") {
-              vars.push(
-                `${upstream.data.variableName}.item`,
-                `${upstream.data.variableName}.index`,
-              );
-            } else {
-              vars.push(
-                `${upstream.data.variableName}.results`,
-                `${upstream.data.variableName}.items`,
-              );
-            }
-          } else if (upstream.data.kind === "filter") {
-            vars.push(`${upstream.data.variableName}.items`);
-          }
+        if (upstream) {
+          vars.push(...getUpstreamNodeVariables(upstream, edge.sourceHandle));
         }
       }
     }

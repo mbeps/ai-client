@@ -97,7 +97,7 @@ export function WorkflowBuilderChat({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reload when workflowId or isNew changes
+    // only reload when workflowId or isNew changes
   }, [workflowId, isNew, loadChatSession, handleApiError]);
 
   const {

@@ -26,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/config/routes";
 import { toggleSetItem } from "@/lib/toggle-set-item";
 import type { Agent } from "@/types/agent/agent";
@@ -34,15 +33,7 @@ import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { McpServer } from "@/types/mcp/mcp-server";
 import type { Skill } from "@/types/skill/skill";
 import type { AiStepNodeData } from "@/types/workflows/workflow";
-import { StructuredOutputSchemaEditor } from "./structured-output-editor";
-
-/** Navigation sections supported by the AI Step inspector. */
-export type AiStepSection =
-  | "prompt"
-  | "tools"
-  | "knowledge"
-  | "skills"
-  | "subagents";
+import { AiStepOutputSection } from "./ai-step-output-section";
 
 /** Props for {@link AiStepConfig}. */
 export interface AiStepConfigProps {
@@ -51,7 +42,6 @@ export interface AiStepConfigProps {
   knowledgebases?: Knowledgebase[];
   skills?: Skill[];
   agents?: Agent[];
-  activeSection?: AiStepSection;
   onChange: (updates: Partial<AiStepNodeData>) => void;
 }
 
@@ -167,70 +157,12 @@ export function AiStepConfig({
 
   return (
     <div className="space-y-3">
-      {data.agentId &&
-        (linkedAgent ? (
-          <div className="bg-muted/40 flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5">
-            <div className="flex min-w-0 items-center gap-2">
-              <Bot className="text-primary h-4 w-4 shrink-0" />
-              <div className="min-w-0">
-                <p className="truncate text-xs font-medium">
-                  {linkedAgent.name}
-                </p>
-                <p className="text-muted-foreground truncate text-[11px]">
-                  Linked agent persona
-                </p>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                asChild
-              >
-                <Link
-                  href={
-                    linkedAgent.isBuiltIn
-                      ? ROUTES.AGENTS.path
-                      : ROUTES.AGENTS.detail(linkedAgent.id)
-                  }
-                >
-                  <ExternalLink className="mr-1 h-3 w-3" />
-                  Edit agent
-                </Link>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={() => onChange({ agentId: undefined })}
-              >
-                <Unlink className="mr-1 h-3 w-3" />
-                Detach
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="border-destructive/40 bg-destructive/10 text-destructive flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5">
-            <div className="flex min-w-0 items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <p className="truncate text-xs font-medium">
-                Linked agent not found
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive h-7 shrink-0 px-2 text-xs"
-              onClick={() => onChange({ agentId: undefined })}
-            >
-              <Unlink className="mr-1 h-3 w-3" />
-              Detach
-            </Button>
-          </div>
-        ))}
+      {data.agentId && (
+        <LinkedAgentBanner
+          linkedAgent={linkedAgent}
+          onDetach={() => onChange({ agentId: undefined })}
+        />
+      )}
 
       <Accordion
         type="multiple"
@@ -430,130 +362,7 @@ export function AiStepConfig({
               />
             </div>
 
-            <div className="space-y-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Output</Label>
-                <Select
-                  value={
-                    data.outputMode ??
-                    (data.canvasMode &&
-                    data.canvasMode !== "inherit" &&
-                    data.canvasMode !== "disabled"
-                      ? "canvas"
-                      : "text")
-                  }
-                  onValueChange={(value) => {
-                    const outputMode = value as NonNullable<
-                      AiStepNodeData["outputMode"]
-                    >;
-                    onChange({
-                      outputMode,
-                      ...(outputMode === "text"
-                        ? { canvasMode: "disabled" }
-                        : {}),
-                      ...(outputMode === "structured" &&
-                      !data.structuredOutputSchema
-                        ? { structuredOutputSchema: { fields: [] } }
-                        : {}),
-                    });
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Plain text</SelectItem>
-                    <SelectItem value="structured">Structured JSON</SelectItem>
-                    <SelectItem value="canvas">Canvas (Artifact)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {data.outputMode === "structured" && (
-                <StructuredOutputSchemaEditor
-                  value={data.structuredOutputSchema}
-                  onChange={(structuredOutputSchema) =>
-                    onChange({ structuredOutputSchema })
-                  }
-                />
-              )}
-
-              {(data.outputMode === "canvas" ||
-                (data.outputMode === undefined &&
-                  data.canvasMode &&
-                  data.canvasMode !== "inherit" &&
-                  data.canvasMode !== "disabled")) && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Canvas Format</Label>
-                  <Select
-                    value={data.canvasMode ?? "inherit"}
-                    onValueChange={(value) =>
-                      onChange({
-                        canvasMode: value as AiStepNodeData["canvasMode"],
-                      })
-                    }
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="inherit">
-                        Inherit workflow default
-                      </SelectItem>
-                      <SelectItem value="disabled">Disabled</SelectItem>
-                      <SelectItem value="any">Any allowed format</SelectItem>
-                      <SelectItem value="markdown">Markdown</SelectItem>
-                      <SelectItem value="spreadsheet">Spreadsheet</SelectItem>
-                      <SelectItem value="html">HTML</SelectItem>
-                      <SelectItem value="mermaid">Mermaid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3 rounded-lg border p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="space-y-0.5">
-                  <Label htmlFor="ai-step-review-switch" className="text-xs">
-                    Human Review Gate
-                  </Label>
-                  <p className="text-muted-foreground text-[11px]">
-                    Pause workflow for human approval on this step.
-                  </p>
-                </div>
-                <Switch
-                  id="ai-step-review-switch"
-                  checked={data.requiresReview}
-                  onCheckedChange={(checked) =>
-                    onChange({ requiresReview: checked })
-                  }
-                />
-              </div>
-              {data.requiresReview && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Review Timing</Label>
-                  <Select
-                    value={data.reviewTiming ?? "after"}
-                    onValueChange={(value) =>
-                      onChange({ reviewTiming: value as "before" | "after" })
-                    }
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="before">
-                        Before running step
-                      </SelectItem>
-                      <SelectItem value="after">
-                        After step completes
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
+            <AiStepOutputSection data={data} onChange={onChange} />
 
             <div className="bg-muted/40 flex items-center justify-between rounded-md border px-2.5 py-1.5 text-xs">
               <span className="text-muted-foreground">Output</span>
@@ -564,6 +373,72 @@ export function AiStepConfig({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+    </div>
+  );
+}
+
+interface LinkedAgentBannerProps {
+  linkedAgent: Agent | undefined;
+  onDetach: () => void;
+}
+
+function LinkedAgentBanner({ linkedAgent, onDetach }: LinkedAgentBannerProps) {
+  if (!linkedAgent) {
+    return (
+      <div className="border-destructive/40 bg-destructive/10 text-destructive flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p className="truncate text-xs font-medium">Linked agent not found</p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive h-7 shrink-0 px-2 text-xs"
+          onClick={onDetach}
+        >
+          <Unlink className="mr-1 h-3 w-3" />
+          Detach
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-muted/40 flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <Bot className="text-primary h-4 w-4 shrink-0" />
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium">{linkedAgent.name}</p>
+          <p className="text-muted-foreground truncate text-[11px]">
+            Linked agent persona
+          </p>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" asChild>
+          <Link
+            href={
+              linkedAgent.isBuiltIn
+                ? ROUTES.AGENTS.path
+                : ROUTES.AGENTS.detail(linkedAgent.id)
+            }
+          >
+            <ExternalLink className="mr-1 h-3 w-3" />
+            Edit agent
+          </Link>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={onDetach}
+        >
+          <Unlink className="mr-1 h-3 w-3" />
+          Detach
+        </Button>
+      </div>
     </div>
   );
 }
