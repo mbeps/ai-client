@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageSquare, Plus } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ChatCard } from "@/components/chat/chat-card";
@@ -13,8 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreateChat } from "@/hooks/chat/use-create-chat";
+import { ROUTES } from "@/config/routes";
 import { useAppStore } from "@/lib/store/use-app-store";
+import { useChatToolsStore } from "@/lib/store/use-chat-tools-store";
 import type { Chat } from "@/types/chat/chat";
 
 /**
@@ -37,7 +39,6 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
   const { chats: storeChats, upsertChat } = useAppStore(
     useShallow((s) => ({ chats: s.chats, upsertChat: s.upsertChat })),
   );
-  const createNewChat = useCreateChat();
   const [filter, setFilter] = useState("all");
 
   // Sync initial server data into the store on mount
@@ -73,9 +74,14 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
       emptyStateMessage="No chats yet. Start a new conversation from the home page."
       searchPlaceholder="Search chats..."
       action={
-        <Button onClick={() => createNewChat()} className="w-full md:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          New Chat
+        <Button asChild className="w-full md:w-auto">
+          <Link
+            href={ROUTES.HOME.path}
+            onClick={() => useChatToolsStore.getState().resetDraftChat()}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Chat
+          </Link>
         </Button>
       }
       filterFn={(chat, query) =>

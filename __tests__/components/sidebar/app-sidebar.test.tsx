@@ -37,10 +37,6 @@ vi.mock("@/lib/auth/auth-client", () => ({
   },
 }));
 
-vi.mock("@/hooks/chat/use-create-chat", () => ({
-  useCreateChat: vi.fn(() => vi.fn()),
-}));
-
 vi.mock("@/components/sidebar/sidebar-user-footer", () => ({
   SidebarUserFooter: () => <div data-testid="sidebar-user-footer">User Footer</div>,
 }));
@@ -263,5 +259,37 @@ describe("AppSidebar", () => {
     expect(
       screen.queryByRole("link", { name: /builder: my workflow/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("renders 'New Chat' as a link to '/' and resets draft chat state on click", async () => {
+    const user = userEvent.setup();
+    const { NEW_CHAT_TOOLS_KEY, useChatToolsStore } = await import(
+      "@/lib/store/use-chat-tools-store"
+    );
+    useChatToolsStore.getState().clearAll();
+    useChatToolsStore
+      .getState()
+      .setChatTools(NEW_CHAT_TOOLS_KEY, ["srv:tool:stale"]);
+
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
+
+    const newChatLink = screen.getByRole("link", { name: /new chat/i });
+    expect(newChatLink).toHaveAttribute("href", ROUTES.HOME.path);
+
+    const prevNonce = useChatToolsStore.getState().draftResetNonce;
+    await user.click(newChatLink);
+
+    expect(
+      useChatToolsStore.getState().toolsByChat[NEW_CHAT_TOOLS_KEY],
+    ).toBeUndefined();
+    expect(useChatToolsStore.getState().draftResetNonce).toBe(prevNonce + 1);
   });
 });

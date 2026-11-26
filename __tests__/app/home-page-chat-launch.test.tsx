@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ROUTES } from "@/config/routes";
 
 let lastChatUIProps: Record<string, any> | null = null;
 let mockSession: { user: { id: string; name?: string } } | null = {
@@ -31,25 +30,16 @@ describe("HomePage unified ChatUI rendering", () => {
     mockSession = { user: { id: "user-1", name: "Maruf Bepary" } };
   });
 
-  it("renders ChatUI in draft mode with user greeting and quick-action links", () => {
+  it("renders ChatUI in draft mode with user greeting and no quick-action cards", () => {
     render(<HomePage />);
 
     expect(lastChatUIProps?.chatId).toBeUndefined();
     expect(screen.getByText("Hello, Maruf")).toBeInTheDocument();
     expect(screen.getByText("How can I help you today?")).toBeInTheDocument();
 
-    expect(screen.getByText("Projects").closest("a")).toHaveAttribute(
-      "href",
-      ROUTES.PROJECTS.path,
-    );
-    expect(screen.getByText("Agents").closest("a")).toHaveAttribute(
-      "href",
-      ROUTES.AGENTS.path,
-    );
-    expect(screen.getByText("Knowledgebases").closest("a")).toHaveAttribute(
-      "href",
-      ROUTES.KNOWLEDGEBASES.path,
-    );
+    expect(screen.queryByText("Projects")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agents")).not.toBeInTheDocument();
+    expect(screen.queryByText("Knowledgebases")).not.toBeInTheDocument();
   });
 
   it("renders fallback greeting when session user name is absent", () => {
