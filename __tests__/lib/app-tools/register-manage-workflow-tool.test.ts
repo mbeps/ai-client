@@ -1,3 +1,4 @@
+import { asSchema } from "ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTES } from "@/config/routes";
 
@@ -172,5 +173,112 @@ describe("registerManageWorkflowTool", () => {
       name: "Updated Locked",
       route: ROUTES.WORKFLOWS.AUTOMATIONS.detail(WF_ID),
     });
+  });
+
+  it("advertises a single-object schema without top-level anyOf and normalises stringified fields and null optionals", async () => {
+    const { manage_workflow } = registerManageWorkflowTool("user-1", {
+      deferLoading: false,
+      lockedWorkflowId: WF_ID,
+    });
+
+    const toolSchema = asSchema(manage_workflow.inputSchema);
+    const jsonSchema = await toolSchema.jsonSchema;
+    expect(jsonSchema.type).toBe("object");
+    expect(jsonSchema).not.toHaveProperty("anyOf");
+
+    const nodes = [
+      {
+        id: "initial-trigger",
+        name: "Manual Trigger",
+        type: "manual_trigger",
+        position: { x: 78, y: 109 },
+        data: {
+          kind: "manual_trigger",
+          variableName: "trigger",
+          requiresFileUpload: true,
+        },
+      },
+      {
+        id: "http-request-node",
+        name: "Get Post 1",
+        type: "http_request",
+        position: { x: 420, y: 100 },
+        data: {
+          kind: "http_request",
+          variableName: "step3",
+          method: "GET",
+          url: "https://jsonplaceholder.typicode.com/posts/1",
+          headers: [],
+          body: null,
+          requiresReview: false,
+        },
+      },
+    ];
+    const edges = [
+      {
+        id: "edge-1",
+        sourceNodeId: "initial-trigger",
+        targetNodeId: "http-request-node",
+        sourceHandle: "main",
+        targetHandle: "main",
+      },
+    ];
+
+    const parsedFromStrings = await toolSchema.validate!({
+      action: "update",
+      id: WF_ID,
+      name: "Spreadsheets",
+      description: null,
+      reasoningEffort: null,
+      tools: JSON.stringify(["internal:tool:manage_artifact"]),
+      canvasConfig: JSON.stringify({
+        enabled: true,
+        allowedTypes: ["spreadsheet"],
+        defaultType: "spreadsheet",
+      }),
+      nodes: JSON.stringify(nodes),
+      edges: JSON.stringify(edges),
+    });
+    expect(parsedFromStrings.success).toBe(true);
+    if (parsedFromStrings.success) {
+      expect(parsedFromStrings.value.reasoningEffort).toBeNull();
+      expect(parsedFromStrings.value.description).toBeUndefined();
+      expect(parsedFromStrings.value.nodes).toHaveLength(2);
+      expect(parsedFromStrings.value.nodes?.[1]?.data).not.toHaveProperty(
+        "body",
+      );
+      expect(parsedFromStrings.value.edges).toHaveLength(1);
+    }
+
+    const parsedWholeString = await toolSchema.validate!(
+      JSON.stringify({
+        action: "create",
+        name: "Created From String",
+        nodes: JSON.stringify(nodes),
+        edges: JSON.stringify(edges),
+      }),
+    );
+    expect(parsedWholeString.success).toBe(true);
+
+    const missingCreateName = await toolSchema.validate!({
+      action: "create",
+    });
+    expect(missingCreateName.success).toBe(false);
+
+    const missingUpdateId = await toolSchema.validate!({
+      action: "update",
+      name: "No ID",
+    });
+    expect(missingUpdateId.success).toBe(false);
+
+    const invalidJsonField = await toolSchema.validate!({
+      action: "update",
+      id: WF_ID,
+      nodes: "{not-valid-json",
+    });
+    expect(invalidJsonField.success).toBe(false);
+
+    const invalidWholeString = await toolSchema.validate!("{not-valid-json");
+    expect(invalidWholeString.success).toBe(false);
   });
 });

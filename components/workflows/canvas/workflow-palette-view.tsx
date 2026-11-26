@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowUpRight,
   Bot,
   Filter,
   GitBranch,
@@ -281,17 +282,9 @@ export function WorkflowPaletteView({
 
               {(!isSearching || filteredAgents.length > 0) && (
                 <AccordionItem value="existing-agents" className="border-b-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <AccordionTrigger className="text-muted-foreground py-2 text-xs font-semibold tracking-wide uppercase hover:no-underline">
-                      Existing agents
-                    </AccordionTrigger>
-                    <Link
-                      href={ROUTES.AGENTS.path}
-                      className="text-muted-foreground hover:text-foreground shrink-0 text-xs font-medium"
-                    >
-                      View all
-                    </Link>
-                  </div>
+                  <AccordionTrigger className="text-muted-foreground py-2 text-xs font-semibold tracking-wide uppercase hover:no-underline">
+                    Existing agents
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-1 pb-2">
                     {agents.length === 0 ? (
                       <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-center text-xs">
@@ -330,6 +323,24 @@ export function WorkflowPaletteView({
                           </div>
                         </button>
                       ))
+                    )}
+                    {!isSearching && (
+                      <Link
+                        href={ROUTES.AGENTS.path}
+                        className="hover:bg-accent flex w-full items-start gap-2.5 rounded-lg border border-transparent p-2 text-left transition-colors"
+                      >
+                        <div className="bg-muted mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+                          <ArrowUpRight className="text-muted-foreground h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm leading-tight font-medium">
+                            View all agents
+                          </p>
+                          <p className="text-muted-foreground mt-0.5 text-xs leading-snug">
+                            Browse and manage all agents
+                          </p>
+                        </div>
+                      </Link>
                     )}
                   </AccordionContent>
                 </AccordionItem>

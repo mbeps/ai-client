@@ -34,6 +34,7 @@ export interface WorkflowRightPanelProps {
   onPanelModeChange?: (mode: "build" | "chat") => void;
   chatSlot?: ReactNode;
   headerSlot?: ReactNode;
+  open?: boolean;
   mobileOpen?: boolean;
   onMobileOpenChange?: (open: boolean) => void;
   onAddNode: (type: WorkflowNodeType) => void;
@@ -62,6 +63,7 @@ export function WorkflowRightPanel({
   onPanelModeChange,
   chatSlot,
   headerSlot,
+  open = true,
   mobileOpen = false,
   onMobileOpenChange,
   onAddNode,
@@ -144,12 +146,14 @@ export function WorkflowRightPanel({
 
   return (
     <>
-      <aside
-        aria-label="Workflow studio panel"
-        className="bg-background hidden h-full w-[420px] shrink-0 flex-col border-l lg:flex xl:w-[460px]"
-      >
-        {content}
-      </aside>
+      {open && (
+        <aside
+          aria-label="Workflow studio panel"
+          className="bg-background hidden h-full w-[420px] shrink-0 flex-col border-l lg:flex xl:w-[460px]"
+        >
+          {content}
+        </aside>
+      )}
 
       {onMobileOpenChange && (
         <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>

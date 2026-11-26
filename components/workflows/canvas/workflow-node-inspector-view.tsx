@@ -201,16 +201,6 @@ export function WorkflowNodeInspectorView({
           onChange={(e) => onUpdateNode(node.id, { name: e.target.value })}
           className="focus-visible:border-input h-7 min-w-0 flex-1 border-transparent bg-transparent px-1.5 text-sm font-medium"
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-destructive h-7 w-7 shrink-0"
-          aria-label="Delete node"
-          onClick={() => onDeleteNode(node.id)}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
@@ -290,6 +280,19 @@ export function WorkflowNodeInspectorView({
           {node.data.kind === "http_request" && (
             <HttpRequestConfig data={node.data} onChange={updateData} />
           )}
+
+          <div className="border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive w-full"
+              onClick={() => onDeleteNode(node.id)}
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Delete Node
+            </Button>
+          </div>
         </div>
       </ScrollArea>
     </div>

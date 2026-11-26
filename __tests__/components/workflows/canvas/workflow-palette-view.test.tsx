@@ -72,7 +72,7 @@ describe("WorkflowPaletteView", () => {
     expect(screen.getByText("Built-in")).toBeInTheDocument();
     expect(screen.getByText("Custom Writer")).toBeInTheDocument();
 
-    const viewAllLink = screen.getByRole("link", { name: "View all" });
+    const viewAllLink = screen.getByRole("link", { name: /View all agents/i });
     expect(viewAllLink).toHaveAttribute("href", ROUTES.AGENTS.path);
     // Ensure View all link is NOT nested inside a button (AccordionTrigger)
     expect(viewAllLink.closest("button")).toBeNull();

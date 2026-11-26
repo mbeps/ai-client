@@ -15,8 +15,13 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { LayoutGrid, PanelRightOpen, Play } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  LayoutGrid,
+  PanelRightClose,
+  PanelRightOpen,
+  Play,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { WorkflowCanvasNodeData } from "@/components/workflows/canvas/base-workflow-node";
 import { WORKFLOW_NODE_TYPES } from "@/components/workflows/canvas/node-types";
@@ -125,7 +130,18 @@ function WorkflowCanvasInner({
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [panelOpen, setPanelOpen] = useState(true);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+
+  const openPanelForViewport = useCallback(() => {
+    setPanelOpen(true);
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(max-width: 1023px)")?.matches
+    ) {
+      setMobilePanelOpen(true);
+    }
+  }, []);
   const measuredRef = useRef<Map<string, { width?: number; height?: number }>>(
     new Map(),
   );
@@ -156,7 +172,7 @@ function WorkflowCanvasInner({
         onConfigure: (id) => {
           setSelectedNodeId(id);
           setPanelMode("build");
-          setMobilePanelOpen(true);
+          openPanelForViewport();
         },
         onDelete: (id) => onDeleteNodeRef.current?.(id),
       }),
@@ -168,6 +184,7 @@ function WorkflowCanvasInner({
       setSelectedNodeId,
       agentById,
       setPanelMode,
+      openPanelForViewport,
     ],
   );
 
@@ -264,7 +281,7 @@ function WorkflowCanvasInner({
             if (!readOnly) {
               setSelectedNodeId(rfNode.id);
               setPanelMode("build");
-              setMobilePanelOpen(true);
+              openPanelForViewport();
             }
           }}
           onPaneClick={() => {
@@ -298,9 +315,25 @@ function WorkflowCanvasInner({
                 type="button"
                 variant="outline"
                 size="sm"
+                className="hidden lg:inline-flex"
+                onClick={() => setPanelOpen((prev) => !prev)}
+                aria-label={
+                  panelOpen ? "Close studio panel" : "Open studio panel"
+                }
+              >
+                {panelOpen ? (
+                  <PanelRightClose className="h-3.5 w-3.5" />
+                ) : (
+                  <PanelRightOpen className="h-3.5 w-3.5" />
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 className="lg:hidden"
                 onClick={() => setMobilePanelOpen(true)}
-                aria-label="Open studio panel"
+                aria-label="Open studio panel (mobile)"
               >
                 <PanelRightOpen className="h-3.5 w-3.5" />
               </Button>
@@ -340,6 +373,7 @@ function WorkflowCanvasInner({
               onWorkflowMutated={onWorkflowMutated}
             />
           }
+          open={panelOpen}
           mobileOpen={mobilePanelOpen}
           onMobileOpenChange={setMobilePanelOpen}
           onAddNode={handleAddNode}

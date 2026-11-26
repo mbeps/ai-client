@@ -32,31 +32,110 @@ const workflowFieldsSchema = {
   edges: z.array(workflowEdgeSchema).optional(),
 };
 
-const manageWorkflowInputSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("create"),
-    ...workflowFieldsSchema,
-  }),
-  z.object({
-    action: z.literal("update"),
-    id: z.string().uuid().describe("UUID of the workflow to update."),
-    name: workflowFieldsSchema.name.optional(),
-    description: workflowFieldsSchema.description,
-    globalContext: workflowFieldsSchema.globalContext,
-    modelId: workflowFieldsSchema.modelId,
-    reasoningEffort: workflowFieldsSchema.reasoningEffort,
-    tools: workflowFieldsSchema.tools,
-    skillMode: workflowFieldsSchema.skillMode,
-    skillIds: workflowFieldsSchema.skillIds,
-    knowledgeBaseIds: workflowFieldsSchema.knowledgeBaseIds,
-    subagentIds: workflowFieldsSchema.subagentIds,
-    requiresFileUpload: workflowFieldsSchema.requiresFileUpload,
-    canvasConfig: workflowFieldsSchema.canvasConfig,
-    approvalConfig: workflowFieldsSchema.approvalConfig,
-    nodes: workflowFieldsSchema.nodes,
-    edges: workflowFieldsSchema.edges,
-  }),
-]);
+const JSON_STRINGIFIED_FIELDS = [
+  "nodes",
+  "edges",
+  "tools",
+  "skillIds",
+  "knowledgeBaseIds",
+  "subagentIds",
+  "canvasConfig",
+  "approvalConfig",
+] as const;
+
+const TOP_LEVEL_NULLABLE_KEYS = new Set(["reasoningEffort"]);
+
+function tryParseJson(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function stripNullOptionals(
+  value: unknown,
+  preserveNullKeys?: ReadonlySet<string>,
+): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripNullOptionals(item));
+  }
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry === null) {
+      if (preserveNullKeys?.has(key)) {
+        cleaned[key] = null;
+      }
+      continue;
+    }
+    cleaned[key] = stripNullOptionals(entry);
+  }
+  return cleaned;
+}
+
+/**
+ * Normalises raw tool-call arguments for `manage_workflow` before Zod validation.
+ * Tolerates JSON-stringified payloads or array/object fields (e.g. `nodes`, `edges`)
+ * and strips explicit `null` values on non-nullable optional fields so the advertised
+ * JSON Schema stays a single flat object without top-level `anyOf`.
+ */
+function normaliseManageWorkflowInput(val: unknown): unknown {
+  const target = tryParseJson(val);
+  if (typeof target !== "object" || target === null || Array.isArray(target)) {
+    return target;
+  }
+  const record: Record<string, unknown> = {
+    ...(target as Record<string, unknown>),
+  };
+  for (const field of JSON_STRINGIFIED_FIELDS) {
+    if (typeof record[field] === "string") {
+      record[field] = tryParseJson(record[field]);
+    }
+  }
+  return stripNullOptionals(record, TOP_LEVEL_NULLABLE_KEYS);
+}
+
+const manageWorkflowBaseSchema = z.object({
+  action: z.enum(["create", "update"]),
+  id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      "UUID of the workflow to update (required when action is 'update').",
+    ),
+  ...workflowFieldsSchema,
+  name: workflowFieldsSchema.name
+    .optional()
+    .describe("Workflow name (required when action is 'create')."),
+});
+
+const manageWorkflowInputSchema = Object.assign(
+  z.preprocess(
+    normaliseManageWorkflowInput,
+    manageWorkflowBaseSchema.superRefine((data, ctx) => {
+      if (data.action === "create" && !data.name) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["name"],
+          message: "Workflow name is required when action is 'create'",
+        });
+      }
+      if (data.action === "update" && !data.id) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["id"],
+          message: "Workflow id is required when action is 'update'",
+        });
+      }
+    }),
+  ),
+  { shape: manageWorkflowBaseSchema.shape },
+);
 
 /**
  * Registers the deferred `manage_workflow` tool for creating and updating DAG workflows.
@@ -87,7 +166,10 @@ export function registerManageWorkflowTool(
 
         if (input.action === "create") {
           const { action: _, ...data } = input;
-          const res = await createWorkflowForUser(userId, data);
+          const res = await createWorkflowForUser(
+            userId,
+            data as Parameters<typeof createWorkflowForUser>[1],
+          );
           if (!res.ok) return toToolFailure(res.error);
           return {
             success: true as const,
@@ -99,7 +181,7 @@ export function registerManageWorkflowTool(
         }
 
         const { action: _, id, ...data } = input;
-        const res = await updateWorkflowForUser(userId, id, data);
+        const res = await updateWorkflowForUser(userId, id as string, data);
         if (!res.ok) return toToolFailure(res.error);
         return {
           success: true as const,

@@ -123,6 +123,17 @@ describe("WorkflowCanvas", () => {
       onPaneClick?.();
     });
 
+    // Toggle studio sidebar OFF and back ON
+    fireEvent.click(screen.getByRole("button", { name: /Close studio panel/i }));
+    expect(
+      screen.queryByRole("complementary", { name: /Workflow studio panel/i }),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open studio panel" }));
+    expect(
+      screen.getByRole("complementary", { name: /Workflow studio panel/i }),
+    ).toBeInTheDocument();
+
     // readOnly mode hides right panel cleanly
     rerender(
       <WorkflowCanvas
