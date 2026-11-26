@@ -30,6 +30,9 @@ export interface WorkflowRightPanelProps {
   knowledgebases?: Knowledgebase[];
   skills?: Skill[];
   agents?: Agent[];
+  panelMode?: "build" | "chat";
+  onPanelModeChange?: (mode: "build" | "chat") => void;
+  chatSlot?: ReactNode;
   headerSlot?: ReactNode;
   mobileOpen?: boolean;
   onMobileOpenChange?: (open: boolean) => void;
@@ -55,6 +58,9 @@ export function WorkflowRightPanel({
   knowledgebases = [],
   skills = [],
   agents = [],
+  panelMode = "build",
+  onPanelModeChange,
+  chatSlot,
   headerSlot,
   mobileOpen = false,
   onMobileOpenChange,
@@ -67,9 +73,49 @@ export function WorkflowRightPanel({
 }: WorkflowRightPanelProps) {
   const content = (
     <div className="flex h-full min-h-0 flex-col">
-      {headerSlot && <div className="border-b px-3 py-2">{headerSlot}</div>}
+      {(headerSlot || onPanelModeChange) && (
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          {onPanelModeChange && (
+            <div
+              role="tablist"
+              aria-label="Studio panel mode"
+              className="bg-muted grid w-full grid-cols-2 rounded-md p-0.5"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={panelMode === "build"}
+                onClick={() => onPanelModeChange("build")}
+                className={`rounded-sm px-2 py-1 text-xs font-medium transition-colors ${
+                  panelMode === "build"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Build
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={panelMode === "chat"}
+                onClick={() => onPanelModeChange("chat")}
+                className={`rounded-sm px-2 py-1 text-xs font-medium transition-colors ${
+                  panelMode === "chat"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                AI Chat
+              </button>
+            </div>
+          )}
+          {headerSlot}
+        </div>
+      )}
       <div className="min-h-0 flex-1">
-        {selectedNode ? (
+        {panelMode === "chat" && chatSlot ? (
+          chatSlot
+        ) : selectedNode ? (
           <WorkflowNodeInspectorView
             node={selectedNode}
             allNodes={allNodes}

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { createWorkflow } from "@/actions/workflows/create-workflow";
 import { deleteWorkflow } from "@/actions/workflows/delete-workflow";
+import { getWorkflow } from "@/actions/workflows/get-workflow";
 import { regenerateWebhookSecret } from "@/actions/workflows/regenerate-webhook-secret";
 import { updateWorkflow } from "@/actions/workflows/update-workflow";
 import { useWorkflowEditorStore } from "@/components/workflows/canvas/workflow-editor-store";
@@ -194,6 +195,59 @@ export function useWorkflowEditor({
     }
   };
 
+  const handleSaveForBuilderChat = async (): Promise<boolean> => {
+    if (isNew) return false;
+    if (!form.name.trim()) {
+      toast.error("Please enter a workflow name");
+      return false;
+    }
+    try {
+      validateAndSortWorkflowGraph(form.nodes, form.edges);
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Workflow graph contains invalid connections or cycles",
+      );
+      return false;
+    }
+
+    const payload = buildWorkflowPayload({
+      name: form.name,
+      description: form.description,
+      globalContext: form.globalContext,
+      modelId: form.modelId,
+      reasoningEffort: form.reasoningEffort,
+      tools: form.tools,
+      skillMode: form.skillMode,
+      skillIds: form.skillIds,
+      knowledgeBaseIds: form.knowledgeBaseIds,
+      subagentIds: form.subagentIds,
+      requiresFileUpload,
+      canvasConfig: form.canvasConfig,
+      approvalConfig: form.approvalConfig,
+      nodes: form.nodes,
+      edges: form.edges,
+    });
+
+    const res = await updateWorkflow(id, payload);
+    if (!res.ok) {
+      handleApiError(res.error, "Failed to save workflow before chat");
+      return false;
+    }
+    return true;
+  };
+
+  const handleWorkflowMutated = async () => {
+    if (isNew) return;
+    const res = await getWorkflow(id);
+    if (!res.ok) return;
+    form.setNodes(res.value.nodes);
+    form.setEdges(res.value.edges);
+    form.setName(res.value.name);
+    form.setDescription(res.value.description ?? "");
+  };
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -227,6 +281,8 @@ export function useWorkflowEditor({
     handleAutoLayout,
     handleRegenerateWebhookSecret,
     handleSave,
+    handleSaveForBuilderChat,
+    handleWorkflowMutated,
     handleDelete,
   };
 }

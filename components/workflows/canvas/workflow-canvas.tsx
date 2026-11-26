@@ -24,6 +24,7 @@ import type { WorkflowVisualNodeStatus } from "@/components/workflows/canvas/nod
 import { WORKFLOW_NODE_TYPES } from "@/components/workflows/canvas/node-types";
 import { useWorkflowEditorStore } from "@/components/workflows/canvas/workflow-editor-store";
 import { WorkflowRightPanel } from "@/components/workflows/canvas/workflow-right-panel";
+import { WorkflowBuilderChat } from "@/components/workflows/editor/workflow-builder-chat";
 import {
   createAgentWorkflowNode,
   createDefaultWorkflowNode,
@@ -69,6 +70,10 @@ export interface WorkflowCanvasProps {
   selectedNodeId?: string | null;
   onSelectNode?: (nodeId: string | null) => void;
   readOnly?: boolean;
+  isNew?: boolean;
+  onBeforeBuilderChatSend?: () => Promise<boolean> | boolean;
+  onCreateDraftForBuilderChat?: () => Promise<void> | void;
+  onWorkflowMutated?: () => Promise<void> | void;
 }
 
 function WorkflowCanvasInner({
@@ -92,7 +97,12 @@ function WorkflowCanvasInner({
   selectedNodeId: controlledSelectedNodeId,
   onSelectNode,
   readOnly = false,
+  isNew = false,
+  onBeforeBuilderChatSend,
+  onCreateDraftForBuilderChat,
+  onWorkflowMutated,
 }: WorkflowCanvasProps) {
+  const [panelMode, setPanelMode] = useState<"build" | "chat">("build");
   const instance = useReactFlow();
   const {
     selectedNodeId: storeSelectedNodeId,
@@ -364,6 +374,17 @@ function WorkflowCanvasInner({
           knowledgebases={knowledgebases}
           skills={skills}
           agents={agents}
+          panelMode={panelMode}
+          onPanelModeChange={setPanelMode}
+          chatSlot={
+            <WorkflowBuilderChat
+              workflowId={workflowId}
+              isNew={isNew}
+              onCreateDraft={onCreateDraftForBuilderChat}
+              onBeforeSend={onBeforeBuilderChatSend}
+              onWorkflowMutated={onWorkflowMutated}
+            />
+          }
           mobileOpen={mobilePanelOpen}
           onMobileOpenChange={setMobilePanelOpen}
           onAddNode={handleAddNode}

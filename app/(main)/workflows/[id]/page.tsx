@@ -82,6 +82,9 @@ export default function WorkflowEditorPage() {
         onRunWorkflow={() => editor.setRunDialogOpen(true)}
         webhookSecret={editor.webhookSecret}
         onRegenerateWebhookSecret={editor.handleRegenerateWebhookSecret}
+        onBeforeBuilderChatSend={editor.handleSaveForBuilderChat}
+        onCreateDraftForBuilderChat={editor.handleSave}
+        onWorkflowMutated={editor.handleWorkflowMutated}
         globalContext={editor.globalContext}
         onGlobalContextChange={editor.setGlobalContext}
         knowledgebases={editor.knowledgebases}
