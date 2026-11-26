@@ -98,6 +98,103 @@ const webhookTriggerNodeDataSchema = z.object({
   samplePayload: z.string().max(20000).optional(),
 });
 
+const RESERVED_OUTPUT_FIELD_NAMES = new Set([
+  "text",
+  "data",
+  "artifact",
+  "outputAttachmentId",
+]);
+
+const outputFieldNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Field name is required")
+  .max(64, "Field name must be 64 characters or fewer")
+  .regex(
+    /^[A-Za-z_][A-Za-z0-9_]*$/,
+    "Field name must start with a letter or underscore and contain only letters, digits, and underscores",
+  )
+  .refine(
+    (name) => !RESERVED_OUTPUT_FIELD_NAMES.has(name),
+    "Field name is reserved (cannot be text, data, artifact, or outputAttachmentId)",
+  );
+
+const structuredOutputSubfieldSchema = z.object({
+  id: z.string().min(1),
+  name: outputFieldNameSchema,
+  type: z.enum(["string", "number", "boolean"]),
+  description: z.string().max(300).optional(),
+  required: z.boolean(),
+});
+
+/**
+ * Zod schema validating a single top-level structured output field.
+ */
+export const structuredOutputFieldSchema = z
+  .object({
+    id: z.string().min(1),
+    name: outputFieldNameSchema,
+    type: z.enum([
+      "string",
+      "number",
+      "boolean",
+      "string_array",
+      "number_array",
+      "object_array",
+    ]),
+    description: z.string().max(300).optional(),
+    required: z.boolean(),
+    itemFields: z
+      .array(structuredOutputSubfieldSchema)
+      .max(15, "At most 15 item subfields are allowed")
+      .optional(),
+  })
+  .superRefine((field, ctx) => {
+    if (field.type !== "object_array") return;
+    if (!field.itemFields || field.itemFields.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "List of Objects requires at least one item subfield",
+        path: ["itemFields"],
+      });
+      return;
+    }
+    const seen = new Set<string>();
+    for (const sub of field.itemFields) {
+      if (seen.has(sub.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate subfield name "${sub.name}"`,
+          path: ["itemFields"],
+        });
+      }
+      seen.add(sub.name);
+    }
+  });
+
+/**
+ * Zod schema validating the structured output definition on an AI Step node.
+ */
+export const structuredOutputSchema = z
+  .object({
+    fields: z
+      .array(structuredOutputFieldSchema)
+      .max(30, "At most 30 structured output fields are allowed"),
+  })
+  .superRefine((schema, ctx) => {
+    const seen = new Set<string>();
+    for (const field of schema.fields) {
+      if (seen.has(field.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Duplicate field name "${field.name}"`,
+          path: ["fields"],
+        });
+      }
+      seen.add(field.name);
+    }
+  });
+
 const aiStepNodeDataSchema = z.object({
   kind: z.literal("ai_step"),
   variableName: variableNameField,
@@ -117,6 +214,8 @@ const aiStepNodeDataSchema = z.object({
   canvasMode: z
     .union([z.enum(["inherit", "disabled", "any"]), artifactCanvasTypeSchema])
     .optional(),
+  outputMode: z.enum(["text", "structured", "canvas"]).optional(),
+  structuredOutputSchema: structuredOutputSchema.optional(),
 });
 
 const ifConditionNodeDataSchema = z.object({

@@ -81,6 +81,47 @@ export interface WebhookTriggerNodeData {
 }
 
 /**
+ * Supported field types for structured JSON output on an AI Step node.
+ */
+export type StructuredOutputFieldType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "string_array"
+  | "number_array"
+  | "object_array";
+
+/**
+ * Nested subfield definition for `object_array` structured output fields.
+ */
+export interface StructuredOutputSubfield {
+  id: string;
+  name: string;
+  type: "string" | "number" | "boolean";
+  description?: string;
+  required: boolean;
+}
+
+/**
+ * Top-level field definition for structured JSON output on an AI Step node.
+ */
+export interface StructuredOutputField {
+  id: string;
+  name: string;
+  type: StructuredOutputFieldType;
+  description?: string;
+  required: boolean;
+  itemFields?: StructuredOutputSubfield[];
+}
+
+/**
+ * Visual structured JSON output schema attached to an AI Step node.
+ */
+export interface StructuredOutputSchema {
+  fields: StructuredOutputField[];
+}
+
+/**
  * Node data for an AI Step execution node.
  */
 export interface AiStepNodeData {
@@ -100,6 +141,8 @@ export interface AiStepNodeData {
   reviewTiming?: "before" | "after";
   toolApprovalMode?: "inherit" | "auto" | "ask";
   canvasMode?: "inherit" | "disabled" | "any" | ArtifactCanvasType;
+  outputMode?: "text" | "structured" | "canvas";
+  structuredOutputSchema?: StructuredOutputSchema;
 }
 
 /**
@@ -224,6 +267,7 @@ export interface WorkflowNodeRunState {
   branchTaken?: "true" | "false";
   conditionReasoning?: string;
   httpResponse?: { status: number; statusText: string; data: unknown };
+  structuredOutput?: Record<string, unknown>;
   artifact?: ArtifactData | null;
   toolCalls?: ToolCallState[];
   toolResults?: Array<{

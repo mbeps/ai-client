@@ -260,7 +260,10 @@ function WorkflowCanvasInner({
       x: typeof window !== "undefined" ? window.innerWidth / 2 : 400,
       y: typeof window !== "undefined" ? window.innerHeight / 2 : 300,
     });
-    return { x: Math.round(center.x + offset), y: Math.round(center.y + offset) };
+    return {
+      x: Math.round(center.x + offset),
+      y: Math.round(center.y + offset),
+    };
   };
 
   const handleAddNode = (type: WorkflowNodeType) => {
