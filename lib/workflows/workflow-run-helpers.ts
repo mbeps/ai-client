@@ -10,6 +10,7 @@ import type { WorkflowStreamEvent } from "@/lib/inngest/workflow-run-channel";
 import { buildFileContext } from "@/lib/workflows/build-file-context";
 import { evaluateIfConditionNode } from "@/lib/workflows/evaluate-if-condition";
 import { executeAiStepNode } from "@/lib/workflows/execute-ai-step-node";
+import { executeFilterNode } from "@/lib/workflows/execute-filter-node";
 import { executeHttpRequestNode } from "@/lib/workflows/execute-http-node";
 import { loadWorkflowContext } from "@/lib/workflows/load-workflow-context";
 import { resolveEffectiveAiStepConfig } from "@/lib/workflows/resolve-effective-ai-step-config";
@@ -250,6 +251,66 @@ export async function executeSingleWorkflowNode(params: {
     };
   }
 
+  if (node.data.kind === "filter") {
+    let model: any;
+    if (node.data.evaluationMode === "llm") {
+      const targetModelId = node.data.modelId || workflowRow.modelId;
+      const targetEffort =
+        (node.data.modelId
+          ? node.data.reasoningEffort
+          : workflowRow.reasoningEffort) ?? undefined;
+      const resolved = targetModelId
+        ? await resolveProvider(userId, targetModelId, targetEffort).catch(
+            () => null,
+          )
+        : (await loadWorkflowContext({ userId, workflowRow, nodes: allNodes }))
+            .resolvedProvider;
+      if (resolved?.sdkProvider?.chat && resolved.modelId) {
+        model = resolved.sdkProvider.chat(resolved.modelId);
+      }
+    }
+    const filterRes = await executeFilterNode({
+      data: node.data,
+      context: contextData,
+      model,
+    });
+    return {
+      status: "completed",
+      activeHandles: filterRes.activeHandles,
+      contextEntry: {
+        items: filterRes.items,
+        excluded: filterRes.excluded,
+        count: filterRes.count,
+        totalCount: filterRes.totalCount,
+        reasoning: filterRes.reasoning,
+      },
+      outputAttachmentIds,
+      activeWorkbookFilePath,
+      activeArtifact,
+      nodeState: {
+        status: "completed",
+        summary: filterRes.reasoning,
+        filterSummary: {
+          kept: filterRes.count,
+          total: filterRes.totalCount,
+          reasoning: filterRes.reasoning,
+        },
+        startedAt,
+        completedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  if (node.data.kind !== "ai_step") {
+    await failWorkflowRun(
+      runId,
+      node.id,
+      `Unsupported node kind "${node.data.kind}" in single-node executor.`,
+      emit,
+    );
+    return { status: "failed" };
+  }
+
   let linkedAgent: Agent | null = null;
   if (node.data.agentId) {
     const [resolvedAgent] = await resolveLinkedSubagents(userId, [
@@ -449,6 +510,7 @@ export async function executeNodeWithGates(params: {
       reviewPhase: "before",
       nodeStates,
       emit,
+      stepIdPrefix,
     });
     if (!ok) return { status: "failed" };
   }
@@ -493,6 +555,7 @@ export async function executeNodeWithGates(params: {
     dryRun,
     nodeStates,
     emit,
+    stepIdPrefix,
   });
 
   if (outcome.status === "cancelled") {
@@ -534,6 +597,7 @@ export async function executeNodeWithGates(params: {
       reviewPhase: "after",
       nodeStates,
       emit,
+      stepIdPrefix,
     });
     if (!ok) return { status: "failed" };
   }

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { executeSingleWorkflowNode } from "@/lib/workflows/workflow-run-helpers";
+import {
+  executeNodeWithGates,
+  executeSingleWorkflowNode,
+} from "@/lib/workflows/workflow-run-helpers";
 import type { Agent } from "@/types/agent/agent";
 import type { WorkflowNode } from "@/types/workflows/workflow";
 
@@ -37,6 +40,25 @@ vi.mock("@/lib/workflows/execute-ai-step-node", () => ({
 
 vi.mock("@/lib/workflows/build-file-context", () => ({
   buildFileContext: vi.fn().mockResolvedValue({ attachmentRows: [] }),
+}));
+
+const mockExecuteFilterNode = vi.fn();
+vi.mock("@/lib/workflows/execute-filter-node", () => ({
+  executeFilterNode: (...args: unknown[]) => mockExecuteFilterNode(...args),
+}));
+
+const mockResolveProvider = vi.fn();
+vi.mock("@/lib/chat/resolve-provider", () => ({
+  resolveProvider: (...args: unknown[]) => mockResolveProvider(...args),
+}));
+
+const mockAwaitHumanReviewGate = vi.fn().mockResolvedValue(true);
+const mockResolvePendingToolApprovalLoop = vi.fn(async ({ outcome }) => outcome);
+vi.mock("@/lib/workflows/workflow-run-gates", () => ({
+  awaitHumanReviewGate: (...args: unknown[]) =>
+    mockAwaitHumanReviewGate(...args),
+  resolvePendingToolApprovalLoop: (...args: unknown[]) =>
+    mockResolvePendingToolApprovalLoop(...args),
 }));
 
 const baseWorkflowRow = {
@@ -275,6 +297,199 @@ describe("executeSingleWorkflowNode — agent persona & overrides", () => {
         type: "error",
         nodeId: "node-1",
         message: expect.stringContaining("deleted-agent-99"),
+      }),
+    );
+  });
+
+  it("executes filter node in deterministic mode and returns filterSummary", async () => {
+    mockExecuteFilterNode.mockResolvedValueOnce({
+      items: [{ id: 1 }],
+      excluded: [{ id: 2 }],
+      count: 1,
+      totalCount: 2,
+      reasoning: "Matched 1 of 2",
+      activeHandles: ["main"],
+    });
+
+    const filterNode: WorkflowNode = {
+      id: "filter-1",
+      type: "filter",
+      name: "Filter Items",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "filter",
+        variableName: "filtered",
+        itemsTemplate: "{{items}}",
+        evaluationMode: "deterministic",
+        logic: "and",
+        rules: [],
+        continueWhenEmpty: true,
+      },
+    };
+
+    const outcome = await executeSingleWorkflowNode({
+      runId: "run-1",
+      userId: "user-1",
+      node: filterNode,
+      stepIndex: 0,
+      allNodes: [filterNode],
+      workflowRow: baseWorkflowRow,
+      initialData: {},
+      contextData: { items: [{ id: 1 }, { id: 2 }] },
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      dryRun: false,
+      emit,
+    });
+
+    expect(outcome.status).toBe("completed");
+    if (outcome.status === "completed") {
+      expect(outcome.activeHandles).toEqual(["main"]);
+      expect(outcome.nodeState.filterSummary).toEqual({
+        kept: 1,
+        total: 2,
+        reasoning: "Matched 1 of 2",
+      });
+    }
+  });
+
+  it("executes filter node in LLM mode with continueWhenEmpty: false", async () => {
+    const fakeChatModel = { modelId: "filter-llm" };
+    mockResolveProvider.mockResolvedValueOnce({
+      modelId: "filter-llm",
+      sdkProvider: { chat: () => fakeChatModel },
+    });
+    mockExecuteFilterNode.mockResolvedValueOnce({
+      items: [],
+      excluded: [{ id: 1 }],
+      count: 0,
+      totalCount: 1,
+      reasoning: "None matched",
+      activeHandles: [],
+    });
+
+    const filterNode: WorkflowNode = {
+      id: "filter-2",
+      type: "filter",
+      name: "LLM Filter",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "filter",
+        variableName: "filtered",
+        itemsTemplate: "{{items}}",
+        evaluationMode: "llm",
+        logic: "and",
+        rules: [],
+        llmFilterPrompt: "Keep valid",
+        continueWhenEmpty: false,
+      },
+    };
+
+    const outcome = await executeSingleWorkflowNode({
+      runId: "run-1",
+      userId: "user-1",
+      node: filterNode,
+      stepIndex: 0,
+      allNodes: [filterNode],
+      workflowRow: baseWorkflowRow,
+      initialData: {},
+      contextData: { items: [{ id: 1 }] },
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      dryRun: false,
+      emit,
+    });
+
+    expect(mockExecuteFilterNode).toHaveBeenCalledWith(
+      expect.objectContaining({ model: fakeChatModel }),
+    );
+    expect(outcome.status).toBe("completed");
+    if (outcome.status === "completed") {
+      expect(outcome.activeHandles).toEqual([]);
+    }
+  });
+
+  it("fails cleanly when an unsupported node kind reaches single-node executor", async () => {
+    const loopNode: WorkflowNode = {
+      id: "loop-1",
+      type: "loop",
+      name: "Loop",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "loop",
+        variableName: "loop1",
+        mode: "count",
+        count: 2,
+        maxIterations: 20,
+      },
+    };
+
+    const outcome = await executeSingleWorkflowNode({
+      runId: "run-1",
+      userId: "user-1",
+      node: loopNode,
+      stepIndex: 0,
+      allNodes: [loopNode],
+      workflowRow: baseWorkflowRow,
+      initialData: {},
+      contextData: {},
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      dryRun: false,
+      emit,
+    });
+
+    expect(outcome).toEqual({ status: "failed" });
+    expect(emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "error",
+        nodeId: "loop-1",
+        message: expect.stringContaining('Unsupported node kind "loop"'),
+      }),
+    );
+  });
+
+  it("forwards stepIdPrefix to review and tool approval gates in executeNodeWithGates", async () => {
+    mockAwaitHumanReviewGate.mockClear();
+    mockResolvePendingToolApprovalLoop.mockClear();
+    const step = {
+      run: vi.fn(async (_id: string, fn: () => Promise<unknown>) => fn()),
+      waitForEvent: vi.fn(),
+    };
+
+    const res = await executeNodeWithGates({
+      step,
+      runId: "run-1",
+      userId: "user-1",
+      node: makeAiNode({ requiresReview: true, reviewTiming: "before" }),
+      stepIndex: 0,
+      allNodes: [],
+      workflowRow: baseWorkflowRow,
+      initialData: {},
+      contextData: {},
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      activeArtifact: null,
+      dryRun: false,
+      nodeStates: {},
+      emit,
+      stepIdPrefix: "loop-l1-iter-0-",
+    });
+
+    expect(res.status).toBe("completed");
+    expect(mockAwaitHumanReviewGate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reviewPhase: "before",
+        stepIdPrefix: "loop-l1-iter-0-",
+      }),
+    );
+    expect(mockResolvePendingToolApprovalLoop).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stepIdPrefix: "loop-l1-iter-0-",
       }),
     );
   });

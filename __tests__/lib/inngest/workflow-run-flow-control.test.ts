@@ -32,6 +32,7 @@ vi.mock("@/lib/workflows/workflow-run-helpers", () => ({
   failWorkflowRun: mockFailWorkflowRun,
 }));
 
+import { inngest } from "@/lib/inngest/client";
 import { executeWorkflowRun } from "@/lib/inngest/functions/workflow-run";
 
 type HandlerFn = (args: {
@@ -283,6 +284,14 @@ describe("executeWorkflowRun loop flow control", () => {
     });
 
     expect(res).toEqual({ success: true, completed: true });
+    expect(inngest.realtime.publish).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        type: "workflow-node-skipped",
+        runId: "run-1",
+        nodeId: "body1",
+      }),
+    );
     expect(mockExecuteNodeWithGates).toHaveBeenCalledTimes(1);
     expect(mockExecuteNodeWithGates.mock.calls[0][0].node.id).toBe("done1");
     expect(mockExecuteNodeWithGates.mock.calls[0][0].contextData.loop1).toEqual({

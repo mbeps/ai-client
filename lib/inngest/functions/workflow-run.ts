@@ -359,6 +359,12 @@ export const executeWorkflowRun = inngest.createFunction(
           }
         }
 
+        if (slicedItems.length === 0) {
+          for (const bodyNode of bodyNodes) {
+            nodeStates[bodyNode.id] = { status: "skipped" };
+          }
+        }
+
         contextData[loopData.variableName] = {
           results,
           items: slicedItems,
@@ -388,6 +394,15 @@ export const executeWorkflowRun = inngest.createFunction(
             .where(
               and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
             );
+          if (slicedItems.length === 0) {
+            for (const bodyNode of bodyNodes) {
+              await emit({
+                type: "workflow-node-skipped",
+                runId,
+                nodeId: bodyNode.id,
+              });
+            }
+          }
           await emit({
             type: "workflow-node-complete",
             runId,
