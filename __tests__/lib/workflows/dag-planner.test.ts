@@ -1,6 +1,7 @@
 import { NonRetriableError } from "inngest";
 import { describe, expect, it } from "vitest";
 import {
+  extractLoopBodyMap,
   resolveNodeExecutionEligibility,
   validateAndSortWorkflowGraph,
 } from "@/lib/workflows/dag-planner";
@@ -163,5 +164,89 @@ describe("resolveNodeExecutionEligibility", () => {
     expect(
       resolveNodeExecutionEligibility("join", edges, activeHandles, skipped),
     ).toBe("skip");
+  });
+});
+
+function makeLoopNode(id: string): WorkflowNode {
+  return {
+    id,
+    type: "loop",
+    name: id,
+    position: { x: 0, y: 0 },
+    data: {
+      kind: "loop",
+      variableName: id,
+      mode: "count",
+      count: 3,
+      maxIterations: 20,
+    },
+  };
+}
+
+describe("extractLoopBodyMap", () => {
+  it("isolates body nodes from done nodes", () => {
+    const nodes = [
+      makeNode("start", "manual_trigger"),
+      makeLoopNode("loop1"),
+      makeNode("body1"),
+      makeNode("body2"),
+      makeNode("after"),
+    ];
+    const edges = [
+      makeEdge("e1", "start", "loop1", "main"),
+      makeEdge("e2", "loop1", "body1", "body"),
+      makeEdge("e3", "body1", "body2", "main"),
+      makeEdge("e4", "loop1", "after", "done"),
+    ];
+
+    const map = extractLoopBodyMap(nodes, edges);
+    expect(Array.from(map.get("loop1") ?? [])).toEqual(["body1", "body2"]);
+  });
+
+  it("rejects body branch reconnecting into done branch", () => {
+    const nodes = [
+      makeLoopNode("loop1"),
+      makeNode("body1"),
+      makeNode("after"),
+    ];
+    const edges = [
+      makeEdge("e1", "loop1", "body1", "body"),
+      makeEdge("e2", "body1", "after", "main"),
+      makeEdge("e3", "loop1", "after", "done"),
+    ];
+
+    expect(() => extractLoopBodyMap(nodes, edges)).toThrow(
+      "cannot reconnect into its done branch",
+    );
+  });
+
+  it("rejects nested loops inside loop body", () => {
+    const nodes = [
+      makeLoopNode("loop1"),
+      makeLoopNode("loop2"),
+    ];
+    const edges = [makeEdge("e1", "loop1", "loop2", "body")];
+
+    expect(() => extractLoopBodyMap(nodes, edges)).toThrow(
+      "Nested loops are not supported",
+    );
+  });
+
+  it("rejects external edges entering the middle of a loop body", () => {
+    const nodes = [
+      makeNode("outside"),
+      makeLoopNode("loop1"),
+      makeNode("body1"),
+      makeNode("body2"),
+    ];
+    const edges = [
+      makeEdge("e1", "loop1", "body1", "body"),
+      makeEdge("e2", "body1", "body2", "main"),
+      makeEdge("e3", "outside", "body2", "main"),
+    ];
+
+    expect(() => extractLoopBodyMap(nodes, edges)).toThrow(
+      "External edge",
+    );
   });
 });

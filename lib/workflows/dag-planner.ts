@@ -101,3 +101,109 @@ export function hasInvalidEdgeEndpoints(
       !nodeIds.has(edge.sourceNodeId) || !nodeIds.has(edge.targetNodeId),
   );
 }
+
+function collectReachableNodeIds(
+  startIds: string[],
+  adjacency: Map<string, string[]>,
+): Set<string> {
+  const visited = new Set<string>();
+  const queue = [...startIds];
+  let head = 0;
+
+  while (head < queue.length) {
+    const id = queue[head++];
+    if (visited.has(id)) continue;
+    visited.add(id);
+    for (const nextId of adjacency.get(id) ?? []) {
+      if (!visited.has(nextId)) {
+        queue.push(nextId);
+      }
+    }
+  }
+
+  return visited;
+}
+
+/**
+ * Partitions each `loop` node's `body` sub-DAG from its `done` branch and validates
+ * loop isolation invariants:
+ * - `body` and `done` subgraphs must be strictly disjoint.
+ * - No nested `loop` nodes are allowed inside a `body` subgraph.
+ * - No external edges may enter a `body` subgraph from outside the owning `loop` node.
+ *
+ * @throws NonRetriableError when any loop invariant is violated.
+ */
+export function extractLoopBodyMap(
+  nodes: WorkflowNode[],
+  edges: WorkflowEdge[],
+): Map<string, Set<string>> {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  const adjacency = new Map<string, string[]>();
+  const incomingByNode = new Map<string, WorkflowEdge[]>();
+
+  for (const node of nodes) {
+    adjacency.set(node.id, []);
+    incomingByNode.set(node.id, []);
+  }
+  for (const edge of edges) {
+    if (!nodeMap.has(edge.sourceNodeId) || !nodeMap.has(edge.targetNodeId)) {
+      continue;
+    }
+    adjacency.get(edge.sourceNodeId)!.push(edge.targetNodeId);
+    incomingByNode.get(edge.targetNodeId)!.push(edge);
+  }
+
+  const loopBodyMap = new Map<string, Set<string>>();
+
+  for (const node of nodes) {
+    if (node.type !== "loop") continue;
+
+    const bodyStarts = edges
+      .filter(
+        (e) =>
+          e.sourceNodeId === node.id &&
+          e.sourceHandle === "body" &&
+          nodeMap.has(e.targetNodeId),
+      )
+      .map((e) => e.targetNodeId);
+
+    const doneStarts = edges
+      .filter(
+        (e) =>
+          e.sourceNodeId === node.id &&
+          e.sourceHandle === "done" &&
+          nodeMap.has(e.targetNodeId),
+      )
+      .map((e) => e.targetNodeId);
+
+    const bodySet = collectReachableNodeIds(bodyStarts, adjacency);
+    const doneSet = collectReachableNodeIds(doneStarts, adjacency);
+
+    for (const bodyId of bodySet) {
+      if (doneSet.has(bodyId)) {
+        throw new NonRetriableError(
+          `Loop "${node.name}" body branch cannot reconnect into its done branch`,
+        );
+      }
+      // ponytail: v1 disallows nested loops; upgrade path is recursive sub-DAG executor
+      if (nodeMap.get(bodyId)?.type === "loop") {
+        throw new NonRetriableError(
+          `Nested loops are not supported inside loop "${node.name}"`,
+        );
+      }
+      for (const incoming of incomingByNode.get(bodyId) ?? []) {
+        const isFromOwningLoop =
+          incoming.sourceNodeId === node.id && incoming.sourceHandle === "body";
+        if (!isFromOwningLoop && !bodySet.has(incoming.sourceNodeId)) {
+          throw new NonRetriableError(
+            `External edge from "${incoming.sourceNodeId}" cannot enter loop "${node.name}" body`,
+          );
+        }
+      }
+    }
+
+    loopBodyMap.set(node.id, bodySet);
+  }
+
+  return loopBodyMap;
+}

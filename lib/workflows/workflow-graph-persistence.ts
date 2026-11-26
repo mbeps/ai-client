@@ -6,6 +6,7 @@ import { toAppError } from "@/lib/error/to-app-error";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
 import {
+  extractLoopBodyMap,
   hasInvalidEdgeEndpoints,
   validateAndSortWorkflowGraph,
 } from "@/lib/workflows/dag-planner";
@@ -78,6 +79,7 @@ export function validateWorkflowGraphInput(
   }
   try {
     validateAndSortWorkflowGraph(nodes, edges);
+    extractLoopBodyMap(nodes, edges);
   } catch (err) {
     return fail({
       code: ERROR_CODE.INVALID_INPUT,

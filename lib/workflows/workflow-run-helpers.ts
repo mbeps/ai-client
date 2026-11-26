@@ -13,6 +13,10 @@ import { executeAiStepNode } from "@/lib/workflows/execute-ai-step-node";
 import { executeHttpRequestNode } from "@/lib/workflows/execute-http-node";
 import { loadWorkflowContext } from "@/lib/workflows/load-workflow-context";
 import { resolveEffectiveAiStepConfig } from "@/lib/workflows/resolve-effective-ai-step-config";
+import {
+  awaitHumanReviewGate,
+  resolvePendingToolApprovalLoop,
+} from "@/lib/workflows/workflow-run-gates";
 import type { ResumedToolDecision } from "@/lib/workflows/workflow-tool-approval";
 import type { Agent } from "@/types/agent/agent";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
@@ -376,4 +380,171 @@ export async function executeSingleWorkflowNode(params: {
   } finally {
     await wfCtx.mcpCleanup();
   }
+}
+
+/**
+ * Executes a single node with its pre/post human review gates, tool approval loop,
+ * state updates, and DB/realtime checkpointing. Shared by top-level DAG and loop body runs.
+ */
+export async function executeNodeWithGates(params: {
+  step: {
+    run: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
+    waitForEvent: (id: string, opts: unknown) => Promise<unknown>;
+  };
+  runId: string;
+  userId: string;
+  node: WorkflowNode;
+  stepIndex: number;
+  allNodes: WorkflowNode[];
+  workflowRow: WorkflowRunExecutionRow;
+  initialData: Record<string, unknown>;
+  contextData: Record<string, unknown>;
+  inputAttachmentIds: string[];
+  outputAttachmentIds: string[];
+  activeWorkbookFilePath: string | null;
+  activeArtifact: ArtifactData | null;
+  dryRun: boolean;
+  nodeStates: Record<string, WorkflowNodeRunState>;
+  emit: (data: WorkflowStreamEvent) => Promise<void>;
+  stepIdPrefix?: string;
+}): Promise<
+  | {
+      status: "completed";
+      activeHandles: string[];
+      nodeState: WorkflowNodeRunState;
+      contextEntry: unknown;
+      outputAttachmentIds: string[];
+      activeWorkbookFilePath: string | null;
+      activeArtifact: ArtifactData | null;
+    }
+  | { status: "cancelled" }
+  | { status: "failed" }
+> {
+  const {
+    step,
+    runId,
+    userId,
+    node,
+    stepIndex,
+    allNodes,
+    workflowRow,
+    initialData,
+    contextData,
+    inputAttachmentIds,
+    outputAttachmentIds,
+    activeWorkbookFilePath,
+    activeArtifact,
+    dryRun,
+    nodeStates,
+    emit,
+    stepIdPrefix = "",
+  } = params;
+
+  const reviewGate = resolveNodeReviewGate(node, workflowRow.approvalConfig);
+  if (reviewGate === "before") {
+    const ok = await awaitHumanReviewGate({
+      step: step as Parameters<typeof awaitHumanReviewGate>[0]["step"],
+      runId,
+      nodeId: node.id,
+      reviewPhase: "before",
+      nodeStates,
+      emit,
+    });
+    if (!ok) return { status: "failed" };
+  }
+
+  const executeStepId = stepIdPrefix
+    ? `${stepIdPrefix}node-${node.id}`
+    : `execute-node-${node.id}`;
+  const initialOutcome = (await step.run(executeStepId, async () =>
+    executeSingleWorkflowNode({
+      runId,
+      userId,
+      node,
+      stepIndex,
+      allNodes,
+      workflowRow,
+      initialData,
+      contextData,
+      inputAttachmentIds,
+      outputAttachmentIds,
+      activeWorkbookFilePath,
+      activeArtifact,
+      dryRun,
+      emit,
+    }),
+  )) as NodeStepOutcome;
+
+  const outcome = await resolvePendingToolApprovalLoop({
+    step: step as Parameters<typeof resolvePendingToolApprovalLoop>[0]["step"],
+    outcome: initialOutcome,
+    runId,
+    userId,
+    node,
+    stepIndex,
+    allNodes,
+    workflowRow,
+    initialData,
+    contextData,
+    inputAttachmentIds,
+    outputAttachmentIds,
+    activeWorkbookFilePath,
+    activeArtifact,
+    dryRun,
+    nodeStates,
+    emit,
+  });
+
+  if (outcome.status === "cancelled") {
+    return { status: "cancelled" };
+  }
+  if (outcome.status !== "completed") {
+    return { status: "failed" };
+  }
+
+  nodeStates[node.id] = outcome.nodeState;
+  contextData[node.data.variableName] = outcome.contextEntry;
+
+  const checkpointStepId = `${stepIdPrefix}checkpoint-node-${node.id}`;
+  await step.run(checkpointStepId, async () => {
+    await db
+      .update(workflowRun)
+      .set({
+        currentNodeId: node.id,
+        nodeStates,
+        contextData,
+        outputAttachmentIds: outcome.outputAttachmentIds,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")));
+    await emit({
+      type: "workflow-node-complete",
+      runId,
+      nodeId: node.id,
+      state: outcome.nodeState,
+      outputAttachmentIds: outcome.outputAttachmentIds,
+    });
+  });
+
+  if (reviewGate === "after") {
+    const ok = await awaitHumanReviewGate({
+      step: step as Parameters<typeof awaitHumanReviewGate>[0]["step"],
+      runId,
+      nodeId: node.id,
+      reviewPhase: "after",
+      nodeStates,
+      emit,
+    });
+    if (!ok) return { status: "failed" };
+  }
+
+  return {
+    status: "completed",
+    activeHandles: outcome.activeHandles,
+    nodeState: outcome.nodeState,
+    contextEntry: outcome.contextEntry,
+    outputAttachmentIds: outcome.outputAttachmentIds,
+    activeWorkbookFilePath: outcome.activeWorkbookFilePath,
+    activeArtifact: outcome.activeArtifact ?? activeArtifact,
+  };
 }
