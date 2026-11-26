@@ -753,4 +753,61 @@ describe("executeAiStepNode", () => {
       expect(res.artifact?.id).toBe("fresh-art-2");
     }
   });
+
+  it("forwards agentPersonaPrompt and effectiveTools to prompt builder and tool filter", async () => {
+    mockGenerateText.mockResolvedValueOnce({
+      text: "Audited",
+      steps: [],
+    });
+
+    const res = await executeAiStepNode({
+      runId: "run-1",
+      nodeId: "node-3",
+      nodeName: "Audit",
+      stepIndex: 0,
+      userId: "user-1",
+      data: { ...baseNodeData, mcpServerIds: ["srv-1"], toolIds: [] },
+      workflow: {
+        globalContext: null,
+        tools: ["Internal:tool:search_web"],
+        requiresFileUpload: false,
+        canvasConfig: defaultCanvas,
+        approvalConfig: {
+          defaultReviewGate: "none",
+          toolApprovalMode: "auto",
+          autoApprovedTools: [],
+        },
+      },
+      context: { webhook: { body: { text: "SELECT 1" } } },
+      resolvedProvider: baseProvider,
+      allServers: [{ id: "srv-1", name: "PostgresMCP" }],
+      runMcpTools: {
+        run_query: { execute: vi.fn() },
+        search_web: { execute: vi.fn() },
+      },
+      runToolSourceMap: {
+        run_query: "PostgresMCP",
+        search_web: "Internal",
+      },
+      kbContext: "",
+      skillCatalog: [],
+      preloadedSkills: [],
+      linkedSubagents: [],
+      currentAttachmentRows: [],
+      currentOutputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      dryRun: false,
+      emit: vi.fn(),
+      agentPersonaPrompt: "You are a strict SQL auditor.",
+      effectiveTools: ["srv-1:tool:run_query"],
+    });
+
+    expect(res.status).toBe("completed");
+    const callArgs = mockGenerateText.mock.calls[0][0];
+    expect(callArgs.instructions).toContain(
+      "Agent Persona:\nYou are a strict SQL auditor.",
+    );
+    expect(callArgs.tools.run_query).toBeDefined();
+    expect(callArgs.tools.search_web).toBeUndefined();
+  });
 });

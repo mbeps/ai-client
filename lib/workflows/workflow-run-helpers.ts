@@ -4,6 +4,7 @@ import {
   type WorkflowRow,
   workflowRun,
 } from "@/drizzle/schemas/workflow-schema";
+import { resolveLinkedSubagents } from "@/lib/agents/resolve-linked-subagents";
 import { resolveProvider } from "@/lib/chat/resolve-provider";
 import type { WorkflowStreamEvent } from "@/lib/inngest/workflow-run-channel";
 import { buildFileContext } from "@/lib/workflows/build-file-context";
@@ -11,7 +12,9 @@ import { evaluateIfConditionNode } from "@/lib/workflows/evaluate-if-condition";
 import { executeAiStepNode } from "@/lib/workflows/execute-ai-step-node";
 import { executeHttpRequestNode } from "@/lib/workflows/execute-http-node";
 import { loadWorkflowContext } from "@/lib/workflows/load-workflow-context";
+import { resolveEffectiveAiStepConfig } from "@/lib/workflows/resolve-effective-ai-step-config";
 import type { ResumedToolDecision } from "@/lib/workflows/workflow-tool-approval";
+import type { Agent } from "@/types/agent/agent";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type { PendingApproval } from "@/types/tool/approval";
 import type {
@@ -243,6 +246,29 @@ export async function executeSingleWorkflowNode(params: {
     };
   }
 
+  let linkedAgent: Agent | null = null;
+  if (node.data.agentId) {
+    const [resolvedAgent] = await resolveLinkedSubagents(userId, [
+      node.data.agentId,
+    ]);
+    if (!resolvedAgent) {
+      await failWorkflowRun(
+        runId,
+        node.id,
+        `Linked agent "${node.data.agentId}" was not found or is no longer accessible.`,
+        emit,
+      );
+      return { status: "failed" };
+    }
+    linkedAgent = resolvedAgent;
+  }
+
+  const effective = resolveEffectiveAiStepConfig({
+    nodeData: node.data,
+    linkedAgent,
+    workflowRow,
+  });
+
   const stageIds =
     outputAttachmentIds.length > 0
       ? [outputAttachmentIds[outputAttachmentIds.length - 1]]
@@ -255,13 +281,13 @@ export async function executeSingleWorkflowNode(params: {
     userId,
     workflowRow,
     nodes: allNodes,
-    modelOverride: node.data.modelId ?? null,
+    modelOverride: effective.modelId,
     nodeOverride: {
-      reasoningEffort: node.data.reasoningEffort,
-      knowledgeBaseIds: node.data.knowledgeBaseIds,
-      skillMode: node.data.skillMode,
-      skillIds: node.data.skillIds,
-      subagentIds: node.data.subagentIds,
+      reasoningEffort: effective.reasoningEffort,
+      knowledgeBaseIds: effective.knowledgeBaseIds,
+      skillMode: effective.skillMode,
+      skillIds: effective.skillIds,
+      subagentIds: effective.subagentIds,
     },
   });
 
@@ -272,7 +298,11 @@ export async function executeSingleWorkflowNode(params: {
       nodeName: node.name,
       stepIndex,
       userId,
-      data: node.data,
+      data: {
+        ...node.data,
+        mcpServerIds: effective.mcpServerIds,
+        subagentIds: effective.subagentIds,
+      },
       workflow: workflowRow,
       context: contextData,
       resolvedProvider: wfCtx.resolvedProvider!,
@@ -290,6 +320,8 @@ export async function executeSingleWorkflowNode(params: {
       dryRun,
       emit,
       resumedToolDecisions,
+      agentPersonaPrompt: effective.agentPersonaPrompt,
+      effectiveTools: effective.toolIds,
     });
 
     if (aiRes.status === "awaiting_tool_approval") {

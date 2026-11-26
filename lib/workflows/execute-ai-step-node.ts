@@ -69,6 +69,8 @@ export interface ExecuteAiStepNodeParams {
   dryRun: boolean;
   emit: (data: WorkflowStreamEvent) => Promise<void> | void;
   resumedToolDecisions?: ResumedToolDecision[];
+  agentPersonaPrompt?: string;
+  effectiveTools?: string[];
 }
 
 /** Result returned by `executeAiStepNode`. */
@@ -125,13 +127,17 @@ export async function executeAiStepNode(
     dryRun,
     emit,
     resumedToolDecisions,
+    agentPersonaPrompt,
+    effectiveTools,
   } = params;
 
   try {
     const compiledPrompt = compileWorkflowTemplate(data.prompt, context);
     const { filteredTools, toolSourceMap, stepServerNames } = filterStepTools({
-      step: data,
-      workflowRow: workflow,
+      step: effectiveTools ? { ...data, toolIds: effectiveTools } : data,
+      workflowRow: effectiveTools
+        ? { ...workflow, tools: effectiveTools }
+        : workflow,
       allServers,
       runMcpTools,
       runToolSourceMap,
@@ -216,6 +222,7 @@ export async function executeAiStepNode(
       dryRun,
       linkedSubagents,
       activeArtifact,
+      agentPersonaPrompt,
     });
 
     const userMessage = resumedSummary
