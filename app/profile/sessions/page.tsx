@@ -25,7 +25,10 @@ export default async function SessionsPage() {
         </p>
       </div>
       <LoadingSuspense>
-        <SessionsTab currentSessionToken={session.session.token} />
+        <SessionsTab
+          currentSessionToken={session.session.token}
+          userId={session.user.id}
+        />
       </LoadingSuspense>
     </div>
   );
