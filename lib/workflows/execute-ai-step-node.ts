@@ -3,12 +3,17 @@ import { and, eq, ne } from "drizzle-orm";
 import { env } from "@/config/env";
 import { db } from "@/drizzle/db";
 import { workflowRun } from "@/drizzle/schemas/workflow-schema";
+import { generateStructuredObject } from "@/lib/chat/generate-structured-object";
 import type { WorkflowStreamEvent } from "@/lib/inngest/workflow-run-channel";
 import {
   classifyAiStepError,
   collectStepTurnOutputs,
 } from "@/lib/workflows/ai-step-turn-outputs";
 import type { AttachmentRow } from "@/lib/workflows/build-file-context";
+import {
+  buildZodSchemaFromOutputFields,
+  formatStructuredOutputSummary,
+} from "@/lib/workflows/build-structured-output-zod";
 import { compileWorkflowTemplate } from "@/lib/workflows/compile-template";
 import { handleStepArtifactOutput } from "@/lib/workflows/step-artifact-output";
 import { buildStepSystemPrompt } from "@/lib/workflows/step-system-prompt";
@@ -78,6 +83,7 @@ export type ExecuteAiStepNodeResult =
   | {
       status: "completed";
       summary: string;
+      structuredOutput?: Record<string, unknown>;
       artifact: ArtifactData | null;
       outputAttachmentId?: string;
       currentOutputAttachmentIds: string[];
@@ -132,9 +138,25 @@ export async function executeAiStepNode(
   } = params;
 
   try {
+    const isStructured = data.outputMode === "structured";
+    const structuredFields = data.structuredOutputSchema?.fields ?? [];
+    if (isStructured && structuredFields.length === 0) {
+      return {
+        status: "failed",
+        errorMessage:
+          "Structured output mode requires at least one output field.",
+      };
+    }
+
+    const effectiveStepData = isStructured
+      ? { ...data, canvasMode: "disabled" as const }
+      : data;
+
     const compiledPrompt = compileWorkflowTemplate(data.prompt, context);
     const { filteredTools, toolSourceMap, stepServerNames } = filterStepTools({
-      step: effectiveTools ? { ...data, toolIds: effectiveTools } : data,
+      step: effectiveTools
+        ? { ...effectiveStepData, toolIds: effectiveTools }
+        : effectiveStepData,
       workflowRow: effectiveTools
         ? { ...workflow, tools: effectiveTools }
         : workflow,
@@ -157,7 +179,7 @@ export async function executeAiStepNode(
     );
 
     const canvasPolicy = resolveStepCanvasPolicy(
-      data.canvasMode,
+      effectiveStepData.canvasMode,
       workflow.canvasConfig,
     );
     const enforcedTools = applyCanvasToolEnforcement(
@@ -229,8 +251,33 @@ export async function executeAiStepNode(
       ? `Approved/denied tool decisions were processed:\n${resumedSummary}\n\nPlease complete the task and summarise the outcome.`
       : "Please execute the task.";
 
+    const model = resolvedProvider.sdkProvider.chat(resolvedProvider.modelId);
+
+    if (isStructured && Object.keys(wrappedTools).length === 0) {
+      const outputSchema = buildZodSchemaFromOutputFields(structuredFields);
+      const structuredOutput = (await generateStructuredObject({
+        model,
+        schema: outputSchema,
+        schemaName: data.variableName || "step_output",
+        schemaDescription: `Structured output for workflow step "${nodeName}"`,
+        system: systemPrompt,
+        prompt: userMessage,
+      })) as Record<string, unknown>;
+
+      return {
+        status: "completed",
+        summary: formatStructuredOutputSummary(structuredOutput),
+        structuredOutput,
+        artifact: null,
+        currentOutputAttachmentIds,
+        currentAttachmentRows,
+        activeWorkbookFilePath,
+        toolCalls: [],
+      };
+    }
+
     const result = await generateText({
-      model: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
+      model,
       instructions: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
       tools: wrappedTools,
@@ -286,9 +333,27 @@ export async function executeAiStepNode(
         ? { ...rawArtifact, id: activeArtifact.id }
         : rawArtifact;
 
+    let structuredOutput: Record<string, unknown> | undefined;
+    if (isStructured) {
+      const outputSchema = buildZodSchemaFromOutputFields(structuredFields);
+      structuredOutput = (await generateStructuredObject({
+        model,
+        schema: outputSchema,
+        schemaName: data.variableName || "step_output",
+        schemaDescription: `Structured output for workflow step "${nodeName}"`,
+        system:
+          "Extract and format the final response into the required structured JSON schema.",
+        prompt:
+          result.text || "Extract structured output from the completed task.",
+      })) as Record<string, unknown>;
+    }
+
     return {
       status: "completed",
-      summary: result.text || "Step completed.",
+      summary: structuredOutput
+        ? formatStructuredOutputSummary(structuredOutput)
+        : result.text || "Step completed.",
+      ...(structuredOutput ? { structuredOutput } : {}),
       artifact,
       outputAttachmentId: persisted.stepOutputAttachmentId,
       currentOutputAttachmentIds: persisted.currentOutputAttachmentIds,

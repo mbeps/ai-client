@@ -332,11 +332,25 @@ export async function executeSingleWorkflowNode(params: {
     }
     if (aiRes.status === "failed") return { status: "failed" };
 
+    const structuredFields = aiRes.structuredOutput
+      ? Object.fromEntries(
+          Object.entries(aiRes.structuredOutput).filter(
+            ([k]) =>
+              k !== "text" &&
+              k !== "data" &&
+              k !== "artifact" &&
+              k !== "outputAttachmentId",
+          ),
+        )
+      : {};
+
     return {
       status: "completed",
       activeHandles: ["main"],
       contextEntry: {
+        ...structuredFields,
         text: aiRes.summary,
+        ...(aiRes.structuredOutput ? { data: aiRes.structuredOutput } : {}),
         artifact: aiRes.artifact,
         outputAttachmentId: aiRes.outputAttachmentId,
       },
@@ -349,6 +363,9 @@ export async function executeSingleWorkflowNode(params: {
       nodeState: {
         status: "completed",
         summary: aiRes.summary,
+        ...(aiRes.structuredOutput
+          ? { structuredOutput: aiRes.structuredOutput }
+          : {}),
         artifact: aiRes.artifact,
         outputAttachmentId: aiRes.outputAttachmentId,
         toolCalls: aiRes.toolCalls,
