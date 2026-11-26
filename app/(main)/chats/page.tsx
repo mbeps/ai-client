@@ -10,7 +10,7 @@ import type { ChatRow } from "@/types/chat/chat-row";
  * @see ChatsClient for client-side rendering and interactions
  */
 export default async function ChatsPage() {
-  const res = await listChats();
+  const res = await listChats({ includeWorkflowChats: true });
   const rows: ChatRow[] = res.ok ? res.value : [];
   const chats = rows.map((row) => ({
     id: row.id,
@@ -18,6 +18,7 @@ export default async function ChatsPage() {
     projectId: row.projectId ?? undefined,
     agentId: row.agentId ?? undefined,
     assistantId: row.agentId ?? undefined,
+    workflowId: row.workflowId ?? undefined,
     knowledgebaseId: row.knowledgebaseId ?? null,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),

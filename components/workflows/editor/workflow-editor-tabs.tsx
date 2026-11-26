@@ -46,6 +46,11 @@ export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
     onRunWorkflow,
     webhookSecret,
     onRegenerateWebhookSecret,
+    onBeforeBuilderChatSend,
+    onCreateDraftForBuilderChat,
+    onWorkflowMutated,
+    panelMode,
+    onPanelModeChange,
     globalContext,
     onGlobalContextChange,
     knowledgebases,
@@ -113,6 +118,12 @@ export function WorkflowEditorTabs(props: WorkflowEditorTabsProps) {
           onAutoLayout={onAutoLayout}
           onRunWorkflow={isNew ? undefined : onRunWorkflow}
           onRegenerateWebhookSecret={onRegenerateWebhookSecret}
+          isNew={isNew}
+          onBeforeBuilderChatSend={onBeforeBuilderChatSend}
+          onCreateDraftForBuilderChat={onCreateDraftForBuilderChat}
+          onWorkflowMutated={onWorkflowMutated}
+          panelMode={panelMode}
+          onPanelModeChange={onPanelModeChange}
           mcpServers={mcpServers}
           knowledgebases={knowledgebases}
           skills={skills}

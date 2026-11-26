@@ -1,14 +1,16 @@
 import { generateText, isStepCount } from "ai";
-import { and, eq, ne } from "drizzle-orm";
 import { env } from "@/config/env";
-import { db } from "@/drizzle/db";
-import { workflowRun } from "@/drizzle/schemas/workflow-schema";
+import { generateStructuredObject } from "@/lib/chat/generate-structured-object";
 import type { WorkflowStreamEvent } from "@/lib/inngest/workflow-run-channel";
 import {
   classifyAiStepError,
   collectStepTurnOutputs,
 } from "@/lib/workflows/ai-step-turn-outputs";
 import type { AttachmentRow } from "@/lib/workflows/build-file-context";
+import {
+  buildZodSchemaFromOutputFields,
+  formatStructuredOutputSummary,
+} from "@/lib/workflows/build-structured-output-zod";
 import { compileWorkflowTemplate } from "@/lib/workflows/compile-template";
 import { handleStepArtifactOutput } from "@/lib/workflows/step-artifact-output";
 import { buildStepSystemPrompt } from "@/lib/workflows/step-system-prompt";
@@ -18,6 +20,7 @@ import {
   resolveStepCanvasPolicy,
   resolveStepFileContext,
 } from "@/lib/workflows/step-tool-filtering";
+import { updateActiveWorkflowRun } from "@/lib/workflows/workflow-run-db";
 import {
   applyCanvasToolEnforcement,
   executeResumedToolDecisions,
@@ -34,6 +37,7 @@ import type { PendingApproval } from "@/types/tool/approval";
 import type { ToolCallState } from "@/types/tool/tool-call";
 import type {
   AiStepNodeData,
+  StructuredOutputField,
   WorkflowApprovalConfig,
   WorkflowCanvasConfig,
 } from "@/types/workflows/workflow";
@@ -69,6 +73,8 @@ export interface ExecuteAiStepNodeParams {
   dryRun: boolean;
   emit: (data: WorkflowStreamEvent) => Promise<void> | void;
   resumedToolDecisions?: ResumedToolDecision[];
+  agentPersonaPrompt?: string;
+  effectiveTools?: string[];
 }
 
 /** Result returned by `executeAiStepNode`. */
@@ -76,6 +82,7 @@ export type ExecuteAiStepNodeResult =
   | {
       status: "completed";
       summary: string;
+      structuredOutput?: Record<string, unknown>;
       artifact: ArtifactData | null;
       outputAttachmentId?: string;
       currentOutputAttachmentIds: string[];
@@ -93,6 +100,25 @@ export type ExecuteAiStepNodeResult =
       errorMessage: string;
       errorCode?: string;
     };
+
+async function runStructuredExtraction(params: {
+  model: ReturnType<ResolvedProvider["sdkProvider"]["chat"]>;
+  fields: StructuredOutputField[];
+  variableName: string;
+  nodeName: string;
+  system: string;
+  prompt: string;
+}): Promise<Record<string, unknown>> {
+  const outputSchema = buildZodSchemaFromOutputFields(params.fields);
+  return (await generateStructuredObject({
+    model: params.model,
+    schema: outputSchema,
+    schemaName: params.variableName || "step_output",
+    schemaDescription: `Structured output for workflow step "${params.nodeName}"`,
+    system: params.system,
+    prompt: params.prompt,
+  })) as Record<string, unknown>;
+}
 
 /**
  * Executes an `ai_step` workflow node: compiles prompt templates, enforces canvas policies
@@ -125,13 +151,34 @@ export async function executeAiStepNode(
     dryRun,
     emit,
     resumedToolDecisions,
+    agentPersonaPrompt,
+    effectiveTools,
   } = params;
 
   try {
+    const isStructured = data.outputMode === "structured";
+    const structuredFields = data.structuredOutputSchema?.fields ?? [];
+    if (isStructured && structuredFields.length === 0) {
+      return {
+        status: "failed",
+        errorMessage:
+          "Structured output mode requires at least one output field.",
+      };
+    }
+
+    const shouldDisableCanvas = isStructured || data.outputMode === "text";
+    const effectiveStepData = shouldDisableCanvas
+      ? { ...data, canvasMode: "disabled" as const }
+      : data;
+
     const compiledPrompt = compileWorkflowTemplate(data.prompt, context);
     const { filteredTools, toolSourceMap, stepServerNames } = filterStepTools({
-      step: data,
-      workflowRow: workflow,
+      step: effectiveTools
+        ? { ...effectiveStepData, toolIds: effectiveTools }
+        : effectiveStepData,
+      workflowRow: effectiveTools
+        ? { ...workflow, tools: effectiveTools }
+        : workflow,
       allServers,
       runMcpTools,
       runToolSourceMap,
@@ -151,7 +198,7 @@ export async function executeAiStepNode(
     );
 
     const canvasPolicy = resolveStepCanvasPolicy(
-      data.canvasMode,
+      effectiveStepData.canvasMode,
       workflow.canvasConfig,
     );
     const enforcedTools = applyCanvasToolEnforcement(
@@ -216,15 +263,50 @@ export async function executeAiStepNode(
       dryRun,
       linkedSubagents,
       activeArtifact,
+      agentPersonaPrompt,
     });
 
     const userMessage = resumedSummary
       ? `Approved/denied tool decisions were processed:\n${resumedSummary}\n\nPlease complete the task and summarise the outcome.`
       : "Please execute the task.";
 
+    const model = resolvedProvider.sdkProvider.chat(resolvedProvider.modelId);
+
+    if (isStructured && Object.keys(wrappedTools).length === 0) {
+      const structuredOutput = await runStructuredExtraction({
+        model,
+        fields: structuredFields,
+        variableName: data.variableName,
+        nodeName,
+        system: systemPrompt,
+        prompt: userMessage,
+      });
+
+      return {
+        status: "completed",
+        summary: formatStructuredOutputSummary(structuredOutput),
+        structuredOutput,
+        artifact: null,
+        currentOutputAttachmentIds,
+        currentAttachmentRows,
+        activeWorkbookFilePath,
+        toolCalls: [],
+      };
+    }
+
+    const pass1Instructions =
+      isStructured && Object.keys(wrappedTools).length > 0
+        ? `${systemPrompt}\n\nTarget structured output fields (ensure your final response includes all facts needed for these fields):\n${structuredFields
+            .map(
+              (f) =>
+                `- ${f.name} (${f.type})${f.description ? `: ${f.description}` : ""}`,
+            )
+            .join("\n")}`
+        : systemPrompt;
+
     const result = await generateText({
-      model: resolvedProvider.sdkProvider.chat(resolvedProvider.modelId),
-      instructions: systemPrompt,
+      model,
+      instructions: pass1Instructions,
       messages: [{ role: "user", content: userMessage }],
       tools: wrappedTools,
       stopWhen: isStepCount(env.CHAT_MAX_STEPS),
@@ -279,9 +361,44 @@ export async function executeAiStepNode(
         ? { ...rawArtifact, id: activeArtifact.id }
         : rawArtifact;
 
+    let structuredOutput: Record<string, unknown> | undefined;
+    if (isStructured) {
+      const toolResultsText =
+        turn.toolCalls.length > 0
+          ? turn.toolCalls
+              .map((tc) => {
+                const serialized =
+                  typeof tc.result === "string"
+                    ? tc.result
+                    : JSON.stringify(tc.result ?? null);
+                return `[${tc.toolName}]: ${serialized.slice(0, 2000)}`;
+              })
+              .join("\n")
+          : "";
+      const extractionPrompt = [
+        result.text || "Extract structured output from the completed task.",
+        toolResultsText ? `Tool outputs:\n${toolResultsText}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      structuredOutput = await runStructuredExtraction({
+        model,
+        fields: structuredFields,
+        variableName: data.variableName,
+        nodeName,
+        system:
+          "Extract and format the final response into the required structured JSON schema.",
+        prompt: extractionPrompt,
+      });
+    }
+
     return {
       status: "completed",
-      summary: result.text || "Step completed.",
+      summary: structuredOutput
+        ? formatStructuredOutputSummary(structuredOutput)
+        : result.text || "Step completed.",
+      ...(structuredOutput ? { structuredOutput } : {}),
       artifact,
       outputAttachmentId: persisted.stepOutputAttachmentId,
       currentOutputAttachmentIds: persisted.currentOutputAttachmentIds,
@@ -291,10 +408,11 @@ export async function executeAiStepNode(
     };
   } catch (err) {
     const classified = classifyAiStepError(err);
-    await db
-      .update(workflowRun)
-      .set({ status: "failed", errorMessage: classified.message })
-      .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")));
+    await updateActiveWorkflowRun(runId, {
+      status: "failed",
+      currentNodeId: nodeId,
+      errorMessage: classified.message,
+    });
     await emit({
       type: "error",
       nodeId,

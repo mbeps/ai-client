@@ -28,6 +28,7 @@ import {
 import { registerMcpTools } from "@/lib/chat/register-mcp-tools";
 import { sliceThreadFromLatestCompaction } from "@/lib/chat/slice-thread-from-compaction";
 import { buildAssistantFinishMetadata } from "@/lib/chat/stream/build-assistant-finish-metadata";
+import { ToolsNotSupportedError } from "@/lib/error/tools-not-supported-error";
 import { chatChannel } from "@/lib/inngest/chat-channel";
 import {
   buildStreamExecutionConfig,
@@ -56,6 +57,7 @@ import { inngest } from "@/lib/inngest/client";
 import { getLogger } from "@/lib/logger";
 import { deleteScratchpadFiles } from "@/lib/subagents/delete-scratchpad-files";
 import { wrapSubagentToolsWithApproval } from "@/lib/subagents/wrap-subagent-tools-with-approval";
+import { buildWorkflowBuilderSystemPrompt } from "@/lib/workflows/build-workflow-builder-prompt";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { Agent } from "@/types/agent/agent";
 import type { ApprovalMode, PendingApproval } from "@/types/tool/approval";
@@ -672,14 +674,26 @@ export const generateChatResponse = inngest.createFunction(
 
       resolvedModelId = resolved.modelId;
       const isToolCallingModel = !!resolved.modelRow.capTools;
+      const workflowBuilderId = ctx.chatRow?.workflowId ?? null;
+      const isWorkflowBuilderChat = Boolean(workflowBuilderId);
 
-      const mcpState = await setupChatMcpTools(
-        isToolCallingModel,
-        ctx.servers,
-        selectedTools,
-        ctx.subagentServers,
-        ctx.linkedSubagents,
-      );
+      const mcpState = isWorkflowBuilderChat
+        ? {
+            mcpTools: {},
+            subagentMcpTools: {},
+            toolSourceMap: {},
+            toolServerIdMap: {},
+            toolRawNameMap: {},
+            mcpCleanup: async () => {},
+            hasExternalMcpTools: false,
+          }
+        : await setupChatMcpTools(
+            isToolCallingModel,
+            ctx.servers,
+            selectedTools,
+            ctx.subagentServers,
+            ctx.linkedSubagents,
+          );
       mcpCleanup = mcpState.mcpCleanup;
 
       const sliced = sliceThreadFromLatestCompaction(thread);
@@ -693,6 +707,10 @@ export const generateChatResponse = inngest.createFunction(
         thread: activeMessages as any,
         capVision: resolved.modelRow.capVision,
       });
+
+      if (isWorkflowBuilderChat && !isToolCallingModel) {
+        throw new ToolsNotSupportedError();
+      }
 
       const fileAttachments = extractFileAttachments(thread);
       const maxContextTokens = resolved.modelRow?.contextWindow
@@ -883,30 +901,37 @@ export const generateChatResponse = inngest.createFunction(
         isSubagentDelegationEnabled,
       );
 
-      const canvasArtifacts = extractThreadCanvasArtifacts(thread);
+      const canvasArtifacts = isWorkflowBuilderChat
+        ? []
+        : extractThreadCanvasArtifacts(thread);
       const isInteractiveUiEnabled =
-        selectedTools === undefined ||
-        selectedTools.includes(INTERNAL_TOOL_IDS.INTERACTIVE_UI);
+        !isWorkflowBuilderChat &&
+        (selectedTools === undefined ||
+          selectedTools.includes(INTERNAL_TOOL_IDS.INTERACTIVE_UI));
 
-      const baseSystemPrompt = buildSystemPrompt(
-        userSettings?.globalSystemPrompt,
-        ctx.projectRow?.globalPrompt,
-        ctx.agentRow?.prompt,
-        isToolCallingModel && hasKbTool,
-        {
-          attachmentNames: fileAttachments.map((a) => a.name),
-          availableSkills: ctx.availableSkills,
-          selectedSkills: ctx.selectedSkills,
-          supportsTools: isToolCallingModel,
-          userContext: { name: userName, email: userEmail },
-          userMemories: ctx.userMemories,
-          isSubagentDelegationEnabled,
-          availableSubagents: ctx.linkedSubagents,
-          canvasArtifacts,
-          compactionSummary,
-          isInteractiveUiEnabled,
-        },
-      );
+      const baseSystemPrompt = isWorkflowBuilderChat
+        ? await buildWorkflowBuilderSystemPrompt(userId, workflowBuilderId!, {
+            compactionSummary,
+          })
+        : buildSystemPrompt(
+            userSettings?.globalSystemPrompt,
+            ctx.projectRow?.globalPrompt,
+            ctx.agentRow?.prompt,
+            isToolCallingModel && hasKbTool,
+            {
+              attachmentNames: fileAttachments.map((a) => a.name),
+              availableSkills: ctx.availableSkills,
+              selectedSkills: ctx.selectedSkills,
+              supportsTools: isToolCallingModel,
+              userContext: { name: userName, email: userEmail },
+              userMemories: ctx.userMemories,
+              isSubagentDelegationEnabled,
+              availableSubagents: ctx.linkedSubagents,
+              canvasArtifacts,
+              compactionSummary,
+              isInteractiveUiEnabled,
+            },
+          );
 
       const hasDeniedDecision =
         isApprovalResume &&

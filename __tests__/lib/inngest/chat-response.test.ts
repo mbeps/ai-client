@@ -3611,6 +3611,104 @@ describe("generateChatResponse Inngest Function", () => {
       await pNoPersist;
     });
   });
+
+  describe("workflow builder chat", () => {
+    it("uses workflow builder system prompt and skips external MCP setup when workflowId is set", async () => {
+      const { loadChatContext } = await import("@/lib/chat/load-chat-context");
+      vi.mocked(loadChatContext).mockResolvedValueOnce({
+        chatRow: {
+          id: "chat-wf-1",
+          workflowId: "wf-1",
+          projectId: null,
+          agentId: null,
+        },
+        projectRow: null,
+        agentRow: null,
+        servers: [],
+        subagentServers: [],
+        linkedSubagents: [],
+        activeKbId: null,
+        activeKbIds: [],
+        kbIsReady: false,
+        skillCatalog: [],
+        preloadedSkills: [],
+        userMemories: [],
+        projectTableSchema: null,
+      } as any);
+
+      mockStreamText.mockImplementationOnce(() => ({
+        fullStream: (async function* () {
+          yield { type: "text-delta", delta: "Workflow updated" };
+        })(),
+        finishReason: Promise.resolve("stop"),
+        usage: Promise.resolve({ promptTokens: 1, completionTokens: 1 }),
+      }));
+
+      const fn = (generateChatResponse as any).fn;
+      await fn({
+        event: {
+          data: {
+            chatId: "chat-wf-1",
+            userId: "user-1",
+            userMessageId: "msg-1",
+            model: "gpt-4o",
+          },
+        },
+      });
+
+      expect(mockStreamText).toHaveBeenCalled();
+    });
+
+    it("throws ToolsNotSupportedError when workflowId is set on a non-tool-calling model", async () => {
+      const { loadChatContext } = await import("@/lib/chat/load-chat-context");
+      vi.mocked(loadChatContext).mockResolvedValueOnce({
+        chatRow: {
+          id: "chat-wf-2",
+          workflowId: "wf-1",
+          projectId: null,
+          agentId: null,
+        },
+        projectRow: null,
+        agentRow: null,
+        servers: [],
+        subagentServers: [],
+        linkedSubagents: [],
+        activeKbId: null,
+        activeKbIds: [],
+        kbIsReady: false,
+        skillCatalog: [],
+        preloadedSkills: [],
+        userMemories: [],
+        projectTableSchema: null,
+      } as any);
+      mockResolveProvider.mockResolvedValueOnce({
+        model: "mock-model" as any,
+        modelId: "no-tools-model",
+        modelRow: { capTools: false, capVision: false, contextWindow: 8192 },
+      } as any);
+
+      const fn = (generateChatResponse as any).fn;
+      await expect(
+        fn({
+          event: {
+            data: {
+              chatId: "chat-wf-2",
+              userId: "user-1",
+              userMessageId: "msg-1",
+              model: "no-tools-model",
+            },
+          },
+        }),
+      ).rejects.toThrow("does not support tool calling");
+
+      expect(inngest.realtime.publish).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          type: "error",
+        }),
+      );
+    });
+  });
 });
 
 

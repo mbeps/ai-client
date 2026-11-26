@@ -1,10 +1,8 @@
 "use client";
 
-import { Handle, NodeToolbar, Position } from "@xyflow/react";
-import { Settings2, Trash2 } from "lucide-react";
+import { Handle, Position } from "@xyflow/react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   NodeStatusIndicator,
   type WorkflowVisualNodeStatus,
@@ -16,6 +14,8 @@ export interface WorkflowCanvasNodeData {
   label: string;
   nodeData: WorkflowNodeData;
   status?: WorkflowVisualNodeStatus;
+  linkedAgent?: { id: string; name: string } | null;
+  missingAgent?: boolean;
   onConfigure?: (nodeId: string) => void;
   onDelete?: (nodeId: string) => void;
   readOnly?: boolean;
@@ -35,7 +35,7 @@ export interface BaseWorkflowNodeProps {
 }
 
 /**
- * Shared visual node shell with React Flow `<NodeToolbar>`, typed handles, variable badge, and live status ring.
+ * Shared visual node shell with typed handles, variable badge, and live status ring.
  */
 export function BaseWorkflowNode({
   id,
@@ -50,35 +50,6 @@ export function BaseWorkflowNode({
 }: BaseWorkflowNodeProps) {
   return (
     <NodeStatusIndicator status={data.status} selected={selected}>
-      {!data.readOnly && (
-        <NodeToolbar
-          isVisible={Boolean(selected)}
-          position={Position.Top}
-          className="bg-popover flex items-center gap-1 rounded-lg border p-1 shadow-md"
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="nodrag h-7 px-2 text-xs"
-            onClick={() => data.onConfigure?.(id)}
-          >
-            <Settings2 className="mr-1 h-3.5 w-3.5" />
-            Configure
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="nodrag text-destructive hover:text-destructive h-7 px-2 text-xs"
-            onClick={() => data.onDelete?.(id)}
-          >
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            Delete
-          </Button>
-        </NodeToolbar>
-      )}
-
       {hasTargetHandle && (
         <Handle
           id="main"

@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NonRetriableError } from "inngest";
 import { db } from "@/drizzle/db";
 import {
@@ -15,20 +15,17 @@ import {
 } from "@/lib/inngest/workflow-run-channel";
 import { getLogger } from "@/lib/logger";
 import {
+  extractLoopBodyMap,
   resolveNodeExecutionEligibility,
   validateAndSortWorkflowGraph,
 } from "@/lib/workflows/dag-planner";
-import {
-  awaitHumanReviewGate,
-  resolvePendingToolApprovalLoop,
-} from "@/lib/workflows/workflow-run-gates";
-import {
-  executeSingleWorkflowNode,
-  type NodeStepOutcome,
-  resolveNodeReviewGate,
-} from "@/lib/workflows/workflow-run-helpers";
+import { executeLoopNode } from "@/lib/workflows/execute-loop-node";
+import { updateActiveWorkflowRun } from "@/lib/workflows/workflow-run-db";
+import { executeNodeWithGates } from "@/lib/workflows/workflow-run-gates";
+import type { WorkflowStepTools } from "@/lib/workflows/workflow-run-helpers";
 import type { ArtifactData } from "@/types/artifact/artifact-data";
 import type {
+  LoopNodeData,
   WorkflowEdge,
   WorkflowNode,
   WorkflowNodeRunState,
@@ -56,15 +53,10 @@ export const executeWorkflowRun = inngest.createFunction(
       const { runId } = event.data.event.data as { runId?: string };
       if (!runId) return;
       const appErr = toAppError(error);
-      const updated = await db
-        .update(workflowRun)
-        .set({
-          status: "failed",
-          errorMessage: appErr.message,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
-        .returning({ id: workflowRun.id });
+      const updated = await updateActiveWorkflowRun(runId, {
+        status: "failed",
+        errorMessage: appErr.message,
+      });
 
       if (updated.length === 0) return;
 
@@ -84,6 +76,7 @@ export const executeWorkflowRun = inngest.createFunction(
       workflowId: string;
       userId: string;
     };
+    const stepTools = step as unknown as WorkflowStepTools;
     const wfCh = workflowRunChannel({ runId });
 
     const emit = async (data: WorkflowStreamEvent) => {
@@ -139,27 +132,55 @@ export const executeWorkflowRun = inngest.createFunction(
       }));
 
       const sortedNodes = validateAndSortWorkflowGraph(nodes, edges);
+      const loopBodyMap = extractLoopBodyMap(nodes, edges);
+      const serializedLoopBodyMap: Record<string, string[]> = {};
+      for (const [loopId, bodyIds] of loopBodyMap.entries()) {
+        serializedLoopBodyMap[loopId] = Array.from(bodyIds);
+      }
 
-      const initialized = await db
-        .update(workflowRun)
-        .set({ status: "running", errorMessage: null, updatedAt: new Date() })
-        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
-        .returning({ id: workflowRun.id });
+      const initialized = await updateActiveWorkflowRun(runId, {
+        status: "running",
+        errorMessage: null,
+      });
 
       if (initialized.length === 0) {
-        return { cancelled: true as const, runRow, wfRow, sortedNodes, edges };
+        return {
+          cancelled: true as const,
+          runRow,
+          wfRow,
+          sortedNodes,
+          edges,
+          serializedLoopBodyMap,
+        };
       }
 
       await emit({ type: "workflow-start", runId });
 
-      return { cancelled: false as const, runRow, wfRow, sortedNodes, edges };
+      return {
+        cancelled: false as const,
+        runRow,
+        wfRow,
+        sortedNodes,
+        edges,
+        serializedLoopBodyMap,
+      };
     });
 
     if (init.cancelled) {
       return { success: false, cancelled: true };
     }
 
-    const { runRow, wfRow, sortedNodes, edges } = init;
+    const { runRow, wfRow, sortedNodes, edges, serializedLoopBodyMap } = init;
+    const loopBodyMap = new Map<string, Set<string>>(
+      Object.entries(serializedLoopBodyMap).map(([k, v]) => [k, new Set(v)]),
+    );
+    const allLoopBodyNodeIds = new Set<string>();
+    for (const bodySet of loopBodyMap.values()) {
+      for (const id of bodySet) {
+        allLoopBodyNodeIds.add(id);
+      }
+    }
+
     const nodeStates: Record<string, WorkflowNodeRunState> = {
       ...(runRow.nodeStates ?? {}),
     };
@@ -174,6 +195,10 @@ export const executeWorkflowRun = inngest.createFunction(
 
     for (let idx = 0; idx < sortedNodes.length; idx++) {
       const node = sortedNodes[idx];
+      if (allLoopBodyNodeIds.has(node.id)) {
+        continue;
+      }
+
       const eligibility = resolveNodeExecutionEligibility(
         node.id,
         edges,
@@ -183,56 +208,58 @@ export const executeWorkflowRun = inngest.createFunction(
 
       if (eligibility === "skip") {
         skippedNodeIds.add(node.id);
+        const bodyIds = loopBodyMap.get(node.id);
+        if (bodyIds) {
+          for (const bodyId of bodyIds) {
+            skippedNodeIds.add(bodyId);
+            nodeStates[bodyId] = { status: "skipped" };
+          }
+        }
         await step.run(`skip-node-${node.id}`, async () => {
           nodeStates[node.id] = { status: "skipped" };
-          await db
-            .update(workflowRun)
-            .set({ nodeStates, updatedAt: new Date() })
-            .where(
-              and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
-            );
+          await updateActiveWorkflowRun(runId, { nodeStates });
           await emit({ type: "workflow-node-skipped", runId, nodeId: node.id });
         });
         continue;
       }
 
-      const reviewGate = resolveNodeReviewGate(node, wfRow.approvalConfig);
-      if (reviewGate === "before") {
-        const ok = await awaitHumanReviewGate({
-          step,
+      if (node.type === "loop" && node.data.kind === "loop") {
+        const loopOutcome = await executeLoopNode({
+          step: stepTools,
           runId,
-          nodeId: node.id,
-          reviewPhase: "before",
+          userId,
+          node: node as WorkflowNode & { data: LoopNodeData },
+          sortedNodes,
+          edges,
+          loopBodyMap,
+          workflowRow: wfRow,
+          initialData: runRow.initialData ?? {},
+          contextData,
+          inputAttachmentIds: runRow.inputAttachmentIds ?? [],
+          outputAttachmentIds,
+          activeWorkbookFilePath,
+          activeArtifact,
+          dryRun: runRow.dryRun,
           nodeStates,
           emit,
         });
-        if (!ok) return { success: false };
+
+        if (loopOutcome.status === "cancelled") {
+          return { success: false, cancelled: true };
+        }
+        if (loopOutcome.status !== "completed") {
+          return { success: false };
+        }
+
+        activeHandlesByNode.set(node.id, new Set(["done"]));
+        outputAttachmentIds = loopOutcome.outputAttachmentIds;
+        activeWorkbookFilePath = loopOutcome.activeWorkbookFilePath;
+        activeArtifact = loopOutcome.activeArtifact ?? activeArtifact;
+        continue;
       }
 
-      const initialOutcome = (await step.run(
-        `execute-node-${node.id}`,
-        async () =>
-          executeSingleWorkflowNode({
-            runId,
-            userId,
-            node,
-            stepIndex: idx,
-            allNodes: sortedNodes,
-            workflowRow: wfRow,
-            initialData: runRow.initialData ?? {},
-            contextData,
-            inputAttachmentIds: runRow.inputAttachmentIds ?? [],
-            outputAttachmentIds,
-            activeWorkbookFilePath,
-            activeArtifact,
-            dryRun: runRow.dryRun,
-            emit,
-          }),
-      )) as NodeStepOutcome;
-
-      const outcome = await resolvePendingToolApprovalLoop({
-        step,
-        outcome: initialOutcome,
+      const outcome = await executeNodeWithGates({
+        step: stepTools,
         runId,
         userId,
         node,
@@ -258,58 +285,17 @@ export const executeWorkflowRun = inngest.createFunction(
       }
 
       activeHandlesByNode.set(node.id, new Set(outcome.activeHandles));
-      nodeStates[node.id] = outcome.nodeState;
-      contextData[node.data.variableName] = outcome.contextEntry;
       outputAttachmentIds = outcome.outputAttachmentIds;
       activeWorkbookFilePath = outcome.activeWorkbookFilePath;
       activeArtifact = outcome.activeArtifact ?? activeArtifact;
-
-      await step.run(`checkpoint-node-${node.id}`, async () => {
-        await db
-          .update(workflowRun)
-          .set({
-            currentNodeId: node.id,
-            nodeStates,
-            contextData,
-            outputAttachmentIds,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")),
-          );
-        await emit({
-          type: "workflow-node-complete",
-          runId,
-          nodeId: node.id,
-          state: outcome.nodeState,
-          outputAttachmentIds,
-        });
-      });
-
-      if (reviewGate === "after") {
-        const ok = await awaitHumanReviewGate({
-          step,
-          runId,
-          nodeId: node.id,
-          reviewPhase: "after",
-          nodeStates,
-          emit,
-        });
-        if (!ok) return { success: false };
-      }
     }
 
     const completed = await step.run("finalize-workflow-run", async () => {
-      const updated = await db
-        .update(workflowRun)
-        .set({
-          status: "completed",
-          currentNodeId: null,
-          outputAttachmentIds,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(workflowRun.id, runId), ne(workflowRun.status, "failed")))
-        .returning({ id: workflowRun.id });
+      const updated = await updateActiveWorkflowRun(runId, {
+        status: "completed",
+        currentNodeId: null,
+        outputAttachmentIds,
+      });
 
       if (updated.length === 0) {
         return false;

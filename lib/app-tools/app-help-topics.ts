@@ -134,7 +134,7 @@ export const APP_HELP_TOPICS: readonly AppHelpTopicEntry[] = [
     ],
     guide:
       `Build visual DAG workflows at ${ROUTES.WORKFLOWS.AUTOMATIONS.path} (new: ${ROUTES.WORKFLOWS.AUTOMATIONS.new}).\n` +
-      `Each workflow is a directed acyclic graph of trigger and AI step nodes with per-step prompts, tools, MCP servers, canvas policies, and optional review gates. ` +
+      `Each workflow is a directed acyclic graph of trigger, AI step (with optional linked agentId, structured JSON outputMode: "structured", or canvas artifacts), flow control (if_condition, loop, filter), and HTTP request nodes, with per-step prompts, tools, MCP servers, and optional review gates. ` +
       `Translation workflows are available at ${ROUTES.WORKFLOWS.TRANSLATION.path}.`,
   },
   {

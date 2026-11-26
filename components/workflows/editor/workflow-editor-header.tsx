@@ -90,7 +90,7 @@ export function WorkflowEditorHeader({
             disabled={disabledRun}
           />
         )}
-        <Button onClick={onSave} disabled={disabledSave}>
+        <Button onClick={() => onSave()} disabled={disabledSave}>
           {isSaving ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (

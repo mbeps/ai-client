@@ -8,6 +8,7 @@ const {
   mockUpdateWhere,
   mockUpdateSet,
   mockDeleteWhere,
+  mockAssertWorkflowAgentsOwned,
   mockAssertWorkflowKbsOwned,
   mockValidateTargetSubagentIds,
   mockWithSubagentLinkLock,
@@ -19,6 +20,7 @@ const {
   const mockUpdateWhere = vi.fn(() => ({ returning: mockUpdateReturning }));
   const mockUpdateSet = vi.fn(() => ({ where: mockUpdateWhere }));
   const mockDeleteWhere = vi.fn();
+  const mockAssertWorkflowAgentsOwned = vi.fn();
   const mockAssertWorkflowKbsOwned = vi.fn();
   const mockValidateTargetSubagentIds = vi.fn();
   const mockWithSubagentLinkLock = vi.fn();
@@ -37,6 +39,7 @@ const {
     mockUpdateWhere,
     mockUpdateSet,
     mockDeleteWhere,
+    mockAssertWorkflowAgentsOwned,
     mockAssertWorkflowKbsOwned,
     mockValidateTargetSubagentIds,
     mockWithSubagentLinkLock,
@@ -45,6 +48,10 @@ const {
 });
 
 vi.mock("@/drizzle/db", () => ({ db: mockDb }));
+vi.mock("@/lib/workflows/assert-workflow-agents-owned", () => ({
+  assertWorkflowAgentsOwned: (...args: unknown[]) =>
+    mockAssertWorkflowAgentsOwned(...args),
+}));
 vi.mock("@/lib/workflows/assert-workflow-kbs-owned", () => ({
   assertWorkflowKbsOwned: (...args: unknown[]) =>
     mockAssertWorkflowKbsOwned(...args),
@@ -100,6 +107,7 @@ const SAMPLE_WF = {
 describe("workflow-service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAssertWorkflowAgentsOwned.mockResolvedValue(true);
     mockAssertWorkflowKbsOwned.mockResolvedValue(true);
     mockValidateTargetSubagentIds.mockResolvedValue({ ok: true, value: true });
     mockWithSubagentLinkLock.mockImplementation(
@@ -227,6 +235,34 @@ describe("workflow-service", () => {
       });
     });
 
+    it("rejects unowned node agents with FORBIDDEN", async () => {
+      mockAssertWorkflowAgentsOwned.mockResolvedValueOnce(false);
+      const res = await createWorkflowForUser(USER_ID, {
+        name: "WF",
+        nodes: [
+          {
+            id: NODE_A,
+            type: "ai_step",
+            name: "Step",
+            position: { x: 0, y: 0 },
+            data: {
+              kind: "ai_step",
+              variableName: "step1",
+              agentId: "44444444-4444-4444-8444-444444444444",
+              prompt: "Run",
+              mcpServerIds: [],
+              toolIds: [],
+              requiresReview: false,
+            },
+          },
+        ],
+      });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: ERROR_CODE.FORBIDDEN }),
+      });
+    });
+
     it("validates subagentIds under lock", async () => {
       mockValidateTargetSubagentIds.mockResolvedValueOnce({
         ok: false,
@@ -300,6 +336,33 @@ describe("workflow-service", () => {
       });
     });
 
+    it("rejects unowned node agents on update", async () => {
+      mockAssertWorkflowAgentsOwned.mockResolvedValueOnce(false);
+      const res = await updateWorkflowForUser(USER_ID, WF_ID, {
+        nodes: [
+          {
+            id: NODE_A,
+            type: "ai_step",
+            name: "Step",
+            position: { x: 0, y: 0 },
+            data: {
+              kind: "ai_step",
+              variableName: "step1",
+              agentId: "44444444-4444-4444-8444-444444444444",
+              prompt: "Run",
+              mcpServerIds: [],
+              toolIds: [],
+              requiresReview: false,
+            },
+          },
+        ],
+      });
+      expect(res).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: ERROR_CODE.FORBIDDEN }),
+      });
+    });
+
     it("returns NOT_FOUND when workflow is missing", async () => {
       mockUpdateReturning.mockResolvedValueOnce([]);
       const res = await updateWorkflowForUser(USER_ID, WF_ID, {
@@ -339,6 +402,8 @@ describe("workflow-service", () => {
         knowledgeBaseIds: [],
         subagentIds: [SUB_ID],
         requiresFileUpload: true,
+        canvasConfig: SAMPLE_WF.canvasConfig,
+        approvalConfig: SAMPLE_WF.approvalConfig,
         nodes: [
           {
             id: NODE_A,
@@ -379,6 +444,18 @@ describe("workflow-service", () => {
       expect(okRes).toEqual({ ok: true, value: SAMPLE_WF });
       expect(mockDb.delete).toHaveBeenCalledTimes(2);
       expect(mockDb.insert).toHaveBeenCalledTimes(2);
+
+      mockUpdateReturning.mockResolvedValueOnce([SAMPLE_WF]);
+      const nodesOnlyRes = await updateWorkflowForUser(USER_ID, WF_ID, {
+        nodes: [],
+      });
+      expect(nodesOnlyRes).toEqual({ ok: true, value: SAMPLE_WF });
+
+      mockUpdateReturning.mockResolvedValueOnce([SAMPLE_WF]);
+      const metaOnlyRes = await updateWorkflowForUser(USER_ID, WF_ID, {
+        name: "Meta only",
+      });
+      expect(metaOnlyRes).toEqual({ ok: true, value: SAMPLE_WF });
     });
   });
 });

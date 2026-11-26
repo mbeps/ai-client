@@ -53,6 +53,11 @@ export interface WorkflowEditorTabsProps {
   onRunWorkflow?: () => void;
   webhookSecret?: string | null;
   onRegenerateWebhookSecret?: () => Promise<void> | void;
+  onBeforeBuilderChatSend?: () => Promise<boolean> | boolean;
+  onCreateDraftForBuilderChat?: () => Promise<void> | void;
+  onWorkflowMutated?: () => Promise<void> | void;
+  panelMode?: "build" | "chat";
+  onPanelModeChange?: (mode: "build" | "chat") => void;
   globalContext: string;
   onGlobalContextChange: (ctx: string) => void;
   knowledgebases: Knowledgebase[];

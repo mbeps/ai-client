@@ -16,6 +16,7 @@ import {
 import { ERROR_CODE } from "@/lib/error/error-code";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
+import { assertWorkflowAgentsOwned } from "@/lib/workflows/assert-workflow-agents-owned";
 import { assertWorkflowKbsOwned } from "@/lib/workflows/assert-workflow-kbs-owned";
 import {
   buildDefaultWorkflowGraph,
@@ -90,6 +91,13 @@ export async function createWorkflowForUser(
     return fail({
       code: ERROR_CODE.FORBIDDEN,
       message: "One or more knowledge bases are not accessible",
+    });
+  }
+
+  if (!(await assertWorkflowAgentsOwned(userId, nodes))) {
+    return fail({
+      code: ERROR_CODE.FORBIDDEN,
+      message: "One or more agents are not accessible",
     });
   }
 
@@ -178,6 +186,13 @@ export async function updateWorkflowForUser(
     return fail({
       code: ERROR_CODE.FORBIDDEN,
       message: "One or more knowledge bases are not accessible",
+    });
+  }
+
+  if (!(await assertWorkflowAgentsOwned(userId, validated.nodes))) {
+    return fail({
+      code: ERROR_CODE.FORBIDDEN,
+      message: "One or more agents are not accessible",
     });
   }
 

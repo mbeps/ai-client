@@ -9,6 +9,11 @@ import {
   type WorkflowWithGraph,
 } from "@/types/workflows/workflow";
 
+const mockCreateWorkflow = vi.fn();
+vi.mock("@/actions/workflows/create-workflow", () => ({
+  createWorkflow: (...args: unknown[]) => mockCreateWorkflow(...args),
+}));
+
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -213,5 +218,43 @@ describe("workflow requiresFileUpload synchronization", () => {
         data: expect.objectContaining({ requiresFileUpload: true }),
       }),
     ]);
+  });
+
+  it("blocks repeated handleCreateDraftForBuilderChat calls while handleSave is pending", async () => {
+    let resolveCreate!: (val: unknown) => void;
+    mockCreateWorkflow.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() =>
+      useWorkflowEditor({
+        id: "new",
+        isNew: true,
+        handleApiError: vi.fn(),
+      }),
+    );
+
+    let firstPromise!: Promise<void>;
+    let secondPromise!: Promise<void>;
+    act(() => {
+      firstPromise = result.current.handleCreateDraftForBuilderChat();
+      secondPromise = result.current.handleCreateDraftForBuilderChat();
+    });
+
+    expect(mockCreateWorkflow).toHaveBeenCalledTimes(1);
+    expect(result.current.isSaving).toBe(true);
+
+    await act(async () => {
+      resolveCreate({ ok: true, value: { id: "wf-new-1" } });
+      await Promise.all([firstPromise, secondPromise]);
+    });
+
+    expect(result.current.isSaving).toBe(false);
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringContaining("wf-new-1?panel=chat"),
+    );
   });
 });

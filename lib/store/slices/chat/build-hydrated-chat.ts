@@ -23,6 +23,7 @@ export function buildHydratedChat(
     projectId: row.projectId ?? undefined,
     agentId: row.agentId ?? undefined,
     assistantId: row.agentId ?? undefined,
+    workflowId: row.workflowId ?? undefined,
     knowledgebaseId: row.knowledgebaseId ?? null,
     createdAt: resolveCreatedAt(row.createdAt, existing?.createdAt),
     updatedAt: new Date(row.updatedAt),

@@ -34,11 +34,13 @@ import { ManualTriggerNode } from "@/components/workflows/canvas/nodes/manual-tr
 import { WebhookTriggerNode } from "@/components/workflows/canvas/nodes/webhook-trigger-node";
 
 describe("Workflow Custom Nodes & Registry", () => {
-  it("exports module-scope WORKFLOW_NODE_TYPES with all 5 node types", () => {
+  it("exports module-scope WORKFLOW_NODE_TYPES with all 7 node types", () => {
     expect(Object.keys(WORKFLOW_NODE_TYPES).sort()).toEqual([
       "ai_step",
+      "filter",
       "http_request",
       "if_condition",
+      "loop",
       "manual_trigger",
       "webhook_trigger",
     ]);
@@ -150,5 +152,62 @@ describe("Workflow Custom Nodes & Registry", () => {
     expect(screen.getByTestId("handle-target-main")).toBeInTheDocument();
     expect(screen.getByTestId("handle-source-true")).toBeInTheDocument();
     expect(screen.getByTestId("handle-source-false")).toBeInTheDocument();
+  });
+
+  it("renders AiStepNode linked agent badge, Missing agent badge, and Needs info indicator", () => {
+    render(
+      <>
+        <AiStepNode
+          id="a1"
+          selected={false}
+          data={{
+            label: "Linked",
+            linkedAgent: { id: "agent-1", name: "Researcher" },
+            nodeData: {
+              kind: "ai_step",
+              variableName: "step1",
+              agentId: "agent-1",
+              prompt: "",
+              mcpServerIds: [],
+              toolIds: [],
+            },
+          }}
+        />
+        <AiStepNode
+          id="a2"
+          selected={false}
+          data={{
+            label: "Broken",
+            missingAgent: true,
+            nodeData: {
+              kind: "ai_step",
+              variableName: "step2",
+              agentId: "agent-deleted",
+              prompt: "",
+              mcpServerIds: [],
+              toolIds: [],
+            },
+          }}
+        />
+        <AiStepNode
+          id="a3"
+          selected={false}
+          data={{
+            label: "Empty",
+            nodeData: {
+              kind: "ai_step",
+              variableName: "step3",
+              prompt: "",
+              mcpServerIds: [],
+              toolIds: [],
+            },
+          }}
+        />
+      </>,
+    );
+
+    expect(screen.getByText("Researcher")).toBeInTheDocument();
+    expect(screen.getByText("Missing agent")).toBeInTheDocument();
+    expect(screen.getByText("Needs info")).toBeInTheDocument();
   });
 });

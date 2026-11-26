@@ -12,7 +12,9 @@ export type WorkflowNodeType =
   | "webhook_trigger"
   | "ai_step"
   | "if_condition"
-  | "http_request";
+  | "http_request"
+  | "loop"
+  | "filter";
 
 /**
  * Supported Canvas artifact output formats for workflows.
@@ -81,11 +83,64 @@ export interface WebhookTriggerNodeData {
 }
 
 /**
+ * Reserved context keys on AI step outputs that user-defined structured output
+ * fields cannot shadow.
+ */
+export const RESERVED_STRUCTURED_OUTPUT_FIELDS: ReadonlySet<string> = new Set([
+  "text",
+  "data",
+  "artifact",
+  "outputAttachmentId",
+]);
+
+/**
+ * Supported field types for structured JSON output on an AI Step node.
+ */
+export type StructuredOutputFieldType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "string_array"
+  | "number_array"
+  | "object_array";
+
+/**
+ * Nested subfield definition for `object_array` structured output fields.
+ */
+export interface StructuredOutputSubfield {
+  id: string;
+  name: string;
+  type: "string" | "number" | "boolean";
+  description?: string;
+  required: boolean;
+}
+
+/**
+ * Top-level field definition for structured JSON output on an AI Step node.
+ */
+export interface StructuredOutputField {
+  id: string;
+  name: string;
+  type: StructuredOutputFieldType;
+  description?: string;
+  required: boolean;
+  itemFields?: StructuredOutputSubfield[];
+}
+
+/**
+ * Visual structured JSON output schema attached to an AI Step node.
+ */
+export interface StructuredOutputSchema {
+  fields: StructuredOutputField[];
+}
+
+/**
  * Node data for an AI Step execution node.
  */
 export interface AiStepNodeData {
   kind: "ai_step";
   variableName: string;
+  agentId?: string;
   prompt: string;
   modelId?: string;
   reasoningEffort?: ReasoningEffort;
@@ -99,6 +154,8 @@ export interface AiStepNodeData {
   reviewTiming?: "before" | "after";
   toolApprovalMode?: "inherit" | "auto" | "ask";
   canvasMode?: "inherit" | "disabled" | "any" | ArtifactCanvasType;
+  outputMode?: "text" | "structured" | "canvas";
+  structuredOutputSchema?: StructuredOutputSchema;
 }
 
 /**
@@ -156,6 +213,34 @@ export interface HttpRequestNodeData {
 }
 
 /**
+ * Node data for a Filter flow-control node.
+ */
+export interface FilterNodeData {
+  kind: "filter";
+  variableName: string;
+  itemsTemplate: string;
+  evaluationMode: "deterministic" | "llm";
+  logic: "and" | "or";
+  rules: IfConditionRule[];
+  llmFilterPrompt?: string;
+  modelId?: string;
+  reasoningEffort?: ReasoningEffort;
+  continueWhenEmpty?: boolean;
+}
+
+/**
+ * Node data for a Loop flow-control node.
+ */
+export interface LoopNodeData {
+  kind: "loop";
+  variableName: string;
+  mode: "for_each" | "count";
+  itemsTemplate?: string;
+  count?: number;
+  maxIterations: number;
+}
+
+/**
  * Discriminated union of all workflow node payloads.
  */
 export type WorkflowNodeData =
@@ -163,7 +248,9 @@ export type WorkflowNodeData =
   | WebhookTriggerNodeData
   | AiStepNodeData
   | IfConditionNodeData
-  | HttpRequestNodeData;
+  | HttpRequestNodeData
+  | FilterNodeData
+  | LoopNodeData;
 
 /**
  * Canvas node position in React Flow coordinates.
@@ -222,7 +309,10 @@ export interface WorkflowNodeRunState {
   summary?: string;
   branchTaken?: "true" | "false";
   conditionReasoning?: string;
+  filterSummary?: { kept: number; total: number; reasoning?: string };
+  loopSummary?: { iterations: number; totalItems: number; truncated: boolean };
   httpResponse?: { status: number; statusText: string; data: unknown };
+  structuredOutput?: Record<string, unknown>;
   artifact?: ArtifactData | null;
   toolCalls?: ToolCallState[];
   toolResults?: Array<{

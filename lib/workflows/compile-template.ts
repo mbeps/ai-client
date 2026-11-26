@@ -36,6 +36,39 @@ function formatInterpolatedValue(value: unknown, asJson: boolean): string {
 }
 
 /**
+ * Resolves a single mustache expression (e.g. `{{step1.items}}` or `step1.items`)
+ * to its raw value in `context` without stringifying, with a JSON-parse fallback
+ * when the resolved value is a JSON-encoded array string.
+ */
+export function resolveWorkflowTemplateValue(
+  expr: string,
+  context: Record<string, unknown>,
+): unknown {
+  const trimmed = expr.trim();
+  if (!trimmed) return undefined;
+
+  const unwrapped =
+    trimmed.startsWith("{{") && trimmed.endsWith("}}")
+      ? trimmed.slice(2, -2).trim()
+      : trimmed;
+  if (!unwrapped) return undefined;
+
+  const resolved = resolvePath(context, unwrapped);
+  if (typeof resolved === "string") {
+    const candidate = resolved.trim();
+    if (candidate.startsWith("[") && candidate.endsWith("]")) {
+      try {
+        return JSON.parse(candidate) as unknown;
+      } catch {
+        return resolved;
+      }
+    }
+  }
+
+  return resolved;
+}
+
+/**
  * Compiles `{{variableName.path}}` and `{{json variableName.path}}` expressions against workflow context.
  * Throws `NonRetriableError` on unclosed or empty mustache tags.
  */

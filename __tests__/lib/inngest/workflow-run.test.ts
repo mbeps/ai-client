@@ -2,10 +2,10 @@ import { NonRetriableError } from "inngest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { inngest } from "@/lib/inngest/client";
 import { executeWorkflowRun } from "@/lib/inngest/functions/workflow-run";
+import { resolveNodeReviewGate } from "@/lib/workflows/workflow-run-gates";
 import {
   executeSingleWorkflowNode,
   failWorkflowRun,
-  resolveNodeReviewGate,
 } from "@/lib/workflows/workflow-run-helpers";
 
 const mockSelectWhere = vi.hoisted(() => vi.fn());
@@ -1148,6 +1148,7 @@ describe("executeWorkflowRun Inngest DAG Function", () => {
     });
     mockUpdateReturning
       .mockResolvedValueOnce([{ id: "run-guard" }]) // init
+      .mockResolvedValueOnce([{ id: "run-guard" }]) // checkpoint
       .mockResolvedValueOnce([]); // finalize
     await expect(
       fn({

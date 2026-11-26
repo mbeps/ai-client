@@ -1,7 +1,10 @@
 import { env } from "@/config/env";
 import { isInternalToolBlocked } from "@/config/tool-approval";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
+import { registerAppHelpTool } from "@/lib/app-tools/register-app-help-tool";
 import { registerAppTools } from "@/lib/app-tools/register-app-tools";
+import { registerInspectWorkspaceTool } from "@/lib/app-tools/register-inspect-workspace-tool";
+import { registerManageWorkflowTool } from "@/lib/app-tools/register-manage-workflow-tool";
 import { registerArtifactTool } from "@/lib/chat/register-artifact-tool";
 import { registerFileUrlTool } from "@/lib/chat/register-file-url-tool";
 import { registerKnowledgebaseTool } from "@/lib/chat/register-knowledgebase-tool";
@@ -247,6 +250,31 @@ export function buildOrchestratorToolSet(
       subagentDispatchTools: {},
       allTools: undefined,
       hasAnyTools: false,
+      hasKbTool: false,
+      hasArtifactTool: false,
+      artifactTools: {},
+      isSubagentDelegationEnabled: false,
+    };
+  }
+
+  const workflowId = ctx.chatRow?.workflowId;
+  if (workflowId) {
+    const builderTools = filterBlockedInternalTools(
+      {
+        ...registerInspectWorkspaceTool(userId, { deferLoading: false }),
+        ...registerManageWorkflowTool(userId, {
+          deferLoading: false,
+          lockedWorkflowId: workflowId,
+        }),
+        ...registerAppHelpTool(),
+      },
+      internalToolOverrides,
+    );
+    return {
+      orchestratorActiveTools: builderTools,
+      subagentDispatchTools: {},
+      allTools: builderTools,
+      hasAnyTools: Object.keys(builderTools).length > 0,
       hasKbTool: false,
       hasArtifactTool: false,
       artifactTools: {},

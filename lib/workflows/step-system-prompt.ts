@@ -37,6 +37,7 @@ export interface BuildStepSystemPromptParams {
   dryRun?: boolean;
   linkedSubagents?: Agent[];
   activeArtifact?: ArtifactData | null;
+  agentPersonaPrompt?: string;
 }
 
 /**
@@ -57,6 +58,7 @@ export function buildStepSystemPrompt(
     dryRun,
     linkedSubagents,
     activeArtifact,
+    agentPersonaPrompt,
   } = params;
 
   const canvasPolicy = resolveStepCanvasPolicy(
@@ -91,13 +93,16 @@ export function buildStepSystemPrompt(
       ? formatSubagentManifest(linkedSubagents)
       : null;
 
+  const trimmedPersona = agentPersonaPrompt?.trim();
   const sections: Array<string | null | undefined> = [
     dryRun ? DRY_RUN_INSTRUCTION : null,
     workflowRow.globalContext ? `Context:\n${workflowRow.globalContext}` : null,
     kbContext ? `Additional Knowledge Context:\n${kbContext}` : null,
     ...preloadedSkills.map((s) => formatActiveSkill(s)),
     skillCatalog.length > 0 ? formatSkillCatalog(skillCatalog) : null,
-    "You are a helpful AI assistant performing a workflow node task.",
+    trimmedPersona
+      ? `Agent Persona:\n${trimmedPersona}`
+      : "You are a helpful AI assistant performing a workflow node task.",
     `Instructions for this node:\n${compiledPrompt}`,
     "Use only the provided tools. After completing the task, briefly summarise what you did.",
     canvasInstruction,

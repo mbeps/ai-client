@@ -25,6 +25,13 @@ export default function WorkflowEditorPage() {
       history: "replace",
     }),
   );
+  const [panelMode, setPanelMode] = useQueryState(
+    "panel",
+    parseAsString.withDefault("build").withOptions({
+      shallow: true,
+      history: "replace",
+    }),
+  );
 
   const editor = useWorkflowEditor({ id, isNew, handleApiError });
 
@@ -82,6 +89,11 @@ export default function WorkflowEditorPage() {
         onRunWorkflow={() => editor.setRunDialogOpen(true)}
         webhookSecret={editor.webhookSecret}
         onRegenerateWebhookSecret={editor.handleRegenerateWebhookSecret}
+        onBeforeBuilderChatSend={editor.handleSaveForBuilderChat}
+        onCreateDraftForBuilderChat={editor.handleCreateDraftForBuilderChat}
+        onWorkflowMutated={editor.handleWorkflowMutated}
+        panelMode={panelMode === "chat" ? "chat" : "build"}
+        onPanelModeChange={setPanelMode}
         globalContext={editor.globalContext}
         onGlobalContextChange={editor.setGlobalContext}
         knowledgebases={editor.knowledgebases}

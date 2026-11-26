@@ -1,7 +1,9 @@
 import type { NodeTypes } from "@xyflow/react";
 import { AiStepNode } from "@/components/workflows/canvas/nodes/ai-step-node";
+import { FilterNode } from "@/components/workflows/canvas/nodes/filter-node";
 import { HttpRequestNode } from "@/components/workflows/canvas/nodes/http-request-node";
 import { IfConditionNode } from "@/components/workflows/canvas/nodes/if-condition-node";
+import { LoopNode } from "@/components/workflows/canvas/nodes/loop-node";
 import { ManualTriggerNode } from "@/components/workflows/canvas/nodes/manual-trigger-node";
 import { WebhookTriggerNode } from "@/components/workflows/canvas/nodes/webhook-trigger-node";
 
@@ -14,5 +16,7 @@ export const WORKFLOW_NODE_TYPES: NodeTypes = {
   webhook_trigger: WebhookTriggerNode as NodeTypes[string],
   ai_step: AiStepNode as NodeTypes[string],
   if_condition: IfConditionNode as NodeTypes[string],
+  loop: LoopNode as NodeTypes[string],
+  filter: FilterNode as NodeTypes[string],
   http_request: HttpRequestNode as NodeTypes[string],
 };

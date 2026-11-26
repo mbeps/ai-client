@@ -64,68 +64,9 @@ describe("WorkflowCanvas", () => {
     useWorkflowEditorStore.setState({ selectedNodeId: null });
   });
 
-  it("selects node to show actions on single click without opening sidebar, and opens sidebar on double click", () => {
-    render(
-      <WorkflowCanvas
-        workflowId="wf-1"
-        nodes={sampleNodes}
-        edges={[]}
-        onNodesChange={vi.fn()}
-        onEdgesChange={vi.fn()}
-        onAddNode={vi.fn()}
-        onUpdateNode={vi.fn()}
-        onDeleteNode={vi.fn()}
-      />,
-    );
-
-    const onNodeClick = capturedReactFlowProps.onNodeClick as
-      | ((event: unknown, node: { id: string }) => void)
-      | undefined;
-    const onNodeDoubleClick = capturedReactFlowProps.onNodeDoubleClick as
-      | ((event: unknown, node: { id: string }) => void)
-      | undefined;
-    const onPaneClick = capturedReactFlowProps.onPaneClick as
-      | (() => void)
-      | undefined;
-
-    expect(onNodeClick).toBeTypeOf("function");
-    expect(onPaneClick).toBeTypeOf("function");
-
-    act(() => {
-      onNodeClick?.({}, { id: "n1" });
-    });
-
-    const rfNodesAfterClick = capturedReactFlowProps.nodes as Array<{
-      id: string;
-      selected?: boolean;
-    }>;
-    expect(rfNodesAfterClick[0]?.selected).toBe(true);
-    expect(screen.queryByRole("button", { name: /Done/i })).toBeNull();
-
-    act(() => {
-      onNodeDoubleClick?.({}, { id: "n1" });
-    });
-
-    expect(screen.getByRole("button", { name: /Done/i })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /Done/i }));
-    expect(screen.queryByRole("button", { name: /Done/i })).toBeNull();
-
-    act(() => {
-      onPaneClick?.();
-    });
-
-    const rfNodesAfterPaneClick = capturedReactFlowProps.nodes as Array<{
-      id: string;
-      selected?: boolean;
-    }>;
-    expect(rfNodesAfterPaneClick[0]?.selected).toBe(false);
-  });
-
-  it("configures a pending node before committing via Add Node button", () => {
+  it("selects node and opens docked inspector on click, returns to palette on back, and hides panel in readOnly", () => {
     const onAddNode = vi.fn();
-
-    render(
+    const { rerender } = render(
       <WorkflowCanvas
         workflowId="wf-1"
         nodes={sampleNodes}
@@ -138,23 +79,73 @@ describe("WorkflowCanvas", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Add Node/i }));
-    fireEvent.click(screen.getByText("Manual Trigger"));
+    // Docked right panel is visible in palette mode initially
+    expect(
+      screen.getByRole("complementary", { name: /Workflow studio panel/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search nodes/i)).toBeInTheDocument();
 
-    expect(onAddNode).not.toHaveBeenCalled();
+    const onNodeClick = capturedReactFlowProps.onNodeClick as
+      | ((event: unknown, node: { id: string }) => void)
+      | undefined;
+    const onPaneClick = capturedReactFlowProps.onPaneClick as
+      | (() => void)
+      | undefined;
 
-    const addButtons = screen.getAllByRole("button", { name: /Add Node/i });
-    const sheetAddButton = addButtons[addButtons.length - 1];
-    fireEvent.click(sheetAddButton);
+    act(() => {
+      onNodeClick?.({}, { id: "n1" });
+    });
 
-    expect(onAddNode).toHaveBeenCalledTimes(1);
+    const rfNodesAfterClick = capturedReactFlowProps.nodes as Array<{
+      id: string;
+      selected?: boolean;
+    }>;
+    expect(rfNodesAfterClick[0]?.selected).toBe(true);
+    expect(
+      screen.getByRole("button", { name: /Back to palette/i }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Back to palette/i }));
+    expect(
+      screen.queryByRole("button", { name: /Back to palette/i }),
+    ).toBeNull();
+    expect(screen.getByPlaceholderText(/Search nodes/i)).toBeInTheDocument();
+
+    // Instant node drop from palette adds node & opens inspector without modal staging
+    fireEvent.click(screen.getByRole("button", { name: /AI Agent/i }));
     expect(onAddNode).toHaveBeenCalledWith(
-      "manual_trigger",
-      expect.any(Object),
-      expect.objectContaining({
-        type: "manual_trigger",
-      }),
+      "ai_step",
+      expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }),
+      expect.objectContaining({ type: "ai_step" }),
     );
+
+    act(() => {
+      onPaneClick?.();
+    });
+
+    // Toggle studio sidebar OFF and back ON
+    fireEvent.click(screen.getByRole("button", { name: /Close studio panel/i }));
+    expect(
+      screen.queryByRole("complementary", { name: /Workflow studio panel/i }),
+    ).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open studio panel" }));
+    expect(
+      screen.getByRole("complementary", { name: /Workflow studio panel/i }),
+    ).toBeInTheDocument();
+
+    // readOnly mode hides right panel cleanly
+    rerender(
+      <WorkflowCanvas
+        workflowId="wf-1"
+        nodes={sampleNodes}
+        edges={[]}
+        readOnly
+      />,
+    );
+    expect(
+      screen.queryByRole("complementary", { name: /Workflow studio panel/i }),
+    ).toBeNull();
   });
 
   it("preserves measured node dimensions without calling onNodesChange on dimension-only updates", () => {
