@@ -86,6 +86,7 @@ export interface WebhookTriggerNodeData {
 export interface AiStepNodeData {
   kind: "ai_step";
   variableName: string;
+  agentId?: string;
   prompt: string;
   modelId?: string;
   reasoningEffort?: ReasoningEffort;

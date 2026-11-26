@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { subagentTargetIdField } from "@/schemas/agent/agent";
+import {
+  agentIdOrBuiltInField,
+  subagentTargetIdField,
+} from "@/schemas/agent/agent";
 import { reasoningEffortSchema } from "@/schemas/providers/provider-registry";
 import {
   descriptionField,
@@ -98,6 +101,7 @@ const webhookTriggerNodeDataSchema = z.object({
 const aiStepNodeDataSchema = z.object({
   kind: z.literal("ai_step"),
   variableName: variableNameField,
+  agentId: agentIdOrBuiltInField.optional(),
   prompt: z.string().max(8000),
   modelId: z.string().max(100).optional(),
   reasoningEffort: reasoningEffortSchema.optional(),
