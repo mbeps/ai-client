@@ -15,11 +15,17 @@ import { ToolApprovalDialog } from "@/components/chat/tool-approval-dialog";
 import { useChatStore } from "@/components/chat/use-chat-ui-store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useApiError } from "@/hooks/use-api-error";
 import { useUserModels } from "@/hooks/use-user-models";
 import { buildChatFromRows } from "@/lib/chat/message-tree-utils";
 import { useAppStore } from "@/lib/store/use-app-store";
+
+const EXCLUDED_WORKFLOW_BUILDER_TOOLS = [
+  INTERNAL_TOOL_IDS.MANAGE_ARTIFACT,
+  INTERNAL_TOOL_IDS.INTERACTIVE_UI,
+] as const;
 
 /** Props for {@link WorkflowBuilderChat}. */
 export interface WorkflowBuilderChatProps {
@@ -32,7 +38,7 @@ export interface WorkflowBuilderChatProps {
 
 /**
  * Scoped AI Builder side chat for creating and editing the open workflow.
- * Reuses MessageThread, StreamingSection, ToolApprovalDialog, and ChatInput (minimalMode).
+ * Reuses MessageThread, StreamingSection, ToolApprovalDialog, and ChatInput.
  */
 export function WorkflowBuilderChat({
   workflowId,
@@ -137,16 +143,16 @@ export function WorkflowBuilderChat({
 
   const handleSend: ChatInputProps["onSend"] = async (
     content,
-    _attachments,
+    attachments,
     model,
-    _selectedServerIds,
-    _selectedTools,
-    _selectedPromptId,
-    _selectedAssistantId,
-    _selectedKnowledgebases,
-    _selectedSkillIds,
-    _subagentsEnabled,
-    _canvasMode,
+    selectedServerIds,
+    selectedTools,
+    selectedPromptId,
+    selectedAssistantId,
+    selectedKnowledgebases,
+    selectedSkillIds,
+    subagentsEnabled,
+    canvasMode,
     reasoningEffort,
     _selectedProviderId,
     approvalMode,
@@ -161,16 +167,16 @@ export function WorkflowBuilderChat({
       crypto.randomUUID(),
       content,
       storeChat?.currentLeafId ?? null,
-      [],
+      attachments,
       model,
-      [],
-      [],
-      undefined,
-      undefined,
-      [],
-      [],
-      false,
-      undefined,
+      selectedServerIds,
+      selectedTools,
+      selectedPromptId,
+      selectedAssistantId,
+      selectedKnowledgebases,
+      selectedSkillIds,
+      subagentsEnabled,
+      canvasMode,
       reasoningEffort,
       [],
       approvalMode,
@@ -293,7 +299,6 @@ export function WorkflowBuilderChat({
         <ChatInput
           key={chatId}
           chatId={chatId}
-          minimalMode={true}
           isLoading={isStreaming}
           onStop={stopStream}
           onSend={handleSend}
@@ -301,6 +306,7 @@ export function WorkflowBuilderChat({
             setSelectedModelId(selections.modelId)
           }
           servers={[]}
+          excludedInternalToolIds={EXCLUDED_WORKFLOW_BUILDER_TOOLS}
         />
       </div>
     </div>

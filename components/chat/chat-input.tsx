@@ -185,6 +185,9 @@ export interface ChatInputProps {
    */
   minimalMode?: boolean;
 
+  /** Internal tool IDs to hide from the tool picker (e.g. canvas/interactive UI in narrow sidebars). */
+  excludedInternalToolIds?: readonly string[];
+
   /** Callback invoked when composer model, tool, KB, skill, or subagent selections change. */
   onSelectionsChange?: (selections: ChatComposerSelections) => void;
 }
@@ -544,6 +547,7 @@ export function ChatInput(props: ChatInputProps) {
         handleClearPrompts={interaction.prompts.handleClearPrompts}
         supportsVision={services.supportsVision}
         supportsTools={services.supportsTools}
+        excludedInternalToolIds={props.excludedInternalToolIds}
         subagentsEnabled={interaction.selections.subagentsEnabled}
         handleOpenSubagents={interaction.handleOpenSubagents}
         modelId={services.modelId}

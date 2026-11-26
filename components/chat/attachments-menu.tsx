@@ -50,6 +50,7 @@ interface AttachmentsMenuProps {
   onClearPrompts?: () => void;
   supportsVision?: boolean;
   supportsTools?: boolean;
+  excludedInternalToolIds?: readonly string[];
   subagentsEnabled?: boolean;
   onOpenSubagents?: () => void;
 }
@@ -206,6 +207,7 @@ function ToolsMenuOption(props: {
     select: boolean,
   ) => void;
   supportsTools?: boolean;
+  excludedInternalToolIds?: readonly string[];
 }) {
   const supportsTools = props.supportsTools !== false;
   const toolsButtonLabel = supportsTools ? "Select Tools" : "Tools Unsupported";
@@ -217,6 +219,7 @@ function ToolsMenuOption(props: {
       onToggleTool={props.onToggleTool}
       onBulkSelect={props.onBulkSelect}
       supportsTools={supportsTools}
+      excludedInternalToolIds={props.excludedInternalToolIds}
       trigger={
         <Button
           variant="ghost"
@@ -305,6 +308,7 @@ export const AttachmentsMenu = (props: AttachmentsMenuProps) => {
         onToggleTool={props.onToggleTool}
         onBulkSelect={props.onBulkSelect}
         supportsTools={props.supportsTools}
+        excludedInternalToolIds={props.excludedInternalToolIds}
       />
 
       <SubagentsMenuOption onOpenSubagents={props.onOpenSubagents} />

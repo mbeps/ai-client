@@ -190,7 +190,7 @@ describe("WorkflowBuilderChat", () => {
     });
   });
 
-  it("loads workflow chat and renders ChatInput in minimalMode", async () => {
+  it("loads workflow chat and renders ChatInput with full toolbar", async () => {
     render(<WorkflowBuilderChat workflowId="wf-1" isNew={false} />);
 
     await waitFor(() => {
@@ -198,7 +198,7 @@ describe("WorkflowBuilderChat", () => {
     });
 
     const input = await screen.findByTestId("chat-input");
-    expect(input.getAttribute("data-minimal")).toBe("true");
+    expect(input.getAttribute("data-minimal")).toBe("false");
     expect(screen.getByTestId("message-thread")).toHaveAttribute(
       "data-chat-id",
       "chat-wf-1",

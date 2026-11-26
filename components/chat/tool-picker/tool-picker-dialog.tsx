@@ -25,6 +25,7 @@ export interface ToolPickerDialogProps {
   ) => void;
   supportsTools?: boolean;
   trigger?: React.ReactNode;
+  excludedInternalToolIds?: readonly string[];
 }
 
 /**
@@ -39,6 +40,7 @@ export function ToolPickerDialog({
   onBulkSelect,
   supportsTools = true,
   trigger,
+  excludedInternalToolIds,
 }: ToolPickerDialogProps) {
   return (
     <PickerDialog
@@ -75,6 +77,7 @@ export function ToolPickerDialog({
         selectedTools={selectedTools}
         onToggleTool={onToggleTool}
         onBulkSelect={onBulkSelect}
+        excludedInternalToolIds={excludedInternalToolIds}
         className="flex min-h-0 flex-1 flex-col p-4"
       />
     </PickerDialog>

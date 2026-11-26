@@ -395,6 +395,7 @@ export interface ChatInputToolbarProps {
   handleClearPrompts: () => void;
   supportsVision: boolean;
   supportsTools: boolean;
+  excludedInternalToolIds?: readonly string[];
   subagentsEnabled: boolean;
   handleOpenSubagents: () => void;
   modelId: string;
@@ -492,6 +493,7 @@ export function ChatInputToolbar(props: ChatInputToolbarProps) {
               onClearPrompts={props.handleClearPrompts}
               supportsVision={props.supportsVision}
               supportsTools={props.supportsTools}
+              excludedInternalToolIds={props.excludedInternalToolIds}
               subagentsEnabled={props.subagentsEnabled}
               onOpenSubagents={props.handleOpenSubagents}
             />

@@ -14,6 +14,7 @@ interface InternalToolsSectionProps {
   search: string;
   isExpanded: boolean;
   selectedTools: Set<string>;
+  excludedInternalToolIds?: readonly string[];
   onToggleExpand: () => void;
   onToggleTool: (serverId: string, toolName: string) => void;
   onBulkSelect: (
@@ -77,25 +78,30 @@ export function InternalToolsSection({
   search,
   isExpanded,
   selectedTools,
+  excludedInternalToolIds,
   onToggleExpand,
   onToggleTool,
   onBulkSelect,
 }: InternalToolsSectionProps) {
-  const matchingTools = search
-    ? PICKER_INTERNAL_TOOLS.filter((tool) => matchesPickerTool(tool, search))
+  const availableTools = excludedInternalToolIds?.length
+    ? PICKER_INTERNAL_TOOLS.filter(
+        (tool) => !excludedInternalToolIds.includes(tool.id),
+      )
     : PICKER_INTERNAL_TOOLS;
+
+  const matchingTools = search
+    ? availableTools.filter((tool) => matchesPickerTool(tool, search))
+    : availableTools;
 
   if (matchingTools.length === 0) {
     return null;
   }
 
-  const count = PICKER_INTERNAL_TOOLS.filter((tool) =>
+  const count = availableTools.filter((tool) =>
     selectedTools.has(tool.id),
   ).length;
-  const isAllInternalSelected = count === PICKER_INTERNAL_TOOLS.length;
-  const allInternalToolNames = PICKER_INTERNAL_TOOLS.map(
-    (tool) => tool.toolName,
-  );
+  const isAllInternalSelected = count === availableTools.length;
+  const allInternalToolNames = availableTools.map((tool) => tool.toolName);
 
   return (
     <div className="border-primary/20 flex flex-col overflow-hidden rounded-lg border">

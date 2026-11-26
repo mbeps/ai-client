@@ -9,7 +9,7 @@ import {
 } from "@/components/chat/tool-picker/server-tools-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PICKER_INTERNAL_TOOLS } from "@/config/tools";
+import { PICKER_INTERNAL_TOOLS, type PickerInternalTool } from "@/config/tools";
 import { discoverMcpServerTools } from "@/lib/mcp/discover-mcp-server-tools";
 import { cn } from "@/lib/utils";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -35,6 +35,7 @@ export interface ToolPickerListProps {
   ) => void;
   className?: string;
   maxHeight?: string;
+  excludedInternalToolIds?: readonly string[];
 }
 
 /**
@@ -44,9 +45,12 @@ export interface ToolPickerListProps {
  * @returns The resolved result
  * @author Maruf Bepary
  */
-function matchesInternalToolsSearch(search: string): boolean {
+function matchesInternalToolsSearch(
+  search: string,
+  tools: readonly PickerInternalTool[],
+): boolean {
   const lowerSearch = search.toLowerCase();
-  return PICKER_INTERNAL_TOOLS.some(
+  return tools.some(
     (tool) =>
       tool.title.toLowerCase().includes(lowerSearch) ||
       tool.description.toLowerCase().includes(lowerSearch) ||
@@ -60,17 +64,19 @@ function matchesInternalToolsSearch(search: string): boolean {
  *
  * @param filteredServersLength - Target filtered servers length
  * @param search - Target search
+ * @param internalTools - Available internal tools
  * @returns The resolved result
  * @author Maruf Bepary
  */
 function shouldShowNoToolsFound(
   filteredServersLength: number,
   search: string,
+  internalTools: readonly PickerInternalTool[],
 ): boolean {
   return (
     filteredServersLength === 0 &&
     search.length > 0 &&
-    !matchesInternalToolsSearch(search)
+    !matchesInternalToolsSearch(search, internalTools)
   );
 }
 
@@ -141,6 +147,7 @@ export function ToolPickerList({
   onBulkSelectBatch,
   className,
   maxHeight,
+  excludedInternalToolIds,
 }: ToolPickerListProps) {
   const [search, setSearch] = useState("");
   const [serverContent, setServerContent] = useState<
@@ -217,6 +224,16 @@ export function ToolPickerList({
     });
   }, [enabledServers, search, serverContent]);
 
+  const availableInternalTools = useMemo(
+    () =>
+      excludedInternalToolIds?.length
+        ? PICKER_INTERNAL_TOOLS.filter(
+            (tool) => !excludedInternalToolIds.includes(tool.id),
+          )
+        : PICKER_INTERNAL_TOOLS,
+    [excludedInternalToolIds],
+  );
+
   const allDiscoveredTools = useMemo(() => {
     const mcpTools = enabledServers.flatMap((s) =>
       (serverContent[s.id]?.tools || []).map((t) => ({
@@ -225,13 +242,13 @@ export function ToolPickerList({
       })),
     );
     return [
-      ...PICKER_INTERNAL_TOOLS.map((tool) => ({
+      ...availableInternalTools.map((tool) => ({
         serverId: "internal",
         toolName: tool.toolName,
       })),
       ...mcpTools,
     ];
-  }, [enabledServers, serverContent]);
+  }, [availableInternalTools, enabledServers, serverContent]);
 
   const selectedCount = useMemo(() => {
     return allDiscoveredTools.filter((t) =>
@@ -258,7 +275,7 @@ export function ToolPickerList({
     const groups = [
       {
         serverId: "internal",
-        toolNames: PICKER_INTERNAL_TOOLS.map((tool) => tool.toolName),
+        toolNames: availableInternalTools.map((tool) => tool.toolName),
       },
       ...enabledServers
         .filter((s) => Boolean(serverContent[s.id]?.tools))
@@ -307,12 +324,17 @@ export function ToolPickerList({
             search={search}
             isExpanded={expandedServers.has("internal")}
             selectedTools={selectedTools}
+            excludedInternalToolIds={excludedInternalToolIds}
             onToggleExpand={() => toggleExpand("internal")}
             onToggleTool={onToggleTool}
             onBulkSelect={onBulkSelect}
           />
 
-          {shouldShowNoToolsFound(filteredServers.length, search) && (
+          {shouldShowNoToolsFound(
+            filteredServers.length,
+            search,
+            availableInternalTools,
+          ) && (
             <div className="text-muted-foreground py-8 text-center">
               No tools found matching &quot;{search}&quot;
             </div>
