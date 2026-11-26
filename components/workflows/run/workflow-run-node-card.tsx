@@ -71,7 +71,10 @@ export function WorkflowRunNodeCard({
     [state?.artifact, node.id],
   );
   const hasTimeline = Boolean(reasoning || state?.toolCalls?.length);
-  const hasBody = Boolean(content || messageArtifacts.length > 0);
+  const hasStructuredOutput = Boolean(state?.structuredOutput);
+  const hasBody = Boolean(
+    !hasStructuredOutput && (content || messageArtifacts.length > 0),
+  );
 
   const handleOutputClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) {
@@ -143,7 +146,7 @@ export function WorkflowRunNodeCard({
           </p>
         )}
 
-        {(hasTimeline || hasBody) && (
+        {(hasTimeline || hasBody || hasStructuredOutput) && (
           <div
             onClick={handleOutputClick}
             className="bg-muted/30 rounded-lg p-3 text-sm"
@@ -153,6 +156,16 @@ export function WorkflowRunNodeCard({
                 reasoning={reasoning || undefined}
                 activeToolCalls={state?.toolCalls}
               />
+            )}
+            {hasStructuredOutput && state?.structuredOutput && (
+              <details open className="group">
+                <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs font-medium select-none">
+                  Structured Output
+                </summary>
+                <pre className="bg-background/80 mt-2 max-h-72 overflow-auto rounded-md border p-2.5 font-mono text-xs leading-relaxed">
+                  {JSON.stringify(state.structuredOutput, null, 2)}
+                </pre>
+              </details>
             )}
             {hasBody && (
               <AssistantMessageBody
