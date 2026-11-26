@@ -100,3 +100,15 @@ describe("resolveWorkflowTemplateValue", () => {
     ).toBeUndefined();
   });
 });
+
+describe("resolveWorkflowTemplateValue edge cases", () => {
+  it("returns undefined for empty braces {{   }}", () => {
+    expect(resolveWorkflowTemplateValue("{{   }}", {})).toBeUndefined();
+  });
+
+  it("returns raw string when bracketed string is invalid JSON", () => {
+    expect(
+      resolveWorkflowTemplateValue("{{badJson}}", { badJson: "[not valid json]" }),
+    ).toBe("[not valid json]");
+  });
+});

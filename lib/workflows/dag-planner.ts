@@ -114,7 +114,7 @@ function collectReachableNodeIds(
     const id = queue[head++];
     if (visited.has(id)) continue;
     visited.add(id);
-    for (const nextId of adjacency.get(id) ?? []) {
+    for (const nextId of adjacency.get(id)!) {
       if (!visited.has(nextId)) {
         queue.push(nextId);
       }
@@ -191,7 +191,7 @@ export function extractLoopBodyMap(
           `Nested loops are not supported inside loop "${node.name}"`,
         );
       }
-      for (const incoming of incomingByNode.get(bodyId) ?? []) {
+      for (const incoming of incomingByNode.get(bodyId)!) {
         const isFromOwningLoop =
           incoming.sourceNodeId === node.id && incoming.sourceHandle === "body";
         if (!isFromOwningLoop && !bodySet.has(incoming.sourceNodeId)) {

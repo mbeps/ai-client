@@ -171,4 +171,24 @@ describe("formatStructuredOutputSummary", () => {
     const formatted = formatStructuredOutputSummary({ title: "Hello", count: 2 });
     expect(formatted).toBe('{\n  "title": "Hello",\n  "count": 2\n}');
   });
+
+  it("handles object_array without itemFields and array/object descriptions", () => {
+    const schema = buildZodSchemaFromOutputFields([
+      {
+        id: "f1",
+        name: "items",
+        type: "object_array",
+        description: "Empty object array",
+        required: true,
+      },
+      {
+        id: "f2",
+        name: "tags",
+        type: "string_array",
+        description: "Tag list",
+        required: false,
+      },
+    ]);
+    expect(schema.safeParse({ items: [{}] }).success).toBe(true);
+  });
 });

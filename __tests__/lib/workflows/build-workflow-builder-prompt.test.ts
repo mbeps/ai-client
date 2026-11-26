@@ -75,4 +75,22 @@ describe("buildWorkflowBuilderSystemPrompt", () => {
     expect(prompt).toContain("missing");
     expect(prompt).toContain("could not be loaded");
   });
+
+  it("builds prompt without compactionSummary when options are omitted", async () => {
+    mockSelect
+      .mockReturnValueOnce(
+        makeChain([
+          {
+            id: "wf-1",
+            name: "Invoice Flow",
+            description: null,
+          },
+        ]),
+      )
+      .mockReturnValueOnce(makeChain([]))
+      .mockReturnValueOnce(makeChain([]));
+    const prompt = await buildWorkflowBuilderSystemPrompt("user-1", "wf-1");
+    expect(prompt).toContain("Invoice Flow");
+    expect(prompt).not.toContain("Earlier conversation summary:");
+  });
 });

@@ -249,4 +249,30 @@ describe("extractLoopBodyMap", () => {
       "External edge",
     );
   });
+
+  it("skips edges with missing source/target nodes and handles diamond reachability", () => {
+    const loop = {
+      id: "loop-1",
+      name: "Loop",
+      type: "loop" as const,
+      position: { x: 0, y: 0 },
+      data: { mode: "count" as const, count: 1, variableName: "l" },
+    };
+    const b1 = makeNode("b1");
+    const b2 = makeNode("b2");
+    const b3 = makeNode("b3");
+    const result = extractLoopBodyMap(
+      [loop, b1, b2, b3],
+      [
+        makeEdge("e0", "missing", "b1", "main"),
+        makeEdge("e1", "loop-1", "b1", "body"),
+        makeEdge("e2", "loop-1", "b2", "body"),
+        makeEdge("e3", "b1", "b3", "main"),
+        makeEdge("e4", "b2", "b3", "main"),
+        makeEdge("e5", "b1", "b3", "main"),
+        makeEdge("e6", "b3", "b1", "main"),
+      ],
+    );
+    expect(result.get("loop-1")).toEqual(new Set(["b1", "b2", "b3"]));
+  });
 });

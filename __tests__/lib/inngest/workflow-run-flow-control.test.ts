@@ -53,7 +53,12 @@ type HandlerFn = (args: {
 
 const runHandler = executeWorkflowRun as unknown as HandlerFn;
 
-function setupDbMocks(nodes: unknown[], edges: unknown[], initialData: Record<string, unknown> = {}) {
+function setupDbMocks(
+  nodes: unknown[],
+  edges: unknown[],
+  initialData: Record<string, unknown> | null = {},
+  inputAttachmentIds: string[] | null = [],
+) {
   let selectCall = 0;
   mockDbSelect.mockImplementation(() => ({
     from: () => ({
@@ -68,7 +73,7 @@ function setupDbMocks(nodes: unknown[], edges: unknown[], initialData: Record<st
               initialData,
               contextData: {},
               nodeStates: {},
-              inputAttachmentIds: [],
+              inputAttachmentIds,
               outputAttachmentIds: [],
               dryRun: false,
             },
@@ -307,5 +312,102 @@ describe("executeWorkflowRun loop flow control", () => {
       items: [],
       count: 0,
     });
+  });
+
+  it("marks loop body nodes as skipped when the loop node itself is skipped", async () => {
+    const nodes: any[] = [
+      {
+        id: "if1",
+        type: "if_condition",
+        name: "Check",
+        position: { x: 0, y: 0 },
+        data: { kind: "if_condition", variableName: "if1", evaluationMode: "deterministic", logic: "and", rules: [] },
+      },
+      {
+        id: "loop1",
+        type: "loop",
+        name: "Loop 1",
+        position: { x: 100, y: 0 },
+        data: { kind: "loop", variableName: "loop1", mode: "count", count: 1, maxIterations: 20 },
+      },
+      {
+        id: "body1",
+        type: "ai_step",
+        name: "Body 1",
+        position: { x: 200, y: 0 },
+        data: { kind: "ai_step", variableName: "body1", prompt: "hi", mcpServerIds: [], toolIds: [], requiresReview: false },
+      },
+    ];
+    const edges = [
+      { id: "e0", sourceNodeId: "if1", targetNodeId: "loop1", sourceHandle: "true", targetHandle: "main" },
+      { id: "e1", sourceNodeId: "loop1", targetNodeId: "body1", sourceHandle: "body", targetHandle: "main" },
+    ];
+    setupDbMocks(nodes, edges);
+
+    mockExecuteNodeWithGates.mockResolvedValueOnce({
+      status: "completed",
+      activeHandles: ["false"],
+      nodeState: { status: "completed" },
+      contextEntry: { result: false },
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      activeArtifact: null,
+    });
+
+    const { step } = makeStep();
+    const res = await runHandler({
+      event: { data: { runId: "run-1", workflowId: "wf-1", userId: "user-1" } },
+      step,
+    });
+
+    expect(res).toEqual({ success: true, completed: true });
+    expect(inngest.realtime.publish).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        type: "workflow-node-skipped",
+        runId: "run-1",
+        nodeId: "loop1",
+      }),
+    );
+  });
+
+  it("propagates cancelled and failed outcomes from loop node", async () => {
+    const nodes: any[] = [
+      {
+        id: "loop1",
+        type: "loop",
+        name: "Loop 1",
+        position: { x: 100, y: 0 },
+        data: { kind: "loop", variableName: "loop1", mode: "count", count: 1, maxIterations: 20 },
+      },
+      {
+        id: "body1",
+        type: "ai_step",
+        name: "Body 1",
+        position: { x: 200, y: 0 },
+        data: { kind: "ai_step", variableName: "body1", prompt: "hi", mcpServerIds: [], toolIds: [], requiresReview: false },
+      },
+    ];
+    const edges = [
+      { id: "e1", sourceNodeId: "loop1", targetNodeId: "body1", sourceHandle: "body", targetHandle: "main" },
+    ];
+
+    setupDbMocks(nodes, edges, null, null);
+    mockExecuteNodeWithGates.mockResolvedValueOnce({ status: "cancelled" });
+    const { step: step1 } = makeStep();
+    const resCancelled = await runHandler({
+      event: { data: { runId: "run-1", workflowId: "wf-1", userId: "user-1" } },
+      step: step1,
+    });
+    expect(resCancelled).toEqual({ success: false, cancelled: true });
+
+    setupDbMocks(nodes, edges, { items: ["a"] });
+    mockExecuteNodeWithGates.mockResolvedValueOnce({ status: "failed" });
+    const { step: step2 } = makeStep();
+    const resFailed = await runHandler({
+      event: { data: { runId: "run-1", workflowId: "wf-1", userId: "user-1" } },
+      step: step2,
+    });
+    expect(resFailed).toEqual({ success: false });
   });
 });

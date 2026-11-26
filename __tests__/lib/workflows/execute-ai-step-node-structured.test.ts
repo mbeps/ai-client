@@ -269,4 +269,71 @@ describe("executeAiStepNode (structured output)", () => {
     );
     expect(res.status).toBe("completed");
   });
+
+  it("handles field descriptions, empty variableName, empty result.text, empty toolCalls, and string tool results", async () => {
+    const { collectStepTurnOutputs } = await import(
+      "@/lib/workflows/ai-step-turn-outputs"
+    );
+    mockFilterStepTools.mockReturnValue({
+      filteredTools: { search: { execute: vi.fn() } },
+      toolSourceMap: { search: "internal" },
+      stepServerNames: new Map(),
+    });
+    mockGenerateText.mockResolvedValueOnce({
+      text: "",
+      steps: [],
+    });
+    vi.mocked(collectStepTurnOutputs).mockResolvedValueOnce({
+      toolCalls: [],
+      stepArtifact: null,
+      stepHasSpreadsheetMutations: false,
+      activeWorkbookFilePath: null,
+    });
+    mockGenerateStructuredObject.mockResolvedValueOnce({ total: 1 });
+
+    await executeAiStepNode(
+      makeParams({
+        data: {
+          ...baseData,
+          variableName: "",
+          structuredOutputSchema: {
+            fields: [{ name: "total", type: "number", description: "Total amount" }],
+          },
+        },
+      }),
+    );
+
+    expect(mockGenerateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        instructions: expect.stringContaining("- total (number): Total amount"),
+      }),
+    );
+    expect(mockGenerateStructuredObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schemaName: "step_output",
+        prompt: "Extract structured output from the completed task.",
+      }),
+    );
+
+    mockGenerateText.mockResolvedValueOnce({
+      text: "Done",
+      steps: [],
+    });
+    vi.mocked(collectStepTurnOutputs).mockResolvedValueOnce({
+      toolCalls: [
+        { toolCallId: "tc-1", toolName: "search", state: "result", result: "plain string result" },
+      ],
+      stepArtifact: null,
+      stepHasSpreadsheetMutations: false,
+      activeWorkbookFilePath: null,
+    });
+    mockGenerateStructuredObject.mockResolvedValueOnce({ total: 2 });
+
+    await executeAiStepNode(makeParams());
+    expect(mockGenerateStructuredObject).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining("[search]: plain string result"),
+      }),
+    );
+  });
 });

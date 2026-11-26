@@ -597,4 +597,26 @@ describe("loadChatContext KB ownership", () => {
     const memErrCtx = await loadChatContext("chat-mem-err", "user-1");
     expect(memErrCtx.userMemories).toEqual([]);
   });
+
+  it("returns minimal context when chatRow.workflowId is set", async () => {
+    chainable.__queueWhere([
+      {
+        id: "chat-wf-builder",
+        workflowId: "wf-123",
+        projectId: null,
+        agentId: null,
+        knowledgebaseId: null,
+        projectTableId: null,
+        projectGlobalPrompt: null,
+        projectKnowledgebaseId: null,
+        projectSubagentIds: [],
+      },
+    ]);
+
+    const ctx = await loadChatContext("chat-wf-builder", "user-1");
+    expect(ctx.chatRow.workflowId).toBe("wf-123");
+    expect(ctx.projectRow).toBeNull();
+    expect(ctx.agentRow).toBeNull();
+    expect(ctx.servers).toEqual([]);
+  });
 });

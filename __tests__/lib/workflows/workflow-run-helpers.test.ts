@@ -494,4 +494,45 @@ describe("executeSingleWorkflowNode — agent persona & overrides", () => {
       expect.any(Function),
     );
   });
+
+  it("merges structuredOutput fields into contextEntry while filtering reserved keys", async () => {
+    mockExecuteAiStepNode.mockResolvedValueOnce({
+      status: "completed",
+      summary: "Done",
+      structuredOutput: { total: 99, text: "ignored-reserved" },
+      artifact: null,
+      outputAttachmentId: undefined,
+      currentOutputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      toolCalls: [],
+    });
+
+    const outcome = await executeSingleWorkflowNode({
+      runId: "run-1",
+      userId: "user-1",
+      node: makeAiNode(),
+      stepIndex: 0,
+      allNodes: [],
+      workflowRow: baseWorkflowRow,
+      initialData: {},
+      contextData: {},
+      inputAttachmentIds: [],
+      outputAttachmentIds: [],
+      activeWorkbookFilePath: null,
+      dryRun: false,
+      emit,
+    });
+
+    expect(outcome).toMatchObject({
+      status: "completed",
+      contextEntry: {
+        total: 99,
+        text: "Done",
+        data: { total: 99, text: "ignored-reserved" },
+      },
+      nodeState: {
+        structuredOutput: { total: 99, text: "ignored-reserved" },
+      },
+    });
+  });
 });

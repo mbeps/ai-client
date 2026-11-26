@@ -167,4 +167,24 @@ describe("executeFilterNode", () => {
     expect(result.reasoning).toContain("Batch 2");
     expect(result.activeHandles).toEqual(["main"]);
   });
+
+  it("handles empty llmFilterPrompt and empty reasoning in LLM filter mode", async () => {
+    vi.mocked(generateStructuredObject).mockResolvedValueOnce({
+      matchingIndices: [0],
+      reasoning: "",
+    });
+    const res = await executeFilterNode({
+      data: {
+        evaluationMode: "llm",
+        itemsTemplate: "{{items}}",
+        llmFilterPrompt: "",
+        variableName: "filtered",
+      } as any,
+      context: { items: ["a", "b"] },
+      model: mockModel,
+    });
+    expect(res.items).toEqual(["a"]);
+    expect(res.excluded).toEqual(["b"]);
+    expect(res.reasoning).toBe("LLM filter: 1/2 matched");
+  });
 });
