@@ -32,6 +32,7 @@ export interface BuildOrchestratorToolSetParams {
       agentId?: string | null;
       assistantId?: string | null;
       knowledgebaseId?: string | null;
+      workflowId?: string | null;
     };
     agentRow?: {
       id?: string;

@@ -379,4 +379,30 @@ describe("buildOrchestratorToolSet", () => {
     expect(res.orchestratorActiveTools).not.toHaveProperty("scratchpad_write");
     expect(res.orchestratorActiveTools).toHaveProperty("scratchpad_read");
   });
+
+  it("locks down tools to inspect_workspace, manage_workflow, and app_help when chatRow.workflowId is set", () => {
+    const res = buildOrchestratorToolSet({
+      ...baseParams,
+      isMemoryEnabled: true,
+      subagentsEnabled: true,
+      selectedTools: ["internal:tool:manage_artifact"],
+      mcpTools: { external_mcp: { description: "mcp" } },
+      ctx: {
+        chatRow: { id: "chat-1", projectId: null, workflowId: "wf-locked" },
+        agentRow: null,
+        activeKbId: "kb-1",
+        kbIsReady: true,
+        availableSkills: [{ name: "skill-1" }],
+      },
+    });
+
+    expect(res.hasArtifactTool).toBe(false);
+    expect(res.hasKbTool).toBe(false);
+    expect(res.isSubagentDelegationEnabled).toBe(false);
+    expect(Object.keys(res.allTools ?? {}).sort()).toEqual([
+      "app_help",
+      "inspect_workspace",
+      "manage_workflow",
+    ]);
+  });
 });

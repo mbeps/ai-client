@@ -63,7 +63,7 @@ const manageWorkflowInputSchema = z.discriminatedUnion("action", [
  */
 export function registerManageWorkflowTool(
   userId: string,
-  options?: { deferLoading?: boolean },
+  options?: { deferLoading?: boolean; lockedWorkflowId?: string },
 ) {
   return {
     manage_workflow: tool({
@@ -72,6 +72,19 @@ export function registerManageWorkflowTool(
         "Creates or updates a visual DAG Workflow owned by the user, including validated nodes and directed edges.",
       inputSchema: manageWorkflowInputSchema,
       execute: async (input) => {
+        if (options?.lockedWorkflowId) {
+          if (
+            input.action === "create" ||
+            input.id !== options.lockedWorkflowId
+          ) {
+            return {
+              success: false as const,
+              error:
+                "This assistant can only edit the currently open workflow.",
+            };
+          }
+        }
+
         if (input.action === "create") {
           const { action: _, ...data } = input;
           const res = await createWorkflowForUser(userId, data);

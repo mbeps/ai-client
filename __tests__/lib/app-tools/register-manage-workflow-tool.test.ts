@@ -126,4 +126,51 @@ describe("registerManageWorkflowTool", () => {
     });
     expect(updated).not.toHaveProperty("webhookSecret");
   });
+
+  it("enforces lockedWorkflowId by rejecting create and foreign workflow ids", async () => {
+    const OTHER_WF_ID = "22222222-2222-4222-8222-222222222222";
+    const { manage_workflow } = registerManageWorkflowTool("user-1", {
+      deferLoading: false,
+      lockedWorkflowId: WF_ID,
+    });
+
+    const createRes = await manage_workflow.execute!(
+      { action: "create", name: "New Workflow" },
+      { toolCallId: "tc-lock-1", messages: [] },
+    );
+    expect(createRes).toEqual({
+      success: false,
+      error: "This assistant can only edit the currently open workflow.",
+    });
+    expect(mockCreateWorkflowForUser).not.toHaveBeenCalled();
+
+    const foreignRes = await manage_workflow.execute!(
+      { action: "update", id: OTHER_WF_ID, name: "Hijack" },
+      { toolCallId: "tc-lock-2", messages: [] },
+    );
+    expect(foreignRes).toEqual({
+      success: false,
+      error: "This assistant can only edit the currently open workflow.",
+    });
+    expect(mockUpdateWorkflowForUser).not.toHaveBeenCalled();
+
+    mockUpdateWorkflowForUser.mockResolvedValueOnce({
+      ok: true,
+      value: {
+        id: WF_ID,
+        name: "Updated Locked",
+      },
+    });
+    const okRes = await manage_workflow.execute!(
+      { action: "update", id: WF_ID, name: "Updated Locked" },
+      { toolCallId: "tc-lock-3", messages: [] },
+    );
+    expect(okRes).toEqual({
+      success: true,
+      action: "update",
+      id: WF_ID,
+      name: "Updated Locked",
+      route: ROUTES.WORKFLOWS.AUTOMATIONS.detail(WF_ID),
+    });
+  });
 });

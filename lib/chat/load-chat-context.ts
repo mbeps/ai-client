@@ -42,6 +42,7 @@ type ChatContext = {
     projectId: string | null;
     agentId: string | null;
     knowledgebaseId: string | null;
+    workflowId: string | null;
   };
   projectRow: {
     globalPrompt: string | null;
@@ -125,6 +126,7 @@ export async function loadChatContext(
       projectId: chat.projectId,
       agentId: chat.agentId,
       knowledgebaseId: chat.knowledgebaseId,
+      workflowId: chat.workflowId,
       projectTableId: project.id,
       projectGlobalPrompt: project.globalPrompt,
       projectKnowledgebaseId: project.knowledgebaseId,
@@ -151,6 +153,7 @@ export async function loadChatContext(
       ((row as Record<string, unknown>).assistantId as string | null) ??
       null,
     knowledgebaseId: row.knowledgebaseId,
+    workflowId: row.workflowId ?? null,
   };
 
   const projectRow =
@@ -161,6 +164,25 @@ export async function loadChatContext(
           subagentIds: row.projectSubagentIds ?? [],
         }
       : null;
+
+  if (chatRow.workflowId !== null) {
+    return {
+      chatRow,
+      projectRow: null,
+      activeKbId: null,
+      activeKbIds: [],
+      kbIsReady: false,
+      agentRow: null,
+      skillMode: "none",
+      skillIds: [],
+      servers: [],
+      subagentServers: [],
+      availableSkills: [],
+      selectedSkills: [],
+      userMemories: [],
+      linkedSubagents: [],
+    };
+  }
 
   const candidateKbIds: string[] =
     selectedKbIds && selectedKbIds.length > 0
