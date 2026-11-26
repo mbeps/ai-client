@@ -36,6 +36,23 @@ export function AiStepNode({
         </p>
       )}
       <div className="flex flex-wrap items-center gap-1.5">
+        {data.missingAgent ? (
+          <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
+            Missing agent
+          </Badge>
+        ) : data.linkedAgent ? (
+          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+            {data.linkedAgent.name}
+          </Badge>
+        ) : null}
+        {!nodeData.agentId && !nodeData.prompt?.trim() && (
+          <Badge
+            variant="outline"
+            className="border-destructive/40 bg-destructive/10 text-destructive px-1.5 py-0 text-[10px]"
+          >
+            Needs info
+          </Badge>
+        )}
         {nodeData.toolIds.length > 0 && (
           <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
             {nodeData.toolIds.length}{" "}

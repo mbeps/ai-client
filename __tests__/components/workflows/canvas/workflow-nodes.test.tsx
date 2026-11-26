@@ -151,4 +151,61 @@ describe("Workflow Custom Nodes & Registry", () => {
     expect(screen.getByTestId("handle-source-true")).toBeInTheDocument();
     expect(screen.getByTestId("handle-source-false")).toBeInTheDocument();
   });
+
+  it("renders AiStepNode linked agent badge, Missing agent badge, and Needs info indicator", () => {
+    render(
+      <>
+        <AiStepNode
+          id="a1"
+          selected={false}
+          data={{
+            label: "Linked",
+            linkedAgent: { id: "agent-1", name: "Researcher" },
+            nodeData: {
+              kind: "ai_step",
+              variableName: "step1",
+              agentId: "agent-1",
+              prompt: "",
+              mcpServerIds: [],
+              toolIds: [],
+            },
+          }}
+        />
+        <AiStepNode
+          id="a2"
+          selected={false}
+          data={{
+            label: "Broken",
+            missingAgent: true,
+            nodeData: {
+              kind: "ai_step",
+              variableName: "step2",
+              agentId: "agent-deleted",
+              prompt: "",
+              mcpServerIds: [],
+              toolIds: [],
+            },
+          }}
+        />
+        <AiStepNode
+          id="a3"
+          selected={false}
+          data={{
+            label: "Empty",
+            nodeData: {
+              kind: "ai_step",
+              variableName: "step3",
+              prompt: "",
+              mcpServerIds: [],
+              toolIds: [],
+            },
+          }}
+        />
+      </>,
+    );
+
+    expect(screen.getByText("Researcher")).toBeInTheDocument();
+    expect(screen.getByText("Missing agent")).toBeInTheDocument();
+    expect(screen.getByText("Needs info")).toBeInTheDocument();
+  });
 });

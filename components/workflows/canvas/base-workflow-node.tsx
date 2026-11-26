@@ -16,6 +16,8 @@ export interface WorkflowCanvasNodeData {
   label: string;
   nodeData: WorkflowNodeData;
   status?: WorkflowVisualNodeStatus;
+  linkedAgent?: { id: string; name: string } | null;
+  missingAgent?: boolean;
   onConfigure?: (nodeId: string) => void;
   onDelete?: (nodeId: string) => void;
   readOnly?: boolean;

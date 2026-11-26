@@ -16,16 +16,18 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { LayoutGrid, Play } from "lucide-react";
+import { LayoutGrid, PanelRightOpen, Play } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { WorkflowCanvasNodeData } from "@/components/workflows/canvas/base-workflow-node";
 import type { WorkflowVisualNodeStatus } from "@/components/workflows/canvas/node-status-indicator";
 import { WORKFLOW_NODE_TYPES } from "@/components/workflows/canvas/node-types";
 import { useWorkflowEditorStore } from "@/components/workflows/canvas/workflow-editor-store";
-import { WorkflowNodeConfigSheet } from "@/components/workflows/canvas/workflow-node-config-sheet";
-import { WorkflowNodePalette } from "@/components/workflows/canvas/workflow-node-palette";
-import { createDefaultWorkflowNode } from "@/components/workflows/editor/workflow-editor-helpers";
+import { WorkflowRightPanel } from "@/components/workflows/canvas/workflow-right-panel";
+import {
+  createAgentWorkflowNode,
+  createDefaultWorkflowNode,
+} from "@/components/workflows/editor/workflow-editor-helpers";
 import type { Agent } from "@/types/agent/agent";
 import type { Knowledgebase } from "@/types/knowledgebase/knowledgebase";
 import type { McpServer } from "@/types/mcp/mcp-server";
@@ -105,8 +107,7 @@ function WorkflowCanvasInner({
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [pendingNode, setPendingNode] = useState<WorkflowNode | null>(null);
-  const [inspectorNodeId, setInspectorNodeId] = useState<string | null>(null);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const measuredRef = useRef<Map<string, { width?: number; height?: number }>>(
     new Map(),
   );
@@ -120,10 +121,18 @@ function WorkflowCanvasInner({
     return () => setEditorInstance(null);
   }, [instance, setEditorInstance]);
 
+  const agentById = useMemo(
+    () => new Map(agents.map((a) => [a.id, a])),
+    [agents],
+  );
+
   const rfNodes = useMemo<Node<WorkflowCanvasNodeData>[]>(
     () =>
       nodes.map((node) => {
         const measured = measuredRef.current.get(node.id);
+        const agentId =
+          node.data.kind === "ai_step" ? node.data.agentId : undefined;
+        const matchedAgent = agentId ? agentById.get(agentId) : undefined;
         return {
           id: node.id,
           type: node.type,
@@ -134,12 +143,20 @@ function WorkflowCanvasInner({
             label: node.name,
             nodeData: node.data,
             status: mapRunStatus(nodeStates?.[node.id]),
+            ...(agentId
+              ? {
+                  linkedAgent: matchedAgent
+                    ? { id: matchedAgent.id, name: matchedAgent.name }
+                    : null,
+                  missingAgent: !matchedAgent,
+                }
+              : {}),
             readOnly,
             onConfigure: readOnly
               ? undefined
               : (id) => {
                   setSelectedNodeId(id);
-                  setInspectorNodeId(id);
+                  setMobilePanelOpen(true);
                 },
             onDelete: readOnly
               ? undefined
@@ -147,7 +164,7 @@ function WorkflowCanvasInner({
           },
         };
       }),
-    [nodes, selectedNodeId, nodeStates, readOnly, setSelectedNodeId],
+    [nodes, selectedNodeId, nodeStates, readOnly, setSelectedNodeId, agentById],
   );
 
   const rfEdges = useMemo<Edge[]>(
@@ -231,115 +248,122 @@ function WorkflowCanvasInner({
     onEdgesChange(mapped);
   };
 
-  const inspectedNode = useMemo(
-    () => nodes.find((n) => n.id === inspectorNodeId) ?? null,
-    [nodes, inspectorNodeId],
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedNodeId) ?? null,
+    [nodes, selectedNodeId],
   );
-  const activeInspectorNode = pendingNode ?? inspectedNode;
   const hasManualTrigger = nodes.some((n) => n.type === "manual_trigger");
 
-  const handleOpenPendingNode = (
-    type: WorkflowNodeType,
-    position: { x: number; y: number },
-  ) => {
-    setSelectedNodeId(null);
-    setInspectorNodeId(null);
-    setPendingNode(createDefaultWorkflowNode(type, position, nodes));
+  const getDropPosition = () => {
+    const offset = (nodes.length % 5) * 28;
+    const center = instance.screenToFlowPosition({
+      x: typeof window !== "undefined" ? window.innerWidth / 2 : 400,
+      y: typeof window !== "undefined" ? window.innerHeight / 2 : 300,
+    });
+    return { x: Math.round(center.x + offset), y: Math.round(center.y + offset) };
+  };
+
+  const handleAddNode = (type: WorkflowNodeType) => {
+    const position = getDropPosition();
+    const created = createDefaultWorkflowNode(type, position, nodes);
+    onAddNode?.(type, position, created);
+    setSelectedNodeId(created.id);
+  };
+
+  const handleAddAgentNode = (agent: Agent) => {
+    const position = getDropPosition();
+    const created = createAgentWorkflowNode(agent, position, nodes);
+    onAddNode?.("ai_step", position, created);
+    setSelectedNodeId(created.id);
   };
 
   return (
-    <div className="relative h-full min-h-[600px] w-full flex-1">
-      <ReactFlow
-        nodes={rfNodes}
-        edges={rfEdges}
-        nodeTypes={WORKFLOW_NODE_TYPES}
-        onNodesChange={handleRfNodesChange}
-        onEdgesChange={handleRfEdgesChange}
-        onConnect={handleConnect}
-        onNodeClick={(_, rfNode) => {
-          setSelectedNodeId(rfNode.id);
-        }}
-        onNodeDoubleClick={(_, rfNode) => {
-          if (!readOnly) {
+    <div className="flex h-full min-h-[600px] w-full flex-1 overflow-hidden">
+      <div className="relative h-full min-w-0 flex-1">
+        <ReactFlow
+          nodes={rfNodes}
+          edges={rfEdges}
+          nodeTypes={WORKFLOW_NODE_TYPES}
+          onNodesChange={handleRfNodesChange}
+          onEdgesChange={handleRfEdgesChange}
+          onConnect={handleConnect}
+          onNodeClick={(_, rfNode) => {
             setSelectedNodeId(rfNode.id);
-            setInspectorNodeId(rfNode.id);
-          }
-        }}
-        onPaneClick={() => {
-          setSelectedNodeId(null);
-          setSelectedEdgeIds(new Set());
-        }}
-        nodesDraggable={!readOnly}
-        nodesConnectable={!readOnly}
-        elementsSelectable={true}
-        fitView
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background />
-        <Controls />
-        <MiniMap zoomable pannable />
+          }}
+          onNodeDoubleClick={(_, rfNode) => {
+            if (!readOnly) {
+              setSelectedNodeId(rfNode.id);
+              setMobilePanelOpen(true);
+            }
+          }}
+          onPaneClick={() => {
+            setSelectedNodeId(null);
+            setSelectedEdgeIds(new Set());
+          }}
+          nodesDraggable={!readOnly}
+          nodesConnectable={!readOnly}
+          elementsSelectable={true}
+          fitView
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background />
+          <Controls />
+          <MiniMap zoomable pannable />
 
-        {!readOnly && (
-          <Panel position="top-right" className="flex items-center gap-2">
-            {onAddNode && (
-              <WorkflowNodePalette onAddNode={handleOpenPendingNode} />
-            )}
-            {onAutoLayout && (
+          {!readOnly && (
+            <Panel position="top-right" className="flex items-center gap-2">
+              {onAutoLayout && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onAutoLayout}
+                >
+                  <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
+                  Auto-Layout
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={onAutoLayout}
+                className="lg:hidden"
+                onClick={() => setMobilePanelOpen(true)}
+                aria-label="Open studio panel"
               >
-                <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
-                Auto-Layout
+                <PanelRightOpen className="h-3.5 w-3.5" />
               </Button>
-            )}
-          </Panel>
-        )}
+            </Panel>
+          )}
 
-        {!readOnly && hasManualTrigger && onRunWorkflow && (
-          <Panel position="bottom-center">
-            <Button type="button" size="sm" onClick={onRunWorkflow}>
-              <Play className="mr-1.5 h-3.5 w-3.5" />
-              Run Workflow
-            </Button>
-          </Panel>
-        )}
-      </ReactFlow>
+          {!readOnly && hasManualTrigger && onRunWorkflow && (
+            <Panel position="bottom-center">
+              <Button type="button" size="sm" onClick={onRunWorkflow}>
+                <Play className="mr-1.5 h-3.5 w-3.5" />
+                Run Workflow
+              </Button>
+            </Panel>
+          )}
+        </ReactFlow>
+      </div>
 
       {!readOnly && onUpdateNode && onDeleteNode && (
-        <WorkflowNodeConfigSheet
-          open={Boolean(activeInspectorNode)}
-          onOpenChange={(open) => {
-            if (!open) {
-              setPendingNode(null);
-              setInspectorNodeId(null);
-            }
-          }}
-          node={activeInspectorNode}
+        <WorkflowRightPanel
+          workflowId={workflowId}
+          selectedNode={selectedNode}
           allNodes={nodes}
           edges={edges}
-          workflowId={workflowId}
           webhookSecret={webhookSecret}
           mcpServers={mcpServers}
           knowledgebases={knowledgebases}
           skills={skills}
           agents={agents}
-          isNew={Boolean(pendingNode)}
-          onConfirmAdd={() => {
-            if (pendingNode && onAddNode) {
-              onAddNode(pendingNode.type, pendingNode.position, pendingNode);
-              setPendingNode(null);
-            }
-          }}
-          onUpdateNode={(nodeId, updates) => {
-            if (pendingNode && pendingNode.id === nodeId) {
-              setPendingNode((prev) => (prev ? { ...prev, ...updates } : null));
-              return;
-            }
-            onUpdateNode(nodeId, updates);
-          }}
+          mobileOpen={mobilePanelOpen}
+          onMobileOpenChange={setMobilePanelOpen}
+          onAddNode={handleAddNode}
+          onAddAgentNode={handleAddAgentNode}
+          onDeselectNode={() => setSelectedNodeId(null)}
+          onUpdateNode={onUpdateNode}
           onDeleteNode={onDeleteNode}
           onRegenerateWebhookSecret={onRegenerateWebhookSecret}
         />
