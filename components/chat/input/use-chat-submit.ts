@@ -88,11 +88,14 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
   } = options;
 
   const isSubmittingRef = useRef(false);
+  const inputRef = useRef(input);
+  inputRef.current = input;
 
   const handleSend = useCallback(async () => {
     if (isLoading || isSendDisabled || isSubmittingRef.current) return;
 
     isSubmittingRef.current = true;
+    const submittedInput = input;
     const effectiveTools = supportsTools ? Array.from(selectedTools) : [];
     const effectiveServerIds = supportsTools
       ? Array.from(selectedServerIds)
@@ -101,7 +104,7 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
 
     try {
       const result = await onSend(
-        input,
+        submittedInput,
         attachments,
         modelId,
         effectiveServerIds,
@@ -118,7 +121,9 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
       );
       if (result === false) return;
 
-      setInput("");
+      if (inputRef.current === submittedInput) {
+        setInput("");
+      }
       clearAttachments();
       handleClearPrompts();
       setSelectedAssistant(null);

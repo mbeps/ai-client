@@ -113,6 +113,21 @@ export const useChatToolsStore = create<ChatToolsState>()(
           approvalModeByChat: restModes,
         };
       },
+      merge: (persistedState, currentState) => {
+        if (!persistedState || typeof persistedState !== "object") {
+          return currentState;
+        }
+        const persisted = persistedState as Partial<ChatToolsState>;
+        const { [NEW_CHAT_TOOLS_KEY]: _newTools, ...restTools } =
+          persisted.toolsByChat ?? currentState.toolsByChat;
+        const { [NEW_CHAT_TOOLS_KEY]: _newMode, ...restModes } =
+          persisted.approvalModeByChat ?? currentState.approvalModeByChat;
+        return {
+          ...currentState,
+          toolsByChat: restTools,
+          approvalModeByChat: restModes,
+        };
+      },
     },
   ),
 );

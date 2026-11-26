@@ -318,7 +318,7 @@ export function useStreamResponse(
       subagentIds?: string[],
       approvalMode?: ApprovalMode,
       overrideChatId?: string,
-    ): Promise<string> => {
+    ): Promise<boolean> => {
       const promptIds = Array.isArray(selectedPromptId)
         ? selectedPromptId
         : selectedPromptId

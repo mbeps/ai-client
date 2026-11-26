@@ -115,6 +115,7 @@ export interface PendingRefState {
   userMessageId: string | null;
   model: string;
   startTime: number;
+  dispatched?: boolean;
 }
 
 /**

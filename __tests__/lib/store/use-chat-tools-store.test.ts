@@ -151,6 +151,40 @@ describe("useChatToolsStore", () => {
     expect(parsed.state.toolsByChat["chat-1"]).toEqual(["serverA:tool:read"]);
     expect(parsed.state.approvalModeByChat["chat-1"]).toBe("auto");
   });
+
+  it("strips legacy NEW_CHAT_TOOLS_KEY entries from localStorage during rehydration", async () => {
+    window.localStorage.setItem(
+      "chat-tool-selections",
+      JSON.stringify({
+        state: {
+          toolsByChat: {
+            [NEW_CHAT_TOOLS_KEY]: ["srv:tool:stale"],
+            "chat-real": ["srv:tool:keep"],
+          },
+          approvalModeByChat: {
+            [NEW_CHAT_TOOLS_KEY]: "auto",
+            "chat-real": "ask",
+          },
+        },
+        version: 0,
+      }),
+    );
+
+    await useChatToolsStore.persist.rehydrate();
+
+    expect(
+      useChatToolsStore.getState().toolsByChat[NEW_CHAT_TOOLS_KEY],
+    ).toBeUndefined();
+    expect(
+      useChatToolsStore.getState().approvalModeByChat[NEW_CHAT_TOOLS_KEY],
+    ).toBeUndefined();
+    expect(useChatToolsStore.getState().toolsByChat["chat-real"]).toEqual([
+      "srv:tool:keep",
+    ]);
+    expect(useChatToolsStore.getState().approvalModeByChat["chat-real"]).toBe(
+      "ask",
+    );
+  });
 });
 
 describe("useChatToolsStore SSR fallback", () => {

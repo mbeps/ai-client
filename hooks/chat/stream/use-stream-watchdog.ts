@@ -47,11 +47,12 @@ function shouldAbortStalledWatchdog(params: {
   hasActiveCallingTools: boolean;
   isAwaitingApproval: boolean;
   attempts: number;
+  noChunkAttempts: number;
   hasReceivedAnyChunk: boolean;
 }): boolean {
   if (params.isAwaitingApproval) return false;
   if (params.isConnectionError && params.attempts >= 10) return true;
-  if (!params.hasReceivedAnyChunk && params.attempts >= 4) return true;
+  if (!params.hasReceivedAnyChunk && params.noChunkAttempts >= 4) return true;
   return !params.hasActiveCallingTools && params.attempts >= 30;
 }
 
@@ -66,14 +67,12 @@ async function executeWatchdogTick(params: {
   interval: ReturnType<typeof setInterval>;
   syncFromDb: () => Promise<boolean>;
   setIsStreaming: (is: boolean) => void;
-  isConnectionError: boolean;
-  hasActiveCallingTools: boolean;
-  isAwaitingApproval: boolean;
-  hasReceivedAnyChunk: boolean;
+  getStatus: () => ReturnType<typeof createWatchdogTickStatus>;
   attempts: number;
-  shouldSync: boolean;
+  noChunkAttempts: number;
 }) {
-  if (!params.shouldSync) return;
+  const initialTick = params.getStatus();
+  if (!initialTick.shouldSync) return;
 
   const synced = await params.syncFromDb();
   if (synced) {
@@ -82,16 +81,20 @@ async function executeWatchdogTick(params: {
     return;
   }
 
+  // Re-read live refs after syncFromDb() resolves in case approval or chunks arrived mid-await
+  const liveTick = params.getStatus();
+
   if (
     shouldAbortStalledWatchdog({
-      isConnectionError: params.isConnectionError,
-      hasActiveCallingTools: params.hasActiveCallingTools,
-      isAwaitingApproval: params.isAwaitingApproval,
-      hasReceivedAnyChunk: params.hasReceivedAnyChunk,
+      isConnectionError: liveTick.isConnectionError,
+      hasActiveCallingTools: liveTick.hasActiveCallingTools,
+      isAwaitingApproval: liveTick.isAwaitingApproval,
+      hasReceivedAnyChunk: liveTick.hasReceivedAnyChunk,
       attempts: params.attempts,
+      noChunkAttempts: params.noChunkAttempts,
     })
   ) {
-    if (!params.isConnectionError) {
+    if (!liveTick.isConnectionError) {
       const res = await isChatGenerating(params.chatId);
       const isGenerating = res.ok ? res.value : false;
       if (isGenerating) return;
@@ -100,7 +103,7 @@ async function executeWatchdogTick(params: {
     clearInflightState(params.chatId);
     clearInterval(params.interval);
     params.setIsStreaming(false);
-    if (params.isConnectionError) {
+    if (liveTick.isConnectionError) {
       toast.error(
         "Connection lost to generation stream. Please refresh if response is ready.",
       );
@@ -201,26 +204,27 @@ export function useStreamWatchdog(
     if (!isStreaming || chatNotFound) return;
 
     let attempts = 0;
+    let noChunkAttempts = 0;
     const interval = setInterval(async () => {
       attempts++;
-      const tick = createWatchdogTickStatus(
-        refs,
-        connectionStatusRef.current,
-        realtimeError,
-        attempts,
-      );
+      if (refs.pendingRef.current.dispatched !== false) {
+        noChunkAttempts++;
+      }
 
       await executeWatchdogTick({
         chatId,
         interval,
         syncFromDb,
         setIsStreaming,
-        isConnectionError: tick.isConnectionError,
-        hasActiveCallingTools: tick.hasActiveCallingTools,
-        isAwaitingApproval: tick.isAwaitingApproval,
-        hasReceivedAnyChunk: tick.hasReceivedAnyChunk,
+        getStatus: () =>
+          createWatchdogTickStatus(
+            refs,
+            connectionStatusRef.current,
+            realtimeError,
+            attempts,
+          ),
         attempts,
-        shouldSync: tick.shouldSync,
+        noChunkAttempts,
       });
     }, 2000);
 

@@ -154,13 +154,15 @@ function setupStreamResponseStart(
   userMsgId: string,
   model: string,
 ) {
+  const now = Date.now();
   refs.rejoinedRef.current = false;
   refs.pendingRef.current = {
     userMessageId: userMsgId,
     model,
-    startTime: Date.now(),
+    startTime: now,
+    dispatched: false,
   };
-  refs.lastChunkTimeRef.current = Date.now();
+  refs.lastChunkTimeRef.current = now;
   refs.stoppedRef.current = false;
   refs.assistantMessageIdRef.current = null;
   refs.accumulatedTextRef.current = "";
@@ -225,7 +227,7 @@ async function prepareAndPersistUserMessage(
  */
 export async function executeStreamResponse(
   params: StreamResponseExecutionParams,
-): Promise<string> {
+): Promise<boolean> {
   setupStreamResponseStart(
     params.refs,
     params.resetStreamingState,
@@ -243,7 +245,7 @@ export async function executeStreamResponse(
       params.setChatNotFound,
       isNotFound,
     );
-    return "";
+    return false;
   }
 
   const uploaded = await processAttachments(
@@ -275,7 +277,9 @@ export async function executeStreamResponse(
 
   if (!dispatched) {
     params.setIsStreaming(false);
+    return true;
   }
 
-  return "";
+  params.refs.pendingRef.current.dispatched = true;
+  return true;
 }

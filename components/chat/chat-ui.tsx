@@ -248,7 +248,7 @@ export function ChatUI({
           .transferChatTools(NEW_CHAT_TOOLS_KEY, newChatId);
         setCreatedChatId(newChatId);
         if (typeof window !== "undefined") {
-          window.history.replaceState(null, "", ROUTES.CHATS.detail(newChatId));
+          window.history.pushState(null, "", ROUTES.CHATS.detail(newChatId));
         }
         return newChatId;
       } catch (error) {

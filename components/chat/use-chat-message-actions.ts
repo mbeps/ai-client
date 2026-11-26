@@ -129,7 +129,7 @@ export function useChatMessageActions({
 
       const overrideChatId = !chatId && targetChatId ? targetChatId : undefined;
 
-      await streamResponse(
+      const sent = await streamResponse(
         crypto.randomUUID(),
         content,
         chat?.currentLeafId || null,
@@ -148,7 +148,7 @@ export function useChatMessageActions({
         approvalMode,
         ...(overrideChatId ? [overrideChatId] : []),
       );
-      return true;
+      return sent !== false;
     },
     [chat?.currentLeafId, chatId, ensureChatId, streamResponse],
   );

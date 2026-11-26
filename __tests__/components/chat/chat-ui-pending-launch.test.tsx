@@ -144,11 +144,9 @@ describe("ChatUI draft mode (HomePage) and initialMessage", () => {
       ]);
     useChatToolsStore.getState().setChatApprovalMode(NEW_CHAT_TOOLS_KEY, "auto");
 
-    const replaceSpy = vi.spyOn(window.history, "replaceState");
+    const pushSpy = vi.spyOn(window.history, "pushState");
 
-    render(
-      <ChatUI emptyState={<div data-testid="welcome">Welcome</div>} />,
-    );
+    render(<ChatUI emptyState={<div data-testid="welcome">Welcome</div>} />);
 
     expect(screen.getByTestId("welcome")).toBeInTheDocument();
     expect(screen.queryByText("Chat not found.")).not.toBeInTheDocument();
@@ -200,7 +198,7 @@ describe("ChatUI draft mode (HomePage) and initialMessage", () => {
     expect(
       useChatToolsStore.getState().approvalModeByChat["chat-created-1"],
     ).toBe("auto");
-    expect(replaceSpy).toHaveBeenCalledWith(
+    expect(pushSpy).toHaveBeenCalledWith(
       null,
       "",
       ROUTES.CHATS.detail("chat-created-1"),
@@ -232,7 +230,7 @@ describe("ChatUI draft mode (HomePage) and initialMessage", () => {
     expect(lastChatInputProps?.chatId).toBe("chat-created-1");
     expect(typeof lastChatInputProps?.onKnowledgebaseChange).toBe("function");
 
-    replaceSpy.mockRestore();
+    pushSpy.mockRestore();
   });
 
   it("rejects empty content without prompt in draft mode and handles createChatDb errors", async () => {
@@ -273,7 +271,7 @@ describe("ChatUI draft mode (HomePage) and initialMessage", () => {
     expect(mockToastError).toHaveBeenCalledWith("Failed to start chat");
   });
 
-  it("resets createdChatId when chatId prop changes", async () => {
+  it("resets createdChatId when chatId prop changes and does not revive it when chatId is omitted again", async () => {
     const { rerender } = render(<ChatUI />);
 
     await act(async () => {
@@ -284,6 +282,21 @@ describe("ChatUI draft mode (HomePage) and initialMessage", () => {
     const chat2 = buildChat({ id: "chat-2" });
     rerender(<ChatUI chatId="chat-2" initialChat={chat2} />);
     expect(lastChatInputProps?.chatId).toBe("chat-2");
+
+    rerender(<ChatUI />);
+    expect(lastChatInputProps?.chatId).toBe(NEW_CHAT_TOOLS_KEY);
+  });
+
+  it("returns false from onSend when streamResponse returns false so composer retains draft", async () => {
+    mockStreamResponse.mockResolvedValueOnce(false);
+    render(<ChatUI />);
+
+    let result: boolean | undefined;
+    await act(async () => {
+      result = await lastChatInputProps?.onSend("Keep this draft", [], "gpt-4o");
+    });
+
+    expect(result).toBe(false);
   });
 
   it("uses persisted chat tools from useChatToolsStore when ?msg= is used", () => {

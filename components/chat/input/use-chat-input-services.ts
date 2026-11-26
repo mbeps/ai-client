@@ -32,6 +32,7 @@ export function useChatInputServices(initialModelId?: string) {
 
   return {
     ...model,
+    isModelsLoading,
     knowledgebases,
     skills,
     prompts,

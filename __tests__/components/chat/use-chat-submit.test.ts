@@ -246,4 +246,33 @@ describe("useChatSubmit", () => {
     expect(preventCmd).not.toHaveBeenCalled();
     expect(commandOpts.onSend).not.toHaveBeenCalled();
   });
+
+  it("preserves newer input typed while async onSend is pending", async () => {
+    let resolveSend!: (value: boolean) => void;
+    const onSend = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveSend = resolve;
+        }),
+    );
+    const setInput = vi.fn();
+    const opts = createOptions({ input: "Initial text", setInput, onSend });
+    const { result, rerender } = renderHook((p) => useChatSubmit(p), {
+      initialProps: opts,
+    });
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.handleSend();
+    });
+
+    rerender({ ...opts, input: "Newer text typed while pending" });
+
+    await act(async () => {
+      resolveSend(true);
+      await pending;
+    });
+
+    expect(setInput).not.toHaveBeenCalledWith("");
+  });
 });
