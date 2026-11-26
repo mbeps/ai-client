@@ -185,6 +185,28 @@ describe("useChatToolsStore", () => {
       "ask",
     );
   });
+
+  it("falls back to currentState when persisted toolsByChat and approvalModeByChat are missing", async () => {
+    useChatToolsStore.getState().setChatTools("chat-keep", ["srv:tool:1"]);
+    useChatToolsStore.getState().setChatApprovalMode("chat-keep", "auto");
+
+    window.localStorage.setItem(
+      "chat-tool-selections",
+      JSON.stringify({
+        state: {},
+        version: 0,
+      }),
+    );
+
+    await useChatToolsStore.persist.rehydrate();
+
+    expect(useChatToolsStore.getState().toolsByChat["chat-keep"]).toEqual([
+      "srv:tool:1",
+    ]);
+    expect(useChatToolsStore.getState().approvalModeByChat["chat-keep"]).toBe(
+      "auto",
+    );
+  });
 });
 
 describe("useChatToolsStore SSR fallback", () => {
