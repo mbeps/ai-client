@@ -53,9 +53,14 @@ describe("buildWorkflowBuilderSystemPrompt", () => {
     expect(prompt).toContain("Invoice Flow");
     expect(prompt).toContain('"id":"wf-1"');
     expect(prompt).toContain("manual_trigger");
+    expect(prompt).toContain("requiresFileUpload");
     expect(prompt).toContain("webhook_trigger");
+    expect(prompt).toContain("secretHeaderName");
     expect(prompt).toContain("ai_step");
+    expect(prompt).toContain("mcpServerIds");
+    expect(prompt).toContain("requiresReview");
     expect(prompt).toContain("if_condition");
+    expect(prompt).toContain('"hybrid"');
     expect(prompt).toContain("loop");
     expect(prompt).toContain("filter");
     expect(prompt).toContain("http_request");

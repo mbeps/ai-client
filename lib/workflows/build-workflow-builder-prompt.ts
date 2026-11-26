@@ -36,6 +36,7 @@ export async function buildWorkflowBuilderSystemPrompt(
     db
       .select({
         id: workflowNode.id,
+        name: workflowNode.name,
         type: workflowNode.type,
         position: workflowNode.position,
         data: workflowNode.data,
@@ -45,8 +46,8 @@ export async function buildWorkflowBuilderSystemPrompt(
     db
       .select({
         id: workflowEdge.id,
-        source: workflowEdge.sourceNodeId,
-        target: workflowEdge.targetNodeId,
+        sourceNodeId: workflowEdge.sourceNodeId,
+        targetNodeId: workflowEdge.targetNodeId,
         sourceHandle: workflowEdge.sourceHandle,
         targetHandle: workflowEdge.targetHandle,
       })
@@ -69,13 +70,13 @@ export async function buildWorkflowBuilderSystemPrompt(
     `- Always call \`manage_workflow\` with \`action: "update"\` and \`id: "${wf.id}"\`. Never attempt \`action: "create"\` or edit any other workflow.`,
     `- Keep the graph a valid DAG (no cycles).`,
     `- Supported node types (7):`,
-    `  1. \`manual_trigger\`: { kind: "manual_trigger", variableName, inputSchema? }`,
-    `  2. \`webhook_trigger\`: { kind: "webhook_trigger", variableName }`,
-    `  3. \`ai_step\`: { kind: "ai_step", variableName, prompt, agentId?, modelId?, outputMode?: "text"|"structured"|"canvas", structuredOutputSchema?, requiresHumanReview? }`,
-    `  4. \`if_condition\`: { kind: "if_condition", variableName, evaluationMode: "deterministic"|"llm", logic: "and"|"or", rules, llmConditionPrompt? } (handles: "true", "false")`,
-    `  5. \`loop\`: { kind: "loop", variableName, mode: "for_each"|"count", itemsTemplate?, count?, maxIterations: 1..50 } (handles: "body", "done"; body & done subgraphs must be disjoint, no nested loops)`,
+    `  1. \`manual_trigger\`: { kind: "manual_trigger", variableName, requiresFileUpload? }`,
+    `  2. \`webhook_trigger\`: { kind: "webhook_trigger", variableName, secretHeaderName? }`,
+    `  3. \`ai_step\`: { kind: "ai_step", variableName, prompt, agentId?, modelId?, mcpServerIds: [], toolIds: [], requiresReview: boolean, reviewTiming?, outputMode?, structuredOutputSchema? }`,
+    `  4. \`if_condition\`: { kind: "if_condition", variableName, evaluationMode: "deterministic"|"llm"|"hybrid", logic: "and"|"or", rules, llmConditionPrompt? } (handles: "true", "false")`,
+    `  5. \`loop\`: { kind: "loop", variableName, mode: "for_each"|"count", itemsTemplate?, count?, maxIterations } (handles: "body", "done"; body & done subgraphs must be disjoint, no nested loops)`,
     `  6. \`filter\`: { kind: "filter", variableName, itemsTemplate, evaluationMode: "deterministic"|"llm", logic: "and"|"or", rules, llmFilterPrompt?, continueWhenEmpty? }`,
-    `  7. \`http_request\`: { kind: "http_request", variableName, method, url, headers?, body?, requiresHumanReview? }`,
+    `  7. \`http_request\`: { kind: "http_request", variableName, method, url, headers: [], body?, requiresReview? }`,
     `- Use \`inspect_workspace\` to discover available agents, MCP servers, or skills if needed, and \`app_help\` for app documentation.`,
     `Current Workflow JSON:\n\`\`\`json\n${snapshot}\n\`\`\``,
   ];

@@ -16,10 +16,14 @@ import {
   autoLayoutWorkflowNodes,
   buildWorkflowPayload,
   createDefaultWorkflowNode,
+  hydrateWorkflowFormState,
 } from "@/components/workflows/editor/workflow-editor-helpers";
 import { ROUTES } from "@/config/routes";
 import { useUserModels } from "@/hooks/use-user-models";
-import { validateAndSortWorkflowGraph } from "@/lib/workflows/dag-planner";
+import {
+  extractLoopBodyMap,
+  validateAndSortWorkflowGraph,
+} from "@/lib/workflows/dag-planner";
 import type {
   WorkflowNode,
   WorkflowNodeType,
@@ -135,7 +139,7 @@ export function useWorkflowEditor({
     toast.success("Webhook secret regenerated");
   };
 
-  const handleSave = async () => {
+  const handleSave = async (redirectQuery?: string) => {
     if (!form.name.trim()) {
       toast.error("Please enter a workflow name");
       return;
@@ -143,6 +147,7 @@ export function useWorkflowEditor({
 
     try {
       validateAndSortWorkflowGraph(form.nodes, form.edges);
+      extractLoopBodyMap(form.nodes, form.edges);
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -179,7 +184,9 @@ export function useWorkflowEditor({
           return;
         }
         toast.success("Workflow created successfully");
-        router.push(ROUTES.WORKFLOWS.AUTOMATIONS.detail(res.value.id));
+        router.push(
+          `${ROUTES.WORKFLOWS.AUTOMATIONS.detail(res.value.id)}${redirectQuery ?? ""}`,
+        );
       } else {
         const res = await updateWorkflow(id, payload);
         if (!res.ok) {
@@ -238,14 +245,43 @@ export function useWorkflowEditor({
     return true;
   };
 
+  const handleCreateDraftForBuilderChat = () => handleSave("?panel=chat");
+
   const handleWorkflowMutated = async () => {
     if (isNew) return;
     const res = await getWorkflow(id);
     if (!res.ok) return;
-    form.setNodes(res.value.nodes);
-    form.setEdges(res.value.edges);
-    form.setName(res.value.name);
-    form.setDescription(res.value.description ?? "");
+    hydrateWorkflowFormState(res.value, {
+      setName: form.setName,
+      setDescription: form.setDescription,
+      setGlobalContext: form.setGlobalContext,
+      setModelId: form.setModelId,
+      setReasoningEffort: form.setReasoningEffort,
+      setTools: form.setTools,
+      setSkillMode: form.setSkillMode,
+      setSkillIds: form.setSkillIds,
+      setKnowledgeBaseIds: form.setKnowledgeBaseIds,
+      setSubagentIds: form.setSubagentIds,
+      setRequiresFileUpload: form.setRequiresFileUpload,
+      setCanvasConfig: form.setCanvasConfig,
+      setApprovalConfig: form.setApprovalConfig,
+      setWebhookSecret: form.setWebhookSecret,
+      setNodes: form.setNodes,
+      setEdges: form.setEdges,
+    });
+    const hasOverlap = res.value.nodes.some((a, i) =>
+      res.value.nodes.some(
+        (b, j) =>
+          i < j &&
+          Math.abs(a.position.x - b.position.x) < 40 &&
+          Math.abs(a.position.y - b.position.y) < 40,
+      ),
+    );
+    if (hasOverlap) {
+      form.setNodes(
+        autoLayoutWorkflowNodes(res.value.nodes, res.value.edges),
+      );
+    }
   };
 
   const handleDelete = async () => {
@@ -281,6 +317,7 @@ export function useWorkflowEditor({
     handleAutoLayout,
     handleRegenerateWebhookSecret,
     handleSave,
+    handleCreateDraftForBuilderChat,
     handleSaveForBuilderChat,
     handleWorkflowMutated,
     handleDelete,

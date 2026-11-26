@@ -74,6 +74,8 @@ export interface WorkflowCanvasProps {
   onBeforeBuilderChatSend?: () => Promise<boolean> | boolean;
   onCreateDraftForBuilderChat?: () => Promise<void> | void;
   onWorkflowMutated?: () => Promise<void> | void;
+  panelMode?: "build" | "chat";
+  onPanelModeChange?: (mode: "build" | "chat") => void;
 }
 
 function WorkflowCanvasInner({
@@ -101,8 +103,14 @@ function WorkflowCanvasInner({
   onBeforeBuilderChatSend,
   onCreateDraftForBuilderChat,
   onWorkflowMutated,
+  panelMode: controlledPanelMode,
+  onPanelModeChange,
 }: WorkflowCanvasProps) {
-  const [panelMode, setPanelMode] = useState<"build" | "chat">("build");
+  const [internalPanelMode, setInternalPanelMode] = useState<"build" | "chat">(
+    "build",
+  );
+  const panelMode = controlledPanelMode ?? internalPanelMode;
+  const setPanelMode = onPanelModeChange ?? setInternalPanelMode;
   const instance = useReactFlow();
   const {
     selectedNodeId: storeSelectedNodeId,
@@ -166,6 +174,7 @@ function WorkflowCanvasInner({
               ? undefined
               : (id) => {
                   setSelectedNodeId(id);
+                  setPanelMode("build");
                   setMobilePanelOpen(true);
                 },
             onDelete: readOnly
@@ -309,6 +318,7 @@ function WorkflowCanvasInner({
           onNodeDoubleClick={(_, rfNode) => {
             if (!readOnly) {
               setSelectedNodeId(rfNode.id);
+              setPanelMode("build");
               setMobilePanelOpen(true);
             }
           }}

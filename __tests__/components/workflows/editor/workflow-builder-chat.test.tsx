@@ -56,6 +56,23 @@ vi.mock("@/hooks/use-api-error", () => ({
   }),
 }));
 
+vi.mock("@/lib/store/use-app-store", () => ({
+  useAppStore: {
+    getState: () => ({
+      upsertChat: (...args: unknown[]) => mockUpsertChat(...args),
+    }),
+  },
+}));
+
+vi.mock("@/hooks/use-user-models", () => ({
+  useUserModels: () => ({
+    models: [
+      { id: "gpt-4o", capTools: true },
+      { id: "no-tools", capTools: false },
+    ],
+  }),
+}));
+
 vi.mock("@/components/chat/use-chat-ui-store", () => ({
   useChatStore: (chatId: string) => ({
     storeChat: chatId
@@ -128,7 +145,8 @@ describe("WorkflowBuilderChat", () => {
       value: {
         id: "chat-wf-1",
         title: "Builder: Test",
-        messages: {},
+        messages: [],
+        attachments: [],
         currentLeafId: null,
       },
     });

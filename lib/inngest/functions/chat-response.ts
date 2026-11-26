@@ -707,6 +707,10 @@ export const generateChatResponse = inngest.createFunction(
         capVision: resolved.modelRow.capVision,
       });
 
+      if (isWorkflowBuilderChat && !isToolCallingModel) {
+        throw new ToolsNotSupportedError();
+      }
+
       const fileAttachments = extractFileAttachments(thread);
       const maxContextTokens = resolved.modelRow?.contextWindow
         ? Math.floor(resolved.modelRow.contextWindow * 0.85)
