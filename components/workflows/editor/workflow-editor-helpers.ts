@@ -6,6 +6,7 @@ import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
 import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
 import type { SkillMode } from "@/schemas/skill/skill-config";
+import type { Agent } from "@/types/agent/agent";
 import type { Result } from "@/types/result";
 import {
   DEFAULT_WORKFLOW_APPROVAL_CONFIG,
@@ -64,6 +65,45 @@ function buildUniqueVarName(prefix: string, nodes: WorkflowNode[]): string {
     idx += 1;
   }
   return `${prefix}${idx}`;
+}
+
+function sanitizeVariablePrefix(name: string): string {
+  const cleaned = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^[^a-z_]+/, "")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 48);
+  return cleaned || "agent";
+}
+
+/**
+ * Instantiates an `ai_step` workflow node pre-bound to an existing Agent persona.
+ */
+export function createAgentWorkflowNode(
+  agent: Pick<Agent, "id" | "name">,
+  position: { x: number; y: number },
+  existingNodes: WorkflowNode[],
+): WorkflowNode {
+  return {
+    id: crypto.randomUUID(),
+    type: "ai_step",
+    name: agent.name,
+    position,
+    data: {
+      kind: "ai_step",
+      variableName: buildUniqueVarName(
+        sanitizeVariablePrefix(agent.name),
+        existingNodes,
+      ),
+      agentId: agent.id,
+      prompt: "",
+      mcpServerIds: [],
+      toolIds: [],
+      requiresReview: false,
+    },
+  };
 }
 
 /**
