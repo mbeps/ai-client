@@ -72,7 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isChatsCollapsed, setIsChatsCollapsed] = React.useState(false);
 
   const recentChats = sortByUpdatedAt(
-    Object.values(chats).filter((chat) => !chat.projectId),
+    Object.values(chats).filter((chat) => !chat.projectId && !chat.workflowId),
   ).slice(0, 9);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Load chats once on sidebar mount

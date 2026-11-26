@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkflowBuilderChat } from "@/components/workflows/editor/workflow-builder-chat";
 
 const mockGetOrCreateWorkflowChat = vi.fn();
-const mockResetWorkflowChat = vi.fn();
+const mockCreateWorkflowChat = vi.fn();
+const mockListWorkflowChats = vi.fn();
 const mockGetChat = vi.fn();
 const mockStreamResponse = vi.fn();
 const mockStopGeneration = vi.fn();
@@ -18,7 +19,8 @@ let mockPendingApprovals: unknown[] = [];
 vi.mock("@/actions/workflows/get-or-create-workflow-chat", () => ({
   getOrCreateWorkflowChat: (...args: unknown[]) =>
     mockGetOrCreateWorkflowChat(...args),
-  resetWorkflowChat: (...args: unknown[]) => mockResetWorkflowChat(...args),
+  createWorkflowChat: (...args: unknown[]) => mockCreateWorkflowChat(...args),
+  listWorkflowChats: (...args: unknown[]) => mockListWorkflowChats(...args),
 }));
 
 vi.mock("@/actions/chats/get-chat", () => ({
@@ -136,9 +138,26 @@ describe("WorkflowBuilderChat", () => {
       ok: true,
       value: { id: "chat-wf-1", title: "Builder: Test", workflowId: "wf-1" },
     });
-    mockResetWorkflowChat.mockResolvedValue({
+    mockCreateWorkflowChat.mockResolvedValue({
       ok: true,
       value: { id: "chat-wf-2", title: "Builder: Test", workflowId: "wf-1" },
+    });
+    mockListWorkflowChats.mockResolvedValue({
+      ok: true,
+      value: [
+        {
+          id: "chat-wf-1",
+          title: "Builder: Current",
+          workflowId: "wf-1",
+          updatedAt: new Date("2026-11-26T10:00:00Z"),
+        },
+        {
+          id: "chat-wf-old",
+          title: "Builder: Earlier Iteration",
+          workflowId: "wf-1",
+          updatedAt: new Date("2026-11-25T10:00:00Z"),
+        },
+      ],
     });
     mockGetChat.mockResolvedValue({
       ok: true,
@@ -246,19 +265,51 @@ describe("WorkflowBuilderChat", () => {
     expect(onWorkflowMutated).toHaveBeenCalledTimes(1);
   });
 
-  it("resets workflow chat when New chat is clicked", async () => {
+  it("creates a new workflow chat when New chat is clicked", async () => {
     render(<WorkflowBuilderChat workflowId="wf-1" isNew={false} />);
 
     await screen.findByTestId("chat-input");
     fireEvent.click(screen.getByRole("button", { name: /new chat/i }));
 
     await waitFor(() => {
-      expect(mockResetWorkflowChat).toHaveBeenCalledWith("wf-1");
+      expect(mockCreateWorkflowChat).toHaveBeenCalledWith("wf-1");
     });
     await waitFor(() => {
       expect(screen.getByTestId("message-thread")).toHaveAttribute(
         "data-chat-id",
         "chat-wf-2",
+      );
+    });
+  });
+
+  it("opens searchable History CommandDialog and switches to selected chat", async () => {
+    render(<WorkflowBuilderChat workflowId="wf-1" isNew={false} />);
+
+    await screen.findByTestId("chat-input");
+    fireEvent.click(screen.getByRole("button", { name: /history/i }));
+
+    await waitFor(() => {
+      expect(mockListWorkflowChats).toHaveBeenCalledWith("wf-1");
+    });
+
+    const searchInput = await screen.findByPlaceholderText(
+      "Search workflow chats...",
+    );
+    expect(screen.getByText("Builder: Current")).toBeInTheDocument();
+    expect(screen.getByText("Builder: Earlier Iteration")).toBeInTheDocument();
+
+    fireEvent.change(searchInput, { target: { value: "Earlier" } });
+    expect(screen.queryByText("Builder: Current")).not.toBeInTheDocument();
+    const earlierItem = screen.getByText("Builder: Earlier Iteration");
+    fireEvent.click(earlierItem);
+
+    await waitFor(() => {
+      expect(mockGetChat).toHaveBeenCalledWith("chat-wf-old");
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("message-thread")).toHaveAttribute(
+        "data-chat-id",
+        "chat-wf-old",
       );
     });
   });

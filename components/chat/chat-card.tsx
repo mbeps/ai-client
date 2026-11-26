@@ -68,7 +68,9 @@ export function ChatCard({ chat }: ChatCardProps) {
                     ? "Project Chat"
                     : agentId
                       ? "Agent Chat"
-                      : "Standalone Chat"}
+                      : chat.workflowId
+                        ? "Workflow Chat"
+                        : "Standalone Chat"}
                 </span>
                 {formattedDate && (
                   <>

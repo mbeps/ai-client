@@ -53,7 +53,13 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
     const resolvedAgentId = chat.agentId ?? chat.assistantId;
     if (filter === "project" && !chat.projectId) return false;
     if (filter === "agent" && !resolvedAgentId) return false;
-    if (filter === "none" && (chat.projectId || resolvedAgentId)) return false;
+    if (filter === "workflow" && !chat.workflowId) return false;
+    if (
+      filter === "none" &&
+      (chat.projectId || resolvedAgentId || chat.workflowId)
+    ) {
+      return false;
+    }
     return true;
   };
 
@@ -85,6 +91,7 @@ export function ChatsClient({ initialChats }: ChatsClientProps) {
             <SelectItem value="all">All Chats</SelectItem>
             <SelectItem value="project">In Projects</SelectItem>
             <SelectItem value="agent">With Agents</SelectItem>
+            <SelectItem value="workflow">In Workflows</SelectItem>
             <SelectItem value="none">Standalone</SelectItem>
           </SelectContent>
         </Select>

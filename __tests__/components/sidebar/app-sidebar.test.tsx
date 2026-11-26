@@ -223,4 +223,45 @@ describe("AppSidebar", () => {
     const seeAllLink = screen.getByRole("link", { name: /see all/i });
     expect(seeAllLink).toHaveAttribute("data-active", "true");
   });
+
+  it("excludes workflow chats from the sidebar even when present in store", async () => {
+    mockStoreState.chats = {
+      "chat-normal": {
+        id: "chat-normal",
+        title: "Normal Chat",
+        projectId: null,
+        workflowId: null,
+        updatedAt: new Date("2026-11-26T10:00:00Z"),
+        messages: {},
+        currentLeafId: null,
+      },
+      "chat-workflow": {
+        id: "chat-workflow",
+        title: "Builder: My Workflow",
+        projectId: null,
+        workflowId: "wf-1",
+        updatedAt: new Date("2026-11-26T12:00:00Z"),
+        messages: {},
+        currentLeafId: null,
+      },
+    };
+    mockUsePathname.mockReturnValue("/");
+
+    await act(async () => {
+      render(
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+          </SidebarProvider>
+        </TooltipProvider>,
+      );
+    });
+
+    expect(
+      screen.getByRole("link", { name: /normal chat/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /builder: my workflow/i }),
+    ).not.toBeInTheDocument();
+  });
 });

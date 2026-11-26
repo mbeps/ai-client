@@ -1,11 +1,17 @@
 "use client";
 
-import { AlertCircle, Loader2, RotateCcw, Sparkles } from "lucide-react";
+import {
+  AlertCircle,
+  History,
+  Loader2,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getChat } from "@/actions/chats/get-chat";
 import {
+  createWorkflowChat,
   getOrCreateWorkflowChat,
-  resetWorkflowChat,
 } from "@/actions/workflows/get-or-create-workflow-chat";
 import { ChatInput, type ChatInputProps } from "@/components/chat/chat-input";
 import { resolveThread } from "@/components/chat/chat-ui-helpers";
@@ -15,6 +21,7 @@ import { ToolApprovalDialog } from "@/components/chat/tool-approval-dialog";
 import { useChatStore } from "@/components/chat/use-chat-ui-store";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { WorkflowChatHistoryDialog } from "@/components/workflows/editor/workflow-chat-history-dialog";
 import { INTERNAL_TOOL_IDS } from "@/config/tools";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useApiError } from "@/hooks/use-api-error";
@@ -54,6 +61,7 @@ export function WorkflowBuilderChat({
   const { storeChat } = useChatStore(chatId ?? "");
   const [isLoadingChat, setIsLoadingChat] = useState(!isNew);
   const [isResetting, setIsResetting] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>(
     undefined,
   );
@@ -126,12 +134,12 @@ export function WorkflowBuilderChat({
     },
   });
 
-  const handleReset = async () => {
+  const handleNewChat = async () => {
     setIsResetting(true);
     try {
-      const res = await resetWorkflowChat(workflowId);
+      const res = await createWorkflowChat(workflowId);
       if (!res.ok) {
-        handleApiError(res.error, "Failed to reset builder chat");
+        handleApiError(res.error, "Failed to create builder chat");
         return;
       }
       setChatId(res.value.id);
@@ -139,6 +147,12 @@ export function WorkflowBuilderChat({
     } finally {
       setIsResetting(false);
     }
+  };
+
+  const handleSelectHistoryChat = async (selectedChatId: string) => {
+    if (selectedChatId === chatId) return;
+    setChatId(selectedChatId);
+    await loadChatSession(selectedChatId);
   };
 
   const handleSend: ChatInputProps["onSend"] = async (
@@ -236,18 +250,41 @@ export function WorkflowBuilderChat({
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <span className="text-xs font-medium">AI Workflow Builder</span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1 px-2 text-xs"
-          disabled={isResetting || isStreaming}
-          onClick={handleReset}
-        >
-          <RotateCcw className="h-3 w-3" />
-          New chat
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs"
+            disabled={isStreaming}
+            onClick={() => setIsHistoryOpen(true)}
+          >
+            <History className="h-3 w-3" />
+            History
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs"
+            disabled={isResetting || isStreaming}
+            onClick={handleNewChat}
+          >
+            <RotateCcw className="h-3 w-3" />
+            New chat
+          </Button>
+        </div>
       </div>
+
+      <WorkflowChatHistoryDialog
+        isOpen={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+        workflowId={workflowId}
+        activeChatId={chatId}
+        onSelectChat={(selectedId) => {
+          void handleSelectHistoryChat(selectedId);
+        }}
+      />
 
       <ScrollArea className="min-h-0 flex-1 px-3 py-2">
         {storeChat && (

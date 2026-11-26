@@ -109,6 +109,7 @@ export const chatSchema = z.object({
   projectId: idField.nullable().optional(),
   agentId: agentIdOrBuiltInField.nullable().optional(),
   assistantId: idField.nullable().optional(),
+  workflowId: idField.nullable().optional(),
   knowledgebaseId: idField.nullable().optional(),
   projectName: z.string().optional(),
   agentName: z.string().optional(),

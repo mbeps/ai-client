@@ -7,11 +7,12 @@ vi.mock("@/lib/auth/require-session", () => ({
 }));
 
 const mockSelectWhere = vi.hoisted(() => vi.fn());
+const mockSelectOrderBy = vi.hoisted(() => vi.fn());
+const mockSelectLimit = vi.hoisted(() => vi.fn());
 const mockInsertReturning = vi.hoisted(() => vi.fn());
 const mockInsertValues = vi.hoisted(() =>
   vi.fn(() => ({ returning: mockInsertReturning })),
 );
-const mockDeleteWhere = vi.hoisted(() => vi.fn());
 
 vi.mock("@/drizzle/db", () => {
   const mockDb = {
@@ -23,23 +24,16 @@ vi.mock("@/drizzle/db", () => {
     insert: vi.fn(() => ({
       values: mockInsertValues,
     })),
-    delete: vi.fn(() => ({
-      where: mockDeleteWhere,
-    })),
   };
   return {
-    db: {
-      ...mockDb,
-      transaction: vi.fn(async (fn: (tx: typeof mockDb) => Promise<unknown>) =>
-        fn(mockDb),
-      ),
-    },
+    db: mockDb,
   };
 });
 
 import {
+  createWorkflowChat,
   getOrCreateWorkflowChat,
-  resetWorkflowChat,
+  listWorkflowChats,
 } from "@/actions/workflows/get-or-create-workflow-chat";
 
 describe("workflow chat actions", () => {
@@ -70,7 +64,9 @@ describe("workflow chat actions", () => {
       };
       mockSelectWhere
         .mockResolvedValueOnce([{ id: "wf-1", name: "My Flow" }])
-        .mockResolvedValueOnce([existingChat]);
+        .mockReturnValueOnce({ orderBy: mockSelectOrderBy });
+      mockSelectOrderBy.mockReturnValueOnce({ limit: mockSelectLimit });
+      mockSelectLimit.mockResolvedValueOnce([existingChat]);
 
       const result = await getOrCreateWorkflowChat("wf-1");
 
@@ -90,7 +86,9 @@ describe("workflow chat actions", () => {
       };
       mockSelectWhere
         .mockResolvedValueOnce([{ id: "wf-1", name: "My Flow" }])
-        .mockResolvedValueOnce([]);
+        .mockReturnValueOnce({ orderBy: mockSelectOrderBy });
+      mockSelectOrderBy.mockReturnValueOnce({ limit: mockSelectLimit });
+      mockSelectLimit.mockResolvedValueOnce([]);
       mockInsertReturning.mockResolvedValueOnce([createdChat]);
 
       const result = await getOrCreateWorkflowChat("wf-1");
@@ -109,20 +107,20 @@ describe("workflow chat actions", () => {
     });
   });
 
-  describe("resetWorkflowChat", () => {
+  describe("createWorkflowChat", () => {
     it("returns NOT_FOUND when workflow is not owned by user", async () => {
       mockSelectWhere.mockResolvedValueOnce([]);
 
-      const result = await resetWorkflowChat("wf-foreign");
+      const result = await createWorkflowChat("wf-foreign");
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error.code).toBe(ERROR_CODE.NOT_FOUND);
       }
-      expect(mockDeleteWhere).not.toHaveBeenCalled();
+      expect(mockInsertValues).not.toHaveBeenCalled();
     });
 
-    it("deletes existing builder chat and creates a fresh one", async () => {
+    it("creates a fresh builder chat without deleting existing history", async () => {
       const freshChat = {
         id: "chat-fresh",
         title: "Builder: My Flow",
@@ -130,16 +128,14 @@ describe("workflow chat actions", () => {
         workflowId: "wf-1",
       };
       mockSelectWhere.mockResolvedValueOnce([{ id: "wf-1", name: "My Flow" }]);
-      mockDeleteWhere.mockResolvedValueOnce(undefined);
       mockInsertReturning.mockResolvedValueOnce([freshChat]);
 
-      const result = await resetWorkflowChat("wf-1");
+      const result = await createWorkflowChat("wf-1");
 
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value).toEqual(freshChat);
       }
-      expect(mockDeleteWhere).toHaveBeenCalledTimes(1);
       expect(mockInsertValues).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: "user-1",
@@ -147,6 +143,37 @@ describe("workflow chat actions", () => {
           title: "Builder: My Flow",
         }),
       );
+    });
+  });
+
+  describe("listWorkflowChats", () => {
+    it("returns NOT_FOUND when workflow is not owned by user", async () => {
+      mockSelectWhere.mockResolvedValueOnce([]);
+
+      const result = await listWorkflowChats("wf-foreign");
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe(ERROR_CODE.NOT_FOUND);
+      }
+    });
+
+    it("returns all builder chats for the workflow ordered by updatedAt", async () => {
+      const rows = [
+        { id: "chat-2", title: "Second", workflowId: "wf-1" },
+        { id: "chat-1", title: "First", workflowId: "wf-1" },
+      ];
+      mockSelectWhere
+        .mockResolvedValueOnce([{ id: "wf-1", name: "My Flow" }])
+        .mockReturnValueOnce({ orderBy: mockSelectOrderBy });
+      mockSelectOrderBy.mockResolvedValueOnce(rows);
+
+      const result = await listWorkflowChats("wf-1");
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toEqual(rows);
+      }
     });
   });
 });

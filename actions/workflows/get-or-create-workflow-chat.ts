@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/drizzle/db";
 import { chat } from "@/drizzle/schemas/chat-schema";
 import { workflow } from "@/drizzle/schemas/workflow-schema";
@@ -50,7 +50,7 @@ async function insertWorkflowBuilderChat(
 }
 
 /**
- * Returns the existing builder chat for `workflowId`, or creates one if none exists.
+ * Returns the most recent builder chat for `workflowId`, or creates one if none exists.
  * Enforces workflow ownership via session check.
  *
  * @param workflowId - The workflow ID to scope the builder chat to.
@@ -72,7 +72,9 @@ export const getOrCreateWorkflowChat = defineAction(
       .from(chat)
       .where(
         and(eq(chat.workflowId, workflowId), eq(chat.userId, session.user.id)),
-      );
+      )
+      .orderBy(desc(chat.updatedAt))
+      .limit(1);
     if (existing) {
       return ok(existing);
     }
@@ -89,13 +91,13 @@ export const getOrCreateWorkflowChat = defineAction(
 );
 
 /**
- * Deletes any existing builder chat for `workflowId` and creates a fresh session.
+ * Creates a fresh builder chat session for `workflowId` while preserving prior chat history.
  * Enforces workflow ownership via session check.
  *
- * @param workflowId - The workflow ID whose builder chat should be reset.
+ * @param workflowId - The workflow ID to create a new builder chat for.
  * @returns Result containing the newly created ChatRow, or NOT_FOUND if unowned/missing.
  */
-export const resetWorkflowChat = defineAction(
+export const createWorkflowChat = defineAction(
   async (workflowId: string): Promise<Result<ChatRow, CommonError>> => {
     const session = await requireSession();
     const owned = await findOwnedWorkflow(workflowId, session.user.id);
@@ -106,24 +108,43 @@ export const resetWorkflowChat = defineAction(
       });
     }
 
-    const created = await db.transaction(async (tx) => {
-      await tx
-        .delete(chat)
-        .where(
-          and(
-            eq(chat.workflowId, workflowId),
-            eq(chat.userId, session.user.id),
-          ),
-        );
-
-      return insertWorkflowBuilderChat(
-        tx,
-        session.user.id,
-        workflowId,
-        owned.name,
-      );
-    });
+    const created = await insertWorkflowBuilderChat(
+      db,
+      session.user.id,
+      workflowId,
+      owned.name,
+    );
 
     return ok(created);
+  },
+);
+
+/**
+ * Lists all builder chat sessions for `workflowId`, ordered by most recently updated first.
+ * Enforces workflow ownership via session check.
+ *
+ * @param workflowId - The workflow ID whose builder chat history should be listed.
+ * @returns Result containing ChatRow[], or NOT_FOUND if unowned/missing.
+ */
+export const listWorkflowChats = defineAction(
+  async (workflowId: string): Promise<Result<ChatRow[], CommonError>> => {
+    const session = await requireSession();
+    const owned = await findOwnedWorkflow(workflowId, session.user.id);
+    if (!owned) {
+      return fail({
+        code: ERROR_CODE.NOT_FOUND,
+        message: "Workflow not found",
+      });
+    }
+
+    const rows = await db
+      .select()
+      .from(chat)
+      .where(
+        and(eq(chat.workflowId, workflowId), eq(chat.userId, session.user.id)),
+      )
+      .orderBy(desc(chat.updatedAt));
+
+    return ok(rows);
   },
 );
