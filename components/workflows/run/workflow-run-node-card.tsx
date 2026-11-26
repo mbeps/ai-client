@@ -140,6 +140,36 @@ export function WorkflowRunNodeCard({
           </div>
         )}
 
+        {state?.filterSummary && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline">
+              Matched: {state.filterSummary.kept}/{state.filterSummary.total}
+            </Badge>
+            {state.filterSummary.reasoning && (
+              <span className="text-muted-foreground">
+                {state.filterSummary.reasoning}
+              </span>
+            )}
+          </div>
+        )}
+
+        {state?.loopSummary && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline">
+              Iterations: {state.loopSummary.iterations}/
+              {state.loopSummary.totalItems}
+            </Badge>
+            {state.loopSummary.truncated && (
+              <Badge
+                variant="outline"
+                className="border-amber-500 text-amber-600"
+              >
+                Truncated
+              </Badge>
+            )}
+          </div>
+        )}
+
         {state?.httpResponse && (
           <p className="text-muted-foreground font-mono text-xs">
             HTTP {state.httpResponse.status} {state.httpResponse.statusText}

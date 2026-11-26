@@ -77,4 +77,75 @@ describe("WorkflowRunNodeCard", () => {
       "Hello **world**",
     );
   });
+
+  it("renders matched/total count badge and reasoning when state.filterSummary is present", () => {
+    const filterNode: WorkflowNode = {
+      id: "filter-1",
+      type: "filter",
+      name: "High Priority Filter",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "filter",
+        variableName: "filter1",
+        items: "{{step1.items}}",
+        mode: "deterministic",
+        rules: [],
+      },
+    };
+    const state: WorkflowNodeRunState = {
+      status: "completed",
+      filterSummary: {
+        kept: 3,
+        total: 5,
+        reasoning: "Kept high-priority items",
+      },
+    };
+
+    render(
+      <WorkflowRunNodeCard
+        node={filterNode}
+        state={state}
+        isSelected={false}
+        onClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Matched: 3/5")).toBeInTheDocument();
+    expect(screen.getByText("Kept high-priority items")).toBeInTheDocument();
+  });
+
+  it("renders completed/total iterations summary when state.loopSummary is present", () => {
+    const loopNode: WorkflowNode = {
+      id: "loop-1",
+      type: "loop",
+      name: "Process Items",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "loop",
+        variableName: "loop1",
+        mode: "for_each",
+        items: "{{filter1.items}}",
+      },
+    };
+    const state: WorkflowNodeRunState = {
+      status: "completed",
+      loopSummary: {
+        iterations: 4,
+        totalItems: 5,
+        truncated: true,
+      },
+    };
+
+    render(
+      <WorkflowRunNodeCard
+        node={loopNode}
+        state={state}
+        isSelected={false}
+        onClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Iterations: 4/5")).toBeInTheDocument();
+    expect(screen.getByText("Truncated")).toBeInTheDocument();
+  });
 });
