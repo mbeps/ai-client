@@ -76,22 +76,23 @@ export function InternalToolsGrid({ groups }: InternalToolsGridProps) {
   return (
     <>
       {groups.map(([category, tools]) => (
-        <section key={category} className="space-y-4">
-          <div className="flex items-baseline gap-3">
-            <h2 className="text-xl font-semibold tracking-tight">{category}</h2>
-            <span className="text-muted-foreground text-sm">
+        <section key={category} className="space-y-2.5">
+          <div className="flex items-baseline gap-2.5">
+            <h2 className="text-base font-semibold tracking-tight">
+              {category}
+            </h2>
+            <span className="text-muted-foreground text-xs">
               {tools.length} {tools.length === 1 ? "tool" : "tools"}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2.5">
             {tools.map((tool) => (
               <InternalToolCard
                 key={tool.id}
                 name={tool.name}
                 displayName={tool.displayName}
                 description={tool.description}
-                availability={tool.availability}
                 category={tool.category}
                 approvalMode={resolveInternalToolApproval(tool.name, overrides)}
                 defaultApproval={tool.defaultApproval}
