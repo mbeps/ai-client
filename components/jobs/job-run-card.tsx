@@ -200,30 +200,20 @@ function JobCardTitle({
   url,
   entityDeleted,
   title,
-  subtitle,
-}: JobCardTitleProps) {
+}: Omit<JobCardTitleProps, "subtitle">) {
   const hasLink = Boolean(url && !entityDeleted);
 
-  return (
-    <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-      {hasLink ? (
-        <Link
-          href={url as string}
-          className="text-foreground hover:text-primary truncate text-sm font-semibold transition-colors hover:underline"
-        >
-          {title}
-        </Link>
-      ) : (
-        <span className="text-foreground truncate text-sm font-semibold">
-          {title}
-        </span>
-      )}
-      {subtitle && (
-        <span className="text-muted-foreground truncate text-xs">
-          {subtitle}
-        </span>
-      )}
-    </div>
+  return hasLink ? (
+    <Link
+      href={url as string}
+      className="text-foreground hover:text-primary truncate text-sm font-semibold transition-colors hover:underline"
+    >
+      {title}
+    </Link>
+  ) : (
+    <span className="text-foreground truncate text-sm font-semibold">
+      {title}
+    </span>
   );
 }
 
@@ -236,7 +226,7 @@ interface JobCardMetaDetailsProps {
   errorMessage?: string;
   timingText: string;
   formattedDuration: string | null;
-  functionName?: string;
+  subtitle?: string;
 }
 
 /**
@@ -250,10 +240,10 @@ function JobCardMetaDetails({
   errorMessage,
   timingText,
   formattedDuration,
-  functionName,
+  subtitle,
 }: JobCardMetaDetailsProps) {
   return (
-    <div className="mt-1 space-y-1.5">
+    <div className="mt-0.5 space-y-1">
       <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
         {timingText && (
           <span className="flex items-center gap-1">
@@ -264,11 +254,7 @@ function JobCardMetaDetails({
         {formattedDuration && (
           <span className="tabular-nums">• {formattedDuration}</span>
         )}
-        {functionName && (
-          <span className="bg-muted/60 rounded px-1.5 py-0.5 font-mono text-[10px] opacity-80">
-            {functionName}
-          </span>
-        )}
+        {subtitle && <span className="truncate">• {subtitle}</span>}
       </div>
 
       {errorMessage && (
@@ -409,11 +395,11 @@ export function JobRunCard({
           : "hover:border-primary/30",
       )}
     >
-      <CardContent className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
+      <CardContent className="flex flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <div
             className={cn(
-              "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border",
+              "flex size-8 shrink-0 items-center justify-center rounded-lg border",
               hasApproval
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                 : "border-border/60 bg-muted/50 text-muted-foreground",
@@ -423,6 +409,11 @@ export function JobRunCard({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
+              <JobCardTitle
+                url={job.url}
+                entityDeleted={job.entityDeleted}
+                title={job.title}
+              />
               <Badge variant="secondary" className="px-1.5 text-[11px]">
                 {typeMeta.label}
               </Badge>
@@ -431,18 +422,11 @@ export function JobRunCard({
               {job.entityDeleted && <JobDeletedBadge />}
             </div>
 
-            <JobCardTitle
-              url={job.url}
-              entityDeleted={job.entityDeleted}
-              title={job.title}
-              subtitle={job.subtitle}
-            />
-
             <JobCardMetaDetails
               errorMessage={job.errorMessage}
               timingText={timingText}
               formattedDuration={formattedDuration}
-              functionName={job.functionName}
+              subtitle={job.subtitle}
             />
           </div>
         </div>

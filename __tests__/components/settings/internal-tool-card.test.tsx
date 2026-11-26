@@ -3,13 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import { InternalToolCard } from "@/components/settings/internal-tool-card";
 
 describe("InternalToolCard", () => {
-  it("renders display name, technical name, description, availability, and category", () => {
+  it("renders display name, technical name, description, and permission control", () => {
     render(
       <InternalToolCard
         name="search_knowledge_base"
         displayName="Search Knowledge Base"
         description="Searches attached knowledge bases."
-        availability="Registered when a knowledge base is attached."
         category="Knowledge"
         approvalMode="auto"
         defaultApproval="auto"
@@ -21,11 +20,6 @@ describe("InternalToolCard", () => {
     expect(
       screen.getByText("Searches attached knowledge bases."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Availability:")).toBeInTheDocument();
-    expect(
-      screen.getByText("Registered when a knowledge base is attached."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Knowledge")).toBeInTheDocument();
     expect(screen.getByText("Auto-approved")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /reset/i })).toBeNull();
   });

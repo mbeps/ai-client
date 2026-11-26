@@ -2,11 +2,9 @@
 
 import { Ban, RotateCcw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { type KeyboardEvent, useRef } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -24,8 +22,6 @@ export interface InternalToolCardProps {
   displayName?: string;
   /** One-line summary of what the tool does. */
   description: string;
-  /** Condition under which the tool is registered for a chat. */
-  availability: string;
   /** Tool category label rendered as a metadata pill when provided. */
   category?: string;
   /** Effective permission mode for this tool ("auto", "ask", or "block"). */
@@ -77,8 +73,6 @@ export function InternalToolCard({
   name,
   displayName,
   description,
-  availability,
-  category,
   approvalMode,
   defaultApproval,
   onToggleApproval,
@@ -116,18 +110,25 @@ export function InternalToolCard({
   };
 
   return (
-    <Card className="gap-4 py-5">
-      <CardHeader className="px-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-0.5">
-            <CardTitle className="text-base font-semibold">{label}</CardTitle>
-            <p className="text-muted-foreground font-mono text-xs">{name}</p>
+    <Card className="py-3">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 px-4">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <CardTitle className="text-sm font-semibold">{label}</CardTitle>
+            <span className="text-muted-foreground font-mono text-xs">
+              {name}
+            </span>
           </div>
+          <CardDescription className="text-xs leading-relaxed">
+            {description}
+          </CardDescription>
+        </div>
 
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
           <div
             role="radiogroup"
             aria-label={`${label} permission`}
-            className="bg-muted inline-flex shrink-0 items-center gap-0.5 rounded-lg p-0.5"
+            className="bg-muted inline-flex items-center gap-0.5 rounded-lg p-0.5"
           >
             {PERMISSION_OPTIONS.map((option, index) => {
               const isSelected = effectiveApproval === option.mode;
@@ -163,46 +164,27 @@ export function InternalToolCard({
               );
             })}
           </div>
-        </div>
-
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-
-      <CardContent className="text-muted-foreground space-y-3 px-5 text-sm">
-        <div>
-          <span className="text-foreground font-medium">Availability:</span>{" "}
-          {availability}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {category && (
-              <Badge variant="secondary" className="text-xs font-normal">
-                {category}
-              </Badge>
-            )}
-            {isOverridden && (
-              <span className="text-muted-foreground text-xs">
-                Default: {defaultApproval === "auto" ? "Auto" : "Ask"}
-              </span>
-            )}
-          </div>
 
           {isOverridden && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={!isInteractive}
-              onClick={() => onToggleApproval?.(name, defaultApproval)}
-              className="h-7 gap-1 px-2 text-xs"
-            >
-              <RotateCcw className="size-3" />
-              <span>Reset</span>
-            </Button>
+            <div className="text-muted-foreground flex items-center gap-2 text-xs">
+              <span>
+                Default: {defaultApproval === "auto" ? "Auto" : "Ask"}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={!isInteractive}
+                onClick={() => onToggleApproval?.(name, defaultApproval)}
+                className="h-6 gap-1 px-1.5 text-xs"
+              >
+                <RotateCcw className="size-3" />
+                <span>Reset</span>
+              </Button>
+            </div>
           )}
         </div>
-      </CardContent>
+      </CardHeader>
     </Card>
   );
 }
