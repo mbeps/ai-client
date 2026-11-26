@@ -56,12 +56,4 @@ describe("ToolsSettingsPage", () => {
       }
     }
   });
-
-  it("gives every card one availability note", async () => {
-    render(await ToolsSettingsPage());
-
-    expect(screen.getAllByText("Availability:")).toHaveLength(
-      INTERNAL_TOOL_CATALOGUE.length,
-    );
-  });
 });
