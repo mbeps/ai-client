@@ -1,43 +1,17 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { ReasoningEffort } from "@/schemas/providers/provider-registry";
-import type { Attachment } from "@/types/attachment/attachment";
 import type { ApprovalMode } from "@/types/tool/approval";
 
 /**
- * Key used to store tool selections made on the home page before a chat is created.
+ * Key used to store ephemeral tool selections made on the home page before a chat is created.
  */
 export const NEW_CHAT_TOOLS_KEY = "__new__";
-
-/**
- * Ephemeral launch payload captured on the home page and consumed once by ChatUI
- * after redirecting to `/chats/[id]`, preserving all composer selections and attachments.
- */
-export interface PendingChatLaunch {
-  content: string;
-  attachments: Attachment[];
-  model: string;
-  selectedServerIds: string[];
-  selectedTools: string[];
-  selectedPromptId?: string | string[];
-  selectedAssistantId?: string;
-  selectedKnowledgebases?: string[];
-  selectedSkillIds?: string[];
-  subagentsEnabled?: boolean;
-  subagentModelId?: string;
-  reasoningEffort?: ReasoningEffort;
-  subagentIds?: string[];
-  approvalMode?: ApprovalMode;
-}
 
 export interface ChatToolsState {
   toolsByChat: Record<string, string[]>;
   approvalModeByChat: Record<string, ApprovalMode>;
-  pendingLaunchByChat: Record<string, PendingChatLaunch>;
   setChatTools: (chatId: string, tools: string[]) => void;
   setChatApprovalMode: (chatId: string, mode: ApprovalMode) => void;
-  setPendingLaunch: (chatId: string, launch: PendingChatLaunch) => void;
-  clearPendingLaunch: (chatId: string) => void;
   clearChatTools: (chatId: string) => void;
   transferChatTools: (fromChatId: string, toChatId: string) => void;
   clearAll: () => void;
@@ -62,7 +36,6 @@ export const useChatToolsStore = create<ChatToolsState>()(
     (set) => ({
       toolsByChat: {},
       approvalModeByChat: {},
-      pendingLaunchByChat: {},
 
       setChatTools: (chatId, tools) => {
         set((state) => ({
@@ -82,37 +55,16 @@ export const useChatToolsStore = create<ChatToolsState>()(
         }));
       },
 
-      setPendingLaunch: (chatId, launch) => {
-        set((state) => ({
-          pendingLaunchByChat: {
-            ...state.pendingLaunchByChat,
-            [chatId]: launch,
-          },
-        }));
-      },
-
-      clearPendingLaunch: (chatId) => {
-        set((state) => {
-          if (!(chatId in state.pendingLaunchByChat)) return state;
-          const { [chatId]: _launch, ...rest } = state.pendingLaunchByChat;
-          return { pendingLaunchByChat: rest };
-        });
-      },
-
       clearChatTools: (chatId) => {
         set((state) => {
           const hasTools = chatId in state.toolsByChat;
           const hasMode = chatId in state.approvalModeByChat;
-          const hasLaunch = chatId in state.pendingLaunchByChat;
-          if (!hasTools && !hasMode && !hasLaunch) return state;
+          if (!hasTools && !hasMode) return state;
           const { [chatId]: _tools, ...restTools } = state.toolsByChat;
           const { [chatId]: _mode, ...restModes } = state.approvalModeByChat;
-          const { [chatId]: _launch, ...restLaunches } =
-            state.pendingLaunchByChat;
           return {
             toolsByChat: restTools,
             approvalModeByChat: restModes,
-            pendingLaunchByChat: restLaunches,
           };
         });
       },
@@ -143,7 +95,6 @@ export const useChatToolsStore = create<ChatToolsState>()(
         set({
           toolsByChat: {},
           approvalModeByChat: {},
-          pendingLaunchByChat: {},
         });
       },
     }),
@@ -152,10 +103,31 @@ export const useChatToolsStore = create<ChatToolsState>()(
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? window.localStorage : noopStorage,
       ),
-      partialize: (state) => ({
-        toolsByChat: state.toolsByChat,
-        approvalModeByChat: state.approvalModeByChat,
-      }),
+      partialize: (state) => {
+        const { [NEW_CHAT_TOOLS_KEY]: _newTools, ...restTools } =
+          state.toolsByChat;
+        const { [NEW_CHAT_TOOLS_KEY]: _newMode, ...restModes } =
+          state.approvalModeByChat;
+        return {
+          toolsByChat: restTools,
+          approvalModeByChat: restModes,
+        };
+      },
+      merge: (persistedState, currentState) => {
+        if (!persistedState || typeof persistedState !== "object") {
+          return currentState;
+        }
+        const persisted = persistedState as Partial<ChatToolsState>;
+        const { [NEW_CHAT_TOOLS_KEY]: _newTools, ...restTools } =
+          persisted.toolsByChat ?? currentState.toolsByChat;
+        const { [NEW_CHAT_TOOLS_KEY]: _newMode, ...restModes } =
+          persisted.approvalModeByChat ?? currentState.approvalModeByChat;
+        return {
+          ...currentState,
+          toolsByChat: restTools,
+          approvalModeByChat: restModes,
+        };
+      },
     },
   ),
 );

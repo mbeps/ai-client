@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AgentBar } from "@/components/chat/agent-bar";
 import { ArtifactPanel } from "@/components/chat/artifact-panel";
 import { CanvasReopenButton } from "@/components/chat/canvas-reopen-button";
@@ -36,6 +37,7 @@ import {
 } from "@/components/chat/use-chat-message-actions";
 import { useChatStore } from "@/components/chat/use-chat-ui-store";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ROUTES } from "@/config/routes";
 import { useCompactChat } from "@/hooks/chat/use-compact-chat";
 import { useStreamResponse } from "@/hooks/chat/use-stream-response";
 import { useResourceHydration } from "@/hooks/use-resource-hydration";
@@ -43,7 +45,7 @@ import { extractServerIdsFromTools } from "@/lib/chat/extract-server-ids-from-to
 import { parseMessageMetadata } from "@/lib/chat/parse-message-metadata";
 import { hydratedResources } from "@/lib/store/hydrated-resources";
 import {
-  type PendingChatLaunch,
+  NEW_CHAT_TOOLS_KEY,
   useChatToolsStore,
 } from "@/lib/store/use-chat-tools-store";
 import type { Chat } from "@/types/chat/chat";
@@ -57,14 +59,16 @@ export { resolveActiveChat } from "@/components/chat/use-chat-initial-state";
  * @author Maruf Bepary
  */
 interface ChatUIProps {
-  /** Unique identifier for the active chat session. */
-  chatId: string;
+  /** Unique identifier for the active chat session; omitted on `/` until first send. */
+  chatId?: string;
   /** Pre-fetched chat data from server for immediate rendering before store hydration. */
   initialChat?: Chat;
   /** Optional message to send on component mount. Typically from query parameters. */
   initialMessage?: string;
   /** Callback invoked after the initial message is successfully sent. */
   onInitialMessageSent?: () => void;
+  /** Optional empty-state content rendered when the thread has no messages yet. */
+  emptyState?: React.ReactNode;
 }
 
 /**
@@ -75,13 +79,27 @@ interface ChatUIProps {
  * @author Maruf Bepary
  */
 export function ChatUI({
-  chatId,
+  chatId: chatIdProp,
   initialChat,
   initialMessage,
   onInitialMessageSent,
+  emptyState,
 }: ChatUIProps) {
+  const [createdChatId, setCreatedChatId] = useState<string | null>(null);
+  const [prevChatIdProp, setPrevChatIdProp] = useState(chatIdProp);
+  if (chatIdProp !== prevChatIdProp) {
+    setPrevChatIdProp(chatIdProp);
+    setCreatedChatId(null);
+  }
+
+  const activeChatId = chatIdProp ?? createdChatId;
+  const composerChatId = activeChatId ?? NEW_CHAT_TOOLS_KEY;
+  const streamChatId = activeChatId ?? "";
+  const storeKey = activeChatId ?? "";
+
   const {
     storeChat,
+    createChatDb,
     deleteMessageDb,
     setCurrentLeafDb,
     setKnowledgebaseDb,
@@ -90,8 +108,8 @@ export function ChatUI({
     userSettings,
     projects,
     updateMessageMetadataDb,
-  } = useChatStore(chatId);
-  const chat = resolveActiveChat(storeChat, initialChat, chatId);
+  } = useChatStore(storeKey);
+  const chat = resolveActiveChat(storeChat, initialChat, storeKey);
 
   const hydration = useResourceHydration([
     "mcpServers",
@@ -115,31 +133,12 @@ export function ChatUI({
     [chat?.currentLeafId, chat?.messages],
   );
 
-  const persistedTools = useChatToolsStore((s) => s.toolsByChat[chatId]);
+  const persistedTools = useChatToolsStore(
+    (s) => s.toolsByChat[composerChatId],
+  );
   const persistedApprovalMode = useChatToolsStore(
-    (s) => s.approvalModeByChat[chatId],
+    (s) => s.approvalModeByChat[composerChatId],
   );
-  const storePendingLaunch = useChatToolsStore(
-    (s) => s.pendingLaunchByChat[chatId],
-  );
-  const [capturedLaunchState, setCapturedLaunchState] = useState<{
-    chatId: string;
-    launch: PendingChatLaunch | undefined;
-  }>(() => ({
-    chatId,
-    launch: useChatToolsStore.getState().pendingLaunchByChat[chatId],
-  }));
-
-  if (capturedLaunchState.chatId !== chatId) {
-    setCapturedLaunchState({ chatId, launch: storePendingLaunch });
-  } else if (!capturedLaunchState.launch && storePendingLaunch) {
-    setCapturedLaunchState({ chatId, launch: storePendingLaunch });
-  }
-
-  const capturedPendingLaunch =
-    capturedLaunchState.chatId === chatId
-      ? capturedLaunchState.launch
-      : undefined;
 
   const {
     initialModelId,
@@ -160,34 +159,18 @@ export function ChatUI({
     chat,
   );
 
-  const effectiveInitialModelId =
-    capturedPendingLaunch?.model || initialModelId;
   const effectiveInitialServerIds = useMemo(() => {
-    if (capturedPendingLaunch) return capturedPendingLaunch.selectedServerIds;
     if (persistedTools !== undefined) {
       return extractServerIdsFromTools(persistedTools);
     }
     return initialServerIds;
-  }, [capturedPendingLaunch, persistedTools, initialServerIds]);
+  }, [persistedTools, initialServerIds]);
   const effectiveInitialSelectedTools = useMemo(() => {
-    if (capturedPendingLaunch) return capturedPendingLaunch.selectedTools;
     if (persistedTools !== undefined) return persistedTools;
     return initialSelectedTools;
-  }, [capturedPendingLaunch, persistedTools, initialSelectedTools]);
-  const effectiveInitialKbIds =
-    capturedPendingLaunch?.selectedKnowledgebases ?? initialKbIds;
-  const effectiveInitialSubagentsEnabled =
-    capturedPendingLaunch?.subagentsEnabled ?? initialSubagentsEnabled;
-  const effectiveInitialSubagentModelId =
-    capturedPendingLaunch?.subagentModelId ?? initialSubagentModelId;
-  const effectiveInitialSubagentIds =
-    capturedPendingLaunch?.subagentIds ?? initialSubagentIds;
-  const effectiveInitialReasoningEffort =
-    capturedPendingLaunch?.reasoningEffort ?? initialReasoningEffort;
+  }, [persistedTools, initialSelectedTools]);
   const effectiveInitialApprovalMode =
-    capturedPendingLaunch?.approvalMode ??
-    persistedApprovalMode ??
-    initialApprovalMode;
+    persistedApprovalMode ?? initialApprovalMode;
 
   const allEnabledServers = useMemo(
     () => filterEnabledMcpServers(mcpServers),
@@ -206,7 +189,7 @@ export function ChatUI({
     submitToolApprovals,
     streamResponse,
     stopStream,
-  } = useStreamResponse(chatId);
+  } = useStreamResponse(streamChatId);
 
   const streamingCitations = useMemo(
     () => extractActiveStreamingCitations(activeToolCalls),
@@ -224,7 +207,7 @@ export function ChatUI({
     handleUpdateArtifact,
     handleReopen,
   } = useChatArtifactPanel(
-    chatId,
+    streamChatId,
     chat,
     thread,
     activeToolCalls,
@@ -234,9 +217,48 @@ export function ChatUI({
 
   const handleKbChange = useCallback(
     (kbIds: string[]) => {
-      updateChatKnowledgebase(chatId, kbIds, setKnowledgebaseDb);
+      if (!activeChatId) return;
+      updateChatKnowledgebase(activeChatId, kbIds, setKnowledgebaseDb);
     },
-    [chatId, setKnowledgebaseDb],
+    [activeChatId, setKnowledgebaseDb],
+  );
+
+  const ensureChatId = useCallback(
+    async (
+      content: string,
+      selectedKbIds: string[],
+      selectedPromptId?: string | string[],
+    ): Promise<string | null> => {
+      if (activeChatId) return activeChatId;
+      const hasPrompt = Array.isArray(selectedPromptId)
+        ? selectedPromptId.length > 0
+        : Boolean(selectedPromptId);
+      if (!content.trim() && !hasPrompt) {
+        toast.error("Please enter a message before sending.");
+        return null;
+      }
+      try {
+        const title = content.trim().slice(0, 60) || "New Chat";
+        const newChatId = await createChatDb(title);
+        if (selectedKbIds.length > 0) {
+          await setKnowledgebaseDb(newChatId, selectedKbIds[0]);
+        }
+        useChatToolsStore
+          .getState()
+          .transferChatTools(NEW_CHAT_TOOLS_KEY, newChatId);
+        setCreatedChatId(newChatId);
+        if (typeof window !== "undefined") {
+          window.history.pushState(null, "", ROUTES.CHATS.detail(newChatId));
+        }
+        return newChatId;
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to start chat",
+        );
+        return null;
+      }
+    },
+    [activeChatId, createChatDb, setKnowledgebaseDb],
   );
 
   const {
@@ -246,15 +268,16 @@ export function ChatUI({
     handleDelete,
     handleNavigateBranch,
   } = useChatMessageActions({
-    chatId,
+    chatId: streamChatId,
     chat,
     streamResponse,
     deleteMessageDb,
     setCurrentLeafDb,
+    ensureChatId,
   });
 
   const scrollRef = useChatScrollToBottom();
-  const { isCompacting, handleCompact } = useCompactChat(chatId);
+  const { isCompacting, handleCompact } = useCompactChat(streamChatId);
 
   const chatAgentId = chat?.agentId ?? chat?.assistantId;
   const isAgentsReady =
@@ -268,28 +291,22 @@ export function ChatUI({
   const isInitialContextReady =
     !hydration?.isLoading && isAgentsReady && isProjectsReady;
 
-  const consumePendingLaunch = useCallback(() => {
-    useChatToolsStore.getState().clearPendingLaunch(chatId);
-  }, [chatId]);
-
   useInitialChatAutoSend(
     chat,
     initialMessage,
     onInitialMessageSent,
     handleSend,
-    effectiveInitialModelId,
+    initialModelId,
     effectiveInitialServerIds,
     effectiveInitialSelectedTools,
-    effectiveInitialKbIds,
+    initialKbIds,
     initialSkillIds,
-    effectiveInitialSubagentsEnabled,
-    effectiveInitialSubagentModelId,
-    effectiveInitialSubagentIds,
+    initialSubagentsEnabled,
+    initialSubagentModelId,
+    initialSubagentIds,
     isInitialContextReady,
-    effectiveInitialReasoningEffort,
+    initialReasoningEffort,
     effectiveInitialApprovalMode,
-    capturedPendingLaunch,
-    consumePendingLaunch,
   );
 
   const parkedPending = useMemo(() => {
@@ -332,13 +349,13 @@ export function ChatUI({
 
   const handleComposerSelectionsChange = useCallback(
     (selections: ChatComposerSelections) => {
-      setComposerSelectionsState({ chatId, selections });
+      setComposerSelectionsState({ chatId: composerChatId, selections });
     },
-    [chatId],
+    [composerChatId],
   );
 
   const composerSelections =
-    composerSelectionsState?.chatId === chatId
+    composerSelectionsState?.chatId === composerChatId
       ? composerSelectionsState.selections
       : null;
 
@@ -349,18 +366,17 @@ export function ChatUI({
       await handleSend(
         trimmed,
         [],
-        composerSelections?.modelId ?? effectiveInitialModelId,
+        composerSelections?.modelId ?? initialModelId,
         composerSelections?.serverIds ?? effectiveInitialServerIds,
         composerSelections?.selectedTools ?? effectiveInitialSelectedTools,
         undefined,
         chat?.agentId ?? chat?.assistantId ?? undefined,
-        composerSelections?.kbIds ?? effectiveInitialKbIds,
+        composerSelections?.kbIds ?? initialKbIds,
         composerSelections?.skillIds ?? initialSkillIds,
-        composerSelections?.subagentsEnabled ??
-          effectiveInitialSubagentsEnabled,
-        composerSelections?.subagentModelId ?? effectiveInitialSubagentModelId,
-        composerSelections?.reasoningEffort ?? effectiveInitialReasoningEffort,
-        composerSelections?.subagentIds ?? effectiveInitialSubagentIds,
+        composerSelections?.subagentsEnabled ?? initialSubagentsEnabled,
+        composerSelections?.subagentModelId ?? initialSubagentModelId,
+        composerSelections?.reasoningEffort ?? initialReasoningEffort,
+        composerSelections?.subagentIds ?? initialSubagentIds,
         composerSelections?.approvalMode ?? effectiveInitialApprovalMode,
       );
     },
@@ -368,22 +384,22 @@ export function ChatUI({
       isLoading,
       handleSend,
       composerSelections,
-      effectiveInitialModelId,
+      initialModelId,
       effectiveInitialServerIds,
       effectiveInitialSelectedTools,
       chat?.agentId,
       chat?.assistantId,
-      effectiveInitialKbIds,
+      initialKbIds,
       initialSkillIds,
-      effectiveInitialSubagentsEnabled,
-      effectiveInitialSubagentModelId,
-      effectiveInitialReasoningEffort,
-      effectiveInitialSubagentIds,
+      initialSubagentsEnabled,
+      initialSubagentModelId,
+      initialReasoningEffort,
+      initialSubagentIds,
       effectiveInitialApprovalMode,
     ],
   );
 
-  if (!chat) {
+  if (activeChatId && !chat) {
     return (
       <div className="flex h-full items-center justify-center">
         Chat not found.
@@ -391,7 +407,7 @@ export function ChatUI({
     );
   }
 
-  const chatAssistantId = chat.agentId ?? chat.assistantId;
+  const chatAssistantId = chat?.agentId ?? chat?.assistantId;
   const activeArtifactId = activeArtifact?.id;
   const assistantName = currentAssistant?.name;
   const assistantPrompt = currentAssistant?.prompt ?? undefined;
@@ -416,18 +432,22 @@ export function ChatUI({
           <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
             <div className="px-4 py-6 md:px-8">
               <div className="mx-auto max-w-4xl space-y-6 pb-12">
-                <MessageThread
-                  thread={thread}
-                  chat={chat}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onRegenerate={handleRegenerate}
-                  onNavigateBranch={handleNavigateBranch}
-                  onToggleArtifact={handleToggleArtifact}
-                  activeArtifactId={activeArtifactId}
-                  isCanvasOpen={isArtifactOpen}
-                  servers={allEnabledServers}
-                />
+                {thread.length === 0 && !isLoading && emptyState}
+
+                {chat && (
+                  <MessageThread
+                    thread={thread}
+                    chat={chat}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onRegenerate={handleRegenerate}
+                    onNavigateBranch={handleNavigateBranch}
+                    onToggleArtifact={handleToggleArtifact}
+                    activeArtifactId={activeArtifactId}
+                    isCanvasOpen={isArtifactOpen}
+                    servers={allEnabledServers}
+                  />
+                )}
 
                 <StreamingSection
                   isLoading={isLoading}
@@ -439,7 +459,7 @@ export function ChatUI({
                   onToggleArtifact={handleToggleArtifact}
                   activeArtifactId={activeArtifactId}
                   isCanvasOpen={isArtifactOpen}
-                  chatId={chatId}
+                  chatId={streamChatId}
                   assistantMessageId={assistantMessageId}
                   assistantName={assistantName}
                 />
@@ -463,10 +483,10 @@ export function ChatUI({
                 disabled={Boolean(approvalsDisabled)}
               />
               <ChatInput
-                key={chatId}
-                chatId={chatId}
+                key={chatIdProp ?? "draft"}
+                chatId={composerChatId}
                 onSend={handleSend}
-                onCompact={handleCompact}
+                onCompact={activeChatId ? handleCompact : undefined}
                 isCompacting={isCompacting}
                 isLoading={isLoading}
                 onStop={stopStream}
@@ -476,15 +496,17 @@ export function ChatUI({
                 canMentionAssistant={canMentionAssistant}
                 initialSelectedServerIds={effectiveInitialServerIds}
                 initialSelectedTools={effectiveInitialSelectedTools}
-                initialSelectedKbs={effectiveInitialKbIds}
+                initialSelectedKbs={initialKbIds}
                 initialSelectedSkillIds={initialSkillIds}
-                initialModelId={effectiveInitialModelId}
-                initialSubagentsEnabled={effectiveInitialSubagentsEnabled}
-                initialSubagentModelId={effectiveInitialSubagentModelId}
-                initialSubagentIds={effectiveInitialSubagentIds}
-                initialReasoningEffort={effectiveInitialReasoningEffort}
+                initialModelId={initialModelId}
+                initialSubagentsEnabled={initialSubagentsEnabled}
+                initialSubagentModelId={initialSubagentModelId}
+                initialSubagentIds={initialSubagentIds}
+                initialReasoningEffort={initialReasoningEffort}
                 initialApprovalMode={effectiveInitialApprovalMode}
-                onKnowledgebaseChange={handleKbChange}
+                onKnowledgebaseChange={
+                  activeChatId ? handleKbChange : undefined
+                }
                 onSelectionsChange={handleComposerSelectionsChange}
                 thread={thread}
                 projectId={chat?.projectId}

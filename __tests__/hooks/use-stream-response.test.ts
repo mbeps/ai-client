@@ -3259,5 +3259,52 @@ describe("useStreamResponse (Inngest Realtime-backed)", () => {
 
       unmount();
     });
+
+    it("preserves in-flight streaming state when chatId transitions from empty draft to created chatId", async () => {
+      const { result, rerender, unmount } = renderHook(
+        ({ id }) => useStreamResponse(id),
+        { initialProps: { id: "" } },
+      );
+
+      await act(async () => {
+        await result.current.streamResponse(
+          "u-draft-1",
+          "Hello from home",
+          null,
+          [],
+          "gpt-4o",
+          [],
+          [],
+          undefined,
+          undefined,
+          [],
+          [],
+          false,
+          undefined,
+          undefined,
+          undefined,
+          "ask",
+          "chat-lazy-1",
+        );
+      });
+
+      expect(result.current.isLoading).toBe(true);
+
+      rerender({ id: "chat-lazy-1" });
+
+      expect(result.current.isLoading).toBe(true);
+      expect(mockPersist).toHaveBeenCalledWith(
+        "chat-lazy-1",
+        expect.objectContaining({ id: "u-draft-1", content: "Hello from home" }),
+      );
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/chat",
+        expect.objectContaining({
+          body: expect.stringContaining('"chatId":"chat-lazy-1"'),
+        }),
+      );
+
+      unmount();
+    });
   });
 });

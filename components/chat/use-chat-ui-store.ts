@@ -11,6 +11,7 @@ import { useAppStore } from "@/lib/store/use-app-store";
  */
 export function useChatStore(chatId: string) {
   const storeChat = useAppStore((state) => state.chats[chatId]);
+  const createChatDb = useAppStore((state) => state.createChatDb);
   const deleteMessageDb = useAppStore((state) => state.deleteMessageDb);
   const setCurrentLeafDb = useAppStore((state) => state.setCurrentLeafDb);
   const setKnowledgebaseDb = useAppStore((state) => state.setKnowledgebaseDb);
@@ -24,6 +25,7 @@ export function useChatStore(chatId: string) {
   );
   return {
     storeChat,
+    createChatDb,
     deleteMessageDb,
     setCurrentLeafDb,
     setKnowledgebaseDb,

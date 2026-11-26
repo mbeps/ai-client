@@ -36,6 +36,9 @@ describe("useStreamWatchdog", () => {
       activeToolCallsRef: { current: [] as any[] },
       rejoinedRef: { current: false },
       awaitingApprovalRef: { current: false },
+      assistantMessageIdRef: { current: null },
+      accumulatedTextRef: { current: "" },
+      accumulatedReasoningRef: { current: "" },
       ...overrides,
     };
   }
@@ -270,5 +273,117 @@ describe("useStreamWatchdog", () => {
     expect(mockClearInflightState).toHaveBeenCalledWith(
       "chat-awaiting-resolved",
     );
+  });
+
+  it("triggers syncFromDb on first tick when rejoinedRef is true", async () => {
+    const syncFromDb = vi.fn().mockResolvedValue(false);
+    const setIsStreaming = vi.fn();
+    const refs = createRefs({
+      rejoinedRef: { current: true },
+    });
+
+    renderHook(() =>
+      useStreamWatchdog(
+        "chat-rejoined",
+        true,
+        false,
+        "connected",
+        null,
+        syncFromDb,
+        setIsStreaming,
+        refs as any,
+      ),
+    );
+
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(syncFromDb).toHaveBeenCalledTimes(1);
+
+    // Second tick with recent chunk should not trigger syncFromDb again
+    refs.lastChunkTimeRef.current = Date.now();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(syncFromDb).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs realtimeError and triggers syncFromDb when realtimeError is present", async () => {
+    const syncFromDb = vi.fn().mockResolvedValue(false);
+    const setIsStreaming = vi.fn();
+    const refs = createRefs();
+
+    renderHook(() =>
+      useStreamWatchdog(
+        "chat-realtime-error",
+        true,
+        false,
+        "connected",
+        new Error("Realtime failed"),
+        syncFromDb,
+        setIsStreaming,
+        refs as any,
+      ),
+    );
+
+    expect(syncFromDb).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts after 4 no-chunk attempts when no chunks have been received", async () => {
+    mockIsChatGenerating.mockResolvedValue({ ok: false, error: "fail" });
+    const syncFromDb = vi.fn().mockResolvedValue(false);
+    const setIsStreaming = vi.fn();
+    const now = Date.now();
+    const refs = createRefs({
+      lastChunkTimeRef: { current: now - 10000 },
+      pendingRef: { current: { startTime: now - 10000, dispatched: true } },
+    });
+
+    renderHook(() =>
+      useStreamWatchdog(
+        "chat-no-chunks",
+        true,
+        false,
+        "connected",
+        null,
+        syncFromDb,
+        setIsStreaming,
+        refs as any,
+      ),
+    );
+
+    for (let i = 0; i < 4; i++) {
+      await vi.advanceTimersByTimeAsync(2000);
+    }
+
+    expect(mockIsChatGenerating).toHaveBeenCalledWith("chat-no-chunks");
+    expect(setIsStreaming).toHaveBeenCalledWith(false);
+    expect(mockClearInflightState).toHaveBeenCalledWith("chat-no-chunks");
+  });
+
+  it("does not increment noChunkAttempts when pendingRef.current.dispatched is false", async () => {
+    const syncFromDb = vi.fn().mockResolvedValue(false);
+    const setIsStreaming = vi.fn();
+    const now = Date.now();
+    const refs = createRefs({
+      lastChunkTimeRef: { current: now - 10000 },
+      pendingRef: { current: { startTime: now - 10000, dispatched: false } },
+    });
+
+    renderHook(() =>
+      useStreamWatchdog(
+        "chat-not-dispatched",
+        true,
+        false,
+        "connected",
+        null,
+        syncFromDb,
+        setIsStreaming,
+        refs as any,
+      ),
+    );
+
+    for (let i = 0; i < 4; i++) {
+      await vi.advanceTimersByTimeAsync(2000);
+    }
+
+    expect(mockIsChatGenerating).not.toHaveBeenCalled();
+    expect(setIsStreaming).not.toHaveBeenCalledWith(false);
   });
 });

@@ -1,12 +1,23 @@
-import { render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatUI } from "@/components/chat/chat-ui";
-import { useChatToolsStore } from "@/lib/store/use-chat-tools-store";
+import { ROUTES } from "@/config/routes";
+import {
+  NEW_CHAT_TOOLS_KEY,
+  useChatToolsStore,
+} from "@/lib/store/use-chat-tools-store";
 import type { Chat } from "@/types/chat/chat";
 
 vi.mock("katex/dist/katex.min.css", () => ({}));
 vi.mock("@blocknote/mantine/style.css", () => ({}));
 vi.mock("@blocknote/core/fonts/inter.css", () => ({}));
+
+const mockToastError = vi.fn();
+vi.mock("sonner", () => ({
+  toast: {
+    error: (...args: any[]) => mockToastError(...args),
+  },
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -70,6 +81,8 @@ vi.mock("@/lib/auth/auth-client", () => ({
   },
 }));
 
+const mockCreateChatDb = vi.fn();
+const mockSetKnowledgebaseDb = vi.fn();
 let mockStoreState: Record<string, any> = {};
 vi.mock("@/lib/store/use-app-store", () => ({
   useAppStore: (selector: any) => selector(mockStoreState),
@@ -88,11 +101,20 @@ function buildChat(overrides: Partial<Chat> = {}): Chat {
   } as Chat;
 }
 
-describe("ChatUI pending launch handoff from HomePage", () => {
+describe("ChatUI draft mode (HomePage) and initialMessage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     lastChatInputProps = null;
     useChatToolsStore.getState().clearAll();
+    mockCreateChatDb.mockImplementation(async (title: string) => {
+      const id = "chat-created-1";
+      mockStoreState.chats = {
+        ...mockStoreState.chats,
+        [id]: buildChat({ id, title }),
+      };
+      return id;
+    });
+    mockSetKnowledgebaseDb.mockResolvedValue(undefined);
     mockStoreState = {
       chats: {},
       mcpServers: [{ id: "srv-1", name: "Maruf", enabled: true }],
@@ -105,14 +127,33 @@ describe("ChatUI pending launch handoff from HomePage", () => {
         defaultChatModelId: "openrouter/free",
         defaultAutoApprove: false,
       },
+      createChatDb: mockCreateChatDb,
       updateMessageMetadataDb: vi.fn(),
       deleteMessageDb: vi.fn(),
       setCurrentLeafDb: vi.fn(),
-      setKnowledgebaseDb: vi.fn(),
+      setKnowledgebaseDb: mockSetKnowledgebaseDb,
     };
   });
 
-  it("seeds ChatInput and dispatches all 14 parameters from pendingLaunchByChat, then clears it", () => {
+  it("renders emptyState in draft mode, lazily creates chat on first send, transfers tools, and replaces URL", async () => {
+    useChatToolsStore
+      .getState()
+      .setChatTools(NEW_CHAT_TOOLS_KEY, [
+        "internal:tool:manage_artifact",
+        "srv-1:tool:list_projects",
+      ]);
+    useChatToolsStore.getState().setChatApprovalMode(NEW_CHAT_TOOLS_KEY, "auto");
+
+    const pushSpy = vi.spyOn(window.history, "pushState");
+
+    render(<ChatUI emptyState={<div data-testid="welcome">Welcome</div>} />);
+
+    expect(screen.getByTestId("welcome")).toBeInTheDocument();
+    expect(screen.queryByText("Chat not found.")).not.toBeInTheDocument();
+    expect(lastChatInputProps?.chatId).toBe(NEW_CHAT_TOOLS_KEY);
+    expect(lastChatInputProps?.onCompact).toBeUndefined();
+    expect(lastChatInputProps?.onKnowledgebaseChange).toBeUndefined();
+
     const attachment = {
       id: "att-1",
       type: "document" as const,
@@ -122,55 +163,46 @@ describe("ChatUI pending launch handoff from HomePage", () => {
       dataUrl: "data:text/markdown;base64,IyBoaQ==",
     };
 
-    useChatToolsStore.getState().setPendingLaunch("chat-home-1", {
-      content: "Give me a list of Java projects",
-      attachments: [attachment],
-      model: "nvidia/nemotron-3.5-lightning:free",
-      selectedServerIds: ["srv-1"],
-      selectedTools: [
-        "internal:tool:manage_artifact",
-        "srv-1:tool:list_projects",
-      ],
-      selectedPromptId: ["prompt-1"],
-      selectedAssistantId: "agent-1",
-      selectedKnowledgebases: ["kb-1", "kb-2"],
-      selectedSkillIds: ["skill-1"],
-      subagentsEnabled: true,
-      subagentModelId: "sub-model-1",
-      reasoningEffort: "high",
-      subagentIds: ["sub-1"],
-      approvalMode: "auto",
+    let result: boolean | undefined;
+    await act(async () => {
+      result = await lastChatInputProps?.onSend(
+        "Give me a list of Java projects",
+        [attachment],
+        "nvidia/nemotron-3.5-lightning:free",
+        ["srv-1"],
+        ["internal:tool:manage_artifact", "srv-1:tool:list_projects"],
+        ["prompt-1"],
+        "agent-1",
+        ["kb-1", "kb-2"],
+        ["skill-1"],
+        true,
+        "sub-model-1",
+        "high",
+        ["sub-1"],
+        "auto",
+      );
     });
 
-    const chat = buildChat();
-    const onInitialMessageSent = vi.fn();
-
-    render(
-      <ChatUI
-        chatId="chat-home-1"
-        initialChat={chat}
-        onInitialMessageSent={onInitialMessageSent}
-      />,
+    expect(result).toBe(true);
+    expect(mockCreateChatDb).toHaveBeenCalledWith(
+      "Give me a list of Java projects",
     );
-
-    expect(lastChatInputProps?.initialModelId).toBe(
-      "nvidia/nemotron-3.5-lightning:free",
+    expect(mockSetKnowledgebaseDb).toHaveBeenCalledWith(
+      "chat-created-1",
+      "kb-1",
     );
-    expect(lastChatInputProps?.initialSelectedServerIds).toEqual(["srv-1"]);
-    expect(lastChatInputProps?.initialSelectedTools).toEqual([
+    expect(useChatToolsStore.getState().toolsByChat["chat-created-1"]).toEqual([
       "internal:tool:manage_artifact",
       "srv-1:tool:list_projects",
     ]);
-    expect(lastChatInputProps?.initialSelectedKbs).toEqual(["kb-1", "kb-2"]);
-    expect(lastChatInputProps?.initialSubagentsEnabled).toBe(true);
-    expect(lastChatInputProps?.initialSubagentModelId).toBe("sub-model-1");
-    expect(lastChatInputProps?.initialSubagentIds).toEqual(["sub-1"]);
-    expect(lastChatInputProps?.initialReasoningEffort).toBe("high");
-    expect(lastChatInputProps?.initialApprovalMode).toBe("auto");
-    // Per-turn skills should not remain pre-checked for the next message after initial send
-    expect(lastChatInputProps?.initialSelectedSkillIds).toEqual([]);
-
-    expect(mockStreamResponse).toHaveBeenCalledTimes(1);
+    expect(
+      useChatToolsStore.getState().approvalModeByChat["chat-created-1"],
+    ).toBe("auto");
+    expect(pushSpy).toHaveBeenCalledWith(
+      null,
+      "",
+      ROUTES.CHATS.detail("chat-created-1"),
+    );
     expect(mockStreamResponse).toHaveBeenCalledWith(
       expect.any(String),
       "Give me a list of Java projects",
@@ -188,14 +220,86 @@ describe("ChatUI pending launch handoff from HomePage", () => {
       "high",
       ["sub-1"],
       "auto",
+      "chat-created-1",
     );
-    expect(onInitialMessageSent).toHaveBeenCalledTimes(1);
-    expect(
-      useChatToolsStore.getState().pendingLaunchByChat["chat-home-1"],
-    ).toBeUndefined();
+
+    // Subsequent KB toggles now persist to the newly created chatId
+    mockStoreState.chats["chat-created-1"] = buildChat({
+      id: "chat-created-1",
+    });
+    expect(lastChatInputProps?.chatId).toBe("chat-created-1");
+    expect(typeof lastChatInputProps?.onKnowledgebaseChange).toBe("function");
+
+    pushSpy.mockRestore();
   });
 
-  it("uses persisted chat tools from useChatToolsStore when ?msg= is used without pendingLaunchByChat", () => {
+  it("rejects empty content without prompt in draft mode and handles createChatDb errors", async () => {
+    render(<ChatUI />);
+
+    let emptyResult: boolean | undefined;
+    await act(async () => {
+      emptyResult = await lastChatInputProps?.onSend("   ", [], "gpt-4o");
+    });
+    expect(emptyResult).toBe(false);
+    expect(mockCreateChatDb).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Please enter a message before sending.",
+    );
+
+    mockCreateChatDb.mockRejectedValueOnce(new Error("DB down"));
+    let errResult: boolean | undefined;
+    await act(async () => {
+      errResult = await lastChatInputProps?.onSend("Hello", [], "gpt-4o");
+    });
+    expect(errResult).toBe(false);
+    expect(mockToastError).toHaveBeenCalledWith("DB down");
+    expect(mockStreamResponse).not.toHaveBeenCalled();
+
+    mockCreateChatDb.mockRejectedValueOnce("unknown");
+    let unknownErrResult: boolean | undefined;
+    await act(async () => {
+      unknownErrResult = await lastChatInputProps?.onSend(
+        "   ",
+        [],
+        "gpt-4o",
+        [],
+        [],
+        ["prompt-1"],
+      );
+    });
+    expect(unknownErrResult).toBe(false);
+    expect(mockToastError).toHaveBeenCalledWith("Failed to start chat");
+  });
+
+  it("resets createdChatId when chatId prop changes and does not revive it when chatId is omitted again", async () => {
+    const { rerender } = render(<ChatUI />);
+
+    await act(async () => {
+      await lastChatInputProps?.onSend("First", [], "gpt-4o");
+    });
+    expect(lastChatInputProps?.chatId).toBe("chat-created-1");
+
+    const chat2 = buildChat({ id: "chat-2" });
+    rerender(<ChatUI chatId="chat-2" initialChat={chat2} />);
+    expect(lastChatInputProps?.chatId).toBe("chat-2");
+
+    rerender(<ChatUI />);
+    expect(lastChatInputProps?.chatId).toBe(NEW_CHAT_TOOLS_KEY);
+  });
+
+  it("returns false from onSend when streamResponse returns false so composer retains draft", async () => {
+    mockStreamResponse.mockResolvedValueOnce(false);
+    render(<ChatUI />);
+
+    let result: boolean | undefined;
+    await act(async () => {
+      result = await lastChatInputProps?.onSend("Keep this draft", [], "gpt-4o");
+    });
+
+    expect(result).toBe(false);
+  });
+
+  it("uses persisted chat tools from useChatToolsStore when ?msg= is used", () => {
     useChatToolsStore
       .getState()
       .setChatTools("chat-home-1", ["srv-1:tool:list_projects"]);

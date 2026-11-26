@@ -131,44 +131,81 @@ describe("useChatToolsStore", () => {
     expect(useChatToolsStore.getState().approvalModeByChat).toEqual({});
   });
 
-  it("stores, clears, and resets pendingLaunchByChat without persisting it to localStorage", () => {
-    const launch = {
-      content: "Hello",
-      attachments: [],
-      model: "gpt-4o",
-      selectedServerIds: ["srv-1"],
-      selectedTools: ["srv-1:tool:run"],
-      selectedKnowledgebases: ["kb-1"],
-      selectedSkillIds: ["sk-1"],
-      subagentsEnabled: true,
-      subagentModelId: "gpt-4o-mini",
-      reasoningEffort: "high" as const,
-      subagentIds: ["sub-1"],
-      approvalMode: "auto" as const,
-    };
-
-    useChatToolsStore.getState().setPendingLaunch("chat-1", launch);
-    expect(useChatToolsStore.getState().pendingLaunchByChat["chat-1"]).toEqual(
-      launch,
-    );
+  it("does not persist NEW_CHAT_TOOLS_KEY selections to localStorage while persisting real chat ids", () => {
+    useChatToolsStore
+      .getState()
+      .setChatTools(NEW_CHAT_TOOLS_KEY, ["serverX:tool:temp"]);
+    useChatToolsStore
+      .getState()
+      .setChatApprovalMode(NEW_CHAT_TOOLS_KEY, "auto");
+    useChatToolsStore.getState().setChatTools("chat-1", ["serverA:tool:read"]);
+    useChatToolsStore.getState().setChatApprovalMode("chat-1", "auto");
 
     const persistedRaw = window.localStorage.getItem("chat-tool-selections");
-    if (persistedRaw) {
-      const parsed = JSON.parse(persistedRaw);
-      expect(parsed.state.pendingLaunchByChat).toBeUndefined();
-    }
-
-    useChatToolsStore.getState().clearPendingLaunch("chat-1");
+    expect(persistedRaw).toBeTruthy();
+    const parsed = JSON.parse(persistedRaw!);
+    expect(parsed.state.toolsByChat[NEW_CHAT_TOOLS_KEY]).toBeUndefined();
     expect(
-      useChatToolsStore.getState().pendingLaunchByChat["chat-1"],
+      parsed.state.approvalModeByChat[NEW_CHAT_TOOLS_KEY],
     ).toBeUndefined();
+    expect(parsed.state.toolsByChat["chat-1"]).toEqual(["serverA:tool:read"]);
+    expect(parsed.state.approvalModeByChat["chat-1"]).toBe("auto");
+  });
 
-    // No-op when clearing an absent chatId
-    useChatToolsStore.getState().clearPendingLaunch("chat-missing");
+  it("strips legacy NEW_CHAT_TOOLS_KEY entries from localStorage during rehydration", async () => {
+    window.localStorage.setItem(
+      "chat-tool-selections",
+      JSON.stringify({
+        state: {
+          toolsByChat: {
+            [NEW_CHAT_TOOLS_KEY]: ["srv:tool:stale"],
+            "chat-real": ["srv:tool:keep"],
+          },
+          approvalModeByChat: {
+            [NEW_CHAT_TOOLS_KEY]: "auto",
+            "chat-real": "ask",
+          },
+        },
+        version: 0,
+      }),
+    );
 
-    useChatToolsStore.getState().setPendingLaunch("chat-2", launch);
-    resetClientState();
-    expect(useChatToolsStore.getState().pendingLaunchByChat).toEqual({});
+    await useChatToolsStore.persist.rehydrate();
+
+    expect(
+      useChatToolsStore.getState().toolsByChat[NEW_CHAT_TOOLS_KEY],
+    ).toBeUndefined();
+    expect(
+      useChatToolsStore.getState().approvalModeByChat[NEW_CHAT_TOOLS_KEY],
+    ).toBeUndefined();
+    expect(useChatToolsStore.getState().toolsByChat["chat-real"]).toEqual([
+      "srv:tool:keep",
+    ]);
+    expect(useChatToolsStore.getState().approvalModeByChat["chat-real"]).toBe(
+      "ask",
+    );
+  });
+
+  it("falls back to currentState when persisted toolsByChat and approvalModeByChat are missing", async () => {
+    useChatToolsStore.getState().setChatTools("chat-keep", ["srv:tool:1"]);
+    useChatToolsStore.getState().setChatApprovalMode("chat-keep", "auto");
+
+    window.localStorage.setItem(
+      "chat-tool-selections",
+      JSON.stringify({
+        state: {},
+        version: 0,
+      }),
+    );
+
+    await useChatToolsStore.persist.rehydrate();
+
+    expect(useChatToolsStore.getState().toolsByChat["chat-keep"]).toEqual([
+      "srv:tool:1",
+    ]);
+    expect(useChatToolsStore.getState().approvalModeByChat["chat-keep"]).toBe(
+      "auto",
+    );
   });
 });
 

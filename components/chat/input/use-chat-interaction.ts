@@ -112,6 +112,7 @@ function calculateSkillTokens(
  */
 function checkIsSendDisabled(
   hasNoModels: boolean,
+  isModelsLoading: boolean,
   input: string,
   attachmentsCount: number,
   hasPrompts: boolean,
@@ -119,7 +120,7 @@ function checkIsSendDisabled(
   skillsCount: number,
   kbsCount: number,
 ): boolean {
-  if (hasNoModels) return true;
+  if (hasNoModels || isModelsLoading) return true;
   return (
     !input.trim() &&
     attachmentsCount === 0 &&
@@ -301,6 +302,7 @@ export function useChatInteraction(options: UseChatInteractionOptions) {
 
   const isSendDisabled = checkIsSendDisabled(
     services.hasNoModels,
+    services.isModelsLoading,
     input,
     attachments.attachments.length,
     prompts.promptList.length > 0,
