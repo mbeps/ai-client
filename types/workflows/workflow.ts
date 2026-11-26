@@ -12,7 +12,9 @@ export type WorkflowNodeType =
   | "webhook_trigger"
   | "ai_step"
   | "if_condition"
-  | "http_request";
+  | "http_request"
+  | "loop"
+  | "filter";
 
 /**
  * Supported Canvas artifact output formats for workflows.
@@ -200,6 +202,34 @@ export interface HttpRequestNodeData {
 }
 
 /**
+ * Node data for a Filter flow-control node.
+ */
+export interface FilterNodeData {
+  kind: "filter";
+  variableName: string;
+  itemsTemplate: string;
+  evaluationMode: "deterministic" | "llm";
+  logic: "and" | "or";
+  rules: IfConditionRule[];
+  llmFilterPrompt?: string;
+  modelId?: string;
+  reasoningEffort?: ReasoningEffort;
+  continueWhenEmpty?: boolean;
+}
+
+/**
+ * Node data for a Loop flow-control node.
+ */
+export interface LoopNodeData {
+  kind: "loop";
+  variableName: string;
+  mode: "for_each" | "count";
+  itemsTemplate?: string;
+  count?: number;
+  maxIterations: number;
+}
+
+/**
  * Discriminated union of all workflow node payloads.
  */
 export type WorkflowNodeData =
@@ -207,7 +237,9 @@ export type WorkflowNodeData =
   | WebhookTriggerNodeData
   | AiStepNodeData
   | IfConditionNodeData
-  | HttpRequestNodeData;
+  | HttpRequestNodeData
+  | FilterNodeData
+  | LoopNodeData;
 
 /**
  * Canvas node position in React Flow coordinates.
@@ -266,6 +298,8 @@ export interface WorkflowNodeRunState {
   summary?: string;
   branchTaken?: "true" | "false";
   conditionReasoning?: string;
+  filterSummary?: { kept: number; total: number; reasoning?: string };
+  loopSummary?: { iterations: number; totalItems: number; truncated: boolean };
   httpResponse?: { status: number; statusText: string; data: unknown };
   structuredOutput?: Record<string, unknown>;
   artifact?: ArtifactData | null;

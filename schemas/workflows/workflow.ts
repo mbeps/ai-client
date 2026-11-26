@@ -245,8 +245,30 @@ const httpRequestNodeDataSchema = z.object({
   requiresReview: z.boolean().optional(),
 });
 
+const filterNodeDataSchema = z.object({
+  kind: z.literal("filter"),
+  variableName: variableNameField,
+  itemsTemplate: z.string().max(2000),
+  evaluationMode: z.enum(["deterministic", "llm"]),
+  logic: z.enum(["and", "or"]),
+  rules: z.array(ifConditionRuleSchema),
+  llmFilterPrompt: z.string().max(4000).optional(),
+  modelId: z.string().max(100).optional(),
+  reasoningEffort: reasoningEffortSchema.optional(),
+  continueWhenEmpty: z.boolean().optional(),
+});
+
+const loopNodeDataSchema = z.object({
+  kind: z.literal("loop"),
+  variableName: variableNameField,
+  mode: z.enum(["for_each", "count"]),
+  itemsTemplate: z.string().max(2000).optional(),
+  count: z.number().int().min(1).max(50).optional(),
+  maxIterations: z.number().int().min(1).max(50).default(20),
+});
+
 /**
- * Discriminated union schema for all 5 workflow node payloads.
+ * Discriminated union schema for all 7 workflow node payloads.
  */
 export const workflowNodeDataSchema = z.discriminatedUnion("kind", [
   manualTriggerNodeDataSchema,
@@ -254,6 +276,8 @@ export const workflowNodeDataSchema = z.discriminatedUnion("kind", [
   aiStepNodeDataSchema,
   ifConditionNodeDataSchema,
   httpRequestNodeDataSchema,
+  filterNodeDataSchema,
+  loopNodeDataSchema,
 ]);
 
 /**
@@ -268,6 +292,8 @@ export const workflowNodeSchema = z
       "ai_step",
       "if_condition",
       "http_request",
+      "loop",
+      "filter",
     ]),
     name: nameField,
     position: z.object({

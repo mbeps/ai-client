@@ -1,6 +1,9 @@
 import { NonRetriableError } from "inngest";
 import { describe, expect, it } from "vitest";
-import { compileWorkflowTemplate } from "@/lib/workflows/compile-template";
+import {
+  compileWorkflowTemplate,
+  resolveWorkflowTemplateValue,
+} from "@/lib/workflows/compile-template";
 
 describe("compileWorkflowTemplate", () => {
   it("returns empty string for empty template", () => {
@@ -61,5 +64,39 @@ describe("compileWorkflowTemplate", () => {
     expect(() => compileWorkflowTemplate("Hello {{   }}", {})).toThrow(
       NonRetriableError,
     );
+  });
+});
+
+describe("resolveWorkflowTemplateValue", () => {
+  it("resolves raw arrays and nested fields without stringifying", () => {
+    const items = [{ id: 1, name: "a" }, { id: 2, name: "b" }];
+    const ctx = {
+      step1: { data: { items } },
+    };
+
+    expect(resolveWorkflowTemplateValue("{{step1.data.items}}", ctx)).toEqual(
+      items,
+    );
+    expect(resolveWorkflowTemplateValue("step1.data.items", ctx)).toEqual(
+      items,
+    );
+  });
+
+  it("parses JSON-encoded array strings as a fallback", () => {
+    const ctx = {
+      step1: { text: '[{"id":1},{"id":2}]' },
+    };
+
+    expect(resolveWorkflowTemplateValue("{{step1.text}}", ctx)).toEqual([
+      { id: 1 },
+      { id: 2 },
+    ]);
+  });
+
+  it("returns undefined for missing paths or empty expressions", () => {
+    expect(resolveWorkflowTemplateValue("", { a: [1] })).toBeUndefined();
+    expect(
+      resolveWorkflowTemplateValue("{{missing.items}}", { a: [1] }),
+    ).toBeUndefined();
   });
 });
