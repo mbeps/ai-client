@@ -2,11 +2,19 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MessageDetails } from "@/components/chat/message/message-details";
+import { useUserModels } from "@/hooks/use-user-models";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 
 // Mock useIsMobile hook (desktop by default)
 vi.mock("@/hooks/use-is-mobile", () => ({
   useIsMobile: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock("@/hooks/use-user-models", () => ({
+  useUserModels: vi.fn().mockReturnValue({
+    models: [],
+    rawModels: [],
+  }),
 }));
 
 describe("MessageDetails component", () => {
@@ -105,5 +113,54 @@ describe("MessageDetails component", () => {
       />,
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it("displays model label from user models instead of slug when available", async () => {
+    vi.mocked(useUserModels).mockReturnValueOnce({
+      models: [
+        {
+          id: "db-1",
+          modelId: "nvidia/nemotron-3.5-lightning:free",
+          label: "Nemotron 3.5 Lightning",
+          providerName: "OpenRouter",
+          providerId: "prov-1",
+          modelType: "chat",
+          contextWindow: 128000,
+          embeddingDimensions: null,
+          capTools: true,
+          capVision: false,
+          capReasoning: false,
+          capStructuredOutput: true,
+          reasoningEffortFormat: "none",
+          isEnabled: true,
+          providerIsEnabled: true,
+        },
+      ],
+      rawModels: [],
+      isLoading: false,
+      error: null,
+      isStale: false,
+      refresh: vi.fn(),
+      invalidate: vi.fn(),
+    });
+
+    const user = userEvent.setup();
+    render(
+      <MessageDetails
+        createdAt={mockDate}
+        metadata={{
+          ...fullMetadata,
+          modelId: "nvidia/nemotron-3.5-lightning:free",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Nemotron 3.5 Lightning")).toBeInTheDocument();
+    expect(
+      screen.queryByText("nvidia/nemotron-3.5-lightning:free"),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button"));
+    expect(screen.getAllByText("Nemotron 3.5 Lightning")).toHaveLength(2);
   });
 });

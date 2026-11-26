@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { Info } from "lucide-react";
 import { useMemo } from "react";
 import { ResponsiveDetails } from "@/components/ui/responsive-details";
+import { useUserModels } from "@/hooks/use-user-models";
 import type { ParsedMessageMetadata } from "@/types/message/metadata";
 
 /**
@@ -67,6 +68,15 @@ function DetailRow({
  */
 export function MessageDetails({ createdAt, metadata }: MessageDetailsProps) {
   const { modelId, usage, finishReason, durationMs } = metadata;
+  const { models } = useUserModels();
+
+  const modelName = useMemo(() => {
+    if (!modelId) return null;
+    return (
+      models.find((m) => m.modelId === modelId || m.id === modelId)?.label ??
+      modelId
+    );
+  }, [modelId, models]);
 
   const formattedDate = useMemo(
     () => format(createdAt, "MMM d, yyyy 'at' h:mm a"),
@@ -88,8 +98,8 @@ export function MessageDetails({ createdAt, metadata }: MessageDetailsProps) {
     >
       <Info className="h-3 w-3 shrink-0" />
       <span>
-        {modelId && <span>{modelId}</span>}
-        {modelId && createdAt && <span> · </span>}
+        {modelName && <span>{modelName}</span>}
+        {modelName && createdAt && <span> · </span>}
         {createdAt && <span>{shortDate}</span>}
       </span>
     </button>
@@ -102,7 +112,7 @@ export function MessageDetails({ createdAt, metadata }: MessageDetailsProps) {
       description="Details about this AI response"
     >
       <div className="space-y-0">
-        <DetailRow label="Model" value={modelId} />
+        <DetailRow label="Model" value={modelName} />
         <DetailRow label="Date" value={formattedDate} />
         <DetailRow label="Finish Reason" value={finishReason} />
         {durationMs != null && (
