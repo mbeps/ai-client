@@ -95,4 +95,26 @@ describe("StructuredOutputSchemaEditor", () => {
     const afterRemove = onChange.mock.calls[1][0] as StructuredOutputSchema;
     expect(afterRemove.fields[0].itemFields).toHaveLength(0);
   });
+
+  it("shows inline validation errors for invalid, reserved, or duplicate field names", () => {
+    const onChange = vi.fn();
+    const initial: StructuredOutputSchema = {
+      fields: [
+        { id: "f1", name: "text", type: "string", required: true },
+        { id: "f2", name: "1bad", type: "string", required: true },
+        { id: "f3", name: "dup", type: "string", required: true },
+        { id: "f4", name: "dup", type: "number", required: true },
+      ],
+    };
+
+    render(
+      <StructuredOutputSchemaEditor value={initial} onChange={onChange} />,
+    );
+
+    expect(screen.getByText(/"text" is a reserved field name/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/must start with a letter or _/i),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/duplicate field name "dup"/i)).toHaveLength(2);
+  });
 });

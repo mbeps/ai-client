@@ -209,4 +209,24 @@ describe("Flow Control Canvas Nodes & Configs", () => {
       llmFilterPrompt: "Keep urgent items",
     });
   });
+
+  it("clamps LoopConfig maxIterations to 50", () => {
+    const onChange = vi.fn();
+    render(
+      <LoopConfig
+        data={{
+          kind: "loop",
+          variableName: "loop1",
+          mode: "for_each",
+          itemsTemplate: "{{step1.items}}",
+          maxIterations: 20,
+        }}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Max Iterations"), {
+      target: { value: "99" },
+    });
+    expect(onChange).toHaveBeenCalledWith({ maxIterations: 50 });
+  });
 });

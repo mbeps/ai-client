@@ -148,7 +148,8 @@ export async function executeAiStepNode(
       };
     }
 
-    const effectiveStepData = isStructured
+    const shouldDisableCanvas = isStructured || data.outputMode === "text";
+    const effectiveStepData = shouldDisableCanvas
       ? { ...data, canvasMode: "disabled" as const }
       : data;
 
@@ -276,9 +277,16 @@ export async function executeAiStepNode(
       };
     }
 
+    const pass1Instructions =
+      isStructured && Object.keys(wrappedTools).length > 0
+        ? `${systemPrompt}\n\nTarget structured output fields (ensure your final response includes all facts needed for these fields):\n${structuredFields
+            .map((f) => `- ${f.name} (${f.type})${f.description ? `: ${f.description}` : ""}`)
+            .join("\n")}`
+        : systemPrompt;
+
     const result = await generateText({
       model,
-      instructions: systemPrompt,
+      instructions: pass1Instructions,
       messages: [{ role: "user", content: userMessage }],
       tools: wrappedTools,
       stopWhen: isStepCount(env.CHAT_MAX_STEPS),
@@ -336,6 +344,25 @@ export async function executeAiStepNode(
     let structuredOutput: Record<string, unknown> | undefined;
     if (isStructured) {
       const outputSchema = buildZodSchemaFromOutputFields(structuredFields);
+      const toolResultsText =
+        turn.toolCalls.length > 0
+          ? turn.toolCalls
+              .map((tc) => {
+                const serialized =
+                  typeof tc.result === "string"
+                    ? tc.result
+                    : JSON.stringify(tc.result ?? null);
+                return `[${tc.toolName}]: ${serialized.slice(0, 2000)}`;
+              })
+              .join("\n")
+          : "";
+      const extractionPrompt = [
+        result.text || "Extract structured output from the completed task.",
+        toolResultsText ? `Tool outputs:\n${toolResultsText}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
       structuredOutput = (await generateStructuredObject({
         model,
         schema: outputSchema,
@@ -343,8 +370,7 @@ export async function executeAiStepNode(
         schemaDescription: `Structured output for workflow step "${nodeName}"`,
         system:
           "Extract and format the final response into the required structured JSON schema.",
-        prompt:
-          result.text || "Extract structured output from the completed task.",
+        prompt: extractionPrompt,
       })) as Record<string, unknown>;
     }
 

@@ -215,15 +215,58 @@ describe("executeAiStepNode (structured output)", () => {
     const res = await executeAiStepNode(makeParams());
 
     expect(mockGenerateText).toHaveBeenCalledTimes(1);
+    expect(mockGenerateText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        instructions: expect.stringContaining("total (number)"),
+      }),
+    );
     expect(mockGenerateStructuredObject).toHaveBeenCalledTimes(1);
     expect(mockGenerateStructuredObject).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: "Found invoice from Acme for $42.",
+        prompt: expect.stringContaining("Found invoice from Acme for $42."),
+      }),
+    );
+    expect(mockGenerateStructuredObject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining("Tool outputs:\n[search]:"),
       }),
     );
     expect(res).toMatchObject({
       status: "completed",
       structuredOutput: { total: 42, vendor: "Acme" },
     });
+  });
+
+  it("disables canvas when outputMode is text", async () => {
+    mockFilterStepTools.mockReturnValue({
+      filteredTools: {},
+      toolSourceMap: {},
+      stepServerNames: new Map(),
+    });
+    mockGenerateText.mockResolvedValue({
+      text: "Plain text result",
+      steps: [],
+    });
+
+    const res = await executeAiStepNode(
+      makeParams({
+        data: {
+          ...baseData,
+          outputMode: "text",
+          canvasMode: "any",
+        },
+      }),
+    );
+
+    expect(mockFilterStepTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        step: expect.objectContaining({ canvasMode: "disabled" }),
+      }),
+    );
+    expect(mockResolveStepCanvasPolicy).toHaveBeenCalledWith(
+      "disabled",
+      expect.anything(),
+    );
+    expect(res.status).toBe("completed");
   });
 });

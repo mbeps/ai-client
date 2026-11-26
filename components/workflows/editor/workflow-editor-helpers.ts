@@ -180,7 +180,7 @@ export function createDefaultWorkflowNode(
           variableName: buildUniqueVarName("loop", existingNodes),
           mode: "for_each",
           itemsTemplate: "",
-          maxIterations: 50,
+          maxIterations: 20,
         },
       };
     case "filter":

@@ -104,6 +104,7 @@ describe("Model picker reasoning effort integration", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: /^More$/i }));
     expect(screen.getByText("Reasoning Effort")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Off$/i }));
     expect(onChange).toHaveBeenCalledWith({ reasoningEffort: "off" });

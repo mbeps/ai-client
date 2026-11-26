@@ -66,11 +66,14 @@ export function LoopConfig({ data, onChange }: LoopConfigProps) {
             id="loop-count"
             type="number"
             min={1}
-            max={100}
+            max={50}
             value={data.count ?? 1}
             onChange={(e) =>
               onChange({
-                count: Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                count: Math.min(
+                  50,
+                  Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                ),
               })
             }
           />
@@ -83,13 +86,13 @@ export function LoopConfig({ data, onChange }: LoopConfigProps) {
           id="loop-max-iterations"
           type="number"
           min={1}
-          max={100}
+          max={50}
           value={data.maxIterations}
           onChange={(e) =>
             onChange({
-              maxIterations: Math.max(
-                1,
-                Number.parseInt(e.target.value, 10) || 1,
+              maxIterations: Math.min(
+                50,
+                Math.max(1, Number.parseInt(e.target.value, 10) || 1),
               ),
             })
           }

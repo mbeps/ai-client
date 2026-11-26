@@ -161,7 +161,28 @@ export function StructuredOutputSchemaEditor({
         </p>
       ) : (
         <div className="space-y-2">
-          {fields.map((field) => (
+          {fields.map((field) => {
+            const trimmedName = field.name.trim();
+            const isReserved =
+              trimmedName === "text" ||
+              trimmedName === "data" ||
+              trimmedName === "artifact" ||
+              trimmedName === "outputAttachmentId";
+            const isInvalidIdent =
+              trimmedName.length > 0 &&
+              !/^[A-Za-z_][A-Za-z0-9_]*$/.test(trimmedName);
+            const isDuplicate =
+              trimmedName.length > 0 &&
+              fields.filter((f) => f.name.trim() === trimmedName).length > 1;
+            const fieldError = isReserved
+              ? `"${trimmedName}" is a reserved field name.`
+              : isInvalidIdent
+                ? "Must start with a letter or _ and use only letters, numbers, or _."
+                : isDuplicate
+                  ? `Duplicate field name "${trimmedName}".`
+                  : null;
+
+            return (
             <div
               key={field.id}
               className="bg-muted/30 space-y-2 rounded-md border p-2"
@@ -260,6 +281,7 @@ export function StructuredOutputSchemaEditor({
                         </SelectContent>
                       </Select>
                       <Switch
+                        aria-label="Required subfield"
                         checked={sf.required}
                         onCheckedChange={(checked) =>
                           handleUpdateSubfield(field.id, sf.id, {
@@ -279,6 +301,11 @@ export function StructuredOutputSchemaEditor({
                       </Button>
                     </div>
                   ))}
+                  {(field.itemFields ?? []).length === 0 && (
+                    <p className="text-destructive text-[11px]">
+                      Add at least one item subfield.
+                    </p>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -292,8 +319,12 @@ export function StructuredOutputSchemaEditor({
                   </Button>
                 </div>
               )}
+              {fieldError && (
+                <p className="text-destructive text-[11px]">{fieldError}</p>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

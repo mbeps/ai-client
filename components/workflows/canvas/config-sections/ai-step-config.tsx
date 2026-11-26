@@ -188,7 +188,13 @@ export function AiStepConfig({
                 className="h-7 px-2 text-xs"
                 asChild
               >
-                <Link href={ROUTES.AGENTS.path}>
+                <Link
+                  href={
+                    linkedAgent.isBuiltIn
+                      ? ROUTES.AGENTS.path
+                      : ROUTES.AGENTS.detail(linkedAgent.id)
+                  }
+                >
                   <ExternalLink className="mr-1 h-3 w-3" />
                   Edit agent
                 </Link>
@@ -442,6 +448,9 @@ export function AiStepConfig({
                     >;
                     onChange({
                       outputMode,
+                      ...(outputMode === "text"
+                        ? { canvasMode: "disabled" }
+                        : {}),
                       ...(outputMode === "structured" &&
                       !data.structuredOutputSchema
                         ? { structuredOutputSchema: { fields: [] } }
@@ -460,8 +469,7 @@ export function AiStepConfig({
                 </Select>
               </div>
 
-              {(data.outputMode === "structured" ||
-                (data.outputMode === undefined && false)) && (
+              {data.outputMode === "structured" && (
                 <StructuredOutputSchemaEditor
                   value={data.structuredOutputSchema}
                   onChange={(structuredOutputSchema) =>

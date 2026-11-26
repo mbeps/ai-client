@@ -62,6 +62,20 @@ function collectUpstreamVariables(
                 vars.push(`${upstream.data.variableName}.${field.name.trim()}`);
               }
             }
+          } else if (upstream.data.kind === "loop") {
+            if (edge.sourceHandle === "body") {
+              vars.push(
+                `${upstream.data.variableName}.item`,
+                `${upstream.data.variableName}.index`,
+              );
+            } else {
+              vars.push(
+                `${upstream.data.variableName}.results`,
+                `${upstream.data.variableName}.items`,
+              );
+            }
+          } else if (upstream.data.kind === "filter") {
+            vars.push(`${upstream.data.variableName}.items`);
           }
         }
       }
@@ -245,6 +259,7 @@ export function WorkflowNodeInspectorView({
 
           {node.data.kind === "ai_step" && (
             <AiStepConfig
+              key={node.id}
               data={node.data}
               mcpServers={mcpServers}
               knowledgebases={knowledgebases}
