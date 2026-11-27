@@ -186,6 +186,30 @@ describe("useChatToolsStore", () => {
     );
   });
 
+  it("resetDraftChat clears NEW_CHAT_TOOLS_KEY and increments draftResetNonce without touching real chats", () => {
+    useChatToolsStore
+      .getState()
+      .setChatTools(NEW_CHAT_TOOLS_KEY, ["srv:tool:draft"]);
+    useChatToolsStore
+      .getState()
+      .setChatApprovalMode(NEW_CHAT_TOOLS_KEY, "auto");
+    useChatToolsStore.getState().setChatTools("chat-1", ["srv:tool:real"]);
+
+    const initialNonce = useChatToolsStore.getState().draftResetNonce;
+    useChatToolsStore.getState().resetDraftChat();
+
+    expect(
+      useChatToolsStore.getState().toolsByChat[NEW_CHAT_TOOLS_KEY],
+    ).toBeUndefined();
+    expect(
+      useChatToolsStore.getState().approvalModeByChat[NEW_CHAT_TOOLS_KEY],
+    ).toBeUndefined();
+    expect(useChatToolsStore.getState().toolsByChat["chat-1"]).toEqual([
+      "srv:tool:real",
+    ]);
+    expect(useChatToolsStore.getState().draftResetNonce).toBe(initialNonce + 1);
+  });
+
   it("falls back to currentState when persisted toolsByChat and approvalModeByChat are missing", async () => {
     useChatToolsStore.getState().setChatTools("chat-keep", ["srv:tool:1"]);
     useChatToolsStore.getState().setChatApprovalMode("chat-keep", "auto");

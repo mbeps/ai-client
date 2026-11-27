@@ -10,10 +10,12 @@ export const NEW_CHAT_TOOLS_KEY = "__new__";
 export interface ChatToolsState {
   toolsByChat: Record<string, string[]>;
   approvalModeByChat: Record<string, ApprovalMode>;
+  draftResetNonce: number;
   setChatTools: (chatId: string, tools: string[]) => void;
   setChatApprovalMode: (chatId: string, mode: ApprovalMode) => void;
   clearChatTools: (chatId: string) => void;
   transferChatTools: (fromChatId: string, toChatId: string) => void;
+  resetDraftChat: () => void;
   clearAll: () => void;
 }
 
@@ -36,6 +38,7 @@ export const useChatToolsStore = create<ChatToolsState>()(
     (set) => ({
       toolsByChat: {},
       approvalModeByChat: {},
+      draftResetNonce: 0,
 
       setChatTools: (chatId, tools) => {
         set((state) => ({
@@ -91,10 +94,25 @@ export const useChatToolsStore = create<ChatToolsState>()(
         });
       },
 
+      resetDraftChat: () => {
+        set((state) => {
+          const { [NEW_CHAT_TOOLS_KEY]: _tools, ...restTools } =
+            state.toolsByChat;
+          const { [NEW_CHAT_TOOLS_KEY]: _mode, ...restModes } =
+            state.approvalModeByChat;
+          return {
+            toolsByChat: restTools,
+            approvalModeByChat: restModes,
+            draftResetNonce: state.draftResetNonce + 1,
+          };
+        });
+      },
+
       clearAll: () => {
         set({
           toolsByChat: {},
           approvalModeByChat: {},
+          draftResetNonce: 0,
         });
       },
     }),

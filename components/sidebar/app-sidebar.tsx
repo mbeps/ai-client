@@ -46,9 +46,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ROUTES } from "@/config/routes";
-import { useCreateChat } from "@/hooks/chat/use-create-chat";
 import { sortByUpdatedAt } from "@/lib/sort-by-updated-at";
 import { useAppStore } from "@/lib/store/use-app-store";
+import { useChatToolsStore } from "@/lib/store/use-chat-tools-store";
 import { cn } from "@/lib/utils";
 import { Badge } from "../ui/badge";
 
@@ -67,7 +67,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { isMobile, setOpenMobile } = useSidebar();
   const chats = useAppStore((state) => state.chats);
   const loadChats = useAppStore((state) => state.loadChats);
-  const createNewChat = useCreateChat();
   const pathname = usePathname();
   const [isChatsCollapsed, setIsChatsCollapsed] = React.useState(false);
 
@@ -88,7 +87,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       });
   }, []);
 
-  const handleNewChat = () => createNewChat();
+  const handleNewChat = () => {
+    useChatToolsStore.getState().resetDraftChat();
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <Sidebar {...props}>
@@ -96,12 +98,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={handleNewChat}
+              asChild
               tooltip="New Chat"
               className="h-10 font-semibold"
             >
-              <MessageSquarePlus className="h-4 w-4" />
-              New Chat
+              <Link href={ROUTES.HOME.path} onClick={handleNewChat}>
+                <MessageSquarePlus className="h-4 w-4" />
+                New Chat
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
