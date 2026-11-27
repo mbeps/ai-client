@@ -696,4 +696,225 @@ describe("syncProviderModels action", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("syncs Anthropic models using x-api-key header without probing /embeddings/models", async () => {
+    chainable.where
+      .mockResolvedValueOnce([
+        {
+          id: "prov-1",
+          type: "anthropic",
+          baseUrl: "https://api.anthropic.com/v1",
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    decodeProviderRecordMock.mockReturnValueOnce({
+      apiKey: "ant-key",
+      headers: {},
+      row: {
+        id: "prov-1",
+        type: "anthropic",
+        baseUrl: "https://api.anthropic.com/v1",
+      },
+    });
+
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [{ id: "claude-sonnet-4-5" }],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.added).toBe(1);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.anthropic.com/v1/models",
+      expect.objectContaining({
+        headers: {
+          "x-api-key": "ant-key",
+          "anthropic-version": "2023-06-01",
+        },
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("syncs Google models using x-goog-api-key, strips models/ prefix, and skips /embeddings/models", async () => {
+    chainable.where
+      .mockResolvedValueOnce([
+        {
+          id: "prov-1",
+          type: "google",
+          baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    decodeProviderRecordMock.mockReturnValueOnce({
+      apiKey: "goog-key",
+      headers: {},
+      row: {
+        id: "prov-1",
+        type: "google",
+        baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+      },
+    });
+
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        models: [
+          { name: "models/gemini-2.5-flash" },
+          { name: "models/text-embedding-004" },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://generativelanguage.googleapis.com/v1beta/models",
+      expect.objectContaining({
+        headers: {
+          "x-goog-api-key": "goog-key",
+        },
+      }),
+    );
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          modelId: "gemini-2.5-flash",
+          modelType: "chat",
+        }),
+        expect.objectContaining({
+          modelId: "text-embedding-004",
+          modelType: "embedding",
+        }),
+      ]),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("syncs Cohere models from models[].name without probing /embeddings/models", async () => {
+    chainable.where
+      .mockResolvedValueOnce([
+        {
+          id: "prov-1",
+          type: "cohere",
+          baseUrl: "https://api.cohere.com/v2",
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        models: [{ name: "command-a-03-2025" }],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncProviderModels("prov-1");
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          modelId: "command-a-03-2025",
+          modelType: "chat",
+        }),
+      ]),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("probes /embeddings/models for llama-cpp but not for official openai provider", async () => {
+    chainable.where
+      .mockResolvedValueOnce([
+        {
+          id: "prov-1",
+          type: "openai",
+          baseUrl: "https://api.openai.com/v1",
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const openaiFetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: [{ id: "gpt-4o" }] }),
+    });
+    vi.stubGlobal("fetch", openaiFetchMock);
+
+    const openaiRes = await syncProviderModels("prov-1");
+    expect(openaiRes.ok).toBe(true);
+    expect(openaiFetchMock).toHaveBeenCalledTimes(1);
+    vi.unstubAllGlobals();
+
+    chainable.where
+      .mockResolvedValueOnce([
+        {
+          id: "prov-2",
+          type: "llama-cpp",
+          baseUrl: "http://localhost:8080/v1",
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const llamaFetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [{ id: "llama-3" }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [{ id: "nomic-embed" }] }),
+      });
+    vi.stubGlobal("fetch", llamaFetchMock);
+
+    const llamaRes = await syncProviderModels("prov-2");
+    expect(llamaRes.ok).toBe(true);
+    expect(llamaFetchMock).toHaveBeenCalledTimes(2);
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ["perplexity", "Perplexity"],
+    ["voyage", "Voyage AI"],
+    ["minimax", "MiniMax"],
+    ["baseten", "Baseten"],
+  ])(
+    "returns UPSTREAM_HTTP without fetching for %s which does not support sync",
+    async (type, label) => {
+      chainable.where.mockResolvedValueOnce([
+        {
+          id: "prov-1",
+          type,
+          baseUrl: "https://api.example.com/v1",
+        },
+      ]);
+
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      const result = await syncProviderModels("prov-1");
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+        expect(result.error.message).toBe(
+          `${label} does not support automatic model sync. Add models manually.`,
+        );
+      }
+      expect(fetchMock).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    },
+  );
 });

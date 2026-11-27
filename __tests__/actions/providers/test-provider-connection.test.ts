@@ -202,4 +202,105 @@ describe("testProviderConnection action", () => {
     }
     vi.unstubAllGlobals();
   });
+
+  it("sends Anthropic headers when provider type is anthropic", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: "prov-1",
+        type: "anthropic",
+        baseUrl: "https://api.anthropic.com/v1",
+      },
+    ]);
+    decodeProviderRecordMock.mockReturnValueOnce({
+      apiKey: "ant-key",
+      headers: {},
+      row: {
+        id: "prov-1",
+        type: "anthropic",
+        baseUrl: "https://api.anthropic.com/v1",
+      },
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await testProviderConnection("prov-1");
+    expect(res.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.anthropic.com/v1/models",
+      expect.objectContaining({
+        headers: {
+          "x-api-key": "ant-key",
+          "anthropic-version": "2023-06-01",
+        },
+      }),
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it("sends Google x-goog-api-key header when provider type is google", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: "prov-1",
+        type: "google",
+        baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+      },
+    ]);
+    decodeProviderRecordMock.mockReturnValueOnce({
+      apiKey: "goog-key",
+      headers: {},
+      row: {
+        id: "prov-1",
+        type: "google",
+        baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+      },
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await testProviderConnection("prov-1");
+    expect(res.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://generativelanguage.googleapis.com/v1beta/models",
+      expect.objectContaining({
+        headers: {
+          "x-goog-api-key": "goog-key",
+        },
+      }),
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ["perplexity", "Perplexity"],
+    ["voyage", "Voyage AI"],
+    ["minimax", "MiniMax"],
+    ["baseten", "Baseten"],
+  ])(
+    "returns UPSTREAM_HTTP without fetching for %s which does not support model-listing",
+    async (type, label) => {
+      chainable.where.mockResolvedValueOnce([
+        {
+          id: "prov-1",
+          type,
+          baseUrl: "https://api.example.com/v1",
+        },
+      ]);
+
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+
+      const res = await testProviderConnection("prov-1");
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.code).toBe(ERROR_CODE.UPSTREAM_HTTP);
+        expect(res.error.message).toBe(
+          `${label} does not expose a model-listing endpoint for connection testing. Add a model and test it in chat.`,
+        );
+      }
+      expect(fetchMock).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    },
+  );
 });

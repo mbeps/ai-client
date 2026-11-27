@@ -1,6 +1,7 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
+import { getProviderDefinition } from "@/config/providers";
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { requireSession } from "@/lib/auth/require-session";
@@ -9,6 +10,10 @@ import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { decodeProviderRecord } from "@/lib/providers/decode-provider-record";
+import {
+  buildDiscoveryHeaders,
+  buildModelsEndpointUrl,
+} from "@/lib/providers/provider-discovery";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
 import type { CommonError } from "@/types/error/common-error";
@@ -66,6 +71,14 @@ export const testProviderConnection = defineAction(
       });
     }
 
+    const def = getProviderDefinition(provider.type);
+    if (!def.discovery.supportsSync) {
+      return fail({
+        code: ERROR_CODE.UPSTREAM_HTTP,
+        message: `${def.label} does not expose a model-listing endpoint for connection testing. Add a model and test it in chat.`,
+      });
+    }
+
     if (await isBlockedUrl(provider.baseUrl)) {
       return fail({
         code: ERROR_CODE.FORBIDDEN,
@@ -74,17 +87,17 @@ export const testProviderConnection = defineAction(
     }
 
     const decoded = decodeProviderRecord(provider);
-    const targetUrl = `${decoded.row.baseUrl.replace(/\/$/, "")}/models`;
+    const targetUrl = buildModelsEndpointUrl(decoded.row.baseUrl, def.id);
+    const headers = buildDiscoveryHeaders(
+      def.id,
+      decoded.apiKey,
+      decoded.headers,
+    );
 
     try {
       const response = await fetch(targetUrl, {
         method: "GET",
-        headers: {
-          ...(decoded.apiKey
-            ? { Authorization: `Bearer ${decoded.apiKey}` }
-            : {}),
-          ...decoded.headers,
-        },
+        headers,
         redirect: "error",
         signal: AbortSignal.timeout(10_000),
       });

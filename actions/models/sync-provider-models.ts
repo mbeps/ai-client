@@ -2,6 +2,10 @@
 
 import { and, eq } from "drizzle-orm";
 import { deleteModel } from "@/actions/models/delete-model";
+import {
+  getProviderDefinition,
+  type ProviderDiscoveryResponseFormat,
+} from "@/config/providers";
 import { db } from "@/drizzle/db";
 import { aiModel } from "@/drizzle/schemas/ai-model-schema";
 import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
@@ -12,6 +16,12 @@ import { defineAction } from "@/lib/factories/define-action";
 import { getLogger } from "@/lib/logger";
 import { isBlockedUrl } from "@/lib/mcp/url-guard/is-blocked-url";
 import { decodeProviderRecord } from "@/lib/providers/decode-provider-record";
+import {
+  buildDiscoveryHeaders,
+  buildModelsEndpointUrl,
+  type DiscoveredRawModel,
+  extractDiscoveredModelIds,
+} from "@/lib/providers/provider-discovery";
 import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
 import type { ReasoningEffortFormat } from "@/schemas/providers/provider-registry";
@@ -41,17 +51,6 @@ export type SyncProviderModelsError =
       readonly status?: number;
       readonly url?: string;
     };
-
-/**
- * Raw OpenAI-compatible models API response payload.
- *
- * @author Maruf Bepary
- */
-type ProviderModelsResponse = {
-  data?: Array<{
-    id?: string;
-  }>;
-};
 
 /**
  * Model candidate discovered during provider API querying.
@@ -117,8 +116,9 @@ async function fetchProviderEndpointModels(
   url: string,
   headers: Record<string, string>,
   userId: string,
+  responseFormat: ProviderDiscoveryResponseFormat,
   isRequired = false,
-): Promise<Array<{ id?: string }>> {
+): Promise<DiscoveredRawModel[]> {
   try {
     const response = await fetch(url, {
       method: "GET",
@@ -155,8 +155,8 @@ async function fetchProviderEndpointModels(
       return [];
     }
 
-    const payload = (await response.json()) as ProviderModelsResponse;
-    return payload.data ?? [];
+    const payload = (await response.json()) as unknown;
+    return extractDiscoveredModelIds(payload, responseFormat);
   } catch (err) {
     if (err instanceof AppException) {
       throw err;
@@ -191,7 +191,7 @@ async function fetchProviderEndpointModels(
  * @author Maruf Bepary
  */
 function collectDiscoveredModels(
-  list: Array<{ id?: string }>,
+  list: DiscoveredRawModel[],
   endpoint: string,
   sourcePrefix: string,
   resolveType: (modelId: string) => "chat" | "embedding",
@@ -212,7 +212,7 @@ function collectDiscoveredModels(
       modelsMap.set(modelId, {
         id: modelId,
         types: new Set(),
-        raw: m as Record<string, unknown>,
+        raw: m.raw,
       });
     }
     modelsMap.get(modelId)!.types.add(resolveType(modelId));
@@ -385,22 +385,6 @@ async function loadValidatedProvider(providerId: string, userId: string) {
 }
 
 /**
- * Builds HTTP headers including bearer auth if apiKey is present.
- *
- * @param decoded - Decrypted provider credentials and configuration
- * @returns Header dictionary
- * @author Maruf Bepary
- */
-function buildProviderHeaders(
-  decoded: ReturnType<typeof decodeProviderRecord>,
-): Record<string, string> {
-  return {
-    ...(decoded.apiKey ? { Authorization: `Bearer ${decoded.apiKey}` } : {}),
-    ...decoded.headers,
-  };
-}
-
-/**
  * Removes synced models that are no longer returned by the provider API.
  *
  * @param existingModels - Existing models loaded for the provider
@@ -448,24 +432,42 @@ export const syncProviderModels = defineAction(
 
     try {
       const provider = await loadValidatedProvider(providerId, session.user.id);
+      const def = getProviderDefinition(provider.type);
+
+      if (!def.discovery.supportsSync) {
+        return fail({
+          code: ERROR_CODE.UPSTREAM_HTTP,
+          message: `${def.label} does not support automatic model sync. Add models manually.`,
+        });
+      }
+
       const decoded = decodeProviderRecord(provider);
       const baseUrl = provider.baseUrl.replace(/\/$/, "");
-      const commonHeaders = buildProviderHeaders(decoded);
+      const commonHeaders = buildDiscoveryHeaders(
+        def.id,
+        decoded.apiKey,
+        decoded.headers,
+      );
+      const modelsUrl = buildModelsEndpointUrl(provider.baseUrl, def.id);
 
-      // Probe both endpoints
+      // Probe primary /models endpoint and optionally /embeddings/models for OpenAI-compatible/local proxies
       const [standardList, embeddingList] = await Promise.all([
         fetchProviderEndpointModels(
-          `${baseUrl}/models`,
+          modelsUrl,
           commonHeaders,
           session.user.id,
+          def.discovery.responseFormat,
           true,
         ),
-        fetchProviderEndpointModels(
-          `${baseUrl}/embeddings/models`,
-          commonHeaders,
-          session.user.id,
-          false,
-        ),
+        def.discovery.probeEmbeddingsEndpoint
+          ? fetchProviderEndpointModels(
+              `${baseUrl}/embeddings/models`,
+              commonHeaders,
+              session.user.id,
+              "openai",
+              false,
+            )
+          : Promise.resolve([]),
       ]);
 
       // Aggregate models and determine types
