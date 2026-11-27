@@ -1,3 +1,4 @@
+import { getProviderDefinition } from "@/config/providers";
 import { buildSdkProvider } from "@/lib/chat/build-sdk-provider";
 import { decryptProviderField } from "@/lib/chat/decrypt-provider-field";
 import { getLogger } from "@/lib/logger";
@@ -70,6 +71,7 @@ export function buildResolvedProvider(
 
   return {
     sdkProvider: buildSdkProvider({
+      providerType: getProviderDefinition(row.provider.type).id,
       providerName: row.provider.name,
       baseUrl: row.provider.baseUrl,
       apiKey: decryptedApiKey,

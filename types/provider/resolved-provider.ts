@@ -1,6 +1,14 @@
-import type { createOpenAI } from "@ai-sdk/openai";
+import type { EmbeddingModel, LanguageModel } from "ai";
 import type { AiModelRow } from "@/types/provider/ai-model-row";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
+
+/**
+ * Unified AI SDK provider surface consumed by chat, workflow, translation, and RAG callers.
+ */
+export type SdkProvider = {
+  chat: (modelId: string) => LanguageModel;
+  embeddingModel: (modelId: string) => EmbeddingModel;
+};
 
 /**
  * Resolved AI provider with decrypted credentials and initialized SDK.
@@ -12,7 +20,7 @@ import type { AiProviderRow } from "@/types/provider/ai-provider-row";
  * @author Maruf Bepary
  */
 export type ResolvedProvider = {
-  sdkProvider: ReturnType<typeof createOpenAI>;
+  sdkProvider: SdkProvider;
   modelId: string;
   providerRow: AiProviderRow;
   modelRow: AiModelRow;
