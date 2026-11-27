@@ -20,48 +20,50 @@ import {
   type WorkflowNode,
 } from "@/types/workflows/workflow";
 
-function createInitialNodes(): WorkflowNode[] {
-  const triggerId = "initial-trigger";
-  const stepId = "initial-step";
-  return [
-    {
-      id: triggerId,
-      type: "manual_trigger",
-      name: "Manual Trigger",
-      position: { x: 80, y: 180 },
-      data: {
-        kind: "manual_trigger",
-        variableName: "trigger",
-        requiresFileUpload: false,
+function createInitialGraph(): {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+} {
+  const triggerId = crypto.randomUUID();
+  const stepId = crypto.randomUUID();
+  return {
+    nodes: [
+      {
+        id: triggerId,
+        type: "manual_trigger",
+        name: "Manual Trigger",
+        position: { x: 80, y: 180 },
+        data: {
+          kind: "manual_trigger",
+          variableName: "trigger",
+          requiresFileUpload: false,
+        },
       },
-    },
-    {
-      id: stepId,
-      type: "ai_step",
-      name: "AI Step 1",
-      position: { x: 420, y: 180 },
-      data: {
-        kind: "ai_step",
-        variableName: "step1",
-        prompt: "Describe what this step should do...",
-        mcpServerIds: [],
-        toolIds: [],
-        requiresReview: false,
+      {
+        id: stepId,
+        type: "ai_step",
+        name: "AI Step 1",
+        position: { x: 420, y: 180 },
+        data: {
+          kind: "ai_step",
+          variableName: "step1",
+          prompt: "Describe what this step should do...",
+          mcpServerIds: [],
+          toolIds: [],
+          requiresReview: false,
+        },
       },
-    },
-  ];
-}
-
-function createInitialEdges(): WorkflowEdge[] {
-  return [
-    {
-      id: "initial-edge",
-      sourceNodeId: "initial-trigger",
-      targetNodeId: "initial-step",
-      sourceHandle: "main",
-      targetHandle: "main",
-    },
-  ];
+    ],
+    edges: [
+      {
+        id: crypto.randomUUID(),
+        sourceNodeId: triggerId,
+        targetNodeId: stepId,
+        sourceHandle: "main",
+        targetHandle: "main",
+      },
+    ],
+  };
 }
 
 /** Params for {@link useWorkflowEditorForm}. */
@@ -104,12 +106,11 @@ export function useWorkflowEditorForm({
     DEFAULT_WORKFLOW_APPROVAL_CONFIG,
   );
   const [webhookSecret, setWebhookSecret] = useState<string | null>(null);
-  const [nodes, setNodes] = useState<WorkflowNode[]>(() =>
-    isNew ? createInitialNodes() : [],
+  const [initialGraph] = useState(() =>
+    isNew ? createInitialGraph() : { nodes: [], edges: [] },
   );
-  const [edges, setEdges] = useState<WorkflowEdge[]>(() =>
-    isNew ? createInitialEdges() : [],
-  );
+  const [nodes, setNodes] = useState<WorkflowNode[]>(initialGraph.nodes);
+  const [edges, setEdges] = useState<WorkflowEdge[]>(initialGraph.edges);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isNotFound, setIsNotFound] = useState(false);
 

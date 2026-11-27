@@ -65,6 +65,29 @@ export function buildDefaultWorkflowGraph(): {
 }
 
 /**
+ * Remaps workflow node and edge IDs to fresh UUIDs so newly created workflows
+ * never collide on global `workflow_node.id` or `workflow_edge.id` primary keys.
+ */
+export function remapWorkflowGraphIds(
+  nodes: WorkflowNode[],
+  edges: WorkflowEdge[],
+): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
+  const nodeIdMap = new Map<string, string>();
+  const remappedNodes = nodes.map((node) => {
+    const newId = randomUUID();
+    nodeIdMap.set(node.id, newId);
+    return { ...node, id: newId };
+  });
+  const remappedEdges = edges.map((edge) => ({
+    ...edge,
+    id: randomUUID(),
+    sourceNodeId: nodeIdMap.get(edge.sourceNodeId) ?? edge.sourceNodeId,
+    targetNodeId: nodeIdMap.get(edge.targetNodeId) ?? edge.targetNodeId,
+  }));
+  return { nodes: remappedNodes, edges: remappedEdges };
+}
+
+/**
  * Validates workflow edge endpoints and DAG acyclicity.
  */
 export function validateWorkflowGraphInput(

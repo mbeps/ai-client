@@ -286,6 +286,77 @@ describe("workflow-service", () => {
       });
       expect(okRes).toEqual({ ok: true, value: SAMPLE_WF });
     });
+
+    it("remaps supplied node and edge IDs to fresh UUIDs while preserving edge links", async () => {
+      mockInsertReturning
+        .mockResolvedValueOnce([SAMPLE_WF])
+        .mockResolvedValueOnce([{ ...SAMPLE_WF, id: "wf-2" }]);
+
+      const payload = {
+        name: "WF",
+        nodes: [
+          {
+            id: "initial-trigger",
+            type: "manual_trigger" as const,
+            name: "Manual Trigger",
+            position: { x: 80, y: 180 },
+            data: {
+              kind: "manual_trigger" as const,
+              variableName: "trigger",
+              requiresFileUpload: false,
+            },
+          },
+          {
+            id: "initial-step",
+            type: "ai_step" as const,
+            name: "AI Step 1",
+            position: { x: 420, y: 180 },
+            data: {
+              kind: "ai_step" as const,
+              variableName: "step1",
+              prompt: "Run",
+              mcpServerIds: [],
+              toolIds: [],
+              requiresReview: false,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "initial-edge",
+            sourceNodeId: "initial-trigger",
+            targetNodeId: "initial-step",
+            sourceHandle: "main",
+            targetHandle: "main",
+          },
+        ],
+      };
+
+      const res1 = await createWorkflowForUser(USER_ID, payload);
+      const res2 = await createWorkflowForUser(USER_ID, payload);
+      expect(res1.ok).toBe(true);
+      expect(res2.ok).toBe(true);
+
+      const insertedNodes1 = mockInsertValues.mock.calls[1]?.[0] as Array<{
+        id: string;
+      }>;
+      const insertedEdges1 = mockInsertValues.mock.calls[2]?.[0] as Array<{
+        id: string;
+        sourceNodeId: string;
+        targetNodeId: string;
+      }>;
+      const insertedNodes2 = mockInsertValues.mock.calls[4]?.[0] as Array<{
+        id: string;
+      }>;
+
+      expect(insertedNodes1[0]?.id).toEqual(expect.any(String));
+      expect(insertedNodes1[0]?.id).not.toBe("initial-trigger");
+      expect(insertedNodes1[1]?.id).not.toBe("initial-step");
+      expect(insertedEdges1[0]?.id).not.toBe("initial-edge");
+      expect(insertedEdges1[0]?.sourceNodeId).toBe(insertedNodes1[0]?.id);
+      expect(insertedEdges1[0]?.targetNodeId).toBe(insertedNodes1[1]?.id);
+      expect(insertedNodes1[0]?.id).not.toBe(insertedNodes2[0]?.id);
+    });
   });
 
   describe("updateWorkflowForUser", () => {

@@ -21,6 +21,7 @@ import { assertWorkflowKbsOwned } from "@/lib/workflows/assert-workflow-kbs-owne
 import {
   buildDefaultWorkflowGraph,
   insertWorkflowGraph,
+  remapWorkflowGraphIds,
   validateWorkflowGraphInput,
 } from "@/lib/workflows/workflow-graph-persistence";
 import {
@@ -77,13 +78,17 @@ export async function createWorkflowForUser(
   const validated = parsed.data;
 
   const defaults = buildDefaultWorkflowGraph();
-  const nodes = validated.nodes ?? defaults.nodes;
-  const edges = validated.edges ?? (validated.nodes ? [] : defaults.edges);
+  const rawNodes = validated.nodes ?? defaults.nodes;
+  const rawEdges = validated.edges ?? (validated.nodes ? [] : defaults.edges);
 
-  const graphCheck = validateWorkflowGraphInput(nodes, edges);
+  const graphCheck = validateWorkflowGraphInput(rawNodes, rawEdges);
   if (!graphCheck.ok) {
     return graphCheck;
   }
+
+  const { nodes, edges } = validated.nodes
+    ? remapWorkflowGraphIds(rawNodes, rawEdges)
+    : { nodes: rawNodes, edges: rawEdges };
 
   if (
     !(await assertWorkflowKbsOwned(userId, validated.knowledgeBaseIds, nodes))

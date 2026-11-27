@@ -98,4 +98,37 @@ describe("useWorkflowEditorForm", () => {
     expect(result.current.isNotFound).toBe(false);
     expect(handleApiError).toHaveBeenCalledWith(boom, "Failed to load workflow");
   });
+
+  it("generates unique initial node and edge IDs for each new workflow", () => {
+    const handleApiError = vi.fn();
+
+    const first = renderHook(() =>
+      useWorkflowEditorForm({
+        id: "new",
+        isNew: true,
+        handleApiError,
+      }),
+    );
+    const second = renderHook(() =>
+      useWorkflowEditorForm({
+        id: "new",
+        isNew: true,
+        handleApiError,
+      }),
+    );
+
+    const firstNodes = first.result.current.nodes;
+    const firstEdges = first.result.current.edges;
+    const secondNodes = second.result.current.nodes;
+    const secondEdges = second.result.current.edges;
+
+    expect(firstNodes).toHaveLength(2);
+    expect(firstEdges).toHaveLength(1);
+    expect(firstEdges[0]?.sourceNodeId).toBe(firstNodes[0]?.id);
+    expect(firstEdges[0]?.targetNodeId).toBe(firstNodes[1]?.id);
+
+    expect(firstNodes[0]?.id).not.toBe(secondNodes[0]?.id);
+    expect(firstNodes[1]?.id).not.toBe(secondNodes[1]?.id);
+    expect(firstEdges[0]?.id).not.toBe(secondEdges[0]?.id);
+  });
 });
