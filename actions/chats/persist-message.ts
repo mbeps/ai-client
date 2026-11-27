@@ -137,67 +137,84 @@ export const persistMessage = defineAction(
     const validatedChatId = parsedChatId.data;
     const validatedMsg = parsedMsg.data;
 
-    const [chatRow] = await db
-      .select({ id: chat.id })
-      .from(chat)
-      .where(
-        and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
+    const result = await db.transaction(async (tx) => {
+      const [chatRow] = await tx
+        .select({ id: chat.id })
+        .from(chat)
+        .where(
+          and(eq(chat.id, validatedChatId), eq(chat.userId, session.user.id)),
+        );
+
+      if (!chatRow) {
+        return fail({
+          code: ERROR_CODE.NOT_FOUND,
+          message: "Not Found",
+        });
+      }
+
+      const existingRows = await tx
+        .select({
+          id: message.id,
+          chatId: message.chatId,
+          metadata: message.metadata,
+        })
+        .from(message)
+        .where(eq(message.id, validatedMsg.id));
+
+      const existingMessage = Array.isArray(existingRows)
+        ? existingRows[0]
+        : null;
+
+      if (existingMessage && existingMessage.chatId !== validatedChatId) {
+        return fail({
+          code: ERROR_CODE.CONFLICT,
+          message: "Message ID already belongs to another chat",
+        });
+      }
+
+      const metadataToSave = mergeConflictMetadata(
+        existingMessage?.metadata,
+        validatedMsg.metadata,
       );
 
-    if (!chatRow) {
-      return fail({
-        code: ERROR_CODE.NOT_FOUND,
-        message: "Not Found",
-      });
-    }
-
-    const existingRows = await db
-      .select({
-        id: message.id,
-        metadata: message.metadata,
-      })
-      .from(message)
-      .where(eq(message.id, validatedMsg.id));
-
-    const existingMessage = Array.isArray(existingRows)
-      ? existingRows[0]
-      : null;
-    const metadataToSave = mergeConflictMetadata(
-      existingMessage?.metadata,
-      validatedMsg.metadata,
-    );
-
-    const [newMessage] = await db
-      .insert(message)
-      .values({
-        id: validatedMsg.id,
-        chatId: validatedChatId,
-        role: validatedMsg.role,
-        content: validatedMsg.content,
-        parentId: validatedMsg.parentId,
-        metadata: metadataToSave,
-      })
-      .onConflictDoUpdate({
-        target: message.id,
-        set: {
+      const [newMessage] = await tx
+        .insert(message)
+        .values({
+          id: validatedMsg.id,
+          chatId: validatedChatId,
+          role: validatedMsg.role,
           content: validatedMsg.content,
+          parentId: validatedMsg.parentId,
           metadata: metadataToSave,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+        })
+        .onConflictDoUpdate({
+          target: message.id,
+          set: {
+            content: validatedMsg.content,
+            metadata: metadataToSave,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
 
-    await db
-      .update(chat)
-      .set({ currentLeafId: newMessage.id, updatedAt: new Date() })
-      .where(eq(chat.id, validatedChatId));
+      await tx
+        .update(chat)
+        .set({ currentLeafId: newMessage.id, updatedAt: new Date() })
+        .where(eq(chat.id, validatedChatId));
 
-    log.info("Message persisted (id: {id}, chatId: {chatId}, role: {role})", {
-      id: newMessage.id,
-      chatId: validatedChatId,
-      role: newMessage.role,
+      return ok(newMessage as MessageRow);
     });
 
-    return ok(newMessage as MessageRow);
+    if (!result.ok) {
+      return result;
+    }
+
+    log.info("Message persisted (id: {id}, chatId: {chatId}, role: {role})", {
+      id: result.value.id,
+      chatId: validatedChatId,
+      role: result.value.role,
+    });
+
+    return result;
   },
 );

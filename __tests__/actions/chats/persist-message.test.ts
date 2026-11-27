@@ -28,6 +28,7 @@ const chainable = vi.hoisted(() => {
     "returning",
     "update",
     "set",
+    "transaction",
   ]) {
     c[m] = vi.fn().mockImplementation(() => c);
   }
@@ -61,6 +62,9 @@ describe("persistMessage - Conflict & Model Preservation", () => {
     chainable.returning.mockReturnValue(chainable);
     chainable.update.mockReturnValue(chainable);
     chainable.set.mockReturnValue(chainable);
+    chainable.transaction.mockImplementation(
+      async (cb: (tx: typeof chainable) => Promise<unknown>) => cb(chainable),
+    );
   });
 
   it("does not overwrite existing non-empty model when incoming metadata has empty model", async () => {
@@ -70,6 +74,7 @@ describe("persistMessage - Conflict & Model Preservation", () => {
     chainable.where.mockResolvedValueOnce([
       {
         id: MSG_UUID,
+        chatId: CHAT_UUID,
         metadata: JSON.stringify({
           model: "gpt-4o",
           reasoning: "previous thought",
@@ -135,6 +140,33 @@ describe("persistMessage - Conflict & Model Preservation", () => {
 
     expect(result).toBeDefined();
   });
+
+  it("returns CONFLICT and skips insert when message ID already belongs to another chat", async () => {
+    const OTHER_CHAT_UUID = "f47ac10b-58cc-4372-a567-0e02b2c3d499";
+    chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: MSG_UUID,
+        chatId: OTHER_CHAT_UUID,
+        metadata: JSON.stringify({ model: "gpt-4o" }),
+      },
+    ]);
+
+    const res = await persistMessage(CHAT_UUID, {
+      id: MSG_UUID,
+      role: "user",
+      content: "overwrite attempt",
+      parentId: null,
+      metadata: null,
+    });
+
+    expect(res).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: "CONFLICT" }),
+    });
+    expect(chainable.insert).not.toHaveBeenCalled();
+    expect(chainable.onConflictDoUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe("persistMessage - metadata merge branches", () => {
@@ -149,6 +181,9 @@ describe("persistMessage - metadata merge branches", () => {
     chainable.returning.mockReturnValue(chainable);
     chainable.update.mockReturnValue(chainable);
     chainable.set.mockReturnValue(chainable);
+    chainable.transaction.mockImplementation(
+      async (cb: (tx: typeof chainable) => Promise<unknown>) => cb(chainable),
+    );
   });
 
   function stubDb(returningRow: Record<string, unknown>) {
@@ -193,7 +228,7 @@ describe("persistMessage - metadata merge branches", () => {
   it("keeps existing metadata when incoming is null", async () => {
     chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
     chainable.where.mockResolvedValueOnce([
-      { id: MSG_UUID, metadata: JSON.stringify({ model: "old" }) },
+      { id: MSG_UUID, chatId: CHAT_UUID, metadata: JSON.stringify({ model: "old" }) },
     ]);
     chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
 
@@ -213,7 +248,7 @@ describe("persistMessage - metadata merge branches", () => {
   it("returns incoming metadata raw when existing metadata is not valid JSON", async () => {
     chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
     chainable.where.mockResolvedValueOnce([
-      { id: MSG_UUID, metadata: "not-json{{" },
+      { id: MSG_UUID, chatId: CHAT_UUID, metadata: "not-json{{" },
     ]);
     chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
     const incoming = JSON.stringify({ model: "new" });
@@ -234,7 +269,7 @@ describe("persistMessage - metadata merge branches", () => {
   it("preserves existing model when incoming model is falsy", async () => {
     chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
     chainable.where.mockResolvedValueOnce([
-      { id: MSG_UUID, metadata: JSON.stringify({ model: "gpt-4o" }) },
+      { id: MSG_UUID, chatId: CHAT_UUID, metadata: JSON.stringify({ model: "gpt-4o" }) },
     ]);
     chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
 
@@ -255,7 +290,7 @@ describe("persistMessage - metadata merge branches", () => {
   it("does not overwrite incoming model when it is present", async () => {
     chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
     chainable.where.mockResolvedValueOnce([
-      { id: MSG_UUID, metadata: JSON.stringify({ model: "old" }) },
+      { id: MSG_UUID, chatId: CHAT_UUID, metadata: JSON.stringify({ model: "old" }) },
     ]);
     chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
 
@@ -286,12 +321,19 @@ describe("persistMessage - preserveServerNames", () => {
     chainable.returning.mockReturnValue(chainable);
     chainable.update.mockReturnValue(chainable);
     chainable.set.mockReturnValue(chainable);
+    chainable.transaction.mockImplementation(
+      async (cb: (tx: typeof chainable) => Promise<unknown>) => cb(chainable),
+    );
   });
 
   function stubDb(existingMeta: unknown, incomingMeta: unknown) {
     chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
     chainable.where.mockResolvedValueOnce([
-      { id: MSG_UUID, metadata: JSON.stringify(existingMeta) },
+      {
+        id: MSG_UUID,
+        chatId: CHAT_UUID,
+        metadata: JSON.stringify(existingMeta),
+      },
     ]);
     chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
     return incomingMeta;
@@ -404,7 +446,9 @@ describe("persistMessage - preserveServerNames", () => {
 
   it("handles null metadata on existing row without crashing", async () => {
     chainable.where.mockResolvedValueOnce([{ id: CHAT_UUID }]);
-    chainable.where.mockResolvedValueOnce([{ id: MSG_UUID, metadata: null }]);
+    chainable.where.mockResolvedValueOnce([
+      { id: MSG_UUID, chatId: CHAT_UUID, metadata: null },
+    ]);
     chainable.returning.mockResolvedValueOnce([{ id: MSG_UUID }]);
     const incoming = JSON.stringify({ model: "m" });
 

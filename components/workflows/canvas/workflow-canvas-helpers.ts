@@ -122,8 +122,9 @@ export function mapConnectedEdges(
   connection: Connection,
   rfEdges: Edge[],
 ): WorkflowEdge[] {
+  const existingIds = new Set(rfEdges.map((e) => e.id));
   return addEdge(connection, rfEdges).map((edge) => ({
-    id: edge.id || crypto.randomUUID(),
+    id: existingIds.has(edge.id) ? edge.id : crypto.randomUUID(),
     sourceNodeId: edge.source,
     targetNodeId: edge.target,
     sourceHandle: edge.sourceHandle ?? "main",

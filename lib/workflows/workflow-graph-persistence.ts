@@ -65,35 +65,59 @@ export function buildDefaultWorkflowGraph(): {
 }
 
 /**
- * Remaps workflow node and edge IDs to fresh UUIDs so newly created workflows
+ * Remaps workflow node and edge IDs to fresh UUIDs so workflows
  * never collide on global `workflow_node.id` or `workflow_edge.id` primary keys.
+ * When `idsToRemap` is omitted, all node and edge IDs are remapped (create path).
+ * When `idsToRemap` is provided, only colliding IDs are remapped (update path)
+ * while preserving non-colliding IDs for `workflow_run.node_states` correlation.
  */
 export function remapWorkflowGraphIds(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
+  idsToRemap?: {
+    nodeIds?: ReadonlySet<string>;
+    edgeIds?: ReadonlySet<string>;
+  },
 ): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
   const nodeIdMap = new Map<string, string>();
   const remappedNodes = nodes.map((node) => {
+    const shouldRemap = !idsToRemap || idsToRemap.nodeIds?.has(node.id);
+    if (!shouldRemap) return node;
     const newId = randomUUID();
     nodeIdMap.set(node.id, newId);
     return { ...node, id: newId };
   });
-  const remappedEdges = edges.map((edge) => ({
-    ...edge,
-    id: randomUUID(),
-    sourceNodeId: nodeIdMap.get(edge.sourceNodeId) ?? edge.sourceNodeId,
-    targetNodeId: nodeIdMap.get(edge.targetNodeId) ?? edge.targetNodeId,
-  }));
+  const remappedEdges = edges.map((edge) => {
+    const shouldRemap = !idsToRemap || idsToRemap.edgeIds?.has(edge.id);
+    return {
+      ...edge,
+      id: shouldRemap ? randomUUID() : edge.id,
+      sourceNodeId: nodeIdMap.get(edge.sourceNodeId) ?? edge.sourceNodeId,
+      targetNodeId: nodeIdMap.get(edge.targetNodeId) ?? edge.targetNodeId,
+    };
+  });
   return { nodes: remappedNodes, edges: remappedEdges };
 }
 
 /**
- * Validates workflow edge endpoints and DAG acyclicity.
+ * Validates unique node/edge IDs, edge endpoints, and DAG acyclicity.
  */
 export function validateWorkflowGraphInput(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
 ): Result<true, CommonError> {
+  if (new Set(nodes.map((n) => n.id)).size !== nodes.length) {
+    return fail({
+      code: ERROR_CODE.INVALID_INPUT,
+      message: "Workflow contains duplicate node IDs",
+    });
+  }
+  if (new Set(edges.map((e) => e.id)).size !== edges.length) {
+    return fail({
+      code: ERROR_CODE.INVALID_INPUT,
+      message: "Workflow contains duplicate edge IDs",
+    });
+  }
   if (hasInvalidEdgeEndpoints(nodes, edges)) {
     return fail({
       code: ERROR_CODE.INVALID_INPUT,

@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import type { z } from "zod";
 import { db } from "@/drizzle/db";
 import {
@@ -213,6 +213,47 @@ export async function updateWorkflowForUser(
     if (!updated) return undefined;
 
     if (validated.nodes !== undefined) {
+      const incomingNodes = validated.nodes;
+      const incomingEdges = validated.edges ?? [];
+      const nodeIds = incomingNodes.map((n) => n.id);
+      const edgeIds = incomingEdges.map((e) => e.id);
+
+      // Query only IDs belonging to OTHER workflows so same-workflow IDs stay
+      // stable for workflow_run.node_states correlation.
+      const [collidingNodes, collidingEdges] = await Promise.all([
+        nodeIds.length > 0
+          ? tx
+              .select({ id: workflowNode.id })
+              .from(workflowNode)
+              .where(
+                and(
+                  inArray(workflowNode.id, nodeIds),
+                  ne(workflowNode.workflowId, updated.id),
+                ),
+              )
+          : [],
+        edgeIds.length > 0
+          ? tx
+              .select({ id: workflowEdge.id })
+              .from(workflowEdge)
+              .where(
+                and(
+                  inArray(workflowEdge.id, edgeIds),
+                  ne(workflowEdge.workflowId, updated.id),
+                ),
+              )
+          : [],
+      ]);
+
+      const { nodes, edges } = remapWorkflowGraphIds(
+        incomingNodes,
+        incomingEdges,
+        {
+          nodeIds: new Set(collidingNodes.map((n) => n.id)),
+          edgeIds: new Set(collidingEdges.map((e) => e.id)),
+        },
+      );
+
       await tx
         .delete(workflowEdge)
         .where(eq(workflowEdge.workflowId, updated.id));
@@ -220,12 +261,7 @@ export async function updateWorkflowForUser(
         .delete(workflowNode)
         .where(eq(workflowNode.workflowId, updated.id));
 
-      await insertWorkflowGraph(
-        tx,
-        updated.id,
-        validated.nodes,
-        validated.edges ?? [],
-      );
+      await insertWorkflowGraph(tx, updated.id, nodes, edges);
     }
 
     return updated;

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ERROR_CODE } from "@/lib/error/error-code";
 
 const {
+  mockSelectWhere,
+  mockSelectFrom,
   mockInsertReturning,
   mockInsertValues,
   mockUpdateReturning,
@@ -14,6 +16,8 @@ const {
   mockWithSubagentLinkLock,
   mockDb,
 } = vi.hoisted(() => {
+  const mockSelectWhere = vi.fn().mockResolvedValue([]);
+  const mockSelectFrom = vi.fn(() => ({ where: mockSelectWhere }));
   const mockInsertReturning = vi.fn();
   const mockInsertValues = vi.fn(() => ({ returning: mockInsertReturning }));
   const mockUpdateReturning = vi.fn();
@@ -25,6 +29,7 @@ const {
   const mockValidateTargetSubagentIds = vi.fn();
   const mockWithSubagentLinkLock = vi.fn();
   const mockDb = {
+    select: vi.fn(() => ({ from: mockSelectFrom })),
     insert: vi.fn(() => ({ values: mockInsertValues })),
     update: vi.fn(() => ({ set: mockUpdateSet })),
     delete: vi.fn(() => ({ where: mockDeleteWhere })),
@@ -33,6 +38,8 @@ const {
     ),
   };
   return {
+    mockSelectWhere,
+    mockSelectFrom,
     mockInsertReturning,
     mockInsertValues,
     mockUpdateReturning,
@@ -107,6 +114,7 @@ const SAMPLE_WF = {
 describe("workflow-service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSelectWhere.mockResolvedValue([]);
     mockAssertWorkflowAgentsOwned.mockResolvedValue(true);
     mockAssertWorkflowKbsOwned.mockResolvedValue(true);
     mockValidateTargetSubagentIds.mockResolvedValue({ ok: true, value: true });
@@ -527,6 +535,158 @@ describe("workflow-service", () => {
         name: "Meta only",
       });
       expect(metaOnlyRes).toEqual({ ok: true, value: SAMPLE_WF });
+    });
+
+    it("rejects duplicate node IDs and duplicate edge IDs within the same payload", async () => {
+      const dupNodeRes = await createWorkflowForUser(USER_ID, {
+        name: "Dup nodes",
+        nodes: [
+          {
+            id: NODE_A,
+            type: "manual_trigger",
+            name: "T1",
+            position: { x: 0, y: 0 },
+            data: {
+              kind: "manual_trigger",
+              variableName: "t1",
+              requiresFileUpload: false,
+            },
+          },
+          {
+            id: NODE_A,
+            type: "ai_step",
+            name: "S1",
+            position: { x: 100, y: 0 },
+            data: {
+              kind: "ai_step",
+              variableName: "s1",
+              prompt: "Run",
+              mcpServerIds: [],
+              toolIds: [],
+              requiresReview: false,
+            },
+          },
+        ],
+        edges: [],
+      });
+      expect(dupNodeRes).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: ERROR_CODE.INVALID_INPUT }),
+      });
+
+      const dupEdgeRes = await updateWorkflowForUser(USER_ID, WF_ID, {
+        nodes: [
+          {
+            id: NODE_A,
+            type: "manual_trigger",
+            name: "T1",
+            position: { x: 0, y: 0 },
+            data: {
+              kind: "manual_trigger",
+              variableName: "t1",
+              requiresFileUpload: false,
+            },
+          },
+          {
+            id: NODE_B,
+            type: "ai_step",
+            name: "S1",
+            position: { x: 100, y: 0 },
+            data: {
+              kind: "ai_step",
+              variableName: "s1",
+              prompt: "Run",
+              mcpServerIds: [],
+              toolIds: [],
+              requiresReview: false,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: EDGE_AB,
+            sourceNodeId: NODE_A,
+            targetNodeId: NODE_B,
+            sourceHandle: "main",
+            targetHandle: "main",
+          },
+          {
+            id: EDGE_AB,
+            sourceNodeId: NODE_A,
+            targetNodeId: NODE_B,
+            sourceHandle: "main",
+            targetHandle: "main",
+          },
+        ],
+      });
+      expect(dupEdgeRes).toEqual({
+        ok: false,
+        error: expect.objectContaining({ code: ERROR_CODE.INVALID_INPUT }),
+      });
+    });
+
+    it("preserves own workflow IDs while remapping node and edge IDs that collide with other workflows", async () => {
+      mockUpdateReturning.mockResolvedValueOnce([SAMPLE_WF]);
+      // 1. colliding node IDs query -> NODE_A collides with another workflow
+      mockSelectWhere.mockResolvedValueOnce([{ id: NODE_A }]);
+      // 2. colliding edge IDs query -> EDGE_AB collides with another workflow
+      mockSelectWhere.mockResolvedValueOnce([{ id: EDGE_AB }]);
+
+      const res = await updateWorkflowForUser(USER_ID, WF_ID, {
+        nodes: [
+          {
+            id: NODE_A,
+            type: "manual_trigger",
+            name: "Trigger",
+            position: { x: 0, y: 0 },
+            data: {
+              kind: "manual_trigger",
+              variableName: "trigger",
+              requiresFileUpload: false,
+            },
+          },
+          {
+            id: NODE_B,
+            type: "ai_step",
+            name: "Step",
+            position: { x: 100, y: 0 },
+            data: {
+              kind: "ai_step",
+              variableName: "step1",
+              prompt: "Run",
+              mcpServerIds: [],
+              toolIds: [],
+              requiresReview: false,
+            },
+          },
+        ],
+        edges: [
+          {
+            id: EDGE_AB,
+            sourceNodeId: NODE_A,
+            targetNodeId: NODE_B,
+            sourceHandle: "main",
+            targetHandle: "main",
+          },
+        ],
+      });
+
+      expect(res).toEqual({ ok: true, value: SAMPLE_WF });
+
+      const insertedNodes = mockInsertValues.mock.calls[0]?.[0] as Array<{
+        id: string;
+      }>;
+      const insertedEdges = mockInsertValues.mock.calls[1]?.[0] as Array<{
+        id: string;
+        sourceNodeId: string;
+        targetNodeId: string;
+      }>;
+
+      expect(insertedNodes[0]?.id).not.toBe(NODE_A);
+      expect(insertedNodes[1]?.id).toBe(NODE_B);
+      expect(insertedEdges[0]?.id).not.toBe(EDGE_AB);
+      expect(insertedEdges[0]?.sourceNodeId).toBe(insertedNodes[0]?.id);
+      expect(insertedEdges[0]?.targetNodeId).toBe(NODE_B);
     });
   });
 });
