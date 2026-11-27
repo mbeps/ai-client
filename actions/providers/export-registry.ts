@@ -1,6 +1,7 @@
 "use server";
 
 import { and, eq, inArray } from "drizzle-orm";
+import { getProviderDefinition } from "@/config/providers";
 import { db } from "@/drizzle/db";
 import { aiModel } from "@/drizzle/schemas/ai-model-schema";
 import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
@@ -79,6 +80,7 @@ export const exportProviderRegistry = defineAction(
         );
 
         return {
+          type: getProviderDefinition(provider.type).id,
           name: provider.name,
           baseUrl: provider.baseUrl,
           requiresKey: provider.requiresKey,

@@ -40,6 +40,7 @@ export const createProvider = defineAction(
       .insert(aiProvider)
       .values({
         userId: session.user.id,
+        type: parsed.type ?? "openai-compatible",
         name: parsed.name,
         baseUrl: parsed.baseUrl,
         apiKey: encrypted.apiKey,

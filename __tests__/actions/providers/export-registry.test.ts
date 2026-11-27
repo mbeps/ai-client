@@ -223,4 +223,24 @@ describe("exportProviderRegistry", () => {
     expect(exportedModels[2].reasoningEffortFormat).toBe("openai");
     expect(exportedModels[2].modelOptions).toBeNull();
   });
+
+  it("exports provider type and falls back to openai-compatible for unknown or null values", async () => {
+    const providers = [
+      { ...PROVIDER_ROW, id: "p-anthropic", name: "Anthropic", type: "anthropic" },
+      { ...PROVIDER_ROW, id: "p-null", name: "LegacyNull", type: null },
+      { ...PROVIDER_ROW, id: "p-unknown", name: "LegacyUnknown", type: "legacy-unknown" },
+    ];
+
+    chainable.where
+      .mockResolvedValueOnce(providers)
+      .mockResolvedValueOnce([]);
+
+    const res = await exportProviderRegistry();
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+
+    expect(res.value.providers[0].type).toBe("anthropic");
+    expect(res.value.providers[1].type).toBe("openai-compatible");
+    expect(res.value.providers[2].type).toBe("openai-compatible");
+  });
 });

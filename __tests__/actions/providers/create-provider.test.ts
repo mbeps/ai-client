@@ -52,18 +52,52 @@ describe("createProvider action", () => {
     expect(res.ok).toBe(false);
   });
 
-  it("encrypts api key and creates provider record", async () => {
-    const created = { id: "prov-1", name: "OpenAI", providerType: "openai" };
+  it("encrypts api key and creates provider record with explicit type", async () => {
+    const created = {
+      id: "prov-1",
+      name: "OpenAI",
+      type: "openai",
+    };
     chainable.returning.mockResolvedValueOnce([created]);
 
     const res = await createProvider({
+      type: "openai",
       name: "OpenAI",
-      providerType: "openai",
       apiKey: "sk-proj-123",
       baseUrl: "https://api.openai.com/v1",
     });
 
     expect(res).toEqual({ ok: true, value: created });
     expect(chainable.insert).toHaveBeenCalled();
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "openai",
+        name: "OpenAI",
+        baseUrl: "https://api.openai.com/v1",
+      }),
+    );
+  });
+
+  it("defaults type to openai-compatible when omitted", async () => {
+    const created = {
+      id: "prov-2",
+      name: "Custom",
+      type: "openai-compatible",
+    };
+    chainable.returning.mockResolvedValueOnce([created]);
+
+    const res = await createProvider({
+      name: "Custom",
+      baseUrl: "https://api.custom.com/v1",
+    });
+
+    expect(res).toEqual({ ok: true, value: created });
+    expect(chainable.values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "openai-compatible",
+        isEnabled: true,
+        requiresKey: true,
+      }),
+    );
   });
 });

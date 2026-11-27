@@ -79,7 +79,29 @@ describe("updateProvider action", () => {
 
     const res = await updateProvider("prov-1", { name: "New Name" });
     expect(res).toEqual({ ok: true, value: updated });
-    expect(chainable.set).toHaveBeenCalled();
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.not.objectContaining({ type: expect.anything() }),
+    );
+  });
+
+  it("updates provider type when explicitly provided", async () => {
+    chainable.where.mockResolvedValueOnce([
+      {
+        id: "prov-1",
+        userId: "user-1",
+        type: "openai-compatible",
+        apiKey: "existing-key",
+        headers: null,
+      },
+    ]);
+    const updated = { id: "prov-1", type: "google" };
+    chainable.returning.mockResolvedValueOnce([updated]);
+
+    const res = await updateProvider("prov-1", { type: "google" });
+    expect(res).toEqual({ ok: true, value: updated });
+    expect(chainable.set).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "google" }),
+    );
   });
 
   it("updates provider with all scalar fields and re-encrypts apiKey and headers", async () => {

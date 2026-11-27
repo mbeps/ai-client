@@ -66,6 +66,7 @@ export const updateProvider = defineAction(
     const [updated] = await db
       .update(aiProvider)
       .set({
+        ...(parsed.type !== undefined ? { type: parsed.type } : {}),
         ...(parsed.name !== undefined ? { name: parsed.name } : {}),
         ...(parsed.baseUrl !== undefined ? { baseUrl: parsed.baseUrl } : {}),
         ...(parsed.isEnabled !== undefined

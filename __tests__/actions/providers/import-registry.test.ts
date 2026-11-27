@@ -816,4 +816,97 @@ describe("importProviderRegistry action", () => {
     if (res.ok) return;
     expect(res.error.code).toBe("INTERNAL");
   });
+
+  it("persists explicit provider type on insert and defaults omitted v1 type to openai-compatible", async () => {
+    selectWhereMock.mockResolvedValueOnce([]);
+    insertReturningMock.mockResolvedValueOnce([{ id: "prov-ant" }]);
+    selectWhereMock.mockResolvedValueOnce([]);
+    selectWhereMock.mockResolvedValueOnce([]);
+    insertReturningMock.mockResolvedValueOnce([{ id: "prov-v1" }]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          type: "anthropic" as const,
+          name: "Anthropic",
+          baseUrl: "https://api.anthropic.com/v1",
+          requiresKey: true,
+          models: [],
+        },
+        {
+          name: "LegacyV1",
+          baseUrl: "https://api.legacy.com/v1",
+          requiresKey: true,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    expect(insertValuesMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        name: "Anthropic",
+        type: "anthropic",
+      }),
+    );
+    expect(insertValuesMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        name: "LegacyV1",
+        type: "openai-compatible",
+      }),
+    );
+  });
+
+  it("persists explicit provider type on update and defaults omitted v1 type to openai-compatible", async () => {
+    const capturedUpdates: any[] = [];
+    mockDb.update = vi.fn(() => ({
+      set: vi.fn((vals: any) => {
+        capturedUpdates.push(vals);
+        return {
+          where: vi.fn(() => ({
+            returning: updateReturningMock,
+          })),
+        };
+      }),
+    })) as any;
+
+    selectWhereMock.mockResolvedValueOnce([
+      { id: "prov-1", name: "Google", baseUrl: "https://generativelanguage.googleapis.com/v1beta" },
+    ]);
+    updateReturningMock.mockResolvedValueOnce([{ id: "prov-1" }]);
+    selectWhereMock.mockResolvedValueOnce([
+      { id: "prov-2", name: "LegacyV1", baseUrl: "https://api.legacy.com/v1" },
+    ]);
+    updateReturningMock.mockResolvedValueOnce([{ id: "prov-2" }]);
+
+    const payload = {
+      version: "1" as const,
+      exportedAt: new Date().toISOString(),
+      providers: [
+        {
+          type: "google" as const,
+          name: "Google",
+          baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+          requiresKey: true,
+          models: [],
+        },
+        {
+          name: "LegacyV1",
+          baseUrl: "https://api.legacy.com/v1",
+          requiresKey: true,
+          models: [],
+        },
+      ],
+    };
+
+    const res = await importProviderRegistry(payload);
+    expect(res.ok).toBe(true);
+    expect(capturedUpdates[0].type).toBe("google");
+    expect(capturedUpdates[1].type).toBe("openai-compatible");
+  });
 });
