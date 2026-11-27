@@ -3,7 +3,7 @@
 import { ChevronLeft, Database, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { createProvider } from "@/actions/providers/create-provider";
 import { PageHeader } from "@/components/page-header";
@@ -11,6 +11,7 @@ import { ProviderFormFields } from "@/components/settings/providers/provider-for
 import { PageContainer } from "@/components/shared/page-container";
 import { Button } from "@/components/ui/button";
 import { LoadingSwap } from "@/components/ui/loading-swap";
+import { getProviderDefinition, type ProviderType } from "@/config/providers";
 import { ROUTES } from "@/config/routes";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 
@@ -24,6 +25,9 @@ import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-prov
 export default function NewProviderPage() {
   const router = useRouter();
 
+  const [providerType, setProviderType] =
+    useState<ProviderType>("openai-compatible");
+  const hasCustomName = useRef(false);
   const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -33,6 +37,21 @@ export default function NewProviderPage() {
     { key: string; value: string }[]
   >([{ key: "", value: "" }]);
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleNameChange = (value: string): void => {
+    hasCustomName.current = value.trim().length > 0;
+    setName(value);
+  };
+
+  const handleProviderTypeChange = (nextType: ProviderType): void => {
+    setProviderType(nextType);
+    const def = getProviderDefinition(nextType);
+    setBaseUrl(def.defaultBaseUrl);
+    setRequiresKey(def.defaultRequiresKey);
+    if (!hasCustomName.current) {
+      setName(nextType === "openai-compatible" ? "" : def.label);
+    }
+  };
 
   const canSave =
     name.trim().length > 0 && baseUrl.trim().length > 0 && !isSaving;
@@ -49,6 +68,7 @@ export default function NewProviderPage() {
       );
 
       const res = await createProvider({
+        type: providerType,
         name: name.trim(),
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim().length > 0 ? apiKey.trim() : undefined,
@@ -104,6 +124,7 @@ export default function NewProviderPage() {
         </div>
 
         <ProviderFormFields
+          providerType={providerType}
           name={name}
           baseUrl={baseUrl}
           apiKey={apiKey}
@@ -111,7 +132,8 @@ export default function NewProviderPage() {
           isEnabled={isEnabled}
           headerRows={headerRows}
           isEdit={false}
-          onNameChange={setName}
+          onProviderTypeChange={handleProviderTypeChange}
+          onNameChange={handleNameChange}
           onBaseUrlChange={setBaseUrl}
           onApiKeyChange={setApiKey}
           onRequiresKeyChange={setRequiresKey}

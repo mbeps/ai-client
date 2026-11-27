@@ -1,10 +1,25 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  getProviderDefinition,
+  PROVIDER_CATALOG,
+  type ProviderType,
+} from "@/config/providers";
 
 /**
  * Represents header row.
@@ -19,6 +34,7 @@ type HeaderRow = { key: string; value: string };
  * @author Maruf Bepary
  */
 type ProviderFormFieldsProps = {
+  providerType: ProviderType;
   name: string;
   baseUrl: string;
   apiKey: string;
@@ -29,6 +45,7 @@ type ProviderFormFieldsProps = {
   isEdit: boolean;
   /** True when editing an existing provider that has custom headers saved. */
   hasSavedHeaders?: boolean;
+  onProviderTypeChange?: (value: ProviderType) => void;
   onNameChange: (value: string) => void;
   onBaseUrlChange: (value: string) => void;
   onApiKeyChange: (value: string) => void;
@@ -45,6 +62,7 @@ type ProviderFormFieldsProps = {
  * @author Maruf Bepary
  */
 export function ProviderFormFields({
+  providerType,
   name,
   baseUrl,
   apiKey,
@@ -53,6 +71,7 @@ export function ProviderFormFields({
   headerRows,
   isEdit,
   hasSavedHeaders = false,
+  onProviderTypeChange,
   onNameChange,
   onBaseUrlChange,
   onApiKeyChange,
@@ -60,6 +79,14 @@ export function ProviderFormFields({
   onIsEnabledChange,
   onHeaderRowsChange,
 }: ProviderFormFieldsProps) {
+  const providerDef = getProviderDefinition(providerType);
+  const defaultProviders = PROVIDER_CATALOG.filter((p) => p.tier === "default");
+  const officialProviders = PROVIDER_CATALOG.filter(
+    (p) => p.tier === "official",
+  );
+  const communityProviders = PROVIDER_CATALOG.filter(
+    (p) => p.tier === "community",
+  );
   const updateRow = (index: number, patch: Partial<HeaderRow>): void => {
     const next = [...headerRows];
     next[index] = { ...next[index], ...patch };
@@ -78,6 +105,68 @@ export function ProviderFormFields({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
+        <Label htmlFor="provider-type">Provider Type</Label>
+        {isEdit ? (
+          <div className="bg-muted/40 flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
+            <span>{providerDef.label}</span>
+            {providerDef.isBeta && (
+              <Badge
+                variant="secondary"
+                className="ml-auto px-1.5 py-0 font-mono text-[10px]"
+              >
+                BETA
+              </Badge>
+            )}
+          </div>
+        ) : (
+          <Select
+            value={providerType}
+            onValueChange={(value) =>
+              onProviderTypeChange?.(value as ProviderType)
+            }
+          >
+            <SelectTrigger id="provider-type" className="w-full">
+              <SelectValue placeholder="Select a provider type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Default</SelectLabel>
+                {defaultProviders.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Official Providers</SelectLabel>
+                {officialProviders.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Community (Beta)</SelectLabel>
+                {communityProviders.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    <span className="flex w-full items-center gap-2">
+                      <span>{p.label}</span>
+                      <Badge
+                        variant="secondary"
+                        className="ml-auto px-1.5 py-0 font-mono text-[10px]"
+                      >
+                        BETA
+                      </Badge>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="provider-name">Name</Label>
         <Input
           id="provider-name"
@@ -93,7 +182,9 @@ export function ProviderFormFields({
           id="provider-url"
           value={baseUrl}
           onChange={(e) => onBaseUrlChange(e.target.value)}
-          placeholder="https://openrouter.ai/api/v1"
+          placeholder={
+            providerDef.defaultBaseUrl || "https://openrouter.ai/api/v1"
+          }
         />
       </div>
 

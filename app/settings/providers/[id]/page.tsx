@@ -23,7 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { LoadingSwap } from "@/components/ui/loading-swap";
 import { Switch } from "@/components/ui/switch";
+import { getProviderDefinition } from "@/config/providers";
 import { ROUTES } from "@/config/routes";
+import { getProviderDefinition } from "@/config/providers";
 import { useProviders } from "@/hooks/use-providers";
 import { invalidateProviderRegistryCache } from "@/lib/providers/invalidate-provider-registry-cache";
 
@@ -218,6 +220,7 @@ export default function ProviderDetailPage() {
           </div>
 
           <ProviderFormFields
+            providerType={getProviderDefinition(provider.type).id}
             name={name}
             baseUrl={baseUrl}
             apiKey={apiKey}

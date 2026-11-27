@@ -53,7 +53,8 @@ describe("ProviderDetailPage UI integration", () => {
         {
           id: "provider-1",
           userId: "user-1",
-          name: "OpenRouter",
+          type: "anthropic",
+          name: "Anthropic Prod",
           baseUrl: "https://openrouter.ai/api/v1",
           apiKey: "[REDACTED]",
           requiresKey: true,
@@ -77,6 +78,7 @@ describe("ProviderDetailPage UI integration", () => {
         "Custom headers are encrypted and cannot be read back. Leave empty to keep current headers, or enter new key-value pairs to replace them.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("Anthropic")).toBeInTheDocument();
   });
 
   it("passes hasSavedHeaders=false when provider has null headers", () => {

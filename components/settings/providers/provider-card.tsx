@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { EntityCard } from "@/components/shared/entity-card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,6 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getProviderDefinition } from "@/config/providers";
 import { ROUTES } from "@/config/routes";
 import type { AiProviderRow } from "@/types/provider/ai-provider-row";
 
@@ -60,11 +62,29 @@ export function ProviderCard({
   onTest,
   onSync,
 }: ProviderCardProps) {
+  const def = getProviderDefinition(provider.type);
+  const supportsSync = def.discovery.supportsSync;
+
   return (
     <EntityCard
       horizontal
       className="hover:bg-muted/30 cursor-default border shadow-none"
-      title={<span className="font-semibold">{provider.name}</span>}
+      title={
+        <span className="flex items-center gap-2">
+          <span className="font-semibold">{provider.name}</span>
+          <Badge variant="outline" className="font-normal">
+            {def.label}
+          </Badge>
+          {def.isBeta && (
+            <Badge
+              variant="secondary"
+              className="px-1.5 py-0 font-mono text-[10px]"
+            >
+              BETA
+            </Badge>
+          )}
+        </span>
+      }
       description={provider.baseUrl}
       rightActions={
         <div className="flex items-center gap-1 sm:gap-2">
@@ -93,13 +113,17 @@ export function ProviderCard({
                 size="icon"
                 className="h-8 w-8"
                 onClick={onSync}
-                disabled={isBusy}
+                disabled={isBusy || !supportsSync}
               >
                 <RefreshCw className="h-4 w-4" />
                 <span className="sr-only">Sync Models</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Sync Models</TooltipContent>
+            <TooltipContent>
+              {supportsSync
+                ? "Sync Models"
+                : "Model sync not supported — add models manually"}
+            </TooltipContent>
           </Tooltip>
 
           <div className="ml-1 flex items-center border-l pl-2">

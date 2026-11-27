@@ -5,6 +5,7 @@ import { ProviderFormFields } from "@/components/settings/providers/provider-for
 
 describe("ProviderFormFields", () => {
   const defaultProps = {
+    providerType: "openai-compatible" as const,
     name: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",
     apiKey: "",
@@ -12,6 +13,7 @@ describe("ProviderFormFields", () => {
     isEnabled: true,
     headerRows: [{ key: "", value: "" }],
     isEdit: false,
+    onProviderTypeChange: vi.fn(),
     onNameChange: vi.fn(),
     onBaseUrlChange: vi.fn(),
     onApiKeyChange: vi.fn(),
@@ -94,5 +96,42 @@ describe("ProviderFormFields", () => {
     const removeButton = screen.getByRole("button", { name: /Remove/i });
     await user.click(removeButton);
     expect(onHeaderRowsChange).toHaveBeenCalledWith([{ key: "", value: "" }]);
+  });
+
+  it("renders editable Provider Type select when isEdit is false", () => {
+    render(<ProviderFormFields {...defaultProps} isEdit={false} />);
+
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("https://openrouter.ai/api/v1"),
+    ).toBeInTheDocument();
+  });
+
+  it("updates Base URL placeholder dynamically from providerType", () => {
+    render(
+      <ProviderFormFields
+        {...defaultProps}
+        providerType="anthropic"
+        isEdit={false}
+      />,
+    );
+
+    expect(
+      screen.getByPlaceholderText("https://api.anthropic.com/v1"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders read-only Provider Type row with label and BETA badge when isEdit is true", () => {
+    render(
+      <ProviderFormFields
+        {...defaultProps}
+        providerType="openrouter"
+        isEdit={true}
+      />,
+    );
+
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByText("OpenRouter")).toBeInTheDocument();
+    expect(screen.getByText("BETA")).toBeInTheDocument();
   });
 });
