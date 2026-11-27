@@ -315,7 +315,7 @@ async function batchSyncDiscoveredModels(
         modelId: discovered.id,
         label: discovered.id,
         modelType,
-        contextWindow: 4096,
+        contextWindow: 128000,
         capTools: false,
         capVision: false,
         capReasoning,

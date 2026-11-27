@@ -420,7 +420,7 @@ describe("syncProviderModels action", () => {
         expect.objectContaining({
           modelId: "gpt-4o",
           isEnabled: false,
-          contextWindow: 4096,
+          contextWindow: 128000,
           capTools: false,
         }),
         expect.objectContaining({
