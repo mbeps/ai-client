@@ -108,16 +108,21 @@ export function ProviderCard({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={onSync}
-                disabled={isBusy || !supportsSync}
+              <span
+                className="inline-flex"
+                tabIndex={!supportsSync ? 0 : undefined}
               >
-                <RefreshCw className="h-4 w-4" />
-                <span className="sr-only">Sync Models</span>
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onSync}
+                  disabled={isBusy || !supportsSync}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="sr-only">Sync Models</span>
+                </Button>
+              </span>
             </TooltipTrigger>
             <TooltipContent>
               {supportsSync

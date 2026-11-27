@@ -60,7 +60,6 @@ describe("PROVIDER_TYPES & PROVIDER_CATALOG", () => {
       "voyage",
       "deepinfra",
       "alibaba",
-      "baseten",
     ]);
 
     for (const provider of PROVIDER_CATALOG) {
@@ -78,14 +77,28 @@ describe("PROVIDER_TYPES & PROVIDER_CATALOG", () => {
 
     for (const provider of PROVIDER_CATALOG) {
       expect(provider.discovery.supportsSync).toBe(!noSyncProviders.has(provider.id));
-      expect(provider.discovery.modelsPath).toBe("/models");
+      const expectedModelsPath =
+        provider.id === "ai-gateway"
+          ? "/config"
+          : provider.id === "deepinfra"
+            ? "/openai/models"
+            : "/models";
+      expect(provider.discovery.modelsPath).toBe(expectedModelsPath);
     }
 
     expect(getProviderDefinition("anthropic").discovery.authStyle).toBe("anthropic");
     expect(getProviderDefinition("google").discovery.authStyle).toBe("google");
     expect(getProviderDefinition("google").discovery.responseFormat).toBe("models");
     expect(getProviderDefinition("cohere").discovery.responseFormat).toBe("models");
+    expect(getProviderDefinition("ai-gateway").discovery.responseFormat).toBe("models");
     expect(getProviderDefinition("openai").discovery.responseFormat).toBe("openai");
+
+    expect(getProviderDefinition("ai-gateway").defaultBaseUrl).toBe(
+      "https://ai-gateway.vercel.sh/v4/ai",
+    );
+    expect(getProviderDefinition("minimax").defaultBaseUrl).toBe(
+      "https://api.minimax.io/anthropic/v1",
+    );
 
     expect(getProviderDefinition("openai-compatible").discovery.probeEmbeddingsEndpoint).toBe(
       true

@@ -111,7 +111,7 @@ export default function NewProviderPage() {
       <PageHeader
         icon={<Database className="text-primary h-8 w-8" />}
         title="Add Provider"
-        description="Configure an OpenAI-compatible provider endpoint and optional credentials."
+        description="Configure a pre-built AI SDK provider or an OpenAI-compatible endpoint."
       />
 
       <div className="mt-6 space-y-6">

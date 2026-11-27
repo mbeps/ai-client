@@ -63,37 +63,55 @@ export const updateProvider = defineAction(
           })
         : null;
 
-    const [updated] = await db
-      .update(aiProvider)
-      .set({
-        ...(parsed.type !== undefined ? { type: parsed.type } : {}),
-        ...(parsed.name !== undefined ? { name: parsed.name } : {}),
-        ...(parsed.baseUrl !== undefined ? { baseUrl: parsed.baseUrl } : {}),
-        ...(parsed.isEnabled !== undefined
-          ? { isEnabled: parsed.isEnabled }
-          : {}),
-        ...(parsed.requiresKey !== undefined
-          ? { requiresKey: parsed.requiresKey }
-          : {}),
-        ...(encrypted
-          ? {
-              apiKey:
-                encrypted.apiKey === null ? existing.apiKey : encrypted.apiKey,
-              headers:
-                encrypted.headers === null
-                  ? existing.headers
-                  : encrypted.headers,
-            }
-          : {}),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(aiProvider.id, providerId),
-          eq(aiProvider.userId, session.user.id),
-        ),
-      )
-      .returning();
+    let updated: AiProviderRow | undefined;
+    try {
+      [updated] = await db
+        .update(aiProvider)
+        .set({
+          ...(parsed.type !== undefined ? { type: parsed.type } : {}),
+          ...(parsed.name !== undefined ? { name: parsed.name } : {}),
+          ...(parsed.baseUrl !== undefined ? { baseUrl: parsed.baseUrl } : {}),
+          ...(parsed.isEnabled !== undefined
+            ? { isEnabled: parsed.isEnabled }
+            : {}),
+          ...(parsed.requiresKey !== undefined
+            ? { requiresKey: parsed.requiresKey }
+            : {}),
+          ...(encrypted
+            ? {
+                apiKey:
+                  encrypted.apiKey === null
+                    ? existing.apiKey
+                    : encrypted.apiKey,
+                headers:
+                  encrypted.headers === null
+                    ? existing.headers
+                    : encrypted.headers,
+              }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(aiProvider.id, providerId),
+            eq(aiProvider.userId, session.user.id),
+          ),
+        )
+        .returning();
+    } catch (error: unknown) {
+      const pgCode =
+        (error as { code?: string; cause?: { code?: string } })?.code ??
+        (error as { cause?: { code?: string } })?.cause?.code;
+      if (pgCode === "23505") {
+        return fail({
+          code: ERROR_CODE.CONFLICT,
+          message: parsed.name
+            ? `A provider named "${parsed.name}" already exists.`
+            : "A provider with this name already exists.",
+        });
+      }
+      throw error;
+    }
 
     if (!updated) {
       return fail({

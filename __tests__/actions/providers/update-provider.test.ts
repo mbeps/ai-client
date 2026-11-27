@@ -183,4 +183,57 @@ describe("updateProvider action", () => {
       expect(res.error.message).toBe("Not Found");
     }
   });
+
+  it("returns CONFLICT when renaming to an existing provider name (23505)", async () => {
+    chainable.where.mockResolvedValueOnce([
+      { id: "prov-1", userId: "user-1", apiKey: "key", headers: null },
+    ]);
+    const pgError = Object.assign(new Error("duplicate key value"), {
+      code: "23505",
+    });
+    chainable.returning.mockRejectedValueOnce(pgError);
+
+    const res = await updateProvider("prov-1", { name: "OpenRouter" });
+    expect(res).toEqual({
+      ok: false,
+      error: {
+        code: "CONFLICT",
+        message: 'A provider named "OpenRouter" already exists.',
+      },
+    });
+  });
+
+  it("returns generic CONFLICT message on 23505 via cause when name is omitted", async () => {
+    chainable.where.mockResolvedValueOnce([
+      { id: "prov-1", userId: "user-1", apiKey: "key", headers: null },
+    ]);
+    const drizzleError = Object.assign(new Error("Failed query"), {
+      cause: Object.assign(new Error("duplicate key value"), { code: "23505" }),
+    });
+    chainable.returning.mockRejectedValueOnce(drizzleError);
+
+    const res = await updateProvider("prov-1", {
+      baseUrl: "https://api.example.com/v1",
+    });
+    expect(res).toEqual({
+      ok: false,
+      error: {
+        code: "CONFLICT",
+        message: "A provider with this name already exists.",
+      },
+    });
+  });
+
+  it("rethrows unexpected database errors to defineAction", async () => {
+    chainable.where.mockResolvedValueOnce([
+      { id: "prov-1", userId: "user-1", apiKey: "key", headers: null },
+    ]);
+    chainable.returning.mockRejectedValueOnce(new Error("connection lost"));
+
+    const res = await updateProvider("prov-1", { name: "New Name" });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("INTERNAL");
+    }
+  });
 });

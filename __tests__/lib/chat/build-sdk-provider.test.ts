@@ -246,7 +246,7 @@ describe("buildSdkProvider", () => {
     expect(createReasoningNormalizingFetch).toHaveBeenCalledTimes(1);
     expect(mockOpenAIFactory).toHaveBeenCalledWith({
       baseURL: "http://localhost:8080/v1",
-      apiKey: undefined,
+      apiKey: "not-required",
       headers: {},
       fetch: mockReasoningFetch,
     });

@@ -44,11 +44,14 @@ describe("ProviderCard", () => {
     expect(screen.getByText("BETA")).toBeInTheDocument();
   });
 
-  it("disables Sync Models button when provider does not support sync", () => {
+  it("disables Sync Models button when provider does not support sync and keeps tooltip trigger focusable", () => {
     renderCard(makeProvider({ type: "perplexity", name: "Perplexity" }));
 
     const syncButton = screen.getByRole("button", { name: /Sync Models/i });
     expect(syncButton).toBeDisabled();
+    const triggerWrapper = syncButton.parentElement;
+    expect(triggerWrapper?.tagName).toBe("SPAN");
+    expect(triggerWrapper).toHaveAttribute("tabindex", "0");
   });
 
   it("enables Sync Models button when provider supports sync", () => {

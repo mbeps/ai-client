@@ -3,8 +3,10 @@
 import { db } from "@/drizzle/db";
 import { aiProvider } from "@/drizzle/schemas/ai-provider-schema";
 import { requireSession } from "@/lib/auth/require-session";
+import { ERROR_CODE } from "@/lib/error/error-code";
 import { defineAction } from "@/lib/factories/define-action";
 import { toEncryptedProviderValues } from "@/lib/providers/to-encrypted-provider-values";
+import { fail } from "@/lib/result/fail";
 import { ok } from "@/lib/result/ok";
 import {
   type CreateProviderInput,
@@ -36,20 +38,33 @@ export const createProvider = defineAction(
       headers: parsed.headers,
     });
 
-    const [created] = await db
-      .insert(aiProvider)
-      .values({
-        userId: session.user.id,
-        type: parsed.type ?? "openai-compatible",
-        name: parsed.name,
-        baseUrl: parsed.baseUrl,
-        apiKey: encrypted.apiKey,
-        headers: encrypted.headers,
-        isEnabled: parsed.isEnabled ?? true,
-        requiresKey: parsed.requiresKey ?? true,
-      })
-      .returning();
+    try {
+      const [created] = await db
+        .insert(aiProvider)
+        .values({
+          userId: session.user.id,
+          type: parsed.type ?? "openai-compatible",
+          name: parsed.name,
+          baseUrl: parsed.baseUrl,
+          apiKey: encrypted.apiKey,
+          headers: encrypted.headers,
+          isEnabled: parsed.isEnabled ?? true,
+          requiresKey: parsed.requiresKey ?? true,
+        })
+        .returning();
 
-    return ok(created);
+      return ok(created);
+    } catch (error: unknown) {
+      const pgCode =
+        (error as { code?: string; cause?: { code?: string } })?.code ??
+        (error as { cause?: { code?: string } })?.cause?.code;
+      if (pgCode === "23505") {
+        return fail({
+          code: ERROR_CODE.CONFLICT,
+          message: `A provider named "${parsed.name}" already exists.`,
+        });
+      }
+      throw error;
+    }
   },
 );

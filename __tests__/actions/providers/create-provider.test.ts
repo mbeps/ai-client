@@ -100,4 +100,45 @@ describe("createProvider action", () => {
       }),
     );
   });
+
+  it("returns CONFLICT when a provider with the same name already exists (23505)", async () => {
+    const pgError = Object.assign(new Error("duplicate key value"), {
+      code: "23505",
+    });
+    const drizzleError = Object.assign(new Error("Failed query"), {
+      cause: pgError,
+    });
+    chainable.returning.mockRejectedValueOnce(drizzleError);
+
+    const res = await createProvider({
+      type: "openrouter",
+      name: "OpenRouter",
+      apiKey: "sk-or-123",
+      baseUrl: "https://openrouter.ai/api/v1",
+    });
+
+    expect(res).toEqual({
+      ok: false,
+      error: {
+        code: "CONFLICT",
+        message: 'A provider named "OpenRouter" already exists.',
+      },
+    });
+  });
+
+  it("rethrows unexpected database errors to defineAction", async () => {
+    chainable.returning.mockRejectedValueOnce(new Error("connection lost"));
+
+    const res = await createProvider({
+      type: "openrouter",
+      name: "OpenRouter",
+      apiKey: "sk-or-123",
+      baseUrl: "https://openrouter.ai/api/v1",
+    });
+
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("INTERNAL");
+    }
+  });
 });

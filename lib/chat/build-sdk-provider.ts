@@ -119,7 +119,7 @@ export function buildSdkProvider(input: BuildSdkProviderInput): SdkProvider {
 
     const sdk = createOpenAI({
       baseURL: input.baseUrl,
-      apiKey: input.apiKey ?? undefined,
+      apiKey: input.apiKey || "not-required",
       headers: input.headers,
       fetch: customFetch,
     });

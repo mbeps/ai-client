@@ -109,7 +109,7 @@ export const importProviderRegistry = defineAction(
                 await tx
                   .update(aiProvider)
                   .set({
-                    type: incomingProvider.type ?? "openai-compatible",
+                    type: incomingProvider.type ?? existingProvider.type,
                     name: incomingProvider.name,
                     baseUrl: incomingProvider.baseUrl,
                     requiresKey: incomingProvider.requiresKey,

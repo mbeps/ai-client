@@ -83,18 +83,26 @@ export function extractDiscoveredModelIds(
   if (responseFormat === "models") {
     const list = Array.isArray(record.models) ? record.models : [];
     return list.map((entry) => {
-      const raw = entry as Record<string, unknown>;
+      const raw =
+        entry && typeof entry === "object"
+          ? (entry as Record<string, unknown>)
+          : {};
       const id =
-        typeof raw.name === "string"
-          ? raw.name.replace(/^models\//, "")
-          : undefined;
+        typeof raw.id === "string"
+          ? raw.id
+          : typeof raw.name === "string"
+            ? raw.name.replace(/^models\//, "")
+            : undefined;
       return { id, raw };
     });
   }
 
   const list = Array.isArray(record.data) ? record.data : [];
   return list.map((entry) => {
-    const raw = entry as Record<string, unknown>;
+    const raw =
+      entry && typeof entry === "object"
+        ? (entry as Record<string, unknown>)
+        : {};
     const id = typeof raw.id === "string" ? raw.id : undefined;
     return { id, raw };
   });

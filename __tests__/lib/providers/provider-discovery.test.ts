@@ -112,11 +112,12 @@ describe("provider-discovery", () => {
       ]);
     });
 
-    it("extracts models format entries, stripping Google models/ prefix while preserving Cohere names", () => {
+    it("extracts models format entries, stripping Google models/ prefix while preserving Cohere and AI Gateway IDs", () => {
       const payload = {
         models: [
           { name: "models/gemini-2.5-flash", displayName: "Gemini 2.5 Flash" },
           { name: "command-a-03-2025", context_length: 256000 },
+          { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4" },
           { displayName: "Missing Name" },
         ],
       };
@@ -134,9 +135,35 @@ describe("provider-discovery", () => {
           raw: { name: "command-a-03-2025", context_length: 256000 },
         },
         {
+          id: "anthropic/claude-sonnet-4",
+          raw: { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4" },
+        },
+        {
           id: undefined,
           raw: { displayName: "Missing Name" },
         },
+      ]);
+    });
+
+    it("handles null and primitive entries inside data or models arrays without throwing", () => {
+      expect(
+        extractDiscoveredModelIds({ data: [null, "bad", 42, { id: "gpt-4o" }] }, "openai"),
+      ).toEqual([
+        { id: undefined, raw: {} },
+        { id: undefined, raw: {} },
+        { id: undefined, raw: {} },
+        { id: "gpt-4o", raw: { id: "gpt-4o" } },
+      ]);
+
+      expect(
+        extractDiscoveredModelIds(
+          { models: [null, "bad", { id: "openai/gpt-4o" }] },
+          "models",
+        ),
+      ).toEqual([
+        { id: undefined, raw: {} },
+        { id: undefined, raw: {} },
+        { id: "openai/gpt-4o", raw: { id: "openai/gpt-4o" } },
       ]);
     });
 
