@@ -5,6 +5,7 @@ import {
   exportProviderRegistryInputSchema,
   modelOptionsSchema,
   providerModelTypeSchema,
+  providerTypeSchema,
   reasoningEffortFormatSchema,
   reasoningEffortSchema,
   registryExportSchema,
@@ -15,6 +16,14 @@ import {
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
 
 describe("schemas/providers/provider-registry", () => {
+  it("validates providerTypeSchema", () => {
+    expect(providerTypeSchema.safeParse("openai-compatible").success).toBe(true);
+    expect(providerTypeSchema.safeParse("anthropic").success).toBe(true);
+    expect(providerTypeSchema.safeParse("openrouter").success).toBe(true);
+    expect(providerTypeSchema.safeParse("llama-cpp").success).toBe(true);
+    expect(providerTypeSchema.safeParse("unknown-provider").success).toBe(false);
+  });
+
   it("validates providerModelTypeSchema", () => {
     expect(providerModelTypeSchema.safeParse("chat").success).toBe(true);
     expect(providerModelTypeSchema.safeParse("embedding").success).toBe(true);
@@ -55,6 +64,12 @@ describe("schemas/providers/provider-registry", () => {
       requiresKey: true,
     };
     expect(createProviderSchema.safeParse(valid).success).toBe(true);
+    expect(
+      createProviderSchema.safeParse({ ...valid, type: "anthropic" }).success,
+    ).toBe(true);
+    expect(
+      createProviderSchema.safeParse({ ...valid, type: "invalid-type" }).success,
+    ).toBe(false);
 
     // Invalid baseUrl
     expect(
@@ -75,6 +90,10 @@ describe("schemas/providers/provider-registry", () => {
     // Partial update with at least one field must succeed
     const validResult = updateProviderSchema.safeParse({ name: "Updated Name" });
     expect(validResult.success).toBe(true);
+    expect(updateProviderSchema.safeParse({ type: "google" }).success).toBe(true);
+    expect(
+      updateProviderSchema.safeParse({ type: "invalid-type" }).success,
+    ).toBe(false);
   });
 
   it("validates createModelSchema", () => {
@@ -148,5 +167,19 @@ describe("schemas/providers/provider-registry", () => {
       ],
     };
     expect(registryExportSchema.safeParse(validExport).success).toBe(true);
+
+    const exportWithType = {
+      ...validExport,
+      providers: [{ ...validExport.providers[0], type: "openai" }],
+    };
+    expect(registryExportSchema.safeParse(exportWithType).success).toBe(true);
+
+    const exportWithInvalidType = {
+      ...validExport,
+      providers: [{ ...validExport.providers[0], type: "invalid-type" }],
+    };
+    expect(registryExportSchema.safeParse(exportWithInvalidType).success).toBe(
+      false,
+    );
   });
 });

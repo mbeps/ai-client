@@ -1,5 +1,13 @@
 import { z } from "zod";
+import { PROVIDER_TYPES } from "@/config/providers";
 import { idField, nameField } from "@/schemas/shared-fields";
+
+/**
+ * Enumeration of supported AI provider types.
+ *
+ * @author Maruf Bepary
+ */
+export const providerTypeSchema = z.enum(PROVIDER_TYPES);
 
 /**
  * Enumeration of AI model types available from providers.
@@ -86,6 +94,7 @@ const providerHeadersSchema = z.record(z.string(), z.string());
  * @author Maruf Bepary
  */
 export const createProviderSchema = z.object({
+  type: providerTypeSchema.optional(),
   name: nameField,
   baseUrl: z.string().url("Invalid provider URL").max(1024),
   apiKey: z.string().max(4096).optional().nullable(),
@@ -196,6 +205,7 @@ const registryModelSchema = z.object({
  * @author Maruf Bepary
  */
 const registryProviderSchema = z.object({
+  type: providerTypeSchema.optional(),
   name: z.string().min(1).max(100),
   baseUrl: z.string().url().max(1024),
   requiresKey: z.boolean(),

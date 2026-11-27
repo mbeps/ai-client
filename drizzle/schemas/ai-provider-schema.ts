@@ -21,6 +21,7 @@ export const aiProvider = pgTable(
   {
     id: entityIdColumn(),
     userId: userForeignKeyColumn(),
+    type: text("type").notNull().default("openai-compatible"),
     name: text("name").notNull(),
     baseUrl: text("base_url").notNull(),
     apiKey: text("api_key"),
